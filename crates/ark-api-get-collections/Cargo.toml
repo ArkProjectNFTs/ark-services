@@ -1,0 +1,13 @@
+[package]
+name = "ark-api-get-collections"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lambda_http = "0.8.1"
+lambda_runtime = "0.8.1"
+tokio.workspace = true
+tracing = { version = "0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt"] }
+aws-config = "0.56.1"
+aws-sdk-dynamodb = "0.30.0"

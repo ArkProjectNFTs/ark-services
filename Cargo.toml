@@ -12,6 +12,7 @@ homepage = "https://arkproject.dev"
 [workspace]
 members = [
   "crates/ark-service-metadata",
+  "crates/ark-api-get-collections",
 ]
 
 [workspace.dependencies]
