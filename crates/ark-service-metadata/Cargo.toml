@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
+tokio.workspace = true
+ark-rs = { git = "ssh://git@github.com/ArkProjectNFTs/ark-project.git", branch = "feat/metadata-refactor" }
+dotenv = "0.15.0"
