@@ -1,0 +1,20 @@
+[workspace.package]
+name = "ark-services"
+version = "0.1.0"
+edition = "2021"
+authors = ["Screenshot Labs", "Starknet community"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+#documentation = "https://docs.rs/..."
+repository = "https://github.com/ArkProjectNFTs/ark-services"
+homepage = "https://arkproject.dev"
+
+[workspace]
+members = [
+  "crates/ark-service-metadata",
+]
+
+[workspace.dependencies]
+anyhow = "1.0"
+async-trait = "0.1.73"
+tokio = { version = "1", features = ["full"] }
