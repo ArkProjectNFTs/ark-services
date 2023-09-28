@@ -10,6 +10,7 @@ use aws_config::load_from_env;
 use aws_sdk_dynamodb::Client;
 use dotenv::dotenv;
 use pontos_observer::PontosObserver;
+use starknet::core::types::BlockId;
 use std::{env, sync::Arc};
 
 #[tokio::main]
@@ -23,7 +24,7 @@ async fn main() -> Result<()> {
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
     let pontos_observer = Arc::new(PontosObserver::new(Arc::clone(&dynamo_storage)));
 
-    Pontos::new(
+    let task = Pontos::new(
         Arc::clone(&starknet_client),
         dynamo_storage,
         Arc::clone(&pontos_observer),
@@ -32,6 +33,8 @@ async fn main() -> Result<()> {
             indexer_identifier: String::from("main"),
         },
     );
+
+    task.index_block_range(BlockId::Number(80000), BlockId::Number(90000), true).await?;
 
     Ok(())
 }

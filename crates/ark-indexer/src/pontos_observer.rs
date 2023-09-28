@@ -23,28 +23,31 @@ where
 {
     /// Pontos has normally terminated the indexation of the given blocks.
     async fn on_terminated(&self, indexer_version: u64, indexer_identifier: &str) {
+        println!(
+            "on_terminated: indexer_version: {}, indexer_identifier: {}",
+            indexer_version, indexer_identifier
+        );
+
         // self.storage.set_indexer_progress(progress)
     }
 
-    // /// Block has be processed by Pontos.
-    // async fn on_block_processed(
-    //     &self,
-    //     block_number: u64,
-    //     indexer_version: u64,
-    //     indexer_identifier: &str,
-    // ) {
-    //     println!("on_block_processed");
-    // }
+    async fn on_block_processed(
+        &self,
+        block_number: u64,
+        indexer_version: u64,
+        indexer_identifier: &str,
+    ) {
+        println!(
+            "on_block_processed: block_number: {}, indexer_version: {}, indexer_identifier: {}",
+            block_number, indexer_version, indexer_identifier
+        );
+    }
 
-    // /// A new token has be registered.
-    // async fn on_token_registered(&self, token: TokenFromEvent) {
-    //     println!("on_token_registered");
-    // }
+    async fn on_token_registered(&self, token: TokenFromEvent) {
+        println!("on_token_registered");
+    }
 
-    // /// A new event has be registered.
-    // async fn on_event_registered(&self, event: TokenEvent) {
-    //     println!("on_event_registered");
-    // }
-
-    // TODO: add pertinent events to react on.
+    async fn on_event_registered(&self, event: TokenEvent) {
+        println!("on_event_registered");
+    }
 }
