@@ -1,22 +1,28 @@
 use arkproject::pontos::storage::{
     types::{
-        BlockIndexing, BlockIndexingStatus, BlockInfo, ContractType, StorageError, TokenEvent,
-        TokenFromEvent,
+        BlockIndexing, BlockIndexingStatus, BlockInfo, ContractType, IndexerStatus, StorageError,
+        TokenEvent, TokenFromEvent,
     },
-    StorageManager,
+    Storage,
 };
+
 use async_trait::async_trait;
+use aws_sdk_dynamodb::{types::AttributeValue, Client};
+use chrono::Utc;
 use starknet::core::types::FieldElement;
 
-#[derive(Default)]
 pub struct DynamoStorage {
+    client: Client,
+}
 
-    // TODO: add DynamoDB client.
-
+impl DynamoStorage {
+    pub fn new(client: Client) -> Self {
+        Self { client }
+    }
 }
 
 #[async_trait]
-impl StorageManager for DynamoStorage {
+impl Storage for DynamoStorage {
     async fn register_mint(
         &self,
         token: &TokenFromEvent,
@@ -76,6 +82,36 @@ impl StorageManager for DynamoStorage {
 
 impl DynamoStorage {
     async fn set_indexer_progress(&self, progress: BlockIndexing) -> Result<(), StorageError> {
+        let task_id = progress.identifier;
+        let status = match progress.status {
+            IndexerStatus::Running => String::from("running"),
+            IndexerStatus::Stopped => String::from("stopped"),
+        };
+        let now = Utc::now();
+        let unix_timestamp = now.timestamp();
+
+        self.client
+            .put_item()
+            .table_name(String::from(""))
+            .item("PK", AttributeValue::S(String::from("INDEXER")))
+            .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
+            .item("status", AttributeValue::S(status))
+            .item("last_update", AttributeValue::N(unix_timestamp.to_string()))
+            .item(
+                "version",
+                AttributeValue::N(progress.indexer_version.to_string()),
+            )
+            .item("task_id", AttributeValue::S(task_id.to_string()))
+            .item("from", AttributeValue::N(progress.range.start.to_string()))
+            .item("to", AttributeValue::N(progress.range.end.to_string()))
+            .item(
+                "indexation_progress",
+                AttributeValue::N(progress.percentage.to_string()),
+            )
+            .send()
+            .await
+            .map_err(|_| StorageError::DatabaseError)?;
+
         Ok(())
     }
 }

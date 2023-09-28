@@ -1,7 +1,7 @@
 use arkproject::pontos::{
     event_handler::EventHandler,
     storage::types::{TokenEvent, TokenFromEvent},
-    storage::StorageManager,
+    storage::Storage,
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ impl<S> PontosObserver<S> {
 #[async_trait]
 impl<S> EventHandler for PontosObserver<S>
 where
-    S: StorageManager + Send + Sync,
+    S: Storage + Send + Sync,
 {
     /// Pontos has normally terminated the indexation of the given blocks.
     async fn on_terminated(&self, indexer_version: u64, indexer_identifier: &str) {
