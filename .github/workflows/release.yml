@@ -1,11 +1,8 @@
-name: Push indexer Docker image to Amazon ECR
+name: Deploy to AWS ECR
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'ark-indexer/**'
+  release:
+    types: [created]
   workflow_dispatch:
 
 jobs:
