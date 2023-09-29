@@ -7,6 +7,7 @@ use arkproject::pontos::storage::{
     Storage,
 };
 use async_trait::async_trait;
+use aws_config::load_from_env;
 use aws_sdk_dynamodb::{types::AttributeValue, Client};
 use chrono::Utc;
 use log::{debug, error, trace};
@@ -17,7 +18,9 @@ pub struct DynamoStorage {
 }
 
 impl DynamoStorage {
-    pub fn new(client: Client) -> Self {
+    pub async fn new() -> Self {
+        let config = load_from_env().await;
+        let client = Client::new(&config);
         Self { client }
     }
 }
