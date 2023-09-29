@@ -13,5 +13,5 @@ async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
 starknet = "0.5.0"
-arkproject = { git = "ssh://git@github.com/ArkProjectNFTs/ark-project.git", branch = "feat/fix-indexer"}
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-services.git", branch = "main"}
 
