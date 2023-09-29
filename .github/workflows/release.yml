@@ -1,35 +1,59 @@
-name: Deploy to AWS ECR
+name: Deploy Docker Image to AWS ECR
 
 on:
   release:
     types: [created]
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag'
+        required: true
+        default: 'latest'
 
 jobs:
   build-and-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    # Add a timeout for your jobs to avoid infinite running jobs
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v2.4.0 # Use specific version
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Set up AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.5.5 # Use specific version
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Login to Amazon ECR
+      - name: Log in to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v1.3.3 # Use specific version
 
-      - name: Build, tag, and push docker image to Amazon ECR
+      - name: Determine Image Tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::set-output name=version::${{ github.event.inputs.image_tag }}"
+          else
+            echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
+          fi
+        # Adding comments to explain steps
+        shell: bash
+
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        # Defining environment variables
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: arkproject
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ steps.version.outputs.version }}
         run: |
           cd ark-indexer
+          # Adding comments for each command
+          # Build the Docker image
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f Dockerfile .
+          # Push the Docker image to the ECR repository
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+        shell: bash
