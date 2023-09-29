@@ -43,8 +43,6 @@ impl AWSDynamoStorage for DynamoStorage {
         indexer_version: u64,
         status: IndexerStatus,
     ) -> Result<()> {
-        let table_name = String::from("ark-test");
-
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
@@ -83,8 +81,6 @@ impl AWSDynamoStorage for DynamoStorage {
     }
 
     async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()> {
-        let table_name = String::from("ark-test");
-
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
@@ -99,10 +95,16 @@ impl AWSDynamoStorage for DynamoStorage {
             .update_item()
             .table_name(TABLE_NAME)
             .key("PK", AttributeValue::S(String::from("INDEXER")))
-            .update_expression("SET indexation_progress = :indexation_progress")
+            .update_expression(
+                "SET indexation_progress = :indexation_progress, last_update = :last_update",
+            )
             .expression_attribute_values(
                 ":indexation_progress",
                 AttributeValue::N(value.to_string()),
+            )
+            .expression_attribute_values(
+                ":last_update",
+                AttributeValue::N(unix_timestamp.to_string()),
             )
             .send()
             .await
@@ -127,49 +129,53 @@ impl AWSDynamoStorage for DynamoStorage {
 impl Storage for DynamoStorage {
     async fn register_mint(
         &self,
-        token: &TokenFromEvent,
-        block_number: u64,
+        _token: &TokenFromEvent,
+        _block_number: u64,
     ) -> Result<(), StorageError> {
         Ok(())
     }
 
     async fn register_token(
         &self,
-        token: &TokenFromEvent,
-        block_number: u64,
+        _token: &TokenFromEvent,
+        _block_number: u64,
     ) -> Result<(), StorageError> {
         Ok(())
     }
 
     async fn register_event(
         &self,
-        event: &TokenEvent,
-        block_number: u64,
+        _event: &TokenEvent,
+        _block_number: u64,
     ) -> Result<(), StorageError> {
         Ok(())
     }
 
     async fn get_contract_type(
         &self,
-        contract_address: &FieldElement,
+        _contract_address: &FieldElement,
     ) -> Result<ContractType, StorageError> {
         Ok(ContractType::ERC721)
     }
 
     async fn register_contract_info(
         &self,
-        contract_address: &FieldElement,
-        contract_type: &ContractType,
-        block_number: u64,
+        _contract_address: &FieldElement,
+        _contract_type: &ContractType,
+        _block_number: u64,
     ) -> Result<(), StorageError> {
         Ok(())
     }
 
-    async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
+    async fn set_block_info(
+        &self,
+        _block_number: u64,
+        _info: BlockInfo,
+    ) -> Result<(), StorageError> {
         Ok(())
     }
 
-    async fn get_block_info(&self, block_number: u64) -> Result<BlockInfo, StorageError> {
+    async fn get_block_info(&self, _block_number: u64) -> Result<BlockInfo, StorageError> {
         Ok(BlockInfo {
             indexer_version: 0,
             indexer_identifier: String::from("test"),
@@ -177,7 +183,7 @@ impl Storage for DynamoStorage {
         })
     }
 
-    async fn clean_block(&self, block_number: u64) -> Result<(), StorageError> {
+    async fn clean_block(&self, _block_number: u64) -> Result<(), StorageError> {
         Ok(())
     }
 }

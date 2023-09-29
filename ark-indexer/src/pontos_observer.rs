@@ -29,11 +29,11 @@ impl<S: AWSDynamoStorage> EventHandler for PontosObserver<S>
 where
     S: AWSDynamoStorage + Send + Sync,
 {
-    async fn on_token_registered(&self, token: TokenFromEvent) {
+    async fn on_token_registered(&self, _token: TokenFromEvent) {
         info!("on_token_registered");
     }
 
-    async fn on_event_registered(&self, event: TokenEvent) {
+    async fn on_event_registered(&self, _event: TokenEvent) {
         info!("on_event_registered");
     }
 
