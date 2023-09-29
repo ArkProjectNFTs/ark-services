@@ -192,6 +192,7 @@ dependencies = [
  "aws-sdk-dynamodb",
  "chrono",
  "dotenv",
+ "log",
  "starknet",
  "tokio",
 ]

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+log = "0.4.17"
 chrono = "0.4.19"
 aws-config = "0.56.1"
 aws-sdk-dynamodb = "0.31.1"

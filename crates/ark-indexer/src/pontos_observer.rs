@@ -1,53 +1,59 @@
 use arkproject::pontos::{
     event_handler::EventHandler,
-    storage::types::{TokenEvent, TokenFromEvent},
-    storage::Storage,
+    storage::types::{IndexerStatus, TokenEvent, TokenFromEvent},
 };
 use async_trait::async_trait;
+use log::{info, trace};
 use std::sync::Arc;
 
-pub struct PontosObserver<S> {
+use crate::dynamo_storage::AWSDynamoStorage;
+
+pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
+    pub indexer_version: u64,
+    pub indexer_identifier: String,
 }
 
-impl<S> PontosObserver<S> {
-    pub fn new(storage: Arc<S>) -> Self {
-        Self { storage }
+impl<S: AWSDynamoStorage> PontosObserver<S> {
+    pub fn new(storage: Arc<S>, indexer_version: u64, indexer_identifier: String) -> Self {
+        Self {
+            storage,
+            indexer_identifier,
+            indexer_version,
+        }
     }
 }
 
 #[async_trait]
-impl<S> EventHandler for PontosObserver<S>
+impl<S: AWSDynamoStorage> EventHandler for PontosObserver<S>
 where
-    S: Storage + Send + Sync,
+    S: AWSDynamoStorage + Send + Sync,
 {
-    /// Pontos has normally terminated the indexation of the given blocks.
-    async fn on_terminated(&self, indexer_version: u64, indexer_identifier: &str) {
-        println!(
-            "on_terminated: indexer_version: {}, indexer_identifier: {}",
-            indexer_version, indexer_identifier
-        );
-
-        // self.storage.set_indexer_progress(progress)
-    }
-
-    async fn on_block_processed(
-        &self,
-        block_number: u64,
-        indexer_version: u64,
-        indexer_identifier: &str,
-    ) {
-        println!(
-            "on_block_processed: block_number: {}, indexer_version: {}, indexer_identifier: {}",
-            block_number, indexer_version, indexer_identifier
-        );
-    }
-
     async fn on_token_registered(&self, token: TokenFromEvent) {
-        println!("on_token_registered");
+        info!("on_token_registered");
     }
 
     async fn on_event_registered(&self, event: TokenEvent) {
-        println!("on_event_registered");
+        info!("on_event_registered");
+    }
+
+    async fn on_block_processing(&self, block_number: u64) {
+        trace!("Block processing: block_number={}", block_number);
+        let _ = self
+            .storage
+            .update_indexer_task_status(
+                self.indexer_identifier.clone(),
+                self.indexer_version,
+                IndexerStatus::Running,
+            )
+            .await;
+    }
+
+    async fn on_terminated(&self, block_number: u64, indexation_progress: f64) {
+        trace!("Block processed: block_number={}", block_number);
+        let _ = self
+            .storage
+            .update_indexer_progress(self.indexer_identifier.clone(), indexation_progress)
+            .await;
     }
 }
