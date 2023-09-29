@@ -50,7 +50,6 @@ jobs:
           REPOSITORY: arkproject
           IMAGE_TAG: ${{ steps.version.outputs.version }}
         run: |
-          cd ark-indexer
           # Adding comments for each command
           # Build the Docker image
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f Dockerfile .
