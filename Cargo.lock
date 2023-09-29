@@ -186,7 +186,7 @@ name = "ark-indexer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arkproject 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "arkproject",
  "async-trait",
  "aws-config",
  "aws-sdk-dynamodb",
@@ -200,32 +200,10 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer#9bc9b1fe01a6977427201aa38cd16cdcba9599cb"
-dependencies = [
- "anyhow",
- "ark-starknet 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "async-trait",
- "aws-config",
- "aws-sdk-s3",
- "base64 0.21.4",
- "dotenv",
- "log",
- "reqwest",
- "serde",
- "serde_derive",
- "serde_json",
- "starknet",
- "tokio",
- "urlencoding",
-]
-
-[[package]]
-name = "ark-metadata"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main#7989ac5a0daab806f17c24325b1d4a4c3c7793f1"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "ark-starknet",
  "async-trait",
  "aws-config",
  "aws-sdk-s3",
@@ -255,20 +233,6 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer#9bc9b1fe01a6977427201aa38cd16cdcba9599cb"
-dependencies = [
- "anyhow",
- "async-trait",
- "mockall",
- "num-bigint",
- "regex",
- "starknet",
- "url",
-]
-
-[[package]]
-name = "ark-starknet"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main#7989ac5a0daab806f17c24325b1d4a4c3c7793f1"
 dependencies = [
  "anyhow",
@@ -293,33 +257,16 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer#9bc9b1fe01a6977427201aa38cd16cdcba9599cb"
-dependencies = [
- "anyhow",
- "ark-metadata 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "ark-starknet 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "async-trait",
- "diri 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "futures",
- "log",
- "pontos 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "starknet",
- "tokio",
-]
-
-[[package]]
-name = "arkproject"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main#7989ac5a0daab806f17c24325b1d4a4c3c7793f1"
 dependencies = [
  "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "ark-metadata",
+ "ark-starknet",
  "async-trait",
- "diri 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "diri",
  "futures",
  "log",
- "pontos 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "pontos",
  "starknet",
  "tokio",
 ]
@@ -1583,33 +1530,10 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer#9bc9b1fe01a6977427201aa38cd16cdcba9599cb"
-dependencies = [
- "anyhow",
- "ark-starknet 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "async-trait",
- "clap",
- "dotenv",
- "env_logger",
- "futures",
- "log",
- "mongodb",
- "regex",
- "serde",
- "serde_json",
- "starknet",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "diri"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main#7989ac5a0daab806f17c24325b1d4a4c3c7793f1"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "ark-starknet",
  "async-trait",
  "clap",
  "dotenv",
@@ -2886,22 +2810,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "metadata-background-job"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arkproject 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "async-trait",
- "aws-config",
- "aws-sdk-dynamodb",
- "chrono",
- "dotenv",
- "log",
- "starknet",
- "tokio",
-]
-
-[[package]]
 name = "metrics"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3826,35 +3734,11 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer#9bc9b1fe01a6977427201aa38cd16cdcba9599cb"
-dependencies = [
- "anyhow",
- "ark-metadata 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "ark-starknet 0.1.0 (git+ssh://git@github.com/ArkProjectNFTs/ark-project.git?branch=feat/fix-indexer)",
- "async-trait",
- "dotenv",
- "futures",
- "log",
- "num-bigint",
- "prisma-client-rust",
- "serde",
- "serde_json",
- "starknet",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-log",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "pontos"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main#7989ac5a0daab806f17c24325b1d4a4c3c7793f1"
 dependencies = [
  "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project.git?branch=main)",
+ "ark-metadata",
+ "ark-starknet",
  "async-trait",
  "dotenv",
  "futures",
