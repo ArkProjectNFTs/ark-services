@@ -13,4 +13,5 @@ async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
 starknet = "0.5.0"
-arkproject = { path = "/home/remi/apps/ArkIndexer" }
+arkproject = { git = "ssh://git@github.com/ArkProjectNFTs/ark-project.git", branch = "feat/fix-indexer"}
+
