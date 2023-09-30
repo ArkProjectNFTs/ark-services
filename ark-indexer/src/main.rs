@@ -10,14 +10,29 @@ use arkproject::{
 
 use dotenv::dotenv;
 use pontos_observer::PontosObserver;
-use starknet::core::types::BlockId;
+use starknet::core::types::{BlockId, BlockTag};
 use std::{env, sync::Arc};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
 
+    let start_block_id = env::var("START_BLOCK")
+        .expect("START_BLOCK must be set")
+        .parse()
+        .unwrap();
+
+    let from_block: BlockId = BlockId::Number(start_block_id);
+    let to_block: BlockId = match env::var("END_BLOCK") {
+        Ok(end_block) => {
+            let end_block: u64 = end_block.parse().unwrap();
+            BlockId::Number(end_block)
+        }
+        Err(_) => BlockId::Tag(BlockTag::Latest),
+    };
+
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
+
     let dynamo_storage = Arc::new(DynamoStorage::new().await);
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
@@ -41,7 +56,11 @@ async fn main() -> Result<()> {
     );
 
     pontos_task
-        .index_block_range(BlockId::Number(80000), BlockId::Number(90000), true)
+        .index_block_range(
+           from_block,
+           to_block,
+            true,
+        )
         .await?;
 
     Ok(())
