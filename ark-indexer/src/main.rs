@@ -56,11 +56,7 @@ async fn main() -> Result<()> {
     );
 
     pontos_task
-        .index_block_range(
-           from_block,
-           to_block,
-            true,
-        )
+        .index_block_range(from_block, to_block, true)
         .await?;
 
     Ok(())
