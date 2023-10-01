@@ -50,7 +50,7 @@ where
     }
 
     async fn on_terminated(&self, block_number: u64, indexation_progress: f64) {
-        trace!("Block processed: block_number={}", block_number);
+        info!("Block processed: block_number={}", block_number);
         let _ = self
             .storage
             .update_indexer_progress(self.indexer_identifier.clone(), indexation_progress)

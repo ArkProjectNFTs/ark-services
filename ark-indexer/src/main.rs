@@ -32,8 +32,9 @@ async fn main() -> Result<()> {
     };
 
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
+    let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
 
-    let dynamo_storage = Arc::new(DynamoStorage::new().await);
+    let dynamo_storage = Arc::new(DynamoStorage::new(table_name.clone()).await);
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
     let indexer_version = 1;

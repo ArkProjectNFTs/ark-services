@@ -15,13 +15,14 @@ use starknet::core::types::FieldElement;
 
 pub struct DynamoStorage {
     client: Client,
+    table_name: String,
 }
 
 impl DynamoStorage {
-    pub async fn new() -> Self {
+    pub async fn new(table_name: String) -> Self {
         let config = load_from_env().await;
         let client = Client::new(&config);
-        Self { client }
+        Self { client, table_name }
     }
 }
 
@@ -35,8 +36,6 @@ pub trait AWSDynamoStorage: Send + Sync {
     ) -> Result<()>;
     async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()>;
 }
-
-const TABLE_NAME: &str = "ark-test";
 
 #[async_trait]
 impl AWSDynamoStorage for DynamoStorage {
@@ -58,7 +57,7 @@ impl AWSDynamoStorage for DynamoStorage {
         let response = self
             .client
             .put_item()
-            .table_name(TABLE_NAME)
+            .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(String::from("INDEXER")))
             .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .item("status", AttributeValue::S(status.to_string()))
@@ -96,8 +95,9 @@ impl AWSDynamoStorage for DynamoStorage {
         match self
             .client
             .update_item()
-            .table_name(TABLE_NAME)
+            .table_name(self.table_name.clone())
             .key("PK", AttributeValue::S(String::from("INDEXER")))
+            .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .update_expression(
                 "SET indexation_progress = :indexation_progress, last_update = :last_update",
             )
@@ -117,7 +117,7 @@ impl AWSDynamoStorage for DynamoStorage {
                 Ok(())
             }
             Err(error) => {
-                debug!(
+                error!(
                     "Upsert operation failed for task_id {}: {:?}",
                     task_id, error
                 );
