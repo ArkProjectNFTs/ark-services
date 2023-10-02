@@ -1,0 +1,11 @@
+{
+  "PK": {"S": "COLLECTION#ContractB"},
+  "SK": {"S": "COLLECTION"},
+  "Type": {"S": "Collection"},
+  "Data": {
+    "M": {
+      "attribute1": {"S": "value3"},
+      "attribute2": {"S": "value4"}
+    }
+  }
+}

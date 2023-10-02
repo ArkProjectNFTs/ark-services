@@ -1,0 +1,20 @@
+{
+  "PK": {"S": "TOKEN#ContractB#Token2"},
+  "SK": {"S": "TOKEN"},
+  "GSI1PK": {"S": "OWNER#Owner2"},
+  "GSI1SK": {"S": "TOKEN#ContractB#Token2"},
+  "GSI2PK": {"S": "COLLECTION#ContractB"},
+  "GSI2SK": {"S": "TOKEN#Token2"},
+  "GSI3PK": {"S": "LISTED#ContractB"},
+  "GSI3SK": {"S": "TOKEN#Token2"},
+  "Type": {"S": "Token"},
+  "ListedStatus": {"S": "LISTED"},
+  "Data": {
+    "M": {
+      "owner": {"S": "Owner2"},
+      "mint_address": {"S": "MintAddress2"},
+      "mint_timestamp": {"N": "1632611623"},
+      "is_listed": {"BOOL": true}
+    }
+  }
+}
