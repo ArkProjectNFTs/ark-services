@@ -503,7 +503,7 @@ impl Storage for DynamoStorage {
         log::debug!("Getting contract info for contract {}", contract_address);
 
         // Construct the primary key and secondary key for the contract
-        let pk = format!("CONTRACT#{}", contract_address.to_string());
+        let pk = format!("CONTRACT#{}", contract_address);
         let sk = "CONTRACT".to_string();
 
         // Fetch the contract from DynamoDB
@@ -549,7 +549,7 @@ impl Storage for DynamoStorage {
             contract_address
         );
 
-        let pk = format!("CONTRACT#{}", contract_address.to_string());
+        let pk = format!("CONTRACT#{}", contract_address);
         let sk = "CONTRACT".to_string();
 
         // Construct the data map for the contract
