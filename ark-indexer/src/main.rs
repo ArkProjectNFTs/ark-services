@@ -17,19 +17,18 @@ use std::{env, sync::Arc};
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    let is_head_of_chain = match env::var("HEAD_OF_CHAIN") {
-        Ok(_) => true,
-        Err(_) => false,
-    };
+    let is_head_of_chain = env::var("HEAD_OF_CHAIN").is_ok();
 
     let (from_block, to_block) = if is_head_of_chain {
         (BlockId::Number(0), BlockId::Number(0))
     } else {
-        let from = BlockId::Number(env::var("FROM_BLOCK")
-            .expect("FROM_BLOCK must be set")
-            .parse()
-            .expect("Can't parse FROM_BLOCK, expecting u64"));
-        
+        let from = BlockId::Number(
+            env::var("FROM_BLOCK")
+                .expect("FROM_BLOCK must be set")
+                .parse()
+                .expect("Can't parse FROM_BLOCK, expecting u64"),
+        );
+
         let to: BlockId = match env::var("TO_BLOCK") {
             Ok(to) => BlockId::Number(to.parse().expect("Can't parse TO_BLOCK, expecting u64")),
             Err(_) => BlockId::Tag(BlockTag::Latest),
@@ -37,7 +36,6 @@ async fn main() -> Result<()> {
 
         (from, to)
     };
-
 
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
@@ -68,8 +66,14 @@ async fn main() -> Result<()> {
         log::trace!("Syncing Pontos at head of the chain");
         pontos_task.index_pending().await?;
     } else {
-        log::trace!("Syncing Pontos for block range: {:?} - {:?}", from_block, to_block);
-        pontos_task.index_block_range(from_block, to_block, true).await?;
+        log::trace!(
+            "Syncing Pontos for block range: {:?} - {:?}",
+            from_block,
+            to_block
+        );
+        pontos_task
+            .index_block_range(from_block, to_block, true)
+            .await?;
     }
 
     Ok(())
