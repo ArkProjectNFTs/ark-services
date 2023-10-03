@@ -1,5 +1,5 @@
 {
-  "family": "ark-indexer-task-mainnet",
+  "family": "ark-indexer-task-testnet",
   "containerDefinitions": [
     {
       "name": "ark_indexer",
@@ -23,7 +23,7 @@
         "logDriver": "awslogs",
         "options": {
           "awslogs-create-group": "true",
-          "awslogs-group": "/ecs/ark-indexer-mainnet",
+          "awslogs-group": "/ecs/ark-indexer-testnet",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         },

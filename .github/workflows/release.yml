@@ -5,38 +5,107 @@ on:
     types: [published]
 
 jobs:
-  release-job:
+  push-docker-image:
     runs-on: ubuntu-latest
-    name: Handling Release
+    name: Push Docker Image
+    env:
+      AWS_REGION: us-east-1
+      REPOSITORY: arkproject
+      TAG: ${{ github.event.release.tag_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.release.tag_name }}
-          
+
       - name: Set up AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1.5.5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      
+          aws-region: ${{ env.AWS_REGION }}
+
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1.3.3
-      
-      - name: Build, Tag, and Push Docker Image to Amazon ECR
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: arkproject
-          TAG: ${{ github.event.release.tag_name }}
-        run: |
-          docker build -t $REGISTRY/$REPOSITORY:$TAG -f Dockerfile .
-          docker push $REGISTRY/$REPOSITORY:$TAG
 
-      - name: Notify Discord
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} -f Dockerfile .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
+    outputs:
+      registry: ${{ steps.login-ecr.outputs.registry }}
+
+  update-task-definition:
+    needs: push-docker-image
+    runs-on: ubuntu-latest
+    name: Update ECS Task Definitions
+    strategy:
+      matrix:
+        environment: [mainnet, testnet] # Define your environments here
+    env:
+      AWS_REGION: us-east-1
+      REPOSITORY: arkproject
+      TAG: ${{ github.event.release.tag_name }}
+      CONTAINER_NAME: ark_indexer
+      SERVICE_NAME: ark-indexer-${{ matrix.environment }}
+      CLUSTER_NAME: ark-indexers
+      TASK_DEFINITION_FILE: infrastructure/ecs/indexer-${{ matrix.environment }}.json
+      INDEXER_TABLE_NAME: ark_${{ matrix.environment }}_indexer
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.5.5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Amazon ECS task definition
+        id: render-web-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: "${{ env.TASK_DEFINITION_FILE }}"
+          container-name: "${{ env.CONTAINER_NAME }}"
+          image: "${{ needs.push-docker-image.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}"
+
+      - name: Add environment variables to ECS task definition
+        id: add-env-var
+        uses: cvmaker-bv/amazon-ecs-task-environment@v1
+        env:
+          ARK_INDEXER_VERSION: ${{ github.event.release.tag_name }}
+          RPC_PROVIDER: "https://${{ matrix.environment }}.arkproject.dev"
+          IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev"
+          RUST_LOG: "debug"
+          HEAD_OF_CHAIN: "true"
+        with:
+          task-definition: ${{ steps.render-web-container.outputs.task-definition }}
+          container-name: "${{ env.CONTAINER_NAME }}"
+          env-variables: "${{ toJson(env) }}"
+
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.add-env-var.outputs.task-definition }}
+          service: "${{ env.SERVICE_NAME }}"
+          cluster: "${{ env.CLUSTER_NAME }}"
+
+  discord-notification:
+    needs: "update-task-definition"
+    runs-on: ubuntu-latest
+    name: Discord Notification
+    steps:
+      - name: Send notification to dev-updates channel
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content":"A new release has been published: '${{ github.event.release.tag_name }}'. \nRelease Link: '${{ github.event.release.html_url }}'"}' \
+               --data "{\"content\":\"🔗 A new release has been published (ark-services): ${env.TAG}.\
+               \n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
+               \n🔵 Testnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-testnet \
+               \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: ${github.event.release.html_url}\"}" \
                ${{ secrets.DISCORD_WEBHOOK_URL }}
