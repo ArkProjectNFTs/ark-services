@@ -78,23 +78,3 @@ jobs:
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set Up AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1.5.5
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1.3.3
-
-      - name: Build, Tag, and Push Docker Image to Amazon ECR
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: arkproject
-          IMAGE_TAG: ${{ steps.tag_version.outputs.new_tag }}
-        run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f Dockerfile .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
