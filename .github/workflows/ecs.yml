@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  release-job:
+  task-definition:
     runs-on: ubuntu-latest
     name: Handling Release
     steps:
