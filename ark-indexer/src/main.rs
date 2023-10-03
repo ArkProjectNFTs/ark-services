@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
             to_block
         );
         pontos_task
-            .index_block_range(from_block, to_block, true)
+            .index_block_range(from_block, to_block, false)
             .await?;
     }
 

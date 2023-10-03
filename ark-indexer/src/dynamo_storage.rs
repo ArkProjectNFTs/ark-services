@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{types::AttributeValue, types::ReturnValue, Client};
 use chrono::Utc;
-use log::{debug, error, trace};
+use log::{debug, error, trace, info};
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 
@@ -150,7 +150,7 @@ impl Storage for DynamoStorage {
         let get_item_output = self
             .client
             .get_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk.clone()))
             .key("SK".to_string(), AttributeValue::S(sk.clone()))
             .send()
@@ -178,7 +178,7 @@ impl Storage for DynamoStorage {
                 let update_item_output = self
                     .client
                     .update_item()
-                    .table_name("ark_project_dev")
+                    .table_name(self.table_name.clone())
                     .key("PK".to_string(), AttributeValue::S(pk.clone()))
                     .key("SK".to_string(), AttributeValue::S(sk.clone()))
                     .update_expression("SET Data = :data")
@@ -211,7 +211,7 @@ impl Storage for DynamoStorage {
                 let put_item_output = self
                     .client
                     .put_item()
-                    .table_name("ark_project_dev")
+                    .table_name(self.table_name.clone())
                     .item("PK".to_string(), AttributeValue::S(pk.clone()))
                     .item("SK".to_string(), AttributeValue::S(sk.clone()))
                     .item("Type".to_string(), AttributeValue::S("Token".to_string()))
@@ -283,7 +283,7 @@ impl Storage for DynamoStorage {
         let get_item_output = self
             .client
             .get_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk.clone()))
             .key("SK".to_string(), AttributeValue::S(sk.clone()))
             .send()
@@ -298,7 +298,7 @@ impl Storage for DynamoStorage {
                 let update_item_output = self
                     .client
                     .update_item()
-                    .table_name("ark_project_dev")
+                    .table_name(self.table_name.clone())
                     .key("PK".to_string(), AttributeValue::S(pk.clone()))
                     .key("SK".to_string(), AttributeValue::S(sk.clone()))
                     .update_expression("SET Data = :data")
@@ -328,7 +328,7 @@ impl Storage for DynamoStorage {
                 let put_item_output = self
                     .client
                     .put_item()
-                    .table_name("ark_project_dev")
+                    .table_name(self.table_name.clone())
                     .item("PK".to_string(), AttributeValue::S(pk.clone()))
                     .item("SK".to_string(), AttributeValue::S(sk.clone()))
                     .item("Type".to_string(), AttributeValue::S("Token".to_string()))
@@ -397,7 +397,7 @@ impl Storage for DynamoStorage {
         let get_item_output = self
             .client
             .get_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk.clone()))
             .key("SK".to_string(), AttributeValue::S(sk.clone()))
             .send()
@@ -456,7 +456,7 @@ impl Storage for DynamoStorage {
                 let put_item_output = self
                     .client
                     .put_item()
-                    .table_name("ark_project_dev")
+                    .table_name(self.table_name.clone())
                     .item("PK".to_string(), AttributeValue::S(pk.clone()))
                     .item("SK".to_string(), AttributeValue::S(sk.clone()))
                     .item("Type".to_string(), AttributeValue::S("Event".to_string()))
@@ -510,7 +510,7 @@ impl Storage for DynamoStorage {
         let get_item_output = self
             .client
             .get_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
             .send()
@@ -571,7 +571,7 @@ impl Storage for DynamoStorage {
         let put_item_output = self
             .client
             .put_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
             .item("Data", AttributeValue::M(data))
@@ -613,7 +613,7 @@ impl Storage for DynamoStorage {
         let put_item_output = self
             .client
             .put_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
             .item("Data", AttributeValue::M(data))
@@ -639,12 +639,13 @@ impl Storage for DynamoStorage {
         let get_item_output = self
             .client
             .get_item()
-            .table_name("ark_project_dev")
+            .table_name(self.table_name.clone())
             .key("PK", AttributeValue::S(pk))
             .key("SK", AttributeValue::S(sk))
             .send()
             .await;
 
+        info!("get_item_output: {:?}", get_item_output);
         match get_item_output {
             Ok(output) => {
                 if let Some(item) = output.item {
@@ -685,21 +686,23 @@ impl Storage for DynamoStorage {
                             status,
                         })
                     } else {
+                        log::error!("Data NotFound error");
                         Err(StorageError::NotFound)
                     }
                 } else {
+                    log::error!("Item NotFound error");
                     Err(StorageError::NotFound)
                 }
             }
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
-                Err(StorageError::DatabaseError)
+                log::error!("Table NotFound error: {:?}", e);
+                Err(StorageError::NotFound)
             }
         }
     }
 
     async fn clean_block(&self, _block_number: u64) -> Result<(), StorageError> {
-        Err(StorageError::DatabaseError)
+        Ok(())
     }
 
     async fn update_last_pending_block(
