@@ -1,17 +1,16 @@
-name: Deploy Docker Image to AWS ECR
+name: Build and Push Docker Image to Amazon ECR
 
 on:
-  release:
-    types: [created]
-  workflow_dispatch:
-    inputs:
-      image_tag:
-        description: 'Docker image tag'
-        required: true
-        default: 'latest'
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build-and-push:
+
+  push-docker-image:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
     # Add a timeout for your jobs to avoid infinite running jobs
@@ -32,23 +31,12 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1.3.3 # Use specific version
 
-      - name: Determine Image Tag
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "::set-output name=version::${{ github.event.inputs.image_tag }}"
-          else
-            echo "::set-output name=version::${GITHUB_REF#refs/tags/}"
-          fi
-        # Adding comments to explain steps
-        shell: bash
-
       - name: Build, Tag, and Push Docker Image to Amazon ECR
         # Defining environment variables
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: arkproject
-          IMAGE_TAG: ${{ steps.version.outputs.version }}
+          IMAGE_TAG: ${{ steps.tag_version.outputs.new_tag }}
         run: |
           # Adding comments for each command
           # Build the Docker image
