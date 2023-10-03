@@ -174,6 +174,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "log",
+ "regex",
  "starknet",
  "tokio",
 ]
@@ -397,9 +398,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3"
-version = "0.30.0"
+version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a531d010f9f556bf65eb3bcd8d24f1937600ab6940fede4d454cd9b1f031fb34"
+checksum = "c681fef332c3462634cd97fced8d1ac3cfdf790829bd7bfb4006cfba76712053"
 dependencies = [
  "aws-credential-types",
  "aws-http",
@@ -2499,9 +2500,9 @@ checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
 
 [[package]]
 name = "reqwest"
-version = "0.11.21"
+version = "0.11.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78fdbab6a7e1d7b13cc8ff10197f47986b41c639300cc3c8158cac7847c9bbef"
+checksum = "046cd98826c46c2ac8ddecae268eb5c2e58628688a5fc7a2643704a73faba95b"
 dependencies = [
  "base64 0.21.4",
  "bytes",
