@@ -428,6 +428,7 @@ impl Storage for DynamoStorage {
         match get_item_output {
             Ok(output) if output.item.is_some() => Err(StorageError::AlreadyExists),
             Ok(_) => {
+                println!("event: {:?}", event);
                 // Create new item
                 let mut data_map = HashMap::new();
                 data_map.insert(
@@ -484,7 +485,7 @@ impl Storage for DynamoStorage {
                     .item("Type".to_string(), AttributeValue::S("Event".to_string()))
                     .item(
                         "GSI1PK".to_string(),
-                        AttributeValue::S(format!("CONTRACT#{}", event.contract_address)),
+                        AttributeValue::S(format!("COLLECTION#{}", event.contract_address)),
                     )
                     .item(
                         "GSI1SK".to_string(),
@@ -526,8 +527,8 @@ impl Storage for DynamoStorage {
         log::debug!("Getting contract info for contract {}", contract_address);
 
         // Construct the primary key and secondary key for the contract
-        let pk = format!("CONTRACT#{}", contract_address);
-        let sk = "CONTRACT".to_string();
+        let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
+        let sk = "COLLECTION".to_string();
 
         // Fetch the contract from DynamoDB
         let get_item_output = self
@@ -572,8 +573,8 @@ impl Storage for DynamoStorage {
             contract_address
         );
 
-        let pk = format!("CONTRACT#{}", contract_address);
-        let sk = "CONTRACT".to_string();
+        let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
+        let sk = "COLLECTION".to_string();
 
         // Construct the data map for the contract
         let mut data = HashMap::new();
