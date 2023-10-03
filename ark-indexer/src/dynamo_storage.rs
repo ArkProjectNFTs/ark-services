@@ -189,7 +189,6 @@ impl Storage for DynamoStorage {
                     "MintTimestamp".to_string(),
                     AttributeValue::N(token.mint_timestamp.unwrap().to_string()),
                 );
-                // TODO move as a GSIPK to do quick lookups
                 data_map.insert(
                     "BlockNumber".to_string(),
                     AttributeValue::N(block_number.to_string()),
@@ -218,7 +217,19 @@ impl Storage for DynamoStorage {
             Ok(_) => {
                 // Create new item for the minted token
                 let mut data_map = HashMap::new();
+                data_map.insert(
+                    "BlockNumber".to_string(),
+                    AttributeValue::N(block_number.to_string()),
+                );
                 data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
+                data_map.insert(
+                    "contract_address".to_string(),
+                    AttributeValue::S(token.address.clone()),
+                );
+                data_map.insert(
+                    "TokenId".to_string(),
+                    AttributeValue::N(token.formated_token_id.token_id.to_string()),
+                );
                 data_map.insert(
                     "MintAddress".to_string(),
                     AttributeValue::S(to_hex_str(&token.mint_address.unwrap())),
@@ -262,7 +273,7 @@ impl Storage for DynamoStorage {
                         "GSI3SK".to_string(),
                         AttributeValue::S(format!(
                             "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.token_id
+                            token.address, token.formated_token_id.padded_token_id
                         )),
                     )
                     .item("Data".to_string(), AttributeValue::M(data_map))
@@ -339,11 +350,19 @@ impl Storage for DynamoStorage {
             Ok(_) => {
                 // Create new item
                 let mut data_map = HashMap::new();
-                data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
-                // TODO move as a GSIPK to do quick lookups
                 data_map.insert(
                     "BlockNumber".to_string(),
                     AttributeValue::N(block_number.to_string()),
+                );
+                data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
+                // TODO move as a GSIPK to do quick lookups
+                data_map.insert(
+                    "contract_address".to_string(),
+                    AttributeValue::S(token.address.clone()),
+                );
+                data_map.insert(
+                    "TokenId".to_string(),
+                    AttributeValue::N(token.formated_token_id.token_id.to_string()),
                 );
 
                 let put_item_output = self
@@ -380,7 +399,7 @@ impl Storage for DynamoStorage {
                         "GSI3SK".to_string(),
                         AttributeValue::S(format!(
                             "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.token_id
+                            token.address, token.formated_token_id.padded_token_id
                         )),
                     )
                     .item("Data".to_string(), AttributeValue::M(data_map))
@@ -412,7 +431,11 @@ impl Storage for DynamoStorage {
         log::debug!("Registering event {:?}", event);
 
         // Construct the primary key and secondary key for the event
-        let pk = format!("EVENT#{}#{}", event.contract_address, event.event_id);
+        let pk = format!(
+            "EVENT#{}#{}",
+            event.contract_address,
+            to_hex_str(&event.event_id)
+        );
         let sk = "EVENT".to_string();
 
         // Check if the event already exists in DynamoDB
@@ -456,10 +479,6 @@ impl Storage for DynamoStorage {
                     AttributeValue::S(event.formated_token_id.token_id.clone()),
                 );
                 data_map.insert(
-                    "PaddedTokenID".to_string(),
-                    AttributeValue::S(event.formated_token_id.padded_token_id.clone()),
-                );
-                data_map.insert(
                     "BlockNumber".to_string(),
                     AttributeValue::N(event.block_number.to_string()),
                 );
@@ -472,8 +491,8 @@ impl Storage for DynamoStorage {
                     AttributeValue::S(event.event_type.clone().to_string()),
                 );
                 data_map.insert(
-                    "BlockNumber".to_string(),
-                    AttributeValue::N(block_number.to_string()),
+                    "EventID".to_string(),
+                    AttributeValue::S(to_hex_str(&event.event_id)),
                 );
 
                 let put_item_output = self
@@ -579,8 +598,8 @@ impl Storage for DynamoStorage {
         // Construct the data map for the contract
         let mut data = HashMap::new();
         data.insert(
-            "Type".to_string(),
-            AttributeValue::S(contract_address.to_string()),
+            "ContractAddress".to_string(),
+            AttributeValue::S(to_hex_str(contract_address)),
         );
         data.insert(
             "ContractType".to_string(),
@@ -599,7 +618,10 @@ impl Storage for DynamoStorage {
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
             .item("Data", AttributeValue::M(data))
-            .item("Type", AttributeValue::S(EntityType::Collection.to_string()))
+            .item(
+                "Type",
+                AttributeValue::S(EntityType::Collection.to_string()),
+            )
             .condition_expression("attribute_not_exists(PK)")
             .send()
             .await;

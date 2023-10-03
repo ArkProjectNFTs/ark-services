@@ -13,5 +13,4 @@ async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
 starknet = "0.6.0"
-# arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.1.0-alpha.2"}
-arkproject = { path = "/Users/christophedumont/Workspace/ScreenshotlabsProjects/OpenSource/ark-project" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.1"}
