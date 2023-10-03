@@ -2,6 +2,7 @@
   "family": "ark-indexer-task-mainnet",
   "containerDefinitions": [
     {
+      "name": "ark_indexer",
       "cpu": 0,
       "portMappings": [
         {
@@ -13,6 +14,7 @@
         }
       ],
       "essential": true,
+      "environment": [],
       "environmentFiles": [],
       "mountPoints": [],
       "volumesFrom": [],
