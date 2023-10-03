@@ -34,9 +34,40 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$TAG -f Dockerfile .
           docker push $REGISTRY/$REPOSITORY:$TAG
 
+      - name: Update Amazon ECS task definition
+        id: render-web-container
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: "infrastructure/ecs/indexer-mainnet.json"
+          container-name: "ark_indexer"
+          image: "${{ steps.login-ecr.outputs.registry }}/arkproject:${{ github.event.release.tag_name }}"
+
+      - name: Add environment variables to ECS task definition
+        id: add-env-var
+        uses: cvmaker-bv/amazon-ecs-task-environment@v1
+        env:
+          ARK_INDEXER_VERSION: "v0.0.1"
+          RPC_PROVIDER: "https://juno.mainnet.arkproject.dev"
+          IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev"
+          RUST_LOG: "trace"
+          HEAD_OF_CHAIN: "true"
+          INDEXER_TABLE_NAME: "ark_mainnet_indexer"
+        with:
+          task-definition: ${{ steps.render-web-container.outputs.task-definition }}
+          container-name: "ark_indexer"
+          env-variables: "${{ toJson(env) }}"
+
+      - name: Deploy to Amazon ECS service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.add-env-var.outputs.task-definition }}
+          service: "ark-indexer-mainnet"
+          cluster: "ark-indexers"
+  
       - name: Notify Discord
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
                -d '{"content":"A new release has been published: '${{ github.event.release.tag_name }}'. \nRelease Link: '${{ github.event.release.html_url }}'"}' \
                ${{ secrets.DISCORD_WEBHOOK_URL }}
+
