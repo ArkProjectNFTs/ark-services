@@ -1,45 +1,33 @@
-name: Create New Tag and Push Docker Image to Amazon ECR
+name: Release Workflow
 
 on:
-  push:
-    branches:
-      - main
-
-env:
-  CARGO_TERM_COLOR: always
+  release:
+    types: [created]
 
 jobs:
-
-  build-and-push:
+  release-job:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    
+    name: Handling Release
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v2
-        
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-        
+
       - name: Set up AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1.5.5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
+      
       - name: Log in to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1.3.3
-
+      
       - name: Build, Tag, and Push Docker Image to Amazon ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: arkproject
-          IMAGE_TAG: ${{ steps.tag_version.outputs.new_tag }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f Dockerfile .
-          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+          docker build -t $REGISTRY/$REPOSITORY:$TAG -f Dockerfile .
+          docker push $REGISTRY/$REPOSITORY:$TAG

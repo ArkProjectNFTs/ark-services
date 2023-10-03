@@ -1,57 +1,100 @@
-name: Continous Integration
+name: Continuous Integration
 
 on:
   push:
     branches:
       - main
   pull_request:
+    types: [opened, synchronize, reopened, closed]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   check:
-    name: Check
+    name: Cargo Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
+      - name: Checkout Code
         uses: actions/checkout@v2
-      - name: Cache cargo dependencies
+
+      - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
-      - name: Install stable toolchain
+
+      - name: Set Up Stable Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Run cargo check
+
+      - name: Run Cargo Check
         uses: actions-rs/cargo@v1
         with:
           command: check
 
   lints:
-    if: github.event_name == 'pull_request'
-    name: Lints
+    name: Run Lints
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
     steps:
-      - name: Checkout sources
+      - name: Checkout Code
         uses: actions/checkout@v2
-      - name: Cache cargo dependencies
+
+      - name: Cache Cargo Dependencies
         uses: Swatinem/rust-cache@v2
-      - name: Install stable toolchain
+
+      - name: Set Up Stable Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
           components: rustfmt, clippy
-      - name: Run cargo fmt
+
+      - name: Run Cargo Format Check
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
-      - name: Run cargo clippy
+
+      - name: Run Cargo Clippy
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
+
+  create-tag:
+    name: Create and Push Tag
+    runs-on: ubuntu-latest
+    needs: [check, lints]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Create and Push New Tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Up AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.5.5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1.3.3
+
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: arkproject
+          IMAGE_TAG: ${{ steps.tag_version.outputs.new_tag }}
+        run: |
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f Dockerfile .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
