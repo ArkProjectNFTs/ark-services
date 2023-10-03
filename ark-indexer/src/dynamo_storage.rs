@@ -582,7 +582,8 @@ impl Storage for DynamoStorage {
         match put_item_output {
             Ok(_) => Ok(()),
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
+                // If the condition failed, it means the contract info already exists no need to create it
+                log::info!("Collection already exist: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
@@ -696,7 +697,7 @@ impl Storage for DynamoStorage {
             }
             Err(e) => {
                 log::error!("Table NotFound error: {:?}", e);
-                Err(StorageError::NotFound)
+                Err(StorageError::DatabaseError)
             }
         }
     }

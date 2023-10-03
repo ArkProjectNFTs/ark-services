@@ -39,6 +39,7 @@ async fn main() -> Result<()> {
 
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
+    let force_mode = env::var("FORCE_MODE").is_ok();
 
     let dynamo_storage = Arc::new(DynamoStorage::new(table_name.clone()).await);
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
@@ -72,7 +73,7 @@ async fn main() -> Result<()> {
             to_block
         );
         pontos_task
-            .index_block_range(from_block, to_block, false)
+            .index_block_range(from_block, to_block, force_mode)
             .await?;
     }
 
