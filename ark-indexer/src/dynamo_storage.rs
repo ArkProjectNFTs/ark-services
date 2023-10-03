@@ -494,6 +494,10 @@ impl Storage for DynamoStorage {
                     "EventID".to_string(),
                     AttributeValue::S(to_hex_str(&event.event_id)),
                 );
+                data_map.insert(
+                    "BlockNumber".to_string(),
+                    AttributeValue::N(block_number.to_string()),
+                );
 
                 let put_item_output = self
                     .client
