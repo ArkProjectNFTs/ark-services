@@ -12,5 +12,5 @@ anyhow.workspace = true
 async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
-starknet = "0.5.0"
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.1.0-alpha.0"}
+starknet = "0.6.0"
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.1.0-alpha.1"}

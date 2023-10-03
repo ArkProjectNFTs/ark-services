@@ -189,4 +189,16 @@ impl Storage for DynamoStorage {
     async fn clean_block(&self, _block_number: u64) -> Result<(), StorageError> {
         Ok(())
     }
+
+    async fn update_last_pending_block(
+        &self,
+        _block_number: u64,
+        _block_timestamp: u64,
+    ) -> Result<(), StorageError> {
+        // TODO: when this is called, we've successfully process the `pending`
+        // block that became the `latest`.
+        // So we should update the storage with the new block number
+        // based on the timestamp to identify the block.
+        Ok(())
+    }
 }
