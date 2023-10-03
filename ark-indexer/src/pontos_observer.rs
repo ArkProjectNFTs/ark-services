@@ -10,12 +10,12 @@ use crate::dynamo_storage::AWSDynamoStorage;
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
-    pub indexer_version: u64,
+    pub indexer_version: String,
     pub indexer_identifier: String,
 }
 
 impl<S: AWSDynamoStorage> PontosObserver<S> {
-    pub fn new(storage: Arc<S>, indexer_version: u64, indexer_identifier: String) -> Self {
+    pub fn new(storage: Arc<S>, indexer_version: String, indexer_identifier: String) -> Self {
         Self {
             storage,
             indexer_identifier,
@@ -43,7 +43,7 @@ where
             .storage
             .update_indexer_task_status(
                 self.indexer_identifier.clone(),
-                self.indexer_version,
+                self.indexer_version.clone(),
                 IndexerStatus::Running,
             )
             .await;

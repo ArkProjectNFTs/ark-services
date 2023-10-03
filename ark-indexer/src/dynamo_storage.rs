@@ -11,9 +11,29 @@ use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{types::AttributeValue, types::ReturnValue, Client};
 use chrono::Utc;
-use log::{debug, error, trace, info};
+use log::{debug, error, info, trace};
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
+use std::fmt;
+
+#[derive(Debug, PartialEq, Eq)]
+enum EntityType {
+    Token,
+    Block,
+    Collection,
+    Event,
+}
+
+impl fmt::Display for EntityType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            EntityType::Token => write!(f, "Token"),
+            EntityType::Block => write!(f, "Block"),
+            EntityType::Collection => write!(f, "Collection"),
+            EntityType::Event => write!(f, "Event"),
+        }
+    }
+}
 
 pub struct DynamoStorage {
     client: Client,
@@ -33,7 +53,7 @@ pub trait AWSDynamoStorage: Send + Sync {
     async fn update_indexer_task_status(
         &self,
         task_id: String,
-        indexer_version: u64,
+        indexer_version: String,
         status: IndexerStatus,
     ) -> Result<()>;
     async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()>;
@@ -44,7 +64,7 @@ impl AWSDynamoStorage for DynamoStorage {
     async fn update_indexer_task_status(
         &self,
         task_id: String,
-        indexer_version: u64,
+        indexer_version: String,
         status: IndexerStatus,
     ) -> Result<()> {
         let now = Utc::now();
@@ -236,7 +256,7 @@ impl Storage for DynamoStorage {
                     )
                     .item(
                         "GSI3PK".to_string(),
-                        AttributeValue::S("LISTED#true".to_string()),
+                        AttributeValue::S("LISTED#false".to_string()),
                     ) // Assuming the token is listed by default
                     .item(
                         "GSI3SK".to_string(),
@@ -246,6 +266,7 @@ impl Storage for DynamoStorage {
                         )),
                     )
                     .item("Data".to_string(), AttributeValue::M(data_map))
+                    .item("Type", AttributeValue::S(EntityType::Token.to_string()))
                     .return_values(ReturnValue::AllOld)
                     .send()
                     .await;
@@ -353,7 +374,7 @@ impl Storage for DynamoStorage {
                     )
                     .item(
                         "GSI3PK".to_string(),
-                        AttributeValue::S("LISTED#true".to_string()),
+                        AttributeValue::S("LISTED#false".to_string()),
                     ) // Assuming the token is listed by default
                     .item(
                         "GSI3SK".to_string(),
@@ -363,6 +384,7 @@ impl Storage for DynamoStorage {
                         )),
                     )
                     .item("Data".to_string(), AttributeValue::M(data_map))
+                    .item("Type", AttributeValue::S(EntityType::Token.to_string()))
                     .return_values(ReturnValue::AllOld)
                     .send()
                     .await;
@@ -477,6 +499,7 @@ impl Storage for DynamoStorage {
                         AttributeValue::S(format!("EVENT#{}", event.event_id)),
                     )
                     .item("Data".to_string(), AttributeValue::M(data_map))
+                    .item("Type", AttributeValue::S(EntityType::Event.to_string()))
                     .return_values(ReturnValue::AllOld)
                     .send()
                     .await;
@@ -575,6 +598,7 @@ impl Storage for DynamoStorage {
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
             .item("Data", AttributeValue::M(data))
+            .item("Type", AttributeValue::S(EntityType::Collection.to_string()))
             .condition_expression("attribute_not_exists(PK)")
             .send()
             .await;
@@ -618,6 +642,7 @@ impl Storage for DynamoStorage {
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
             .item("Data", AttributeValue::M(data))
+            .item("Type", AttributeValue::S(EntityType::Block.to_string()))
             .send()
             .await;
 
@@ -658,7 +683,7 @@ impl Storage for DynamoStorage {
                                 return Err(StorageError::DatabaseError);
                             };
 
-                        let indexer_version: u64 = indexer_version_str
+                        let indexer_version = indexer_version_str
                             .parse()
                             .map_err(|_| StorageError::DatabaseError)?;
 

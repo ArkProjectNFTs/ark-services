@@ -44,12 +44,12 @@ async fn main() -> Result<()> {
     let dynamo_storage = Arc::new(DynamoStorage::new(table_name.clone()).await);
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
-    let indexer_version = 1;
+    let indexer_version = "1".to_string(); // TODO: get from env
     let indexer_identifier = String::from("main");
 
     let pontos_observer = Arc::new(PontosObserver::new(
         Arc::clone(&dynamo_storage),
-        indexer_version,
+        indexer_version.clone(),
         indexer_identifier.clone(),
     ));
 
