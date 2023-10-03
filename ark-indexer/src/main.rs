@@ -1,3 +1,4 @@
+mod aws_s3_file_manager;
 mod dynamo_storage;
 mod pontos_observer;
 
