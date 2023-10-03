@@ -1,4 +1,4 @@
-name: Build and Push Docker Image to Amazon ECR
+name: Create New Tag and Push Docker Image to Amazon ECR
 
 on:
   push:
@@ -10,29 +10,22 @@ env:
 
 jobs:
 
-  tag-version:
+  build-and-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        
       - name: Bump version and push tag
         id: tag_version
         uses: mathieudutour/github-tag-action@v6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  push-docker-image:
-    needs: tag-version
-    name: Build and Push Docker Image
-    runs-on: ubuntu-latest
-    # Add a timeout for your jobs to avoid infinite running jobs
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2.4.0 # Use specific version
-
+        
       - name: Set up AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1.5.5 # Use specific version
+        uses: aws-actions/configure-aws-credentials@v1.5.5
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -40,18 +33,13 @@ jobs:
 
       - name: Log in to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1.3.3 # Use specific version
+        uses: aws-actions/amazon-ecr-login@v1.3.3
 
       - name: Build, Tag, and Push Docker Image to Amazon ECR
-        # Defining environment variables
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: arkproject
           IMAGE_TAG: ${{ steps.tag_version.outputs.new_tag }}
         run: |
-          # Adding comments for each command
-          # Build the Docker image
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f Dockerfile .
-          # Push the Docker image to the ECR repository
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
-        shell: bash
