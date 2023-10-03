@@ -1,5 +1,6 @@
 mod aws_s3_file_manager;
 mod dynamo_storage;
+mod file_manager;
 mod pontos_observer;
 
 use crate::dynamo_storage::DynamoStorage;
