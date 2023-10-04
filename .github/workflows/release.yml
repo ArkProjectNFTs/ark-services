@@ -108,4 +108,4 @@ jobs:
                .\n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
                \n🔵 Testnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-testnet \
                \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: '${{ github.event.release.html_url }}'"}' \
-               YOUR_DISCORD_WEBHOOK
+               ${{ secrets.DISCORD_WEBHOOK_URL }}
