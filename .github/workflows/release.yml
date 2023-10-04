@@ -36,10 +36,11 @@ jobs:
     outputs:
       registry: ${{ steps.login-ecr.outputs.registry }}
 
-  release-job:
+  update-task-definition:
+    
     needs: push-docker-image
     runs-on: ubuntu-latest
-    name: Handling Release
+    name: Update ECS Task Definitions
     strategy:
       matrix:
         environment: [mainnet, testnet] # Define your environments here
@@ -54,6 +55,11 @@ jobs:
       INDEXER_TABLE_NAME: ark_${{ matrix.environment }}_indexer
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
       - name: Update Amazon ECS task definition
         id: render-web-container
         uses: aws-actions/amazon-ecs-render-task-definition@v1
