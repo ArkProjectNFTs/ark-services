@@ -4,7 +4,7 @@
 //!
 //! `https://.../collection?address=0x1234`
 //!
-use lambda_dynamo_common::{
+use ark_dynamodb::{
     collection::{ArkCollectionProvider, DynamoDbCollectionProvider},
     init_aws_dynamo_client, Client as DynamoClient,
 };

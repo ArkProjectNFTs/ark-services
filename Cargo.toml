@@ -12,7 +12,7 @@ edition = "2021"
 [workspace]
 members = [
   "ark-indexer",
-  "lambdas/lambda-dynamo-common",
+  "ark-dynamodb",
   "lambdas/apigw/lambda-http-common",
   "lambdas/apigw/lambda-get-collection",
   "lambdas/apigw/lambda-get-token",
@@ -22,11 +22,12 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0"
+ark-dynamodb = { path = "ark-dynamodb" }
 async-trait = "0.1.73"
+lambda-http-common = { path = "lambdas/apigw/lambda-http-common" }
 tokio = { version = "1", features = ["full"] }
 serde = "1.0.160"
 serde_json = "1.0.96"
 serde_with = "2.3.2"
+starknet = "0.6.0"
 thiserror = "1.0.40"
-lambda-http-common = { path = "lambdas/apigw/lambda-http-common" }
-lambda-dynamo-common = { path = "lambdas/lambda-dynamo-common" }

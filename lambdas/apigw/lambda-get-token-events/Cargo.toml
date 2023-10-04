@@ -16,7 +16,7 @@ edition = "2021"
 
 [dependencies]
 lambda-http-common.workspace = true
-lambda-dynamo-common.workspace = true
+ark-dynamodb.workspace = true
 lambda_http = "0.8.1"
 lambda_runtime = "0.8.1"
 tokio = { version = "1", features = ["macros"] }
@@ -25,4 +25,4 @@ tracing-subscriber = { version = "0.3", default-features = false, features = ["f
 
 [dev-dependencies]
 mockall = "0.11.4"
-lambda-dynamo-common = { path = "../../lambda-dynamo-common", features = ["mock"] }
+ark-dynamodb = { path = "../../../ark-dynamodb", features = ["mock"] }

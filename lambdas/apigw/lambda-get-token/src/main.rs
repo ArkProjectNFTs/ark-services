@@ -6,7 +6,7 @@
 //!
 //! `https://.../token?address=0x1234&id=1234`
 //!
-use lambda_dynamo_common::{
+use ark_dynamodb::{
     init_aws_dynamo_client,
     token::{ArkTokenProvider, DynamoDbTokenProvider},
     Client as DynamoClient,

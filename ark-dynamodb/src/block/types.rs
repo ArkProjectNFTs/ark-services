@@ -23,3 +23,23 @@ impl TryFrom<HashMap<String, AttributeValue>> for BlockData {
         })
     }
 }
+
+impl From<BlockData> for HashMap<String, AttributeValue> {
+    fn from(data: BlockData) -> Self {
+        let mut map = HashMap::new();
+        map.insert(
+            "IndexerVersion".to_string(),
+            AttributeValue::S(data.indexer_version.clone()),
+        );
+        map.insert(
+            "IndexerIdentifier".to_string(),
+            AttributeValue::S(data.indexer_identifier.clone()),
+        );
+        map.insert(
+            "Status".to_string(),
+            AttributeValue::S(data.status.clone()),
+        );
+
+        map
+    }
+}

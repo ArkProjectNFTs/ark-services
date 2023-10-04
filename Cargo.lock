@@ -119,6 +119,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4668cab20f66d8d020e1fbc0ebe47217433c1b6c8f2040faf858554e394ace6"
 
 [[package]]
+name = "ark-dynamodb"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arkproject",
+ "async-trait",
+ "aws-config",
+ "aws-sdk-dynamodb",
+ "aws-sdk-s3 0.30.0",
+ "chrono",
+ "log",
+ "mockall",
+ "serde",
+ "serde_json",
+ "serde_with 2.3.3",
+ "starknet",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-log",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "ark-ff"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -166,6 +190,7 @@ name = "ark-indexer"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ark-dynamodb",
  "arkproject",
  "async-trait",
  "aws-config",
@@ -1915,26 +1940,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "lambda-dynamo-common"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "aws-config",
- "aws-sdk-dynamodb",
- "aws-sdk-s3 0.30.0",
- "log",
- "mockall",
- "serde",
- "serde_json",
- "serde_with 2.3.3",
- "thiserror",
-]
-
-[[package]]
 name = "lambda-get-collection"
 version = "0.1.0"
 dependencies = [
- "lambda-dynamo-common",
+ "ark-dynamodb",
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
@@ -1948,7 +1957,7 @@ dependencies = [
 name = "lambda-get-token"
 version = "0.1.0"
 dependencies = [
- "lambda-dynamo-common",
+ "ark-dynamodb",
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
@@ -1962,7 +1971,7 @@ dependencies = [
 name = "lambda-get-token-events"
 version = "0.1.0"
 dependencies = [
- "lambda-dynamo-common",
+ "ark-dynamodb",
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
@@ -2847,9 +2856,9 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.15"
+version = "0.38.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2f9da0cbd88f9f09e7814e388301c8414c51c62aa6ce1e4b5c551d49d96e531"
+checksum = "f25469e9ae0f3d0047ca8b93fc56843f38e6774f0914a107ff8b41be8be8e0b7"
 dependencies = [
  "bitflags 2.4.0",
  "errno",
@@ -3166,9 +3175,9 @@ dependencies = [
 
 [[package]]
 name = "sharded-slab"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1b21f559e07218024e7e9f90f96f601825397de0e25420135f7f952453fed0b"
+checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
 ]

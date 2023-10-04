@@ -1,21 +1,29 @@
 [package]
-name = "lambda-dynamo-common"
+name = "ark-dynamodb"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.17"
+anyhow.workspace = true
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.3" }
 async-trait.workspace = true
 aws-config = "0.56.1"
 aws-sdk-dynamodb = "0.31.1"
 aws-sdk-s3 = "0.30.0"
+chrono = "0.4.19"
+log = "0.4.17"
+mockall = { version = "0.11.2", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
+starknet.workspace = true
 thiserror.workspace = true
-mockall = { version = "0.11.2", optional = true }
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing = "0.1"
+tracing-log = "0.1"
+tokio.workspace = true
 
 [dev-dependencies]
 mockall = "0.11.2"

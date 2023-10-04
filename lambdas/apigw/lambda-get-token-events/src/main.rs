@@ -6,7 +6,7 @@
 //!
 //! `https://.../token-events?address=0x1234&id=1234`
 //!
-use lambda_dynamo_common::{
+use ark_dynamodb::{
     event::{ArkEventProvider, DynamoDbEventProvider},
     init_aws_dynamo_client, Client as DynamoClient,
 };

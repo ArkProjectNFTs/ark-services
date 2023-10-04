@@ -1,3 +1,4 @@
+use ark_dynamodb::storage::AWSDynamoStorage;
 use arkproject::pontos::{
     event_handler::EventHandler,
     storage::types::{IndexerStatus, TokenEvent, TokenFromEvent},
@@ -5,8 +6,6 @@ use arkproject::pontos::{
 use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, error, info};
-
-use crate::dynamo_storage::AWSDynamoStorage;
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,

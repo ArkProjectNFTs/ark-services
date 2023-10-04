@@ -5,6 +5,7 @@ pub mod block;
 pub mod collection;
 pub mod event;
 pub mod token;
+pub mod storage;
 
 pub(crate) mod convert;
 
