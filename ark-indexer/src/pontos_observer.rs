@@ -4,7 +4,7 @@ use arkproject::pontos::{
 };
 use async_trait::async_trait;
 use std::sync::Arc;
-use tracing::{info, error, debug};
+use tracing::{debug, error, info};
 
 use crate::dynamo_storage::AWSDynamoStorage;
 
@@ -40,11 +40,9 @@ where
     async fn on_block_processing(&self, block_number: u64) {
         debug!(
             "Block processing: block_number={}, indexer_identifier={}, indexer_version={}",
-            block_number,
-            self.indexer_identifier,
-            self.indexer_version
+            block_number, self.indexer_identifier, self.indexer_version
         );
-        
+
         match self
             .storage
             .update_indexer_task_status(
@@ -52,10 +50,15 @@ where
                 self.indexer_version.clone(),
                 IndexerStatus::Running,
             )
-            .await {
-                Ok(_) => { info!("Task status updated"); }
-                Err(err) => { error!("Task status request error: {:?}", err); }
+            .await
+        {
+            Ok(_) => {
+                info!("Task status updated");
             }
+            Err(err) => {
+                error!("Task status request error: {:?}", err);
+            }
+        }
     }
 
     async fn on_terminated(&self, block_number: u64, indexation_progress: f64) {
