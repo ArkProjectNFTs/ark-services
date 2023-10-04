@@ -6,15 +6,20 @@ use arkproject::pontos::storage::{
     },
     Storage,
 };
+
 use arkproject::starknet::format::to_hex_str;
 use async_trait::async_trait;
 use aws_config::load_from_env;
-use aws_sdk_dynamodb::{types::AttributeValue, types::ReturnValue, Client};
+use aws_sdk_dynamodb::{
+    types::AttributeValue, types::DeleteRequest, types::ReturnValue, types::WriteRequest, Client,
+};
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::fmt;
 use tracing::{debug, error, info, trace};
+use tokio::time::sleep;
+use tokio::time::Duration;
 
 #[derive(Debug, PartialEq, Eq)]
 enum EntityType {
@@ -159,7 +164,7 @@ impl Storage for DynamoStorage {
         token: &TokenFromEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        debug!("Registering mint {:?}", token);
+        info!("Registering mint {:?}", token);
 
         // Construct the primary key for the token
         let pk = format!(
@@ -452,7 +457,7 @@ impl Storage for DynamoStorage {
         event: &TokenEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        debug!("Registering event {:?}", event);
+        info!("Registering event {:?}", event);
 
         // Construct the primary key and secondary key for the event
         let pk = format!(
@@ -475,7 +480,6 @@ impl Storage for DynamoStorage {
         match get_item_output {
             Ok(output) if output.item.is_some() => Err(StorageError::AlreadyExists),
             Ok(_) => {
-                println!("event: {:?}", event);
                 // Create new item
                 let mut data_map = HashMap::new();
                 data_map.insert(
@@ -582,7 +586,7 @@ impl Storage for DynamoStorage {
         &self,
         contract_address: &FieldElement,
     ) -> Result<ContractType, StorageError> {
-        debug!("Getting contract info for contract {}", contract_address);
+        info!("Getting contract info for contract {}", contract_address);
 
         // Construct the primary key and secondary key for the contract
         let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
@@ -625,7 +629,7 @@ impl Storage for DynamoStorage {
         contract_type: &ContractType,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        debug!(
+        info!(
             "Registering contract info {:?} for contract {}",
             contract_type, contract_address
         );
@@ -676,14 +680,14 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 // If the condition failed, it means the contract info already exists no need to create it
-                info!("Collection already exist: {:?}", e);
+                error!("Collection already exist: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
     }
 
     async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
-        debug!("Setting block info {:?} for block #{}", info, block_number);
+        info!("Setting block info {:?} for block #{}", info, block_number);
 
         let pk = format!("BLOCK#{}", block_number);
         let sk = "BLOCK".to_string();
@@ -730,7 +734,7 @@ impl Storage for DynamoStorage {
     }
 
     async fn get_block_info(&self, block_number: u64) -> Result<BlockInfo, StorageError> {
-        debug!("Getting block info for block #{}", block_number);
+        info!("Getting block info for block #{}", block_number);
 
         let pk = format!("BLOCK#{}", block_number);
         let sk = "BLOCK".to_string();
@@ -801,7 +805,91 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn clean_block(&self, _block_number: u64) -> Result<(), StorageError> {
+    async fn clean_block(&self, block_number: u64) -> Result<(), StorageError> {
+        info!("Cleaning block #{}", block_number);
+        let table_name = self.table_name.clone();
+        let gsi_pk = format!("BLOCK#{}", block_number);
+
+        // Query for all items associated with the block number
+        let query_output = self
+            .client
+            .query()
+            .table_name(&table_name)
+            .index_name("GSI4PK-GSI4SK-index") // Assuming your GSI for block association is named GSI4
+            .key_condition_expression("GSI4PK = :gsi_pk")
+            .expression_attribute_values(":gsi_pk", AttributeValue::S(gsi_pk))
+            .projection_expression("PK, SK") // Only retrieve necessary attributes
+            .send()
+            .await
+            .map_err(|e| {
+                eprintln!("Query error: {:?}", e);
+                StorageError::DatabaseError
+            })?;
+
+        // Prepare the items for batch deletion
+        let mut write_requests: Vec<WriteRequest> = Vec::new();
+        if let Some(items) = query_output.items {
+            for item in items {
+                if let Some(pk) = item.get("PK").cloned() {
+                    if let Some(sk) = item.get("SK").cloned() {
+                        let delete_request =
+                            DeleteRequest::builder().key("PK", pk).key("SK", sk).build();
+                        let write_request = WriteRequest::builder()
+                            .delete_request(delete_request)
+                            .build();
+                        write_requests.push(write_request);
+                    }
+                }
+            }
+        }
+
+        // Batch delete items in chunks of 25
+        for chunk in write_requests.chunks(25) {
+            let batch_write_output = self
+                .client
+                .batch_write_item()
+                .request_items(&table_name, chunk.to_vec())
+                .send()
+                .await
+                .map_err(|e| {
+                    error!("Batch write error: {:?}", e);
+                    StorageError::DatabaseError
+                })?;
+
+            // Handle unprocessed items if any
+            if let Some(unprocessed_items) = batch_write_output.unprocessed_items {
+                if let Some(retry_items) = unprocessed_items.get(&table_name) {
+                    // Implement retry logic as per your use case
+                    // Here, we'll simply wait for a second and try again
+                    sleep(Duration::from_secs(1)).await;
+                    self.client
+                        .batch_write_item()
+                        .request_items(&table_name, retry_items.clone())
+                        .send()
+                        .await
+                        .map_err(|e| {
+                            error!("Retry batch write error: {:?}", e);
+                            StorageError::DatabaseError
+                        })?;
+                }
+            }
+        }
+
+        // Delete the block entry
+        let pk_block = format!("BLOCK#{}", block_number);
+        let sk_block = "BLOCK".to_string();
+        self.client
+            .delete_item()
+            .table_name(&table_name)
+            .key("PK", AttributeValue::S(pk_block))
+            .key("SK", AttributeValue::S(sk_block))
+            .send()
+            .await
+            .map_err(|e| {
+                error!("Delete block entry error: {:?}", e);
+                StorageError::DatabaseError
+            })?;
+
         Ok(())
     }
 
