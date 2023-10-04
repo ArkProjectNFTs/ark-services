@@ -1,11 +1,9 @@
 //! Block module.
 //!
-pub mod types;
-pub use types::*;
-
 mod dynamo_provider;
 pub use dynamo_provider::DynamoDbBlockProvider;
 
+use arkproject::pontos::storage::types::BlockInfo;
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
@@ -20,9 +18,16 @@ use crate::ProviderError;
 pub trait ArkBlockProvider {
     type Client;
 
-    async fn get_block(
+    async fn set_info(
         &self,
         client: &Self::Client,
         block_number: u64,
-    ) -> Result<Option<BlockData>, ProviderError>;
+        info: &BlockInfo,
+    ) -> Result<(), ProviderError>;
+
+    async fn get_info(
+        &self,
+        client: &Self::Client,
+        block_number: u64,
+    ) -> Result<Option<BlockInfo>, ProviderError>;
 }

@@ -6,12 +6,14 @@ use arkproject::pontos::storage::{
     },
     Storage,
 };
-
 use arkproject::starknet::format::to_hex_str;
 use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{
-    types::AttributeValue, types::DeleteRequest, types::ReturnValue, types::WriteRequest, Client,
+    Client,
+    types::{
+        AttributeValue, DeleteRequest, ReturnValue, WriteRequest
+    },
 };
 use chrono::Utc;
 use starknet::core::types::FieldElement;
@@ -21,35 +23,25 @@ use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
-#[derive(Debug, PartialEq, Eq)]
-enum EntityType {
-    Token,
-    Block,
-    Collection,
-    Event,
-}
-
-impl fmt::Display for EntityType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EntityType::Token => write!(f, "Token"),
-            EntityType::Block => write!(f, "Block"),
-            EntityType::Collection => write!(f, "Collection"),
-            EntityType::Event => write!(f, "Event"),
-        }
-    }
-}
+use crate::block::{ArkBlockProvider, DynamoDbBlockProvider};
+use crate::{ArkDynamoDbProvider, EntityType};
 
 pub struct DynamoStorage {
     client: Client,
     table_name: String,
+    provider: ArkDynamoDbProvider,
 }
 
 impl DynamoStorage {
     pub async fn new(table_name: String) -> Self {
         let config = load_from_env().await;
         let client = Client::new(&config);
-        Self { client, table_name }
+        let provider = ArkDynamoDbProvider::new(&table_name);
+        Self {
+            client,
+            table_name,
+            provider,
+        }
     }
 }
 
@@ -710,46 +702,11 @@ impl Storage for DynamoStorage {
     async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
         info!("Setting block info {:?} for block #{}", info, block_number);
 
-        let pk = format!("BLOCK#{}", block_number);
-        let sk = "BLOCK".to_string();
-
-        // Construct the data map for the block
-        let mut data = HashMap::new();
-        data.insert(
-            "IndexerVersion".to_string(),
-            AttributeValue::S(info.indexer_version.to_string()),
-        );
-        data.insert(
-            "IndexerIdentifier".to_string(),
-            AttributeValue::S(info.indexer_identifier),
-        );
-        data.insert(
-            "Status".to_string(),
-            AttributeValue::S(info.status.to_string()),
-        );
-
-        // Upsert the block info
-        let put_item_output = self
-            .client
-            .put_item()
-            .table_name(self.table_name.clone())
-            .item("PK", AttributeValue::S(pk))
-            .item("SK", AttributeValue::S(sk))
-            .item(
-                "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", block_number)),
-            )
-            .item("GSI4SK".to_string(), AttributeValue::S("BLOCK".to_string()))
-            .item("Data", AttributeValue::M(data))
-            .item("Type", AttributeValue::S(EntityType::Block.to_string()))
-            .send()
-            .await;
-
-        match put_item_output {
+        match self.provider.block.set_info(&self.client, block_number, &info).await {
             Ok(_) => Ok(()),
             Err(e) => {
-                error!("DynamoDB error: {:?}", e);
-                Err(StorageError::DatabaseError)
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
     }
@@ -757,72 +714,23 @@ impl Storage for DynamoStorage {
     async fn get_block_info(&self, block_number: u64) -> Result<BlockInfo, StorageError> {
         info!("Getting block info for block #{}", block_number);
 
-        let pk = format!("BLOCK#{}", block_number);
-        let sk = "BLOCK".to_string();
-
-        // Query DynamoDB for the block info
-        let get_item_output = self
-            .client
-            .get_item()
-            .table_name(self.table_name.clone())
-            .key("PK", AttributeValue::S(pk))
-            .key("SK", AttributeValue::S(sk))
-            .send()
-            .await;
-
-        info!("get_item_output: {:?}", get_item_output);
-        match get_item_output {
-            Ok(output) => {
-                if let Some(item) = output.item {
-                    if let Some(AttributeValue::M(data)) = item.get("Data") {
-                        let indexer_version_str =
-                            if let Some(AttributeValue::S(value)) = data.get("indexer_version") {
-                                value.clone()
-                            } else {
-                                return Err(StorageError::DatabaseError);
-                            };
-
-                        let indexer_version = indexer_version_str
-                            .parse()
-                            .map_err(|_| StorageError::DatabaseError)?;
-
-                        let indexer_identifier = if let Some(AttributeValue::S(value)) =
-                            data.get("indexer_identifier")
-                        {
-                            value.clone()
-                        } else {
-                            return Err(StorageError::DatabaseError);
-                        };
-
-                        let status_str = if let Some(AttributeValue::S(value)) = data.get("status")
-                        {
-                            value.clone()
-                        } else {
-                            return Err(StorageError::DatabaseError);
-                        };
-
-                        let status: BlockIndexingStatus = status_str
-                            .parse()
-                            .map_err(|_| StorageError::InvalidStatus)?;
-
-                        Ok(BlockInfo {
-                            indexer_version,
-                            indexer_identifier,
-                            status,
-                        })
-                    } else {
-                        error!("Data NotFound error");
-                        Err(StorageError::NotFound)
-                    }
-                } else {
-                    error!("Item NotFound error");
-                    Err(StorageError::NotFound)
-                }
-            }
+        let info = match self
+            .provider
+            .block
+            .get_info(&self.client, block_number)
+            .await
+        {
+            Ok(i) => i,
             Err(e) => {
-                error!("Table NotFound error: {:?}", e);
-                Err(StorageError::DatabaseError)
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
+        };
+
+        if let Some(info) = info {
+            Ok(info)
+        } else {
+            Err(StorageError::NotFound)
         }
     }
 

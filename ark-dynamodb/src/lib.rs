@@ -4,13 +4,37 @@
 pub mod block;
 pub mod collection;
 pub mod event;
-pub mod token;
 pub mod storage;
+pub mod token;
 
 pub(crate) mod convert;
 
 use aws_config::meta::region::RegionProviderChain;
 pub use aws_sdk_dynamodb::Client;
+use block::DynamoDbBlockProvider;
+use collection::DynamoDbCollectionProvider;
+use event::DynamoDbEventProvider;
+use std::fmt;
+use token::DynamoDbTokenProvider;
+
+#[derive(Debug, PartialEq, Eq)]
+enum EntityType {
+    Token,
+    Block,
+    Collection,
+    Event,
+}
+
+impl fmt::Display for EntityType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EntityType::Token => write!(f, "Token"),
+            EntityType::Block => write!(f, "Block"),
+            EntityType::Collection => write!(f, "Collection"),
+            EntityType::Event => write!(f, "Event"),
+        }
+    }
+}
 
 /// Generic errors for providers.
 #[derive(Debug, thiserror::Error)]
@@ -30,6 +54,23 @@ pub async fn init_aws_dynamo_client() -> Client {
     Client::new(&config)
 }
 
-/// A default provider type, mostly used for mocking.
-#[cfg(any(test, feature = "mock"))]
-pub struct MockedClient;
+/// A convenient provider with all sub-providers.
+/// This is not aims to be tested directly, as each provider
+/// must be tested separately.
+pub struct ArkDynamoDbProvider {
+    token: DynamoDbTokenProvider,
+    collection: DynamoDbCollectionProvider,
+    event: DynamoDbEventProvider,
+    block: DynamoDbBlockProvider,
+}
+
+impl ArkDynamoDbProvider {
+    pub fn new(table_name: &str) -> Self {
+        ArkDynamoDbProvider {
+            token: DynamoDbTokenProvider::new(table_name),
+            event: DynamoDbEventProvider::new(table_name),
+            block: DynamoDbBlockProvider::new(table_name),
+            collection: DynamoDbCollectionProvider::new(table_name),
+        }
+    }
+}

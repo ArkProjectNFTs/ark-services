@@ -1,10 +1,12 @@
+use arkproject::pontos::storage::types::{BlockIndexingStatus, BlockInfo};
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
+use std::str::FromStr;
 
-use super::{types::BlockData, ArkBlockProvider};
-use crate::{convert, ProviderError};
+use super::ArkBlockProvider;
+use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for blocks.
 pub struct DynamoDbBlockProvider {
@@ -23,17 +25,82 @@ impl DynamoDbBlockProvider {
     fn get_pk(&self, block_number: u64) -> String {
         format!("{}#{}", self.key_prefix, block_number)
     }
+
+    fn get_sk(&self) -> String {
+        self.key_prefix.to_string()
+    }
+
+    pub fn data_to_info(
+        data: &HashMap<String, AttributeValue>,
+    ) -> Result<BlockInfo, ProviderError> {
+        Ok(BlockInfo {
+            status: BlockIndexingStatus::from_str(&convert::attr_to_str(&data, "Status")?)
+                .map_err(|_| {
+                    ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string())
+                })?,
+            indexer_identifier: convert::attr_to_str(&data, "IndexerIdentifier")?,
+            indexer_version: convert::attr_to_str(&data, "IndexerVersion")?,
+        })
+    }
+
+    pub fn info_to_data(data: &BlockInfo) -> HashMap<String, AttributeValue> {
+        let mut map = HashMap::new();
+        map.insert(
+            "IndexerVersion".to_string(),
+            AttributeValue::S(data.indexer_version.clone()),
+        );
+        map.insert(
+            "IndexerIdentifier".to_string(),
+            AttributeValue::S(data.indexer_identifier.clone()),
+        );
+        map.insert(
+            "Status".to_string(),
+            AttributeValue::S(data.status.to_string()),
+        );
+
+        map
+    }
 }
 
 #[async_trait]
 impl ArkBlockProvider for DynamoDbBlockProvider {
     type Client = DynamoClient;
 
-    async fn get_block(
+    async fn set_info(
         &self,
         client: &Self::Client,
         block_number: u64,
-    ) -> Result<Option<BlockData>, ProviderError> {
+        info: &BlockInfo,
+    ) -> Result<(), ProviderError> {
+        // Construct the data map for the block
+        let data = DynamoDbBlockProvider::info_to_data(&info);
+
+        // Upsert the block info
+        let put_item_output = client
+            .put_item()
+            .table_name(self.table_name.clone())
+            .item("PK", AttributeValue::S(self.get_pk(block_number)))
+            .item("SK", AttributeValue::S(self.get_sk()))
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(self.get_pk(block_number)),
+            )
+            .item("GSI4SK".to_string(), AttributeValue::S(self.get_sk()))
+            .item("Data", AttributeValue::M(data))
+            .item("Type", AttributeValue::S(EntityType::Block.to_string()))
+            .send()
+            .await;
+
+        put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+
+        Ok(())
+    }
+
+    async fn get_info(
+        &self,
+        client: &Self::Client,
+        block_number: u64,
+    ) -> Result<Option<BlockInfo>, ProviderError> {
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
@@ -51,7 +118,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(Some(data.try_into()?))
+            Ok(Some(DynamoDbBlockProvider::data_to_info(&data)?))
         } else {
             Ok(None)
         }
