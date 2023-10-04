@@ -13,7 +13,7 @@ async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
 starknet = "0.6.0"
-arkproject = { path = "/home/remi/apps/ArkIndexer"}
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.1" }
 regex = "1.9.6"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tracing = "0.1"
