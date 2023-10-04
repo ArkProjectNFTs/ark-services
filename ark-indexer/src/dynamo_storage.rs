@@ -278,6 +278,17 @@ impl Storage for DynamoStorage {
                             token.address, token.formated_token_id.padded_token_id
                         )),
                     )
+                    .item(
+                        "GSI4PK".to_string(),
+                        AttributeValue::S(format!("BLOCK#{}", block_number)),
+                    )
+                    .item(
+                        "GSI4SK".to_string(),
+                        AttributeValue::S(format!(
+                            "TOKEN#{}#{}",
+                            token.address, token.formated_token_id.padded_token_id
+                        )),
+                    )
                     .item("Data".to_string(), AttributeValue::M(data_map))
                     .item("Type", AttributeValue::S(EntityType::Token.to_string()))
                     .return_values(ReturnValue::AllOld)
@@ -404,6 +415,17 @@ impl Storage for DynamoStorage {
                             token.address, token.formated_token_id.padded_token_id
                         )),
                     )
+                    .item(
+                        "GSI4PK".to_string(),
+                        AttributeValue::S(format!("BLOCK#{}", block_number)),
+                    )
+                    .item(
+                        "GSI4SK".to_string(),
+                        AttributeValue::S(format!(
+                            "TOKEN#{}#{}",
+                            token.address, token.formated_token_id.padded_token_id
+                        )),
+                    )
                     .item("Data".to_string(), AttributeValue::M(data_map))
                     .item("Type", AttributeValue::S(EntityType::Token.to_string()))
                     .return_values(ReturnValue::AllOld)
@@ -524,6 +546,17 @@ impl Storage for DynamoStorage {
                         "GSI2SK".to_string(),
                         AttributeValue::S(format!("EVENT#{}", event.event_id)),
                     )
+                    .item(
+                        "GSI4PK".to_string(),
+                        AttributeValue::S(format!("BLOCK#{}", block_number)),
+                    )
+                    .item(
+                        "GSI4SK".to_string(),
+                        AttributeValue::S(format!(
+                            "EVENT#{}#{}",
+                            event.contract_address, event.event_id
+                        )),
+                    )
                     .item("Data".to_string(), AttributeValue::M(data_map))
                     .item("Type", AttributeValue::S(EntityType::Event.to_string()))
                     .return_values(ReturnValue::AllOld)
@@ -622,6 +655,14 @@ impl Storage for DynamoStorage {
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(format!("BLOCK#{}", block_number)),
+            )
+            .item(
+                "GSI4SK".to_string(),
+                AttributeValue::S(format!("COLLECTION#{}", contract_address)),
+            )
             .item("Data", AttributeValue::M(data))
             .item(
                 "Type",
@@ -669,6 +710,11 @@ impl Storage for DynamoStorage {
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(format!("BLOCK#{}", block_number)),
+            )
+            .item("GSI4SK".to_string(), AttributeValue::S("BLOCK".to_string()))
             .item("Data", AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Block.to_string()))
             .send()
