@@ -1,0 +1,41 @@
+{
+  "family": "ark-indexer-task-testnet",
+  "containerDefinitions": [
+    {
+      "name": "ark_indexer",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "hostPort": 80,
+          "protocol": "tcp",
+          "name": "ark_indexer-80-tcp",
+          "appProtocol": "http"
+        }
+      ],
+      "essential": true,
+      "environment": [],
+      "environmentFiles": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "ulimits": [],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-create-group": "true",
+          "awslogs-group": "/ecs/ark-indexer-testnet",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      }
+    }
+  ],
+  "volumes": [],
+  "placementConstraints": [],
+  "networkMode": "awsvpc",
+  "executionRoleArn": "arn:aws:iam::223605539824:role/ecsTaskExecutionRole",
+  "memory": "3072",
+  "cpu": "1024",
+  "requiresCompatibilities": ["FARGATE"]
+}
