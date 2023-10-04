@@ -16,6 +16,7 @@ members = [
   "lambdas/apigw/lambda-http-common",
   "lambdas/apigw/lambda-get-collection",
   "lambdas/apigw/lambda-get-token",
+  "lambdas/apigw/lambda-get-token-events",
 ]
 resolver = "2"
 

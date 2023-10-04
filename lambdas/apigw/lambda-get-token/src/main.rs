@@ -13,7 +13,6 @@ use lambda_dynamo_common::{
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common as common;
-use lambda_http_common::HttpParsingError;
 
 /// A struct to bundle all init required by the lambda.
 struct Ctx<P> {

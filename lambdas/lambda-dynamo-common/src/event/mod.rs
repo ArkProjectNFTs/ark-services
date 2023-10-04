@@ -27,4 +27,11 @@ pub trait ArkEventProvider {
         contract_address: &str,
         event_id: &str,
     ) -> Result<Option<EventData>, ProviderError>;
+
+    async fn get_token_events(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+        token_id: &str,
+    ) -> Result<Vec<EventData>, ProviderError>;
 }

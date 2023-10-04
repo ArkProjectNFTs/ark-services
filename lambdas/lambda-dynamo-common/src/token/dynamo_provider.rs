@@ -52,15 +52,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-
-            Ok(Some(TokenData {
-                block_number: convert::attr_to_u64(&data, "BlockNumber")?,
-                mint_timestamp: convert::attr_to_u64(&data, "MintTimestamp")?,
-                mint_address: convert::attr_to_str(&data, "MintAddress")?,
-                owner: convert::attr_to_str(&data, "Owner")?,
-                token_id: convert::attr_to_str(&data, "TokenId")?,
-                contract_address: convert::attr_to_str(&data, "ContractAddress")?,
-            }))
+            Ok(Some(data.try_into()?))
         } else {
             Ok(None)
         }

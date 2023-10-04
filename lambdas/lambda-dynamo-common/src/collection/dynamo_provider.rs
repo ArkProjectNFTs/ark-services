@@ -51,12 +51,7 @@ impl ArkCollectionProvider for DynamoDbCollectionProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-
-            Ok(Some(CollectionData {
-                block_number: convert::attr_to_u64(&data, "BlockNumber")?,
-                contract_type: convert::attr_to_str(&data, "ContractType")?,
-                contract_address: convert::attr_to_str(&data, "ContractAddress")?,
-            }))
+            Ok(Some(data.try_into()?))
         } else {
             Ok(None)
         }

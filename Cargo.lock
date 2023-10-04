@@ -1959,6 +1959,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lambda-get-token-events"
+version = "0.1.0"
+dependencies = [
+ "lambda-dynamo-common",
+ "lambda-http-common",
+ "lambda_http",
+ "lambda_runtime",
+ "mockall",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lambda-http-common"
 version = "0.1.0"
 dependencies = [

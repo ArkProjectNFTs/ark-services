@@ -51,12 +51,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-
-            Ok(Some(BlockData {
-                status: convert::attr_to_str(&data, "Status")?,
-                indexer_identifier: convert::attr_to_str(&data, "IndexerIdentifier")?,
-                indexer_version: convert::attr_to_str(&data, "IndexerVersion")?,
-            }))
+            Ok(Some(data.try_into()?))
         } else {
             Ok(None)
         }

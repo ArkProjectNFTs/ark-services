@@ -52,21 +52,21 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-
-            Ok(Some(EventData {
-                block_number: convert::attr_to_u64(&data, "BlockNumber")?,
-                event_id: convert::attr_to_str(&data, "EventId")?,
-                event_type: convert::attr_to_str(&data, "EventType")?,
-                timestamp: convert::attr_to_u64(&data, "Timestamp")?,
-                from_address: convert::attr_to_str(&data, "FromAddress")?,
-                to_address: convert::attr_to_str(&data, "ToAddress")?,
-                contract_address: convert::attr_to_str(&data, "ContractAddress")?,
-                contract_type: convert::attr_to_str(&data, "ContractType")?,
-                token_id: convert::attr_to_str(&data, "TokenId")?,
-                transaction_hash: convert::attr_to_str(&data, "TransactionHash")?,
-            }))
+            Ok(Some(data.try_into()?))
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_token_events(
+        &self,
+        _client: &Self::Client,
+        _contract_address: &str,
+        _token_id: &str,
+    ) -> Result<Vec<EventData>, ProviderError> {
+        // TODO: check how to query indexes instead of key?
+        // Do we need to pass only the index?
+
+        Ok(vec![])
     }
 }
