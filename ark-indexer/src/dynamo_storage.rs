@@ -17,9 +17,9 @@ use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::fmt;
-use tracing::{debug, error, info, trace};
 use tokio::time::sleep;
 use tokio::time::Duration;
+use tracing::{debug, error, info};
 
 #[derive(Debug, PartialEq, Eq)]
 enum EntityType {
