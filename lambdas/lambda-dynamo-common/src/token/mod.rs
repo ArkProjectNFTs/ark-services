@@ -10,13 +10,11 @@ use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
 
-#[cfg(any(test, feature = "mock"))]
-use crate::MockedClient;
 use crate::ProviderError;
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.
-#[cfg_attr(any(test, feature = "mock"), automock(type Client=MockedClient;))]
+#[cfg_attr(any(test, feature = "mock"), automock(type Client=aws_sdk_dynamodb::Client;))]
 #[async_trait]
 pub trait ArkTokenProvider {
     type Client;

@@ -1945,6 +1945,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "lambda-get-token"
+version = "0.1.0"
+dependencies = [
+ "lambda-dynamo-common",
+ "lambda-http-common",
+ "lambda_http",
+ "lambda_runtime",
+ "mockall",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lambda-http-common"
 version = "0.1.0"
 dependencies = [
@@ -1952,6 +1966,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
+ "thiserror",
 ]
 
 [[package]]

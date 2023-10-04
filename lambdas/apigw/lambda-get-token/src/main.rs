@@ -1,15 +1,19 @@
-//! A Lambda function to get a collection from it's address in hexadecimal representation.
+//! A Lambda function to get a token..
 //!
-//! To work, this lambda expects the collection address as query string parameter "address".
+//! To work, this lambda expects two query string parameters:
+//!   * address: Contract address of the collection, in hexadecimal.
+//!   * id: The id of the token, in decimal. (TODO: revise the standard we want here).
 //!
-//! `https://.../collection?address=0x1234`
+//! `https://.../token?address=0x1234&id=1234`
 //!
 use lambda_dynamo_common::{
-    collection::{ArkCollectionProvider, DynamoDbCollectionProvider},
-    init_aws_dynamo_client, Client as DynamoClient,
+    init_aws_dynamo_client,
+    token::{ArkTokenProvider, DynamoDbTokenProvider},
+    Client as DynamoClient,
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common as common;
+use lambda_http_common::HttpParsingError;
 
 /// A struct to bundle all init required by the lambda.
 struct Ctx<P> {
@@ -17,7 +21,7 @@ struct Ctx<P> {
     provider: P,
 }
 
-async fn function_handler<P: ArkCollectionProvider<Client = DynamoClient>>(
+async fn function_handler<P: ArkTokenProvider<Client = DynamoClient>>(
     ctx: &Ctx<P>,
     event: Request,
 ) -> Result<Response<Body>, Error> {
@@ -26,7 +30,16 @@ async fn function_handler<P: ArkCollectionProvider<Client = DynamoClient>>(
         Err(e) => return e.try_into(),
     };
 
-    if let Some(data) = ctx.provider.get_collection(&ctx.client, &address).await? {
+    let token_id = match common::get_query_string_param(&event, "id") {
+        Ok(t) => t,
+        Err(e) => return e.try_into(),
+    };
+
+    if let Some(data) = ctx
+        .provider
+        .get_token(&ctx.client, &address, &token_id)
+        .await?
+    {
         common::ok_body_rsp(&data)
     } else {
         common::not_found_rsp()
@@ -47,7 +60,7 @@ async fn main() -> Result<(), Error> {
 
     let ctx = Ctx {
         client: init_aws_dynamo_client().await,
-        provider: DynamoDbCollectionProvider::new(&table_name),
+        provider: DynamoDbTokenProvider::new(&table_name),
     };
 
     run(service_fn(|event: Request| async {
@@ -60,35 +73,40 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use lambda_dynamo_common::{
-        collection::{CollectionData, MockArkCollectionProvider},
         init_aws_dynamo_client,
+        token::{MockArkTokenProvider, TokenData},
     };
     use lambda_http::{Body, RequestExt};
 
     use std::collections::HashMap;
 
-    async fn get_mock_ctx() -> Ctx<MockArkCollectionProvider> {
+    async fn get_mock_ctx() -> Ctx<MockArkTokenProvider> {
         Ctx {
             client: init_aws_dynamo_client().await,
-            provider: MockArkCollectionProvider::default(),
+            provider: MockArkTokenProvider::default(),
         }
     }
 
     #[tokio::test]
     async fn request_ok() {
         let address = "0x1234".to_string();
+        let token_id = "1".to_string();
 
         let mut params = HashMap::new();
         params.insert("address".to_string(), address.clone());
+        params.insert("id".to_string(), token_id.clone());
 
         let req = Request::default().with_query_string_parameters(params.clone());
 
         let mut ctx = get_mock_ctx().await;
-        ctx.provider.expect_get_collection().returning(move |_, _| {
-            Ok(Some(CollectionData {
+        ctx.provider.expect_get_token().returning(move |_, _, _| {
+            Ok(Some(TokenData {
                 block_number: 123,
-                contract_type: "erc721".to_string(),
-                contract_address: address.clone(),
+                mint_timestamp: 8888,
+                mint_address: "0x1111".to_string(),
+                owner: "0x2222".to_string(),
+                token_id: token_id.clone(),
+                contract_address: "0x3333".to_string(),
             }))
         });
 
@@ -102,7 +120,8 @@ mod tests {
     #[tokio::test]
     async fn bad_hexadecimal_address() {
         let mut params = HashMap::new();
-        params.insert("address".to_string(), "contractA".to_string());
+        params.insert("address".to_string(), "1234".to_string());
+        params.insert("id".to_string(), "1".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
         // No setup, as the lambda will return an error before any dynamodb stuff.
@@ -122,7 +141,10 @@ mod tests {
 
     #[tokio::test]
     async fn missing_address() {
-        let req = Request::default();
+        let mut params = HashMap::new();
+        params.insert("id".to_string(), "1".to_string());
+
+        let req = Request::default().with_query_string_parameters(params.clone());
 
         // No setup, as the lambda will return an error before any dynamodb stuff.
         let rsp = function_handler(&get_mock_ctx().await, req)

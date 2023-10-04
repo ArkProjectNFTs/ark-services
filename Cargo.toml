@@ -15,6 +15,7 @@ members = [
   "lambdas/lambda-dynamo-common",
   "lambdas/apigw/lambda-http-common",
   "lambdas/apigw/lambda-get-collection",
+  "lambdas/apigw/lambda-get-token",
 ]
 resolver = "2"
 
