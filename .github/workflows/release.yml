@@ -33,8 +33,6 @@ jobs:
         run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} -f Dockerfile .
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
-    outputs:
-      registry: ${{ steps.login-ecr.outputs.registry }}
 
   update-task-definition:
     needs: push-docker-image
@@ -66,20 +64,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1.3.3
+
       - name: Update Amazon ECS task definition
         id: render-web-container
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: "${{ env.TASK_DEFINITION_FILE }}"
           container-name: "${{ env.CONTAINER_NAME }}"
-          image: "${{ needs.push-docker-image.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}"
+          image: "${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}"
 
       - name: Add environment variables to ECS task definition
         id: add-env-var
         uses: cvmaker-bv/amazon-ecs-task-environment@v1
         env:
-          ARK_INDEXER_VERSION: ${{ github.event.release.tag_name }}
-          RPC_PROVIDER: "https://${{ matrix.environment }}.arkproject.dev"
+          INDEXER_VERSION: ${{ github.event.release.tag_name }}
+          RPC_PROVIDER: "https://juno.${{ matrix.environment }}.arkproject.dev"
           IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev"
           RUST_LOG: "debug"
           HEAD_OF_CHAIN: "true"
@@ -95,17 +97,17 @@ jobs:
           service: "${{ env.SERVICE_NAME }}"
           cluster: "${{ env.CLUSTER_NAME }}"
 
-  discord-notification:
-    needs: "update-task-definition"
-    runs-on: ubuntu-latest
-    name: Discord Notification
-    steps:
-      - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-               -X POST \
-               --data "{\"content\":\"🔗 A new release has been published (ark-services): ${env.TAG}.\
-               \n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
-               \n🔵 Testnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-testnet \
-               \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: ${github.event.release.html_url}\"}" \
-               ${{ secrets.DISCORD_WEBHOOK_URL }}
+  # discord-notification:
+  #   needs: "update-task-definition"
+  #   runs-on: ubuntu-latest
+  #   name: Discord Notification
+  #   steps:
+  #     - name: Send notification to dev-updates channel
+  #       run: |
+  #         curl -H "Content-Type: application/json" \
+  #              -X POST \
+  #              --data "{\"content\":\"🔗 A new release has been published (ark-services): ${env.TAG}.\
+  #              \n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
+  #              \n🔵 Testnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-testnet \
+  #              \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: ${github.event.release.html_url}\"}" \
+  #              ${{ secrets.DISCORD_WEBHOOK_URL }}
