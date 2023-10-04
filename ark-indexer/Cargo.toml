@@ -8,10 +8,11 @@ log = "0.4.17"
 chrono = "0.4.19"
 aws-config = "0.56.1"
 aws-sdk-dynamodb = "0.31.1"
-aws-sdk-s3 = "0.30.0"
+aws-sdk-s3 = "0.31.2"
 anyhow.workspace = true
 async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
 starknet = "0.6.0"
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.1"}
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.3"}
+regex = "1.9.6"

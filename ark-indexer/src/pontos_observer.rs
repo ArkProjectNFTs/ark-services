@@ -38,7 +38,12 @@ where
     }
 
     async fn on_block_processing(&self, block_number: u64) {
-        trace!("Block processing: block_number={}", block_number);
+        trace!(
+            "Block processing: block_number={}, indexer_identifier={}, indexer_version={}",
+            block_number,
+            self.indexer_identifier,
+            self.indexer_version
+        );
         let _ = self
             .storage
             .update_indexer_task_status(

@@ -10,7 +10,9 @@ use arkproject::{
 };
 
 use dotenv::dotenv;
+use log::info;
 use pontos_observer::PontosObserver;
+use regex::Regex;
 use starknet::core::types::{BlockId, BlockTag};
 use std::{env, sync::Arc};
 
@@ -41,12 +43,11 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let force_mode = env::var("FORCE_MODE").is_ok();
+    let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
+    let indexer_identifier = get_task_id();
 
     let dynamo_storage = Arc::new(DynamoStorage::new(table_name.clone()).await);
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
-
-    let indexer_version = "1".to_string(); // TODO: get from env
-    let indexer_identifier = String::from("main");
 
     let pontos_observer = Arc::new(PontosObserver::new(
         Arc::clone(&dynamo_storage),
@@ -79,4 +80,17 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn get_task_id() -> String {
+    let container_metadata_uri = env::var("ECS_CONTAINER_METADATA_URI").unwrap_or("".to_string());
+
+    let pattern = Regex::new(r"/v3/([a-f0-9]{32})-").unwrap();
+    let task_id = pattern
+        .captures(container_metadata_uri.as_str())
+        .and_then(|cap| cap.get(1).map(|m| m.as_str()))
+        .unwrap_or("");
+
+    info!("Indexer Task ID: {:?}", task_id);
+    task_id.to_string()
 }
