@@ -1,73 +1,54 @@
-## Database Schema
+## DynamoDB Table Schema
 
-### 1. Token Entity
+### Token Entity
+- **PK**: `TOKEN#<contract_address>#<token_id>`
+- **SK**: `TOKEN`
+- **Type**: `Token`
+- **GSI1PK**: `COLLECTION#<contract_address>`
+- **GSI1SK**: `TOKEN#<token_id>`
+- **GSI2PK**: `OWNER#<owner_address>`
+- **GSI2SK**: `TOKEN#<contract_address>#<token_id>`
+- **GSI3PK**: `LISTED#<true/false>`
+- **GSI3SK**: `TOKEN#<contract_address>#<token_id>`
+- **GSI4PK**: `BLOCK#<block_number>`
+- **GSI4SK**: `TOKEN#<contract_address>#<token_id>`
+- **Data**: 
+  - `owner`: `<owner_address>`
+  - `mint_address`: `<mint_address>`
+  - `is_listed`: `<true/false>`
+  - `...`: `...`
 
-**Primary Key:**
+### Collection Entity
+- **PK**: `COLLECTION#<contract_address>`
+- **SK**: `COLLECTION`
+- **Type**: `Collection`
+- **GSI4PK**: `BLOCK#<block_number>`
+- **GSI4SK**: `COLLECTION#<contract_address>`
+- **Data**: 
+  - `contract_type`: `<ERC721/ERC1155/...>`
+  - `...`: `...`
 
-- **PK:** `TOKEN#<contract_address>#<token_id>`
-- **SK:** `TOKEN`
+### Event Entity
+- **PK**: `EVENT#<contract_address>#<event_id>`
+- **SK**: `EVENT`
+- **Type**: `Event`
+- **GSI2PK**: `TOKEN#<token_id>`
+- **GSI2SK**: `EVENT#<event_id>`
+- **GSI4PK**: `BLOCK#<block_number>`
+- **GSI4SK**: `EVENT#<contract_address>#<event_id>`
+- **Data**: 
+  - `from_address`: `<from_address>`
+  - `to_address`: `<to_address>`
+  - `event_type`: `<Mint/Burn/Transfer/...>`
+  - `...`: `...`
 
-**Attributes:**
-
-- **Type:** "Token"
-- **Owner:** `<owner_address>`
-- **MintAddress:** (if available) `<mint_address>`
-- **MintTimestamp:** (if available) `<mint_timestamp>`
-
-**GSI1 (for collection queries):**
-
-- **GSI1PK:** `COLLECTION#<contract_address>`
-- **GSI1SK:** `TOKEN#<token_id>`
-
-**GSI2 (for owner queries):**
-
-- **GSI2PK:** `OWNER#<owner_address>`
-- **GSI2SK:** `TOKEN#<contract_address>#<token_id>`
-
----
-
-### 2. Collection Entity
-
-**Primary Key:**
-
-- **PK:** `COLLECTION#<contract_address>`
-- **SK:** `COLLECTION`
-
-**Attributes:**
-
-- **Type:** "Collection"
-- **ContractType:** (e.g., "ERC721")
-
-**GSI1 (for owner queries):**
-
-- **GSI1PK:** `OWNER#<owner_address>`
-- **GSI1SK:** `COLLECTION#<contract_address>`
-
----
-
-### 3. Event Entity
-
-**Primary Key:**
-
-- **PK:** `EVENT#<contract_address>#<event_id>`
-- **SK:** `EVENT`
-
-**Attributes:**
-
-- **Type:** "Event"
-- **EventType:** (e.g., "Transfer", "Mint", etc.)
-- **FromAddress:** `<from_address>`
-- **ToAddress:** `<to_address>`
-- **Timestamp:** `<timestamp>`
-- **TransactionHash:** `<transaction_hash>`
-- **TokenId:** `<token_id>`
-
-**GSI1 (for collection queries):**
-
-- **GSI1PK:** `COLLECTION#<contract_address>`
-- **GSI1SK:** `EVENT#<event_id>`
-
-**GSI2 (for owner queries):**
-
-- **GSI2PK:** `OWNER#<from_address>` or `OWNER#<to_address>`
-- **GSI2SK:** `EVENT#<contract_address>#<event_id>`
+### Block Entity
+- **PK**: `BLOCK#<block_number>`
+- **SK**: `BLOCK`
+- **Type**: `Block`
+- **GSI4PK**: `BLOCK#<block_number>`
+- **GSI4SK**: `BLOCK`
+- **Data**: 
+  - `indexer_version`: `<version_number>`
+  - `status`: `<status>`
+  - `...`: `...`

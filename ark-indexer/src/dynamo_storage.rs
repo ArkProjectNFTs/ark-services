@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use arkproject::pontos::storage::{
     types::{
         BlockIndexingStatus, BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent,
@@ -6,15 +6,20 @@ use arkproject::pontos::storage::{
     },
     Storage,
 };
+
 use arkproject::starknet::format::to_hex_str;
 use async_trait::async_trait;
 use aws_config::load_from_env;
-use aws_sdk_dynamodb::{types::AttributeValue, types::ReturnValue, Client};
+use aws_sdk_dynamodb::{
+    types::AttributeValue, types::DeleteRequest, types::ReturnValue, types::WriteRequest, Client,
+};
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::fmt;
-use tracing::{debug, error, info, trace};
+use tokio::time::sleep;
+use tokio::time::Duration;
+use tracing::{debug, error, info};
 
 #[derive(Debug, PartialEq, Eq)]
 enum EntityType {
@@ -55,8 +60,12 @@ pub trait AWSDynamoStorage: Send + Sync {
         task_id: String,
         indexer_version: String,
         status: IndexerStatus,
-    ) -> Result<()>;
-    async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()>;
+    ) -> Result<(), StorageError>;
+    async fn update_indexer_progress(
+        &self,
+        task_id: String,
+        value: f64,
+    ) -> Result<(), StorageError>;
 }
 
 #[async_trait]
@@ -66,7 +75,7 @@ impl AWSDynamoStorage for DynamoStorage {
         task_id: String,
         indexer_version: String,
         status: IndexerStatus,
-    ) -> Result<()> {
+    ) -> Result<(), StorageError> {
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
@@ -76,18 +85,29 @@ impl AWSDynamoStorage for DynamoStorage {
         }
         .to_string();
 
-        trace!("Updating table {}...", self.table_name);
+        let mut data = HashMap::new();
+        data.insert(
+            "status".to_string(),
+            AttributeValue::S(status_string.clone()),
+        );
+        data.insert(
+            "last_update".to_string(),
+            AttributeValue::N(unix_timestamp.to_string()),
+        );
+        data.insert(
+            "version".to_string(),
+            AttributeValue::S(indexer_version.clone()),
+        );
+        data.insert("task_id".to_string(), AttributeValue::S(task_id.clone()));
 
         let response = self
             .client
             .put_item()
             .table_name(self.table_name.clone())
-            .item("PK", AttributeValue::S(String::from("INDEXER")))
-            .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
-            .item("status", AttributeValue::S(status.to_string()))
-            .item("last_update", AttributeValue::N(unix_timestamp.to_string()))
-            .item("version", AttributeValue::S(indexer_version.to_string()))
-            .item("task_id", AttributeValue::S(task_id.to_string()))
+            .item("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
+            .item("SK", AttributeValue::S("TASK".to_string()))
+            .item("Type", AttributeValue::S("IndexerTask".to_string()))
+            .item("Data", AttributeValue::M(data))
             .send()
             .await;
 
@@ -101,52 +121,58 @@ impl AWSDynamoStorage for DynamoStorage {
                     "Failed to update indexer task status for task_id {}: {:?}",
                     task_id, e
                 );
-                Err(e.into())
+                Err(StorageError::DatabaseError)
             }
         }
     }
 
-    async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()> {
+    async fn update_indexer_progress(
+        &self,
+        task_id: String,
+        value: f64,
+    ) -> Result<(), StorageError> {
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
-        trace!(
+        info!(
             "Updating indexer progress: task_id={}, value={}",
-            task_id,
-            value
+            task_id, value
         );
 
-        match self
+        let mut data = HashMap::new();
+        data.insert("status".to_string(), AttributeValue::S(value.to_string()));
+        data.insert(
+            "last_update".to_string(),
+            AttributeValue::N(unix_timestamp.to_string()),
+        );
+
+        let response = self
             .client
             .update_item()
             .table_name(self.table_name.clone())
-            .key("PK", AttributeValue::S(String::from("INDEXER")))
-            .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
-            .update_expression(
-                "SET indexation_progress = :indexation_progress, last_update = :last_update",
-            )
-            .expression_attribute_values(
-                ":indexation_progress",
-                AttributeValue::N(value.to_string()),
-            )
-            .expression_attribute_values(
-                ":last_update",
-                AttributeValue::N(unix_timestamp.to_string()),
-            )
+            .key("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
+            .key("SK", AttributeValue::S("TASK".to_string()))
+            .update_expression("SET #Data = :data")
+            .expression_attribute_names("#Data", "Data")
+            .expression_attribute_values(":data".to_string(), AttributeValue::M(data))
+            .return_values(ReturnValue::AllNew)
             .send()
-            .await
-        {
-            Ok(output) => {
-                debug!("Upsert operation successful: {:?}", output);
+            .await;
+
+        match response {
+            Ok(_) => {
+                debug!(
+                    "Successfully updated indexer progress for task_id {}: value {}",
+                    task_id, value
+                );
                 Ok(())
             }
-            Err(error) => {
+            Err(e) => {
                 error!(
-                    "Upsert operation failed for task_id {}: {:?}",
-                    task_id, error
+                    "Failed to update indexer progress for task_id {}: {:?}",
+                    task_id, e
                 );
-                Err(anyhow!(error)
-                    .context(format!("Failed to update progress for task_id {}", task_id)))
+                Err(StorageError::DatabaseError)
             }
         }
     }
@@ -159,7 +185,7 @@ impl Storage for DynamoStorage {
         token: &TokenFromEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        debug!("Registering mint {:?}", token);
+        info!("Registering mint {:?}", token);
 
         // Construct the primary key for the token
         let pk = format!(
@@ -230,7 +256,7 @@ impl Storage for DynamoStorage {
                 );
                 data_map.insert(
                     "TokenId".to_string(),
-                    AttributeValue::N(token.formated_token_id.token_id.to_string()),
+                    AttributeValue::S(token.formated_token_id.token_id.to_string()),
                 );
                 data_map.insert(
                     "MintAddress".to_string(),
@@ -273,6 +299,17 @@ impl Storage for DynamoStorage {
                     ) // Assuming the token is listed by default
                     .item(
                         "GSI3SK".to_string(),
+                        AttributeValue::S(format!(
+                            "TOKEN#{}#{}",
+                            token.address, token.formated_token_id.padded_token_id
+                        )),
+                    )
+                    .item(
+                        "GSI4PK".to_string(),
+                        AttributeValue::S(format!("BLOCK#{}", block_number)),
+                    )
+                    .item(
+                        "GSI4SK".to_string(),
                         AttributeValue::S(format!(
                             "TOKEN#{}#{}",
                             token.address, token.formated_token_id.padded_token_id
@@ -364,7 +401,7 @@ impl Storage for DynamoStorage {
                 );
                 data_map.insert(
                     "TokenId".to_string(),
-                    AttributeValue::N(token.formated_token_id.token_id.to_string()),
+                    AttributeValue::S(token.formated_token_id.token_id.to_string()),
                 );
 
                 let put_item_output = self
@@ -404,6 +441,17 @@ impl Storage for DynamoStorage {
                             token.address, token.formated_token_id.padded_token_id
                         )),
                     )
+                    .item(
+                        "GSI4PK".to_string(),
+                        AttributeValue::S(format!("BLOCK#{}", block_number)),
+                    )
+                    .item(
+                        "GSI4SK".to_string(),
+                        AttributeValue::S(format!(
+                            "TOKEN#{}#{}",
+                            token.address, token.formated_token_id.padded_token_id
+                        )),
+                    )
                     .item("Data".to_string(), AttributeValue::M(data_map))
                     .item("Type", AttributeValue::S(EntityType::Token.to_string()))
                     .return_values(ReturnValue::AllOld)
@@ -430,7 +478,7 @@ impl Storage for DynamoStorage {
         event: &TokenEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        debug!("Registering event {:?}", event);
+        info!("Registering event {:?}", event);
 
         // Construct the primary key and secondary key for the event
         let pk = format!(
@@ -453,7 +501,6 @@ impl Storage for DynamoStorage {
         match get_item_output {
             Ok(output) if output.item.is_some() => Err(StorageError::AlreadyExists),
             Ok(_) => {
-                println!("event: {:?}", event);
                 // Create new item
                 let mut data_map = HashMap::new();
                 data_map.insert(
@@ -477,7 +524,7 @@ impl Storage for DynamoStorage {
                     AttributeValue::S(event.transaction_hash.clone()),
                 );
                 data_map.insert(
-                    "TokenID".to_string(),
+                    "TokenId".to_string(),
                     AttributeValue::S(event.formated_token_id.token_id.clone()),
                 );
                 data_map.insert(
@@ -493,7 +540,7 @@ impl Storage for DynamoStorage {
                     AttributeValue::S(event.event_type.clone().to_string()),
                 );
                 data_map.insert(
-                    "EventID".to_string(),
+                    "EventId".to_string(),
                     AttributeValue::S(to_hex_str(&event.event_id)),
                 );
                 data_map.insert(
@@ -524,6 +571,17 @@ impl Storage for DynamoStorage {
                         "GSI2SK".to_string(),
                         AttributeValue::S(format!("EVENT#{}", event.event_id)),
                     )
+                    .item(
+                        "GSI4PK".to_string(),
+                        AttributeValue::S(format!("BLOCK#{}", block_number)),
+                    )
+                    .item(
+                        "GSI4SK".to_string(),
+                        AttributeValue::S(format!(
+                            "EVENT#{}#{}",
+                            event.contract_address, event.event_id
+                        )),
+                    )
                     .item("Data".to_string(), AttributeValue::M(data_map))
                     .item("Type", AttributeValue::S(EntityType::Event.to_string()))
                     .return_values(ReturnValue::AllOld)
@@ -549,7 +607,7 @@ impl Storage for DynamoStorage {
         &self,
         contract_address: &FieldElement,
     ) -> Result<ContractType, StorageError> {
-        debug!("Getting contract info for contract {}", contract_address);
+        info!("Getting contract info for contract {}", contract_address);
 
         // Construct the primary key and secondary key for the contract
         let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
@@ -592,7 +650,7 @@ impl Storage for DynamoStorage {
         contract_type: &ContractType,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        debug!(
+        info!(
             "Registering contract info {:?} for contract {}",
             contract_type, contract_address
         );
@@ -622,6 +680,14 @@ impl Storage for DynamoStorage {
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(format!("BLOCK#{}", block_number)),
+            )
+            .item(
+                "GSI4SK".to_string(),
+                AttributeValue::S(format!("COLLECTION#{}", contract_address)),
+            )
             .item("Data", AttributeValue::M(data))
             .item(
                 "Type",
@@ -635,14 +701,14 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 // If the condition failed, it means the contract info already exists no need to create it
-                info!("Collection already exist: {:?}", e);
+                error!("Collection already exist: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
     }
 
     async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
-        debug!("Setting block info {:?} for block #{}", info, block_number);
+        info!("Setting block info {:?} for block #{}", info, block_number);
 
         let pk = format!("BLOCK#{}", block_number);
         let sk = "BLOCK".to_string();
@@ -669,6 +735,11 @@ impl Storage for DynamoStorage {
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk))
             .item("SK", AttributeValue::S(sk))
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(format!("BLOCK#{}", block_number)),
+            )
+            .item("GSI4SK".to_string(), AttributeValue::S("BLOCK".to_string()))
             .item("Data", AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Block.to_string()))
             .send()
@@ -684,7 +755,7 @@ impl Storage for DynamoStorage {
     }
 
     async fn get_block_info(&self, block_number: u64) -> Result<BlockInfo, StorageError> {
-        debug!("Getting block info for block #{}", block_number);
+        info!("Getting block info for block #{}", block_number);
 
         let pk = format!("BLOCK#{}", block_number);
         let sk = "BLOCK".to_string();
@@ -755,7 +826,91 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn clean_block(&self, _block_number: u64) -> Result<(), StorageError> {
+    async fn clean_block(&self, block_number: u64) -> Result<(), StorageError> {
+        info!("Cleaning block #{}", block_number);
+        let table_name = self.table_name.clone();
+        let gsi_pk = format!("BLOCK#{}", block_number);
+
+        // Query for all items associated with the block number
+        let query_output = self
+            .client
+            .query()
+            .table_name(&table_name)
+            .index_name("GSI4PK-GSI4SK-index") // Assuming your GSI for block association is named GSI4
+            .key_condition_expression("GSI4PK = :gsi_pk")
+            .expression_attribute_values(":gsi_pk", AttributeValue::S(gsi_pk))
+            .projection_expression("PK, SK") // Only retrieve necessary attributes
+            .send()
+            .await
+            .map_err(|e| {
+                eprintln!("Query error: {:?}", e);
+                StorageError::DatabaseError
+            })?;
+
+        // Prepare the items for batch deletion
+        let mut write_requests: Vec<WriteRequest> = Vec::new();
+        if let Some(items) = query_output.items {
+            for item in items {
+                if let Some(pk) = item.get("PK").cloned() {
+                    if let Some(sk) = item.get("SK").cloned() {
+                        let delete_request =
+                            DeleteRequest::builder().key("PK", pk).key("SK", sk).build();
+                        let write_request = WriteRequest::builder()
+                            .delete_request(delete_request)
+                            .build();
+                        write_requests.push(write_request);
+                    }
+                }
+            }
+        }
+
+        // Batch delete items in chunks of 25
+        for chunk in write_requests.chunks(25) {
+            let batch_write_output = self
+                .client
+                .batch_write_item()
+                .request_items(&table_name, chunk.to_vec())
+                .send()
+                .await
+                .map_err(|e| {
+                    error!("Batch write error: {:?}", e);
+                    StorageError::DatabaseError
+                })?;
+
+            // Handle unprocessed items if any
+            if let Some(unprocessed_items) = batch_write_output.unprocessed_items {
+                if let Some(retry_items) = unprocessed_items.get(&table_name) {
+                    // Implement retry logic as per your use case
+                    // Here, we'll simply wait for a second and try again
+                    sleep(Duration::from_secs(1)).await;
+                    self.client
+                        .batch_write_item()
+                        .request_items(&table_name, retry_items.clone())
+                        .send()
+                        .await
+                        .map_err(|e| {
+                            error!("Retry batch write error: {:?}", e);
+                            StorageError::DatabaseError
+                        })?;
+                }
+            }
+        }
+
+        // Delete the block entry
+        let pk_block = format!("BLOCK#{}", block_number);
+        let sk_block = "BLOCK".to_string();
+        self.client
+            .delete_item()
+            .table_name(&table_name)
+            .key("PK", AttributeValue::S(pk_block))
+            .key("SK", AttributeValue::S(sk_block))
+            .send()
+            .await
+            .map_err(|e| {
+                error!("Delete block entry error: {:?}", e);
+                StorageError::DatabaseError
+            })?;
+
         Ok(())
     }
 
