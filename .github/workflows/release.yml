@@ -13,7 +13,6 @@ jobs:
         environment: [mainnet, testnet] # Define your environments here
     env:
       AWS_REGION: us-east-1
-      REGISTRY: ${{ steps.login-ecr.outputs.registry }}
       REPOSITORY: arkproject
       TAG: ${{ github.event.release.tag_name }}
       CONTAINER_NAME: ark_indexer
@@ -41,8 +40,8 @@ jobs:
 
       - name: Build, Tag, and Push Docker Image to Amazon ECR
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ env.TAG }} -f Dockerfile .
-          docker push ${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ env.TAG }}
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} -f Dockerfile .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
 
       - name: Update Amazon ECS task definition
         id: render-web-container
@@ -50,7 +49,7 @@ jobs:
         with:
           task-definition: "${{ env.TASK_DEFINITION_FILE }}"
           container-name: "${{ env.CONTAINER_NAME }}"
-          image: "${{ env.REGISTRY }}/${{ env.REPOSITORY }}:${{ env.TAG }}"
+          image: "${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}"
 
       - name: Add environment variables to ECS task definition
         id: add-env-var
