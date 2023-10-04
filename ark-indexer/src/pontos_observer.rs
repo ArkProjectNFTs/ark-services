@@ -3,8 +3,8 @@ use arkproject::pontos::{
     storage::types::{IndexerStatus, TokenEvent, TokenFromEvent},
 };
 use async_trait::async_trait;
-use log::{info, trace};
 use std::sync::Arc;
+use tracing::{debug, error, info};
 
 use crate::dynamo_storage::AWSDynamoStorage;
 
@@ -38,20 +38,27 @@ where
     }
 
     async fn on_block_processing(&self, block_number: u64) {
-        trace!(
+        debug!(
             "Block processing: block_number={}, indexer_identifier={}, indexer_version={}",
-            block_number,
-            self.indexer_identifier,
-            self.indexer_version
+            block_number, self.indexer_identifier, self.indexer_version
         );
-        let _ = self
+
+        match self
             .storage
             .update_indexer_task_status(
                 self.indexer_identifier.clone(),
                 self.indexer_version.clone(),
                 IndexerStatus::Running,
             )
-            .await;
+            .await
+        {
+            Ok(_) => {
+                info!("Task status updated");
+            }
+            Err(err) => {
+                error!("Task status request error: {:?}", err);
+            }
+        }
     }
 
     async fn on_terminated(&self, block_number: u64, indexation_progress: f64) {
