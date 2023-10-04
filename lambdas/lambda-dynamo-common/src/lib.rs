@@ -3,6 +3,7 @@
 //!
 pub mod block;
 pub mod collection;
+pub mod event;
 pub mod token;
 
 pub(crate) mod convert;
