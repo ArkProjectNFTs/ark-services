@@ -104,8 +104,8 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               --data '{"content":"🔗 A new release has been published (ark-services): '*${{ env.TAG }}*'\
-               .\n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
+               --data "{\"content\":\"🔗 A new release has been published (ark-services): ${env.TAG}.\
+               \n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
                \n🔵 Testnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-testnet \
-               \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: '${{ github.event.release.html_url }}'"}' \
+               \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: ${github.event.release.html_url}\"}" \
                ${{ secrets.DISCORD_WEBHOOK_URL }}
