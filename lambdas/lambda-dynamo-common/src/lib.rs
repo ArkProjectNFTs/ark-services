@@ -1,9 +1,11 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub mod block;
 pub mod collection;
-pub(crate) mod convert;
 pub mod token;
+
+pub(crate) mod convert;
 
 use aws_config::meta::region::RegionProviderChain;
 pub use aws_sdk_dynamodb::Client;

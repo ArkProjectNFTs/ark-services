@@ -3,41 +3,41 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 
-use super::{types::CollectionData, ArkCollectionProvider};
+use super::{types::BlockData, ArkBlockProvider};
 use crate::{convert, ProviderError};
 
-/// DynamoDB provider for collections.
-pub struct DynamoDbCollectionProvider {
+/// DynamoDB provider for blocks.
+pub struct DynamoDbBlockProvider {
     table_name: String,
     key_prefix: String,
 }
 
-impl DynamoDbCollectionProvider {
+impl DynamoDbBlockProvider {
     pub fn new(table_name: &str) -> Self {
-        DynamoDbCollectionProvider {
+        DynamoDbBlockProvider {
             table_name: table_name.to_string(),
-            key_prefix: "COLLECTION".to_string(),
+            key_prefix: "BLOCK".to_string(),
         }
     }
 
-    fn get_pk(&self, contract_address: &str) -> String {
-        format!("{}#{}", self.key_prefix, contract_address)
+    fn get_pk(&self, block_number: u64) -> String {
+        format!("{}#{}", self.key_prefix, block_number)
     }
 }
 
 #[async_trait]
-impl ArkCollectionProvider for DynamoDbCollectionProvider {
+impl ArkBlockProvider for DynamoDbBlockProvider {
     type Client = DynamoClient;
 
-    async fn get_collection(
+    async fn get_block(
         &self,
         client: &Self::Client,
-        contract_address: &str,
-    ) -> Result<Option<CollectionData>, ProviderError> {
+        block_number: u64,
+    ) -> Result<Option<BlockData>, ProviderError> {
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
-            AttributeValue::S(self.get_pk(contract_address)),
+            AttributeValue::S(self.get_pk(block_number)),
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
@@ -52,10 +52,10 @@ impl ArkCollectionProvider for DynamoDbCollectionProvider {
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
 
-            Ok(Some(CollectionData {
-                block_number: convert::attr_to_u64(&data, "BlockNumber")?,
-                contract_type: convert::attr_to_str(&data, "ContractType")?,
-                contract_address: convert::attr_to_str(&data, "ContractAddress")?,
+            Ok(Some(BlockData {
+                status: convert::attr_to_str(&data, "Status")?,
+                indexer_identifier: convert::attr_to_str(&data, "IndexerIdentifier")?,
+                indexer_version: convert::attr_to_str(&data, "IndexerVersion")?,
             }))
         } else {
             Ok(None)

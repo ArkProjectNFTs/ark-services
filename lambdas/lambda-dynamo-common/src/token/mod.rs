@@ -24,6 +24,7 @@ pub trait ArkTokenProvider {
     async fn get_token(
         &self,
         client: &Self::Client,
+        contract_address: &str,
         token_id: &str,
-    ) -> Result<TokenData, ProviderError>;
+    ) -> Result<Option<TokenData>, ProviderError>;
 }
