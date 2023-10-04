@@ -5,22 +5,13 @@ on:
     types: [published]
 
 jobs:
-  release-job:
+  push-docker-image:
     runs-on: ubuntu-latest
-    name: Handling Release
-    strategy:
-      matrix:
-        environment: [mainnet, testnet] # Define your environments here
+    name: Push Docker Image
     env:
       AWS_REGION: us-east-1
       REPOSITORY: arkproject
       TAG: ${{ github.event.release.tag_name }}
-      CONTAINER_NAME: ark_indexer
-      SERVICE_NAME: ark-indexer-${{ matrix.environment }}
-      CLUSTER_NAME: ark-indexers
-      TASK_DEFINITION_FILE: infrastructure/ecs/indexer-${{ matrix.environment }}.json
-      INDEXER_TABLE_NAME: ark_${{ matrix.environment }}_indexer
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -43,6 +34,24 @@ jobs:
           docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} -f Dockerfile .
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
 
+  release-job:
+    needs: push-docker-image
+    runs-on: ubuntu-latest
+    name: Handling Release
+    strategy:
+      matrix:
+        environment: [mainnet, testnet] # Define your environments here
+    env:
+      AWS_REGION: us-east-1
+      REPOSITORY: arkproject
+      TAG: ${{ github.event.release.tag_name }}
+      CONTAINER_NAME: ark_indexer
+      SERVICE_NAME: ark-indexer-${{ matrix.environment }}
+      CLUSTER_NAME: ark-indexers
+      TASK_DEFINITION_FILE: infrastructure/ecs/indexer-${{ matrix.environment }}.json
+      INDEXER_TABLE_NAME: ark_${{ matrix.environment }}_indexer
+
+    steps:
       - name: Update Amazon ECS task definition
         id: render-web-container
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -72,9 +81,17 @@ jobs:
           service: "${{ env.SERVICE_NAME }}"
           cluster: "${{ env.CLUSTER_NAME }}"
 
+  discord-notification:
+    needs: release-job
+    runs-on: ubuntu-latest
+    name: Notify Discord
+    steps:
       - name: Notify Discord
         run: |
           curl -H "Content-Type: application/json" \
                -X POST \
-               -d '{"content":"A new release has been published: '${{ env.TAG }}' for environment: '${{ matrix.environment }}'. \nRelease Link: '${{ github.event.release.html_url }}'"}' \
-               ${{ secrets.DISCORD_WEBHOOK_URL }}
+               --data '{"content":"A new release has been published: '*${{ env.TAG }}*'\
+               .\n\n🟢 Mainnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-mainnet \
+               \n🔵 Testnet Task Definitions: https://us-east-1.console.aws.amazon.com/ecs/v2/task-definitions/ark-indexer-task-testnet \
+               \n\n*Changelog:*\n${{ github.event.release.body }}\n\nRelease Link: '${{ github.event.release.html_url }}'"}' \
+               YOUR_DISCORD_WEBHOOK
