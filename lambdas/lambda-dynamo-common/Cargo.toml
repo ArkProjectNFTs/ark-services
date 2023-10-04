@@ -1,0 +1,24 @@
+[package]
+name = "lambda-dynamo-common"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4.17"
+async-trait.workspace = true
+aws-config = "0.56.1"
+aws-sdk-dynamodb = "0.31.1"
+aws-sdk-s3 = "0.30.0"
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true
+mockall = { version = "0.11.2", optional = true }
+
+[dev-dependencies]
+mockall = "0.11.2"
+
+[features]
+mock = ["dep:mockall"]

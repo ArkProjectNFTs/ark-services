@@ -11,7 +11,10 @@ edition = "2021"
 
 [workspace]
 members = [
-  "ark-indexer"
+  "ark-indexer",
+  "lambdas/lambda-dynamo-common",
+  "lambdas/apigw/lambda-http-common",
+  "lambdas/apigw/lambda-get-collection",
 ]
 resolver = "2"
 
@@ -19,3 +22,9 @@ resolver = "2"
 anyhow = "1.0"
 async-trait = "0.1.73"
 tokio = { version = "1", features = ["full"] }
+serde = "1.0.160"
+serde_json = "1.0.96"
+serde_with = "2.3.2"
+thiserror = "1.0.40"
+lambda-http-common = { path = "lambdas/apigw/lambda-http-common" }
+lambda-dynamo-common = { path = "lambdas/lambda-dynamo-common" }
