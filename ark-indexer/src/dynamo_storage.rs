@@ -11,10 +11,10 @@ use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{types::AttributeValue, types::ReturnValue, Client};
 use chrono::Utc;
-use log::{debug, error, info, trace};
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::fmt;
+use tracing::{debug, error, info, trace};
 
 #[derive(Debug, PartialEq, Eq)]
 enum EntityType {
@@ -76,6 +76,8 @@ impl AWSDynamoStorage for DynamoStorage {
         }
         .to_string();
 
+        trace!("Updating table {}...", self.table_name);
+
         let response = self
             .client
             .put_item()
@@ -84,7 +86,7 @@ impl AWSDynamoStorage for DynamoStorage {
             .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .item("status", AttributeValue::S(status.to_string()))
             .item("last_update", AttributeValue::N(unix_timestamp.to_string()))
-            .item("version", AttributeValue::N(indexer_version.to_string()))
+            .item("version", AttributeValue::S(indexer_version.to_string()))
             .item("task_id", AttributeValue::S(task_id.to_string()))
             .send()
             .await;
@@ -157,7 +159,7 @@ impl Storage for DynamoStorage {
         token: &TokenFromEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        log::debug!("Registering mint {:?}", token);
+        debug!("Registering mint {:?}", token);
 
         // Construct the primary key for the token
         let pk = format!(
@@ -209,7 +211,7 @@ impl Storage for DynamoStorage {
                 match update_item_output {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        log::error!("DynamoDB error: {:?}", e);
+                        error!("DynamoDB error: {:?}", e);
                         Err(StorageError::DatabaseError)
                     }
                 }
@@ -285,13 +287,13 @@ impl Storage for DynamoStorage {
                 match put_item_output {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        log::error!("DynamoDB error: {:?}", e);
+                        error!("DynamoDB error: {:?}", e);
                         Err(StorageError::DatabaseError)
                     }
                 }
             }
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
+                error!("DynamoDB error: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
@@ -302,7 +304,7 @@ impl Storage for DynamoStorage {
         token: &TokenFromEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        log::debug!("Registering token {:?}", token);
+        debug!("Registering token {:?}", token);
 
         // Construct the primary key and secondary key for the token
         let pk = format!(
@@ -342,7 +344,7 @@ impl Storage for DynamoStorage {
                 match update_item_output {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        log::error!("DynamoDB error: {:?}", e);
+                        error!("DynamoDB error: {:?}", e);
                         Err(StorageError::DatabaseError)
                     }
                 }
@@ -411,13 +413,13 @@ impl Storage for DynamoStorage {
                 match put_item_output {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        log::error!("DynamoDB error: {:?}", e);
+                        error!("DynamoDB error: {:?}", e);
                         Err(StorageError::DatabaseError)
                     }
                 }
             }
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
+                error!("DynamoDB error: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
@@ -428,7 +430,7 @@ impl Storage for DynamoStorage {
         event: &TokenEvent,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        log::debug!("Registering event {:?}", event);
+        debug!("Registering event {:?}", event);
 
         // Construct the primary key and secondary key for the event
         let pk = format!(
@@ -531,13 +533,13 @@ impl Storage for DynamoStorage {
                 match put_item_output {
                     Ok(_) => Ok(()),
                     Err(e) => {
-                        log::error!("DynamoDB error: {:?}", e);
+                        error!("DynamoDB error: {:?}", e);
                         Err(StorageError::DatabaseError)
                     }
                 }
             }
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
+                error!("DynamoDB error: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
@@ -547,7 +549,7 @@ impl Storage for DynamoStorage {
         &self,
         contract_address: &FieldElement,
     ) -> Result<ContractType, StorageError> {
-        log::debug!("Getting contract info for contract {}", contract_address);
+        debug!("Getting contract info for contract {}", contract_address);
 
         // Construct the primary key and secondary key for the contract
         let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
@@ -578,7 +580,7 @@ impl Storage for DynamoStorage {
                 Err(StorageError::NotFound)
             }
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
+                error!("DynamoDB error: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
@@ -590,10 +592,9 @@ impl Storage for DynamoStorage {
         contract_type: &ContractType,
         block_number: u64,
     ) -> Result<(), StorageError> {
-        log::debug!(
+        debug!(
             "Registering contract info {:?} for contract {}",
-            contract_type,
-            contract_address
+            contract_type, contract_address
         );
 
         let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
@@ -634,14 +635,14 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 // If the condition failed, it means the contract info already exists no need to create it
-                log::info!("Collection already exist: {:?}", e);
+                info!("Collection already exist: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
     }
 
     async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
-        log::debug!("Setting block info {:?} for block #{}", info, block_number);
+        debug!("Setting block info {:?} for block #{}", info, block_number);
 
         let pk = format!("BLOCK#{}", block_number);
         let sk = "BLOCK".to_string();
@@ -676,14 +677,14 @@ impl Storage for DynamoStorage {
         match put_item_output {
             Ok(_) => Ok(()),
             Err(e) => {
-                log::error!("DynamoDB error: {:?}", e);
+                error!("DynamoDB error: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }
     }
 
     async fn get_block_info(&self, block_number: u64) -> Result<BlockInfo, StorageError> {
-        log::debug!("Getting block info for block #{}", block_number);
+        debug!("Getting block info for block #{}", block_number);
 
         let pk = format!("BLOCK#{}", block_number);
         let sk = "BLOCK".to_string();
@@ -739,16 +740,16 @@ impl Storage for DynamoStorage {
                             status,
                         })
                     } else {
-                        log::error!("Data NotFound error");
+                        error!("Data NotFound error");
                         Err(StorageError::NotFound)
                     }
                 } else {
-                    log::error!("Item NotFound error");
+                    error!("Item NotFound error");
                     Err(StorageError::NotFound)
                 }
             }
             Err(e) => {
-                log::error!("Table NotFound error: {:?}", e);
+                error!("Table NotFound error: {:?}", e);
                 Err(StorageError::DatabaseError)
             }
         }

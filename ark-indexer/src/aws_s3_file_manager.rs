@@ -2,7 +2,7 @@ use anyhow::Result;
 use arkproject::metadata::file_manager::{FileInfo, FileManager};
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::ByteStream;
-use log::debug;
+use tracing::debug;
 
 /// FileManager implementation that saves files to AWS S3.
 ///
