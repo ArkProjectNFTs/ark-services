@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use arkproject::pontos::storage::{
     types::{
         BlockIndexingStatus, BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent,
@@ -60,8 +60,12 @@ pub trait AWSDynamoStorage: Send + Sync {
         task_id: String,
         indexer_version: String,
         status: IndexerStatus,
-    ) -> Result<()>;
-    async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()>;
+    ) -> Result<(), StorageError>;
+    async fn update_indexer_progress(
+        &self,
+        task_id: String,
+        value: f64,
+    ) -> Result<(), StorageError>;
 }
 
 #[async_trait]
@@ -71,7 +75,7 @@ impl AWSDynamoStorage for DynamoStorage {
         task_id: String,
         indexer_version: String,
         status: IndexerStatus,
-    ) -> Result<()> {
+    ) -> Result<(), StorageError> {
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
@@ -81,18 +85,29 @@ impl AWSDynamoStorage for DynamoStorage {
         }
         .to_string();
 
-        trace!("Updating table {}...", self.table_name);
+        let mut data = HashMap::new();
+        data.insert(
+            "status".to_string(),
+            AttributeValue::S(status_string.clone()),
+        );
+        data.insert(
+            "last_update".to_string(),
+            AttributeValue::N(unix_timestamp.to_string()),
+        );
+        data.insert(
+            "version".to_string(),
+            AttributeValue::S(indexer_version.clone()),
+        );
+        data.insert("task_id".to_string(), AttributeValue::S(task_id.clone()));
 
         let response = self
             .client
             .put_item()
             .table_name(self.table_name.clone())
-            .item("PK", AttributeValue::S(String::from("INDEXER")))
-            .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
-            .item("status", AttributeValue::S(status.to_string()))
-            .item("last_update", AttributeValue::N(unix_timestamp.to_string()))
-            .item("version", AttributeValue::S(indexer_version.to_string()))
-            .item("task_id", AttributeValue::S(task_id.to_string()))
+            .item("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
+            .item("SK", AttributeValue::S("TASK".to_string()))
+            .item("Type", AttributeValue::S("IndexerTask".to_string()))
+            .item("Data", AttributeValue::M(data))
             .send()
             .await;
 
@@ -106,52 +121,58 @@ impl AWSDynamoStorage for DynamoStorage {
                     "Failed to update indexer task status for task_id {}: {:?}",
                     task_id, e
                 );
-                Err(e.into())
+                Err(StorageError::DatabaseError)
             }
         }
     }
 
-    async fn update_indexer_progress(&self, task_id: String, value: f64) -> Result<()> {
+    async fn update_indexer_progress(
+        &self,
+        task_id: String,
+        value: f64,
+    ) -> Result<(), StorageError> {
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
-        trace!(
+        info!(
             "Updating indexer progress: task_id={}, value={}",
-            task_id,
-            value
+            task_id, value
         );
 
-        match self
+        let mut data = HashMap::new();
+        data.insert("status".to_string(), AttributeValue::S(value.to_string()));
+        data.insert(
+            "last_update".to_string(),
+            AttributeValue::N(unix_timestamp.to_string()),
+        );
+
+        let response = self
             .client
             .update_item()
             .table_name(self.table_name.clone())
-            .key("PK", AttributeValue::S(String::from("INDEXER")))
-            .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
-            .update_expression(
-                "SET indexation_progress = :indexation_progress, last_update = :last_update",
-            )
-            .expression_attribute_values(
-                ":indexation_progress",
-                AttributeValue::N(value.to_string()),
-            )
-            .expression_attribute_values(
-                ":last_update",
-                AttributeValue::N(unix_timestamp.to_string()),
-            )
+            .key("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
+            .key("SK", AttributeValue::S("TASK".to_string()))
+            .update_expression("SET #Data = :data")
+            .expression_attribute_names("#Data", "Data")
+            .expression_attribute_values(":data".to_string(), AttributeValue::M(data))
+            .return_values(ReturnValue::AllNew)
             .send()
-            .await
-        {
-            Ok(output) => {
-                debug!("Upsert operation successful: {:?}", output);
+            .await;
+
+        match response {
+            Ok(_) => {
+                debug!(
+                    "Successfully updated indexer progress for task_id {}: value {}",
+                    task_id, value
+                );
                 Ok(())
             }
-            Err(error) => {
+            Err(e) => {
                 error!(
-                    "Upsert operation failed for task_id {}: {:?}",
-                    task_id, error
+                    "Failed to update indexer progress for task_id {}: {:?}",
+                    task_id, e
                 );
-                Err(anyhow!(error)
-                    .context(format!("Failed to update progress for task_id {}", task_id)))
+                Err(StorageError::DatabaseError)
             }
         }
     }
