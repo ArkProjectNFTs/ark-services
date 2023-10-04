@@ -37,7 +37,6 @@ jobs:
       registry: ${{ steps.login-ecr.outputs.registry }}
 
   update-task-definition:
-    
     needs: push-docker-image
     runs-on: ubuntu-latest
     name: Update ECS Task Definitions
@@ -90,7 +89,7 @@ jobs:
           cluster: "${{ env.CLUSTER_NAME }}"
 
   discord-notification:
-    needs: release-job
+    needs: "update-task-definition"
     runs-on: ubuntu-latest
     name: Discord Notification
     steps:
