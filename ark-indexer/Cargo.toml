@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.19"
 ark-dynamodb.workspace = true
+arkproject.workspace = true
 aws-config = "0.56.1"
 aws-sdk-dynamodb = "0.31.1"
 aws-sdk-s3 = "0.31.2"
@@ -14,7 +15,6 @@ async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
 starknet = "0.6.0"
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.3" }
 regex = "1.9.6"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tracing = "0.1"

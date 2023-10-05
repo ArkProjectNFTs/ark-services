@@ -194,8 +194,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
         _contract_address: &str,
         _token_id: &str,
     ) -> Result<Vec<TokenEvent>, ProviderError> {
-        // TODO: check how to query indexes instead of key?
-        // Do we need to pass only the index?
+        // TODO.
 
         Ok(vec![])
     }

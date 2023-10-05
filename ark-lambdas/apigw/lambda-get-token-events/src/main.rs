@@ -7,8 +7,9 @@
 //! `https://.../token-events?address=0x1234&id=1234`
 //!
 use ark_dynamodb::{
-    event::{ArkEventProvider, DynamoDbEventProvider},
-    init_aws_dynamo_client, Client as DynamoClient,
+    init_aws_dynamo_client,
+    providers::{ArkEventProvider, DynamoDbEventProvider},
+    Client as DynamoClient,
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common as common;

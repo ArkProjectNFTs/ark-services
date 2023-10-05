@@ -1,5 +1,5 @@
 [package]
-name = "lambda-get-collection"
+name = "lambda-get-contract"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,6 +17,7 @@ edition = "2021"
 [dependencies]
 lambda-http-common.workspace = true
 ark-dynamodb.workspace = true
+arkproject.workspace = true
 lambda_http = "0.8.1"
 lambda_runtime = "0.8.1"
 tokio = { version = "1", features = ["macros"] }

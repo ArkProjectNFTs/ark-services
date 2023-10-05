@@ -123,7 +123,7 @@ name = "ark-dynamodb"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arkproject 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "arkproject",
  "async-trait",
  "aws-config",
  "aws-sdk-dynamodb",
@@ -191,7 +191,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ark-dynamodb",
- "arkproject 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
+ "arkproject",
  "async-trait",
  "aws-config",
  "aws-sdk-dynamodb",
@@ -209,30 +209,10 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
-dependencies = [
- "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "async-trait",
- "base64 0.21.4",
- "dotenv",
- "log",
- "reqwest",
- "serde",
- "serde_derive",
- "serde_json",
- "starknet",
- "tokio",
- "urlencoding",
-]
-
-[[package]]
-name = "ark-metadata"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "ark-starknet",
  "async-trait",
  "base64 0.21.4",
  "dotenv",
@@ -255,20 +235,6 @@ dependencies = [
  "ark-std",
  "digest",
  "num-bigint",
-]
-
-[[package]]
-name = "ark-starknet"
-version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
-dependencies = [
- "anyhow",
- "async-trait",
- "mockall",
- "num-bigint",
- "regex",
- "starknet",
- "url",
 ]
 
 [[package]]
@@ -298,33 +264,16 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
-dependencies = [
- "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "async-trait",
- "diri 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "futures",
- "log",
- "pontos 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "starknet",
- "tokio",
-]
-
-[[package]]
-name = "arkproject"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "ark-metadata",
+ "ark-starknet",
  "async-trait",
- "diri 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "diri",
  "futures",
  "log",
- "pontos 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "pontos",
  "starknet",
  "tokio",
 ]
@@ -1287,33 +1236,10 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
-dependencies = [
- "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "async-trait",
- "clap",
- "dotenv",
- "env_logger",
- "futures",
- "log",
- "mongodb",
- "regex",
- "serde",
- "serde_json",
- "starknet",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "diri"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "ark-starknet",
  "async-trait",
  "clap",
  "dotenv",
@@ -2014,10 +1940,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "lambda-get-collection"
+name = "lambda-get-contract"
 version = "0.1.0"
 dependencies = [
  "ark-dynamodb",
+ "arkproject",
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
@@ -2032,6 +1959,7 @@ name = "lambda-get-token"
 version = "0.1.0"
 dependencies = [
  "ark-dynamodb",
+ "arkproject",
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
@@ -2046,6 +1974,7 @@ name = "lambda-get-token-events"
 version = "0.1.0"
 dependencies = [
  "ark-dynamodb",
+ "arkproject",
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
@@ -2575,32 +2504,11 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
-dependencies = [
- "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "async-trait",
- "dotenv",
- "futures",
- "num-bigint",
- "serde",
- "serde_json",
- "starknet",
- "thiserror",
- "tokio",
- "tracing",
- "version-compare",
-]
-
-[[package]]
-name = "pontos"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "ark-metadata",
+ "ark-starknet",
  "async-trait",
  "dotenv",
  "futures",
