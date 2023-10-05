@@ -5,8 +5,10 @@ pub use dynamo_provider::DynamoDbTokenProvider;
 
 use arkproject::pontos::storage::types::TokenInfo;
 use async_trait::async_trait;
+use aws_sdk_dynamodb::types::AttributeValue;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
+use std::collections::HashMap;
 
 use crate::ProviderError;
 
@@ -34,6 +36,8 @@ pub trait ArkTokenProvider {
     async fn update_data(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        contract_address: &str,
+        token_id_hex: &str,
+        data: HashMap<String, AttributeValue>,
     ) -> Result<(), ProviderError>;
 }

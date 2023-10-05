@@ -110,11 +110,11 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn update_data(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        contract_address: &str,
+        token_id_hex: &str,
+        data: HashMap<String, AttributeValue>,
     ) -> Result<(), ProviderError> {
-        let data = Self::info_to_data(info);
-
-        let pk = self.get_pk(&info.address, &info.token_id_hex);
+        let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
 
         let update_item_output = client

@@ -240,10 +240,16 @@ impl Storage for DynamoStorage {
             .is_ok();
 
         if does_exist {
-            // Update data only for existing token, as the caller may have
-            // added some information to the token info.
-            // TODO: can we have problems here... as the token info may not be complete...
-            match self.provider.token.update_data(&self.client, token).await {
+            // Update the owner only to ensure it's up to date.
+            let mut data = HashMap::new();
+            data.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
+
+            match self
+                .provider
+                .token
+                .update_data(&self.client, &token.address, &token.token_id_hex, data)
+                .await
+            {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     error!("{}", e.to_string());
