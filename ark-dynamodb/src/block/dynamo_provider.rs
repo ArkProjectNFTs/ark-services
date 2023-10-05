@@ -34,12 +34,12 @@ impl DynamoDbBlockProvider {
         data: &HashMap<String, AttributeValue>,
     ) -> Result<BlockInfo, ProviderError> {
         Ok(BlockInfo {
-            status: BlockIndexingStatus::from_str(&convert::attr_to_str(&data, "Status")?)
+            status: BlockIndexingStatus::from_str(&convert::attr_to_str(data, "Status")?)
                 .map_err(|_| {
                     ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string())
                 })?,
-            indexer_identifier: convert::attr_to_str(&data, "IndexerIdentifier")?,
-            indexer_version: convert::attr_to_str(&data, "IndexerVersion")?,
+            indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier")?,
+            indexer_version: convert::attr_to_str(data, "IndexerVersion")?,
         })
     }
 
@@ -73,7 +73,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         info: &BlockInfo,
     ) -> Result<(), ProviderError> {
         // Construct the data map for the block
-        let data = DynamoDbBlockProvider::info_to_data(&info);
+        let data = DynamoDbBlockProvider::info_to_data(info);
 
         // Upsert the block info
         let put_item_output = client

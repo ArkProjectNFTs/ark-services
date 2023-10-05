@@ -1,11 +1,9 @@
 //! Token module.
 //!
-pub mod types;
-pub use types::*;
-
 mod dynamo_provider;
 pub use dynamo_provider::DynamoDbTokenProvider;
 
+use arkproject::pontos::storage::types::TokenInfo;
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
@@ -24,5 +22,12 @@ pub trait ArkTokenProvider {
         client: &Self::Client,
         contract_address: &str,
         token_id: &str,
-    ) -> Result<Option<TokenData>, ProviderError>;
+    ) -> Result<Option<TokenInfo>, ProviderError>;
+
+    async fn register_token(
+        &self,
+        client: &Self::Client,
+        info: &TokenInfo,
+        block_number: u64,
+    ) -> Result<(), ProviderError>;
 }

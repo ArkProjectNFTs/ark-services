@@ -1,8 +1,8 @@
 use anyhow::Result;
 use arkproject::pontos::storage::{
     types::{
-        BlockIndexingStatus, BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent,
-        TokenFromEvent,
+        BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent,
+        TokenInfo,
     },
     Storage,
 };
@@ -10,21 +10,20 @@ use arkproject::starknet::format::to_hex_str;
 use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{
+    types::{AttributeValue, DeleteRequest, ReturnValue, WriteRequest},
     Client,
-    types::{
-        AttributeValue, DeleteRequest, ReturnValue, WriteRequest
-    },
 };
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
-use std::fmt;
+
 use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
-use crate::block::{ArkBlockProvider, DynamoDbBlockProvider};
-use crate::event::{ArkEventProvider, DynamoDbEventProvider};
+use crate::block::{ArkBlockProvider};
+use crate::event::{ArkEventProvider};
+use crate::token::{ArkTokenProvider};
 use crate::{ArkDynamoDbProvider, EntityType};
 
 pub struct DynamoStorage {
@@ -175,293 +174,122 @@ impl AWSDynamoStorage for DynamoStorage {
 impl Storage for DynamoStorage {
     async fn register_mint(
         &self,
-        token: &TokenFromEvent,
+        token: &TokenInfo,
         block_number: u64,
     ) -> Result<(), StorageError> {
         info!("Registering mint {:?}", token);
 
-        // Construct the primary key for the token
-        let pk = format!(
-            "TOKEN#{}#{}",
-            token.address, token.formated_token_id.token_id
-        );
-        let sk = "TOKEN".to_string();
-
-        // Check if the token already exists in DynamoDB
-        let get_item_output = self
-            .client
-            .get_item()
-            .table_name(self.table_name.clone())
-            .key("PK".to_string(), AttributeValue::S(pk.clone()))
-            .key("SK".to_string(), AttributeValue::S(sk.clone()))
-            .send()
-            .await;
-
-        match get_item_output {
-            Ok(output) if output.item.is_some() => {
-                // Update existing item in case we indexed a transfer before the mint
-                let mut data_map = HashMap::new();
-                data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
-                data_map.insert(
-                    "MintAddress".to_string(),
-                    AttributeValue::S(to_hex_str(&token.mint_address.unwrap())),
-                );
-                data_map.insert(
-                    "MintTimestamp".to_string(),
-                    AttributeValue::N(token.mint_timestamp.unwrap().to_string()),
-                );
-                data_map.insert(
-                    "BlockNumber".to_string(),
-                    AttributeValue::N(block_number.to_string()),
-                );
-
-                let update_item_output = self
-                    .client
-                    .update_item()
-                    .table_name(self.table_name.clone())
-                    .key("PK".to_string(), AttributeValue::S(pk.clone()))
-                    .key("SK".to_string(), AttributeValue::S(sk.clone()))
-                    .update_expression("SET Data = :data")
-                    .expression_attribute_values(":data".to_string(), AttributeValue::M(data_map))
-                    .return_values(ReturnValue::AllNew)
-                    .send()
-                    .await;
-
-                match update_item_output {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        error!("DynamoDB error: {:?}", e);
-                        Err(StorageError::DatabaseError)
-                    }
-                }
-            }
-            Ok(_) => {
-                // Create new item for the minted token
-                let mut data_map = HashMap::new();
-                data_map.insert(
-                    "BlockNumber".to_string(),
-                    AttributeValue::N(block_number.to_string()),
-                );
-                data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
-                data_map.insert(
-                    "contract_address".to_string(),
-                    AttributeValue::S(token.address.clone()),
-                );
-                data_map.insert(
-                    "TokenId".to_string(),
-                    AttributeValue::S(token.formated_token_id.token_id.to_string()),
-                );
-                data_map.insert(
-                    "MintAddress".to_string(),
-                    AttributeValue::S(to_hex_str(&token.mint_address.unwrap())),
-                );
-                data_map.insert(
-                    "MintTimestamp".to_string(),
-                    AttributeValue::N(token.mint_timestamp.unwrap().to_string()),
-                );
-
-                let put_item_output = self
-                    .client
-                    .put_item()
-                    .table_name(self.table_name.clone())
-                    .item("PK".to_string(), AttributeValue::S(pk.clone()))
-                    .item("SK".to_string(), AttributeValue::S(sk.clone()))
-                    .item("Type".to_string(), AttributeValue::S("Token".to_string()))
-                    .item(
-                        "GSI1PK".to_string(),
-                        AttributeValue::S(format!("COLLECTION#{}", token.address)),
-                    )
-                    .item(
-                        "GSI1SK".to_string(),
-                        AttributeValue::S(format!("TOKEN#{}", token.formated_token_id.token_id)),
-                    )
-                    .item(
-                        "GSI2PK".to_string(),
-                        AttributeValue::S(format!("OWNER#{}", token.owner)),
-                    )
-                    .item(
-                        "GSI2SK".to_string(),
-                        AttributeValue::S(format!(
-                            "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.token_id
-                        )),
-                    )
-                    .item(
-                        "GSI3PK".to_string(),
-                        AttributeValue::S("LISTED#false".to_string()),
-                    ) // Assuming the token is listed by default
-                    .item(
-                        "GSI3SK".to_string(),
-                        AttributeValue::S(format!(
-                            "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.padded_token_id
-                        )),
-                    )
-                    .item(
-                        "GSI4PK".to_string(),
-                        AttributeValue::S(format!("BLOCK#{}", block_number)),
-                    )
-                    .item(
-                        "GSI4SK".to_string(),
-                        AttributeValue::S(format!(
-                            "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.padded_token_id
-                        )),
-                    )
-                    .item("Data".to_string(), AttributeValue::M(data_map))
-                    .item("Type", AttributeValue::S(EntityType::Token.to_string()))
-                    .return_values(ReturnValue::AllOld)
-                    .send()
-                    .await;
-
-                match put_item_output {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        error!("DynamoDB error: {:?}", e);
-                        Err(StorageError::DatabaseError)
-                    }
-                }
-            }
+        let info_existing = match self
+            .provider
+            .token
+            .get_token(&self.client, &token.address, &token.token_id_hex)
+            .await
+        {
+            Ok(i) => i,
             Err(e) => {
-                error!("DynamoDB error: {:?}", e);
-                Err(StorageError::DatabaseError)
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
+            }
+        };
+
+        let info_to_register = if let Some(mut info) = info_existing {
+            // Token already exists, add mint info.
+            info.mint_address = token.mint_address.clone();
+            info.mint_transaction_hash = token.mint_transaction_hash.clone();
+            info.mint_timestamp = token.mint_timestamp;
+            info.mint_block_number = Some(block_number);
+
+            info
+        } else {
+            // Token does not exist, create it with mint info.
+            TokenInfo {
+                mint_address: token.mint_address.clone(),
+                mint_transaction_hash: token.mint_transaction_hash.clone(),
+                mint_timestamp: token.mint_timestamp,
+                mint_block_number: Some(block_number),
+                owner: token.owner.clone(),
+                address: token.address.clone(),
+                token_id: token.token_id.clone(),
+                token_id_hex: token.token_id_hex.clone(),
+            }
+        };
+
+        match self
+            .provider
+            .token
+            .register_token(&self.client, &info_to_register, block_number)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
     }
 
     async fn register_token(
         &self,
-        token: &TokenFromEvent,
+        token: &TokenInfo,
         block_number: u64,
     ) -> Result<(), StorageError> {
         debug!("Registering token {:?}", token);
 
-        // Construct the primary key and secondary key for the token
-        let pk = format!(
-            "TOKEN#{}#{}",
-            token.address, token.formated_token_id.token_id
-        );
-        let sk = "TOKEN".to_string();
+        let does_exist = self
+            .provider
+            .token
+            .get_token(&self.client, &token.address, &token.token_id_hex)
+            .await
+            .is_ok();
 
-        // Check if the token already exists in DynamoDB
-        let get_item_output = self
-            .client
-            .get_item()
-            .table_name(self.table_name.clone())
-            .key("PK".to_string(), AttributeValue::S(pk.clone()))
-            .key("SK".to_string(), AttributeValue::S(sk.clone()))
-            .send()
-            .await;
+        if does_exist {
+            // Update only owner for existing token.
+            // TODO: we may want an `update_owner` method inside the prodiver directly.
+            let pk = format!("TOKEN#{}#{}", token.address, token.token_id_hex);
+            let sk = "TOKEN".to_string();
 
-        match get_item_output {
-            Ok(output) if output.item.is_some() => {
-                // Update existing item
-                let mut data_map = HashMap::new();
-                data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
+            let mut data_map = HashMap::new();
+            data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
 
-                let update_item_output = self
-                    .client
-                    .update_item()
-                    .table_name(self.table_name.clone())
-                    .key("PK".to_string(), AttributeValue::S(pk.clone()))
-                    .key("SK".to_string(), AttributeValue::S(sk.clone()))
-                    .update_expression("SET Data = :data")
-                    .expression_attribute_values(":data".to_string(), AttributeValue::M(data_map))
-                    .return_values(ReturnValue::AllNew)
-                    .send()
-                    .await;
+            let update_item_output = self
+                .client
+                .update_item()
+                .table_name(self.table_name.clone())
+                .key("PK".to_string(), AttributeValue::S(pk.clone()))
+                .key("SK".to_string(), AttributeValue::S(sk.clone()))
+                .update_expression("SET Data = :data")
+                .expression_attribute_values(":data".to_string(), AttributeValue::M(data_map))
+                .return_values(ReturnValue::AllNew)
+                .send()
+                .await;
 
-                match update_item_output {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        error!("DynamoDB error: {:?}", e);
-                        Err(StorageError::DatabaseError)
-                    }
+            match update_item_output {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("DynamoDB error: {:?}", e);
+                    Err(StorageError::DatabaseError)
                 }
             }
-            Ok(_) => {
-                // Create new item
-                let mut data_map = HashMap::new();
-                data_map.insert(
-                    "BlockNumber".to_string(),
-                    AttributeValue::N(block_number.to_string()),
-                );
-                data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
-                // TODO move as a GSIPK to do quick lookups
-                data_map.insert(
-                    "contract_address".to_string(),
-                    AttributeValue::S(token.address.clone()),
-                );
-                data_map.insert(
-                    "TokenId".to_string(),
-                    AttributeValue::S(token.formated_token_id.token_id.to_string()),
-                );
+        } else {
+            let info = TokenInfo {
+                owner: token.owner.clone(),
+                address: token.address.clone(),
+                token_id: token.token_id.clone(),
+                token_id_hex: token.token_id_hex.clone(),
+                ..Default::default()
+            };
 
-                let put_item_output = self
-                    .client
-                    .put_item()
-                    .table_name(self.table_name.clone())
-                    .item("PK".to_string(), AttributeValue::S(pk.clone()))
-                    .item("SK".to_string(), AttributeValue::S(sk.clone()))
-                    .item("Type".to_string(), AttributeValue::S("Token".to_string()))
-                    .item(
-                        "GSI1PK".to_string(),
-                        AttributeValue::S(format!("COLLECTION#{}", token.address)),
-                    )
-                    .item(
-                        "GSI1SK".to_string(),
-                        AttributeValue::S(format!("TOKEN#{}", token.formated_token_id.token_id)),
-                    )
-                    .item(
-                        "GSI2PK".to_string(),
-                        AttributeValue::S(format!("OWNER#{}", token.owner)),
-                    )
-                    .item(
-                        "GSI2SK".to_string(),
-                        AttributeValue::S(format!(
-                            "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.token_id
-                        )),
-                    )
-                    .item(
-                        "GSI3PK".to_string(),
-                        AttributeValue::S("LISTED#false".to_string()),
-                    ) // Assuming the token is listed by default
-                    .item(
-                        "GSI3SK".to_string(),
-                        AttributeValue::S(format!(
-                            "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.padded_token_id
-                        )),
-                    )
-                    .item(
-                        "GSI4PK".to_string(),
-                        AttributeValue::S(format!("BLOCK#{}", block_number)),
-                    )
-                    .item(
-                        "GSI4SK".to_string(),
-                        AttributeValue::S(format!(
-                            "TOKEN#{}#{}",
-                            token.address, token.formated_token_id.padded_token_id
-                        )),
-                    )
-                    .item("Data".to_string(), AttributeValue::M(data_map))
-                    .item("Type", AttributeValue::S(EntityType::Token.to_string()))
-                    .return_values(ReturnValue::AllOld)
-                    .send()
-                    .await;
-
-                match put_item_output {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        error!("DynamoDB error: {:?}", e);
-                        Err(StorageError::DatabaseError)
-                    }
+            match self
+                .provider
+                .token
+                .register_token(&self.client, &info, block_number)
+                .await
+            {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("{}", e.to_string());
+                    return Err(StorageError::DatabaseError);
                 }
-            }
-            Err(e) => {
-                error!("DynamoDB error: {:?}", e);
-                Err(StorageError::DatabaseError)
             }
         }
     }
@@ -473,80 +301,33 @@ impl Storage for DynamoStorage {
     ) -> Result<(), StorageError> {
         info!("Registering event {:?}", event);
 
-        // Construct the primary key and secondary key for the event
-        let pk = format!(
-            "EVENT#{}#{}",
-            event.contract_address,
-            to_hex_str(&event.event_id)
-        );
-        let sk = "EVENT".to_string();
-
-        // Check if the event already exists in DynamoDB
-        let get_item_output = self
-            .client
-            .get_item()
-            .table_name(self.table_name.clone())
-            .key("PK".to_string(), AttributeValue::S(pk.clone()))
-            .key("SK".to_string(), AttributeValue::S(sk.clone()))
-            .send()
-            .await;
-
-        match get_item_output {
-            Ok(output) if output.item.is_some() => Err(StorageError::AlreadyExists),
-            Ok(_) => {
-                // Create new item
-
-                let put_item_output = self
-                    .client
-                    .put_item()
-                    .table_name(self.table_name.clone())
-                    .item("PK".to_string(), AttributeValue::S(pk.clone()))
-                    .item("SK".to_string(), AttributeValue::S(sk.clone()))
-                    .item("Type".to_string(), AttributeValue::S("Event".to_string()))
-                    .item(
-                        "GSI1PK".to_string(),
-                        AttributeValue::S(format!("COLLECTION#{}", event.contract_address)),
-                    )
-                    .item(
-                        "GSI1SK".to_string(),
-                        AttributeValue::S(format!("EVENT#{}", event.event_id)),
-                    )
-                    .item(
-                        "GSI2PK".to_string(),
-                        AttributeValue::S(format!("TOKEN#{}", event.formated_token_id.token_id)),
-                    )
-                    .item(
-                        "GSI2SK".to_string(),
-                        AttributeValue::S(format!("EVENT#{}", event.event_id)),
-                    )
-                    .item(
-                        "GSI4PK".to_string(),
-                        AttributeValue::S(format!("BLOCK#{}", block_number)),
-                    )
-                    .item(
-                        "GSI4SK".to_string(),
-                        AttributeValue::S(format!(
-                            "EVENT#{}#{}",
-                            event.contract_address, event.event_id
-                        )),
-                    )
-                    .item("Data".to_string(), AttributeValue::M(data_map))
-                    .item("Type", AttributeValue::S(EntityType::Event.to_string()))
-                    .return_values(ReturnValue::AllOld)
-                    .send()
-                    .await;
-
-                match put_item_output {
-                    Ok(_) => Ok(()),
-                    Err(e) => {
-                        error!("DynamoDB error: {:?}", e);
-                        Err(StorageError::DatabaseError)
-                    }
-                }
-            }
+        let info = match self
+            .provider
+            .event
+            .get_event(&self.client, &event.contract_address, &event.event_id)
+            .await
+        {
+            Ok(i) => i,
             Err(e) => {
-                error!("DynamoDB error: {:?}", e);
-                Err(StorageError::DatabaseError)
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
+            }
+        };
+
+        if info.is_some() {
+            return Err(StorageError::AlreadyExists);
+        }
+
+        match self
+            .provider
+            .event
+            .register_event(&self.client, event, block_number)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
     }
@@ -658,7 +439,12 @@ impl Storage for DynamoStorage {
     async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
         info!("Setting block info {:?} for block #{}", info, block_number);
 
-        match self.provider.block.set_info(&self.client, block_number, &info).await {
+        match self
+            .provider
+            .block
+            .set_info(&self.client, block_number, &info)
+            .await
+        {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());

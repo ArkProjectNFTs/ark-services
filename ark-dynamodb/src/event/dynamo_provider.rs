@@ -1,12 +1,12 @@
+use arkproject::pontos::storage::types::{EventType, TokenEvent};
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
-use arkproject::pontos::storage::types::{EventType, TokenEvent};
 use std::str::FromStr;
 
-use super::{types::EventData, ArkEventProvider};
-use crate::{convert, ProviderError, EntityType};
+use super::ArkEventProvider;
+use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for events.
 pub struct DynamoDbEventProvider {
@@ -30,19 +30,21 @@ impl DynamoDbEventProvider {
         self.key_prefix.clone()
     }
 
-    pub fn data_to_event(data: &HashMap<String, AttributeValue>) -> Result<TokenEvent, ProviderError> {
+    pub fn data_to_event(
+        data: &HashMap<String, AttributeValue>,
+    ) -> Result<TokenEvent, ProviderError> {
         Ok(TokenEvent {
-            block_number: convert::attr_to_u64(&data, "BlockNumber")?,
-            event_id: convert::attr_to_str(&data, "EventId")?,
-            event_type: EventType::from_str(&convert::attr_to_str(&data, "EventType")?).unwrap(),
-            timestamp: convert::attr_to_u64(&data, "Timestamp")?,
-            from_address: convert::attr_to_str(&data, "FromAddress")?,
-            to_address: convert::attr_to_str(&data, "ToAddress")?,
-            contract_address: convert::attr_to_str(&data, "ContractAddress")?,
-            contract_type: convert::attr_to_str(&data, "ContractType")?,
-            token_id: convert::attr_to_str(&data, "TokenId")?,
-            token_id_hex: convert::attr_to_str(&data, "TokenIdHex")?,
-            transaction_hash: convert::attr_to_str(&data, "TransactionHash")?,
+            block_number: convert::attr_to_u64(data, "BlockNumber")?,
+            event_id: convert::attr_to_str(data, "EventId")?,
+            event_type: EventType::from_str(&convert::attr_to_str(data, "EventType")?).unwrap(),
+            timestamp: convert::attr_to_u64(data, "Timestamp")?,
+            from_address: convert::attr_to_str(data, "FromAddress")?,
+            to_address: convert::attr_to_str(data, "ToAddress")?,
+            contract_address: convert::attr_to_str(data, "ContractAddress")?,
+            contract_type: convert::attr_to_str(data, "ContractType")?,
+            token_id: convert::attr_to_str(data, "TokenId")?,
+            token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
+            transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
         })
     }
 
@@ -111,12 +113,15 @@ impl ArkEventProvider for DynamoDbEventProvider {
         event: &TokenEvent,
         block_number: u64,
     ) -> Result<(), ProviderError> {
-        let data = Self::event_to_data(&event);
+        let data = Self::event_to_data(event);
 
         let put_item_output = client
             .put_item()
             .table_name(self.table_name.clone())
-            .item("PK".to_string(), AttributeValue::S(self.get_pk(&event.contract_type, &event.event_id)))
+            .item(
+                "PK".to_string(),
+                AttributeValue::S(self.get_pk(&event.contract_type, &event.event_id)),
+            )
             .item("SK".to_string(), AttributeValue::S(self.get_sk()))
             .item("Type".to_string(), AttributeValue::S("Event".to_string()))
             .item(
@@ -148,9 +153,9 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .return_values(ReturnValue::AllOld)
             .send()
             .await;
-        
+
         put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
-        
+
         Ok(())
     }
 

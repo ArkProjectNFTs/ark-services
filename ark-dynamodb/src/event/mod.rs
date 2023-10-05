@@ -1,8 +1,5 @@
 //! Event module.
 //!
-pub mod types;
-pub use types::*;
-
 mod dynamo_provider;
 pub use dynamo_provider::DynamoDbEventProvider;
 
