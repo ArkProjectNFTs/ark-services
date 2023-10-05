@@ -123,7 +123,7 @@ name = "ark-dynamodb"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "arkproject 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
+ "arkproject 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
  "async-trait",
  "aws-config",
  "aws-sdk-dynamodb",
@@ -209,10 +209,10 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11#4505967c46a608a99ddee41e2add12845524b95f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
  "async-trait",
  "base64 0.21.4",
  "dotenv",
@@ -229,10 +229,10 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
  "async-trait",
  "base64 0.21.4",
  "dotenv",
@@ -260,7 +260,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11#4505967c46a608a99ddee41e2add12845524b95f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -274,7 +274,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -298,23 +298,6 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11#4505967c46a608a99ddee41e2add12845524b95f"
-dependencies = [
- "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
- "async-trait",
- "diri 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
- "futures",
- "log",
- "pontos 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
- "starknet",
- "tokio",
-]
-
-[[package]]
-name = "arkproject"
-version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
 dependencies = [
  "anyhow",
@@ -325,6 +308,23 @@ dependencies = [
  "futures",
  "log",
  "pontos 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
+ "starknet",
+ "tokio",
+]
+
+[[package]]
+name = "arkproject"
+version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
+dependencies = [
+ "anyhow",
+ "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "async-trait",
+ "diri 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "futures",
+ "log",
+ "pontos 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
  "starknet",
  "tokio",
 ]
@@ -1287,10 +1287,10 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11#4505967c46a608a99ddee41e2add12845524b95f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
  "async-trait",
  "clap",
  "dotenv",
@@ -1310,10 +1310,10 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
  "async-trait",
  "clap",
  "dotenv",
@@ -2575,11 +2575,11 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11#4505967c46a608a99ddee41e2add12845524b95f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
 dependencies = [
  "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.11)",
+ "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
  "async-trait",
  "dotenv",
  "futures",
@@ -2596,11 +2596,11 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3#5f0798cbe5b55d85ae2a18f01ddb8e34d8cbfb17"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
- "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
- "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.3)",
+ "ark-metadata 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
+ "ark-starknet 0.1.0 (git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types)",
  "async-trait",
  "dotenv",
  "futures",

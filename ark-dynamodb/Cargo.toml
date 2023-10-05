@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.11" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", branch = "refacto/exposed-types" }
 async-trait.workspace = true
 aws-config = "0.56.1"
 aws-sdk-dynamodb = "0.31.1"

@@ -51,7 +51,7 @@ impl DynamoDbTokenProvider {
 
         Ok(TokenInfo {
             owner: convert::attr_to_str(data, "Owner")?,
-            address: convert::attr_to_str(data, "ContractAddress")?,
+            contract_address: convert::attr_to_str(data, "ContractAddress")?,
             token_id: convert::attr_to_str(data, "TokenId")?,
             token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
             mint_block_number,
@@ -66,7 +66,7 @@ impl DynamoDbTokenProvider {
         map.insert("Owner".to_string(), AttributeValue::S(info.owner.clone()));
         map.insert(
             "ContractAddress".to_string(),
-            AttributeValue::S(info.address.clone()),
+            AttributeValue::S(info.contract_address.clone()),
         );
         map.insert(
             "TokenId".to_string(),
@@ -184,7 +184,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     ) -> Result<(), ProviderError> {
         let data = Self::info_to_data(info);
 
-        let pk = self.get_pk(&info.address, &info.token_id_hex);
+        let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
 
         let put_item_output = client
             .put_item()
@@ -194,7 +194,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .item("Type".to_string(), AttributeValue::S("Token".to_string()))
             .item(
                 "GSI1PK".to_string(),
-                AttributeValue::S(format!("COLLECTION#{}", info.address)),
+                AttributeValue::S(format!("COLLECTION#{}", info.contract_address)),
             )
             .item(
                 "GSI1SK".to_string(),

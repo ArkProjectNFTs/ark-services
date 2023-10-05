@@ -5,7 +5,6 @@ use arkproject::pontos::storage::{
     },
     Storage,
 };
-use arkproject::starknet::format::to_hex_str;
 use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{
@@ -13,7 +12,6 @@ use aws_sdk_dynamodb::{
     Client,
 };
 use chrono::Utc;
-use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::str::FromStr;
 use tokio::time::sleep;
@@ -24,7 +22,7 @@ use crate::block::ArkBlockProvider;
 use crate::collection::ArkCollectionProvider;
 use crate::event::ArkEventProvider;
 use crate::token::ArkTokenProvider;
-use crate::{ArkDynamoDbProvider, EntityType};
+use crate::ArkDynamoDbProvider;
 
 pub struct DynamoStorage {
     client: Client,
@@ -182,7 +180,7 @@ impl Storage for DynamoStorage {
         let info_existing = match self
             .provider
             .token
-            .get_token(&self.client, &token.address, &token.token_id_hex)
+            .get_token(&self.client, &token.contract_address, &token.token_id_hex)
             .await
         {
             Ok(i) => i,
@@ -208,7 +206,7 @@ impl Storage for DynamoStorage {
                 mint_timestamp: token.mint_timestamp,
                 mint_block_number: Some(block_number),
                 owner: token.owner.clone(),
-                address: token.address.clone(),
+                contract_address: token.contract_address.clone(),
                 token_id: token.token_id.clone(),
                 token_id_hex: token.token_id_hex.clone(),
             }
@@ -238,7 +236,7 @@ impl Storage for DynamoStorage {
         let does_exist = self
             .provider
             .token
-            .get_token(&self.client, &token.address, &token.token_id_hex)
+            .get_token(&self.client, &token.contract_address, &token.token_id_hex)
             .await
             .is_ok();
 
@@ -252,7 +250,7 @@ impl Storage for DynamoStorage {
             match self
                 .provider
                 .token
-                .update_data(&self.client, &token.address, &token.token_id_hex, data)
+                .update_data(&self.client, &token.contract_address, &token.token_id_hex, data)
                 .await
             {
                 Ok(_) => Ok(()),
@@ -265,7 +263,7 @@ impl Storage for DynamoStorage {
             // Create the full token entry.
             let info = TokenInfo {
                 owner: token.owner.clone(),
-                address: token.address.clone(),
+                contract_address: token.contract_address.clone(),
                 token_id: token.token_id.clone(),
                 token_id_hex: token.token_id_hex.clone(),
                 ..Default::default()
@@ -326,16 +324,14 @@ impl Storage for DynamoStorage {
 
     async fn get_contract_type(
         &self,
-        contract_address: &FieldElement,
+        contract_address: &str,
     ) -> Result<ContractType, StorageError> {
         info!("Getting contract info for contract {}", contract_address);
-
-        let address = to_hex_str(&contract_address);
 
         match self
             .provider
             .collection
-            .get_collection(&self.client, &address)
+            .get_collection(&self.client, &contract_address)
             .await
         {
             Ok(maybe_contract) => {
@@ -356,20 +352,12 @@ impl Storage for DynamoStorage {
 
     async fn register_contract_info(
         &self,
-        contract_address: &FieldElement,
-        contract_type: &ContractType,
-        block_number: u64,
+        info: &ContractInfo,
     ) -> Result<(), StorageError> {
         info!(
             "Registering contract info {:?} for contract {}",
-            contract_type, contract_address
+            info.contract_type, info.contract_address
         );
-
-        let info = ContractInfo {
-            contract_address: to_hex_str(contract_address),
-            contract_type: contract_type.to_string(),
-            block_number,
-        };
 
         match self
             .provider
