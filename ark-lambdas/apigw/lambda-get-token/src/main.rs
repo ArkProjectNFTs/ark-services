@@ -29,7 +29,7 @@ async fn function_handler<P: ArkTokenProvider<Client = DynamoClient>>(
         Err(e) => return e.try_into(),
     };
 
-    let token_id = match common::get_query_string_param(&event, "id") {
+    let token_id = match common::get_query_string_hex_or_dec_param(&event, "id") {
         Ok(t) => t,
         Err(e) => return e.try_into(),
     };
