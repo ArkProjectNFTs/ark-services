@@ -190,17 +190,28 @@ impl Storage for DynamoStorage {
             }
         };
 
-        let info_to_register = if let Some(mut info) = info_existing {
+        if let Some(mut info) = info_existing {
             // Token already exists, add mint info.
             info.mint_address = token.mint_address.clone();
             info.mint_transaction_hash = token.mint_transaction_hash.clone();
             info.mint_timestamp = token.mint_timestamp;
             info.mint_block_number = Some(block_number);
 
-            info
+            match self
+                .provider
+                .token
+                .update_mint_data(&self.client, &info)
+                .await
+            {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("{}", e.to_string());
+                    return Err(StorageError::DatabaseError);
+                }
+            }
         } else {
             // Token does not exist, create it with mint info.
-            TokenInfo {
+            let info = TokenInfo {
                 mint_address: token.mint_address.clone(),
                 mint_transaction_hash: token.mint_transaction_hash.clone(),
                 mint_timestamp: token.mint_timestamp,
@@ -209,19 +220,19 @@ impl Storage for DynamoStorage {
                 contract_address: token.contract_address.clone(),
                 token_id: token.token_id.clone(),
                 token_id_hex: token.token_id_hex.clone(),
-            }
-        };
+            };
 
-        match self
-            .provider
-            .token
-            .register_token(&self.client, &info_to_register, block_number)
-            .await
-        {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+            match self
+                .provider
+                .token
+                .register_token(&self.client, &info, block_number)
+                .await
+            {
+                Ok(_) => Ok(()),
+                Err(e) => {
+                    error!("{}", e.to_string());
+                    return Err(StorageError::DatabaseError);
+                }
             }
         }
     }
@@ -241,16 +252,15 @@ impl Storage for DynamoStorage {
             .is_ok();
 
         if does_exist {
-            // Update the owner only to ensure it's up to date.
-            let mut data = HashMap::new();
-            data.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
-
-            // Some("SET data.owner = :new_owner".to_string()),
-
             match self
                 .provider
                 .token
-                .update_data(&self.client, &token.contract_address, &token.token_id_hex, data)
+                .update_owner(
+                    &self.client,
+                    &token.contract_address,
+                    &token.token_id_hex,
+                    &token.owner,
+                )
                 .await
             {
                 Ok(_) => Ok(()),
@@ -350,10 +360,7 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn register_contract_info(
-        &self,
-        info: &ContractInfo,
-    ) -> Result<(), StorageError> {
+    async fn register_contract_info(&self, info: &ContractInfo) -> Result<(), StorageError> {
         info!(
             "Registering contract info {:?} for contract {}",
             info.contract_type, info.contract_address

@@ -19,6 +19,20 @@ use crate::ProviderError;
 pub trait ArkTokenProvider {
     type Client;
 
+    async fn update_owner(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+        token_id_hex: &str,
+        owner: &str,
+    ) -> Result<(), ProviderError>;
+
+    async fn update_mint_data(
+        &self,
+        client: &Self::Client,
+        info: &TokenInfo,
+    ) -> Result<(), ProviderError>;
+
     async fn get_token(
         &self,
         client: &Self::Client,
@@ -31,13 +45,5 @@ pub trait ArkTokenProvider {
         client: &Self::Client,
         info: &TokenInfo,
         block_number: u64,
-    ) -> Result<(), ProviderError>;
-
-    async fn update_data(
-        &self,
-        client: &Self::Client,
-        contract_address: &str,
-        token_id_hex: &str,
-        data: HashMap<String, AttributeValue>,
     ) -> Result<(), ProviderError>;
 }

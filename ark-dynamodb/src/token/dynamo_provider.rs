@@ -107,38 +107,64 @@ impl DynamoDbTokenProvider {
 impl ArkTokenProvider for DynamoDbTokenProvider {
     type Client = DynamoClient;
 
-    async fn update_data(
+    async fn update_owner(
         &self,
         client: &Self::Client,
         contract_address: &str,
         token_id_hex: &str,
-        data: HashMap<String, AttributeValue>,
+        owner: &str,
     ) -> Result<(), ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
-
-        let test = {
-            let mut values = HashMap::new();
-            values.insert(
-                ":new_name".to_string(),
-                AttributeValue::S("doe".to_string()),
-            );
-            values.insert(
-                ":new_city".to_string(),
-                AttributeValue::S("ici".to_string()),
-            );
-            values
-        };
 
         let update_item_output = client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            //.update_expression("SET Data = :data")
-            .update_expression("SET Data.name = :new_name, Data.city = :new_city")
-            //.expression_attribute_values(":data".to_string(), AttributeValue::M(data))
-            .expression_attribute_values(":Data".to_string(), AttributeValue::M(test))
+            .update_expression("SET Data.owner = :owner")
+            .expression_attribute_values(":owner".to_string(), AttributeValue::S(owner.to_string()))
+            .return_values(ReturnValue::AllNew)
+            .send()
+            .await;
+
+        update_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn update_mint_data(
+        &self,
+        client: &Self::Client,
+        info: &TokenInfo,
+    ) -> Result<(), ProviderError> {
+        let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
+        let sk = self.get_sk();
+
+        let mut values = HashMap::new();
+        values.insert(
+            ":addr".to_string(),
+            AttributeValue::S(info.mint_address.clone().unwrap_or(String::new())),
+        );
+        values.insert(
+            ":tx".to_string(),
+            AttributeValue::S(info.mint_transaction_hash.clone().unwrap_or(String::new())),
+        );
+        values.insert(
+            ":ts".to_string(),
+            AttributeValue::N(info.mint_timestamp.unwrap_or(0).to_string()),
+        );
+        values.insert(
+            ":bn".to_string(),
+            AttributeValue::N(info.mint_block_number.unwrap_or(0).to_string()),
+        );
+
+        let update_item_output = client
+            .update_item()
+            .table_name(self.table_name.clone())
+            .key("PK".to_string(), AttributeValue::S(pk))
+            .key("SK".to_string(), AttributeValue::S(sk))
+            .update_expression("SET Data.MintAddress = :addr, Data.MintTransactionHash = :tx, Data.MintTimestamp = :ts, Data.MintBlockNumber = :bn")
+            .set_expression_attribute_values(Some(values))
             .return_values(ReturnValue::AllNew)
             .send()
             .await;

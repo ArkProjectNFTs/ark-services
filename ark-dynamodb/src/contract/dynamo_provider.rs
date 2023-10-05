@@ -83,10 +83,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
             .item("Data", AttributeValue::M(data))
-            .item(
-                "Type",
-                AttributeValue::S(EntityType::Contract.to_string()),
-            )
+            .item("Type", AttributeValue::S(EntityType::Contract.to_string()))
             .condition_expression("attribute_not_exists(PK)")
             .send()
             .await;
