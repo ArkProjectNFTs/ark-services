@@ -143,11 +143,11 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let mut values = HashMap::new();
         values.insert(
             ":addr".to_string(),
-            AttributeValue::S(info.mint_address.clone().unwrap_or(String::new())),
+            AttributeValue::S(info.mint_address.clone().unwrap_or_default()),
         );
         values.insert(
             ":tx".to_string(),
-            AttributeValue::S(info.mint_transaction_hash.clone().unwrap_or(String::new())),
+            AttributeValue::S(info.mint_transaction_hash.clone().unwrap_or_default()),
         );
         values.insert(
             ":ts".to_string(),

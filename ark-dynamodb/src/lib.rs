@@ -1,21 +1,17 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
-pub mod block;
-pub mod contract;
-pub mod event;
+pub mod providers;
 pub mod storage;
-pub mod token;
 
 pub(crate) mod convert;
 
 use aws_config::meta::region::RegionProviderChain;
 pub use aws_sdk_dynamodb::Client;
-use block::DynamoDbBlockProvider;
-use contract::DynamoDbContractProvider;
-use event::DynamoDbEventProvider;
+use providers::{
+    DynamoDbBlockProvider, DynamoDbContractProvider, DynamoDbEventProvider, DynamoDbTokenProvider,
+};
 use std::fmt;
-use token::DynamoDbTokenProvider;
 
 #[derive(Debug, PartialEq, Eq)]
 enum EntityType {

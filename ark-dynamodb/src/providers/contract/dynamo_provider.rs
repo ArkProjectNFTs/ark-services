@@ -33,9 +33,9 @@ impl DynamoDbContractProvider {
         data: &HashMap<String, AttributeValue>,
     ) -> Result<ContractInfo, ProviderError> {
         Ok(ContractInfo {
-            block_number: convert::attr_to_u64(&data, "BlockNumber")?,
-            contract_type: convert::attr_to_str(&data, "ContractType")?,
-            contract_address: convert::attr_to_str(&data, "ContractAddress")?,
+            block_number: convert::attr_to_u64(data, "BlockNumber")?,
+            contract_type: convert::attr_to_str(data, "ContractType")?,
+            contract_address: convert::attr_to_str(data, "ContractAddress")?,
         })
     }
 
