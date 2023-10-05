@@ -30,4 +30,10 @@ pub trait ArkTokenProvider {
         info: &TokenInfo,
         block_number: u64,
     ) -> Result<(), ProviderError>;
+
+    async fn update_data(
+        &self,
+        client: &Self::Client,
+        info: &TokenInfo,
+    ) -> Result<(), ProviderError>;
 }

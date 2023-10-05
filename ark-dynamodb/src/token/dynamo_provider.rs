@@ -1,4 +1,4 @@
-use arkproject::pontos::storage::types::{TokenInfo};
+use arkproject::pontos::storage::types::TokenInfo;
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
 use aws_sdk_dynamodb::Client as DynamoClient;
@@ -107,6 +107,31 @@ impl DynamoDbTokenProvider {
 impl ArkTokenProvider for DynamoDbTokenProvider {
     type Client = DynamoClient;
 
+    async fn update_data(
+        &self,
+        client: &Self::Client,
+        info: &TokenInfo,
+    ) -> Result<(), ProviderError> {
+        let data = Self::info_to_data(info);
+
+        let pk = self.get_pk(&info.address, &info.token_id_hex);
+        let sk = self.get_sk();
+
+        let update_item_output = client
+            .update_item()
+            .table_name(self.table_name.clone())
+            .key("PK".to_string(), AttributeValue::S(pk))
+            .key("SK".to_string(), AttributeValue::S(sk))
+            .update_expression("SET Data = :data")
+            .expression_attribute_values(":data".to_string(), AttributeValue::M(data))
+            .return_values(ReturnValue::AllNew)
+            .send()
+            .await;
+
+        update_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        Ok(())
+    }
+
     async fn get_token(
         &self,
         client: &Self::Client,
@@ -168,7 +193,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .item(
                 "GSI3PK".to_string(),
                 AttributeValue::S("LISTED#false".to_string()),
-            ) // Assuming the token is listed by default
+            )
             .item("GSI3SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),

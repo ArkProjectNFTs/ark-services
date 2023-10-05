@@ -34,10 +34,9 @@ impl DynamoDbBlockProvider {
         data: &HashMap<String, AttributeValue>,
     ) -> Result<BlockInfo, ProviderError> {
         Ok(BlockInfo {
-            status: BlockIndexingStatus::from_str(&convert::attr_to_str(data, "Status")?)
-                .map_err(|_| {
-                    ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string())
-                })?,
+            status: BlockIndexingStatus::from_str(&convert::attr_to_str(data, "Status")?).map_err(
+                |_| ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string()),
+            )?,
             indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier")?,
             indexer_version: convert::attr_to_str(data, "IndexerVersion")?,
         })

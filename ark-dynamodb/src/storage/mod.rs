@@ -1,9 +1,6 @@
 use anyhow::Result;
 use arkproject::pontos::storage::{
-    types::{
-        BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent,
-        TokenInfo,
-    },
+    types::{BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent, TokenInfo},
     Storage,
 };
 use arkproject::starknet::format::to_hex_str;
@@ -21,9 +18,9 @@ use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
-use crate::block::{ArkBlockProvider};
-use crate::event::{ArkEventProvider};
-use crate::token::{ArkTokenProvider};
+use crate::block::ArkBlockProvider;
+use crate::event::ArkEventProvider;
+use crate::token::ArkTokenProvider;
 use crate::{ArkDynamoDbProvider, EntityType};
 
 pub struct DynamoStorage {
@@ -243,34 +240,18 @@ impl Storage for DynamoStorage {
             .is_ok();
 
         if does_exist {
-            // Update only owner for existing token.
-            // TODO: we may want an `update_owner` method inside the prodiver directly.
-            let pk = format!("TOKEN#{}#{}", token.address, token.token_id_hex);
-            let sk = "TOKEN".to_string();
-
-            let mut data_map = HashMap::new();
-            data_map.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
-
-            let update_item_output = self
-                .client
-                .update_item()
-                .table_name(self.table_name.clone())
-                .key("PK".to_string(), AttributeValue::S(pk.clone()))
-                .key("SK".to_string(), AttributeValue::S(sk.clone()))
-                .update_expression("SET Data = :data")
-                .expression_attribute_values(":data".to_string(), AttributeValue::M(data_map))
-                .return_values(ReturnValue::AllNew)
-                .send()
-                .await;
-
-            match update_item_output {
+            // Update data only for existing token, as the caller may have
+            // added some information to the token info.
+            // TODO: can we have problems here... as the token info may not be complete...
+            match self.provider.token.update_data(&self.client, token).await {
                 Ok(_) => Ok(()),
                 Err(e) => {
-                    error!("DynamoDB error: {:?}", e);
-                    Err(StorageError::DatabaseError)
+                    error!("{}", e.to_string());
+                    return Err(StorageError::DatabaseError);
                 }
             }
         } else {
+            // Create the full token entry.
             let info = TokenInfo {
                 owner: token.owner.clone(),
                 address: token.address.clone(),
