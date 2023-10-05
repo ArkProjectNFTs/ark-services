@@ -81,7 +81,7 @@ jobs:
         uses: cvmaker-bv/amazon-ecs-task-environment@v1
         env:
           INDEXER_VERSION: ${{ github.event.release.tag_name }}
-          RPC_PROVIDER: "https://juno.${{ matrix.environment }}.arkproject.dev"
+          RPC_PROVIDER: ${{ matrix.environment == 'mainnet' && secrets.RPC_PROVIDER_MAINNET || secrets.RPC_PROVIDER_TESTNET }}
           IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev"
           RUST_LOG: "debug"
           HEAD_OF_CHAIN: "true"
