@@ -59,7 +59,7 @@ pub async fn init_aws_dynamo_client() -> Client {
 /// must be tested separately.
 pub struct ArkDynamoDbProvider {
     token: DynamoDbTokenProvider,
-    _contract: DynamoDbCollectionProvider,
+    collection: DynamoDbCollectionProvider,
     event: DynamoDbEventProvider,
     block: DynamoDbBlockProvider,
 }
@@ -70,7 +70,7 @@ impl ArkDynamoDbProvider {
             token: DynamoDbTokenProvider::new(table_name),
             event: DynamoDbEventProvider::new(table_name),
             block: DynamoDbBlockProvider::new(table_name),
-            _contract: DynamoDbCollectionProvider::new(table_name),
+            collection: DynamoDbCollectionProvider::new(table_name),
         }
     }
 }

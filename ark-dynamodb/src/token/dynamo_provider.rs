@@ -117,13 +117,28 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
 
+        let test = {
+            let mut values = HashMap::new();
+            values.insert(
+                ":new_name".to_string(),
+                AttributeValue::S("doe".to_string()),
+            );
+            values.insert(
+                ":new_city".to_string(),
+                AttributeValue::S("ici".to_string()),
+            );
+            values
+        };
+
         let update_item_output = client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression("SET Data = :data")
-            .expression_attribute_values(":data".to_string(), AttributeValue::M(data))
+            //.update_expression("SET Data = :data")
+            .update_expression("SET Data.name = :new_name, Data.city = :new_city")
+            //.expression_attribute_values(":data".to_string(), AttributeValue::M(data))
+            .expression_attribute_values(":Data".to_string(), AttributeValue::M(test))
             .return_values(ReturnValue::AllNew)
             .send()
             .await;

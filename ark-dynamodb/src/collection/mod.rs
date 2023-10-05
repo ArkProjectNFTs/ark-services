@@ -1,11 +1,9 @@
 //! Collection module.
 //!
-pub mod types;
-pub use types::*;
-
 mod dynamo_provider;
 pub use dynamo_provider::DynamoDbCollectionProvider;
 
+use arkproject::pontos::storage::types::ContractInfo;
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
@@ -24,5 +22,11 @@ pub trait ArkCollectionProvider {
         &self,
         client: &Self::Client,
         address: &str,
-    ) -> Result<Option<CollectionData>, ProviderError>;
+    ) -> Result<Option<ContractInfo>, ProviderError>;
+
+    async fn register_collection(
+        &self,
+        client: &Self::Client,
+        info: &ContractInfo,
+    ) -> Result<(), ProviderError>;
 }

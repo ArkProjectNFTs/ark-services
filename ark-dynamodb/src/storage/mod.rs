@@ -1,6 +1,8 @@
 use anyhow::Result;
 use arkproject::pontos::storage::{
-    types::{BlockInfo, ContractType, IndexerStatus, StorageError, TokenEvent, TokenInfo},
+    types::{
+        BlockInfo, ContractInfo, ContractType, IndexerStatus, StorageError, TokenEvent, TokenInfo,
+    },
     Storage,
 };
 use arkproject::starknet::format::to_hex_str;
@@ -13,12 +15,13 @@ use aws_sdk_dynamodb::{
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
-
+use std::str::FromStr;
 use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::block::ArkBlockProvider;
+use crate::collection::ArkCollectionProvider;
 use crate::event::ArkEventProvider;
 use crate::token::ArkTokenProvider;
 use crate::{ArkDynamoDbProvider, EntityType};
@@ -244,6 +247,8 @@ impl Storage for DynamoStorage {
             let mut data = HashMap::new();
             data.insert("Owner".to_string(), AttributeValue::S(token.owner.clone()));
 
+            // Some("SET data.owner = :new_owner".to_string()),
+
             match self
                 .provider
                 .token
@@ -325,37 +330,26 @@ impl Storage for DynamoStorage {
     ) -> Result<ContractType, StorageError> {
         info!("Getting contract info for contract {}", contract_address);
 
-        // Construct the primary key and secondary key for the contract
-        let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
-        let sk = "COLLECTION".to_string();
+        let address = to_hex_str(&contract_address);
 
-        // Fetch the contract from DynamoDB
-        let get_item_output = self
-            .client
-            .get_item()
-            .table_name(self.table_name.clone())
-            .key("PK".to_string(), AttributeValue::S(pk))
-            .key("SK".to_string(), AttributeValue::S(sk))
-            .send()
-            .await;
-
-        match get_item_output {
-            Ok(output) => {
-                if let Some(item) = output.item {
-                    if let Some(AttributeValue::M(data)) = item.get("Data") {
-                        if let Some(AttributeValue::S(contract_type_str)) =
-                            data.get("contract_type")
-                        {
-                            let contract_type: ContractType = contract_type_str.parse().unwrap();
-                            return Ok(contract_type);
-                        }
-                    }
+        match self
+            .provider
+            .collection
+            .get_collection(&self.client, &address)
+            .await
+        {
+            Ok(maybe_contract) => {
+                if let Some(contract) = maybe_contract {
+                    // unwrap should be safe here as the type is controlled by
+                    // the `ContractInfo` directly.
+                    Ok(ContractType::from_str(&contract.contract_type).unwrap())
+                } else {
+                    return Err(StorageError::NotFound);
                 }
-                Err(StorageError::NotFound)
             }
             Err(e) => {
-                error!("DynamoDB error: {:?}", e);
-                Err(StorageError::DatabaseError)
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
     }
@@ -371,54 +365,22 @@ impl Storage for DynamoStorage {
             contract_type, contract_address
         );
 
-        let pk = format!("COLLECTION#{}", to_hex_str(contract_address));
-        let sk = "COLLECTION".to_string();
+        let info = ContractInfo {
+            contract_address: to_hex_str(contract_address),
+            contract_type: contract_type.to_string(),
+            block_number,
+        };
 
-        // Construct the data map for the contract
-        let mut data = HashMap::new();
-        data.insert(
-            "ContractAddress".to_string(),
-            AttributeValue::S(to_hex_str(contract_address)),
-        );
-        data.insert(
-            "ContractType".to_string(),
-            AttributeValue::S(contract_type.to_string()),
-        );
-        data.insert(
-            "BlockNumber".to_string(),
-            AttributeValue::N(block_number.to_string()),
-        );
-
-        // Try to create the contract info with a condition that the PK should not already exist
-        let put_item_output = self
-            .client
-            .put_item()
-            .table_name(self.table_name.clone())
-            .item("PK", AttributeValue::S(pk))
-            .item("SK", AttributeValue::S(sk))
-            .item(
-                "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", block_number)),
-            )
-            .item(
-                "GSI4SK".to_string(),
-                AttributeValue::S(format!("COLLECTION#{}", contract_address)),
-            )
-            .item("Data", AttributeValue::M(data))
-            .item(
-                "Type",
-                AttributeValue::S(EntityType::Collection.to_string()),
-            )
-            .condition_expression("attribute_not_exists(PK)")
-            .send()
-            .await;
-
-        match put_item_output {
+        match self
+            .provider
+            .collection
+            .register_collection(&self.client, &info)
+            .await
+        {
             Ok(_) => Ok(()),
             Err(e) => {
-                // If the condition failed, it means the contract info already exists no need to create it
-                error!("Collection already exist: {:?}", e);
-                Err(StorageError::DatabaseError)
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
     }
