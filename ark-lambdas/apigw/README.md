@@ -47,7 +47,7 @@ members = [
 To allow easy testing with mocking, the lambda must be built with a context
 that bundle all the dependencies on external trait.
 
-Take the example of `lambda-get-collection`:
+Take the example of `lambda-get-contract`:
 
 ```rust
 struct Ctx<P> {
@@ -55,7 +55,7 @@ struct Ctx<P> {
     provider: P,
 }
 
-async fn function_handler<P: ArkCollectionProvider<Client = DynamoClient>>(
+async fn function_handler<P: ArkContractProvider<Client = DynamoClient>>(
     ctx: &Ctx<P>,
     event: Request,
 ) -> Result<Response<Body>, Error> {
@@ -64,7 +64,7 @@ async fn function_handler<P: ArkCollectionProvider<Client = DynamoClient>>(
 ```
 
 The `Ctx` is only generic for provider, which is a trait required in this specific
-case to fetch data related to a collection.
+case to fetch data related to a contract.
 
 The `Ctx` does take ownership of the client and the provider, as the lambda lifecycle is short, and the init is done only once.
 
@@ -87,7 +87,7 @@ To test the lambda, there are two solutions:
 
   Natively, the lambda does not support HTTP request!! This is the Api Gateway that is converting for the lambda to be able to consume the request. So, to test a request with a body + path + query parameters etc.., we must use a special JSON file with the expected format by the lambda runtime.
   
-  You can find a example of this file into the `lambda-get-collection/data-files/http.json`. So we can configure several files, with good and bad data, or with various items we want to check from the DB.
+  You can find a example of this file into the `lambda-get-contract/data-files/http.json`. So we can configure several files, with good and bad data, or with various items we want to check from the DB.
 
   To test with watch, open a first terminal and run `cargo lambda watch`. In an other terminal, you can then do:
   ```bash
@@ -95,7 +95,7 @@ To test the lambda, there are two solutions:
   cargo lambda invoke lambda-<name_of_the_lambda> --data-ascii "{ \"name\": \"everai\" }"
   
   # Or use a JSON file with the body direclty.
-  cargo lambda invoke lambda-get-collection --data-file ./lambdas/apigw/lambda-get-collection/data-files/existing.json
+  cargo lambda invoke lambda-get-contract --data-file ./ark-lambdas/apigw/lambda-get-contract/data-files/existing.json
   ```
   You can check the documentation of [cargo lambda invoke](https://www.cargo-lambda.info/commands/invoke.html).
   

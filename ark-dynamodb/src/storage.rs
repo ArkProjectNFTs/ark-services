@@ -182,7 +182,7 @@ impl Storage for DynamoStorage {
         {
             Ok(i) => i,
             Err(e) => {
-                error!("{}", e.to_string());
+                error!("Registering mint error {}", e.to_string());
                 return Err(StorageError::DatabaseError);
             }
         };
