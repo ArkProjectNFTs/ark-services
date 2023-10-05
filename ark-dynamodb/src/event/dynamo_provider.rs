@@ -1,10 +1,12 @@
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::AttributeValue;
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
+use arkproject::pontos::storage::types::{EventType, TokenEvent};
+use std::str::FromStr;
 
 use super::{types::EventData, ArkEventProvider};
-use crate::{convert, ProviderError};
+use crate::{convert, ProviderError, EntityType};
 
 /// DynamoDB provider for events.
 pub struct DynamoDbEventProvider {
@@ -23,18 +25,141 @@ impl DynamoDbEventProvider {
     fn get_pk(&self, contract_address: &str, event_id: &str) -> String {
         format!("{}#{}#{}", self.key_prefix, contract_address, event_id)
     }
+
+    fn get_sk(&self) -> String {
+        self.key_prefix.clone()
+    }
+
+    pub fn data_to_event(data: &HashMap<String, AttributeValue>) -> Result<TokenEvent, ProviderError> {
+        Ok(TokenEvent {
+            block_number: convert::attr_to_u64(&data, "BlockNumber")?,
+            event_id: convert::attr_to_str(&data, "EventId")?,
+            event_type: EventType::from_str(&convert::attr_to_str(&data, "EventType")?).unwrap(),
+            timestamp: convert::attr_to_u64(&data, "Timestamp")?,
+            from_address: convert::attr_to_str(&data, "FromAddress")?,
+            to_address: convert::attr_to_str(&data, "ToAddress")?,
+            contract_address: convert::attr_to_str(&data, "ContractAddress")?,
+            contract_type: convert::attr_to_str(&data, "ContractType")?,
+            token_id: convert::attr_to_str(&data, "TokenId")?,
+            token_id_hex: convert::attr_to_str(&data, "TokenIdHex")?,
+            transaction_hash: convert::attr_to_str(&data, "TransactionHash")?,
+        })
+    }
+
+    pub fn event_to_data(event: &TokenEvent) -> HashMap<String, AttributeValue> {
+        let mut map = HashMap::new();
+        map.insert(
+            "Timestamp".to_string(),
+            AttributeValue::N(event.timestamp.to_string()),
+        );
+        map.insert(
+            "FromAddress".to_string(),
+            AttributeValue::S(event.from_address.clone()),
+        );
+        map.insert(
+            "ToAddress".to_string(),
+            AttributeValue::S(event.to_address.clone()),
+        );
+        map.insert(
+            "ContractAddress".to_string(),
+            AttributeValue::S(event.contract_address.clone()),
+        );
+        map.insert(
+            "TransactionHash".to_string(),
+            AttributeValue::S(event.transaction_hash.clone()),
+        );
+        map.insert(
+            "TokenId".to_string(),
+            AttributeValue::S(event.token_id.clone()),
+        );
+        map.insert(
+            "TokenIdHex".to_string(),
+            AttributeValue::S(event.token_id_hex.clone()),
+        );
+        map.insert(
+            "BlockNumber".to_string(),
+            AttributeValue::N(event.block_number.to_string()),
+        );
+        map.insert(
+            "ContractType".to_string(),
+            AttributeValue::S(event.contract_type.clone().to_string()),
+        );
+        map.insert(
+            "EventType".to_string(),
+            AttributeValue::S(event.event_type.clone().to_string()),
+        );
+        map.insert(
+            "EventId".to_string(),
+            AttributeValue::S(event.event_id.clone()),
+        );
+        map.insert(
+            "BlockNumber".to_string(),
+            AttributeValue::N(event.block_number.to_string()),
+        );
+
+        map
+    }
 }
 
 #[async_trait]
 impl ArkEventProvider for DynamoDbEventProvider {
     type Client = DynamoClient;
 
+    async fn register_event(
+        &self,
+        client: &Self::Client,
+        event: &TokenEvent,
+        block_number: u64,
+    ) -> Result<(), ProviderError> {
+        let data = Self::event_to_data(&event);
+
+        let put_item_output = client
+            .put_item()
+            .table_name(self.table_name.clone())
+            .item("PK".to_string(), AttributeValue::S(self.get_pk(&event.contract_type, &event.event_id)))
+            .item("SK".to_string(), AttributeValue::S(self.get_sk()))
+            .item("Type".to_string(), AttributeValue::S("Event".to_string()))
+            .item(
+                "GSI1PK".to_string(),
+                AttributeValue::S(format!("COLLECTION#{}", event.contract_address)),
+            )
+            .item(
+                "GSI1SK".to_string(),
+                AttributeValue::S(format!("EVENT#{}", event.event_id)),
+            )
+            .item(
+                "GSI2PK".to_string(),
+                AttributeValue::S(format!("TOKEN#{}", event.token_id_hex)),
+            )
+            .item(
+                "GSI2SK".to_string(),
+                AttributeValue::S(format!("EVENT#{}", event.event_id)),
+            )
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(format!("BLOCK#{}", block_number)),
+            )
+            .item(
+                "GSI4SK".to_string(),
+                AttributeValue::S(self.get_pk(&event.contract_address, &event.event_id)),
+            )
+            .item("Data".to_string(), AttributeValue::M(data))
+            .item("Type", AttributeValue::S(EntityType::Event.to_string()))
+            .return_values(ReturnValue::AllOld)
+            .send()
+            .await;
+        
+        put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        
+        Ok(())
+    }
+
     async fn get_event(
         &self,
         client: &Self::Client,
         contract_address: &str,
         event_id: &str,
-    ) -> Result<Option<EventData>, ProviderError> {
+    ) -> Result<Option<TokenEvent>, ProviderError> {
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
@@ -52,7 +177,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(Some(data.try_into()?))
+            Ok(Some(Self::data_to_event(&data)?))
         } else {
             Ok(None)
         }
@@ -63,7 +188,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
         _client: &Self::Client,
         _contract_address: &str,
         _token_id: &str,
-    ) -> Result<Vec<EventData>, ProviderError> {
+    ) -> Result<Vec<TokenEvent>, ProviderError> {
         // TODO: check how to query indexes instead of key?
         // Do we need to pass only the index?
 

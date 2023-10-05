@@ -24,6 +24,7 @@ use tokio::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::block::{ArkBlockProvider, DynamoDbBlockProvider};
+use crate::event::{ArkEventProvider, DynamoDbEventProvider};
 use crate::{ArkDynamoDbProvider, EntityType};
 
 pub struct DynamoStorage {
@@ -494,51 +495,6 @@ impl Storage for DynamoStorage {
             Ok(output) if output.item.is_some() => Err(StorageError::AlreadyExists),
             Ok(_) => {
                 // Create new item
-                let mut data_map = HashMap::new();
-                data_map.insert(
-                    "Timestamp".to_string(),
-                    AttributeValue::N(event.timestamp.to_string()),
-                );
-                data_map.insert(
-                    "FromAddress".to_string(),
-                    AttributeValue::S(to_hex_str(&event.from_address_field_element)),
-                );
-                data_map.insert(
-                    "ToAddress".to_string(),
-                    AttributeValue::S(to_hex_str(&event.to_address_field_element)),
-                );
-                data_map.insert(
-                    "ContractAddress".to_string(),
-                    AttributeValue::S(event.contract_address.clone()),
-                );
-                data_map.insert(
-                    "TransactionHash".to_string(),
-                    AttributeValue::S(event.transaction_hash.clone()),
-                );
-                data_map.insert(
-                    "TokenId".to_string(),
-                    AttributeValue::S(event.formated_token_id.token_id.clone()),
-                );
-                data_map.insert(
-                    "BlockNumber".to_string(),
-                    AttributeValue::N(event.block_number.to_string()),
-                );
-                data_map.insert(
-                    "ContractType".to_string(),
-                    AttributeValue::S(event.contract_type.clone().to_string()),
-                );
-                data_map.insert(
-                    "EventType".to_string(),
-                    AttributeValue::S(event.event_type.clone().to_string()),
-                );
-                data_map.insert(
-                    "EventId".to_string(),
-                    AttributeValue::S(to_hex_str(&event.event_id)),
-                );
-                data_map.insert(
-                    "BlockNumber".to_string(),
-                    AttributeValue::N(block_number.to_string()),
-                );
 
                 let put_item_output = self
                     .client
