@@ -209,7 +209,6 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -240,7 +239,6 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -264,7 +262,6 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -1236,7 +1233,6 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -1989,6 +1985,8 @@ name = "lambda-http-common"
 version = "0.1.0"
 dependencies = [
  "lambda_http",
+ "num-bigint",
+ "num-traits",
  "serde",
  "serde_json",
  "serde_with 2.3.3",
@@ -2504,7 +2502,6 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refacto/exposed-types#b85ff43624e3a4e0bffb7c360a65f07a1106187d"
 dependencies = [
  "anyhow",
  "ark-metadata",

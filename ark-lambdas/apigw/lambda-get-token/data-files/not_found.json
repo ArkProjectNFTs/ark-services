@@ -1,12 +1,13 @@
 {
-    "resource": "/contract",
-    "path": "/contract",
+    "resource": "/token",
+    "path": "/token",
     "httpMethod": "GET",
     "multiValueHeaders": {
         "Accept": ["*/*"]
     },
     "multiValueQueryStringParameters": {
-        "address": ["0x02c9bd6a59365026dbfe47dd760a20779579dc6075fe0ac5cda808a78fde42ad"]
+        "address": ["0x12312435"],
+        "id": ["0x1234567887"]
     },
     "body": ""
 }
