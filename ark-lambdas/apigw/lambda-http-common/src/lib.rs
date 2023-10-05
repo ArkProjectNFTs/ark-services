@@ -198,10 +198,10 @@ mod tests {
     #[test]
     fn test_is_hexadecimal_with_prefix_invalid() {
         let s = "0x";
-        assert!(is_hexadecimal_with_prefix(s));
+        assert!(!is_hexadecimal_with_prefix(s));
 
         let s = "1234";
-        assert!(is_hexadecimal_with_prefix(s));
+        assert!(!is_hexadecimal_with_prefix(s));
     }
 
     #[test]
