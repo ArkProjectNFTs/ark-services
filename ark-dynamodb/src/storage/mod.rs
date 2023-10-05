@@ -19,7 +19,7 @@ use tokio::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::block::ArkBlockProvider;
-use crate::collection::ArkCollectionProvider;
+use crate::contract::ArkContractProvider;
 use crate::event::ArkEventProvider;
 use crate::token::ArkTokenProvider;
 use crate::ArkDynamoDbProvider;
@@ -330,8 +330,8 @@ impl Storage for DynamoStorage {
 
         match self
             .provider
-            .collection
-            .get_collection(&self.client, &contract_address)
+            .contract
+            .get_contract(&self.client, &contract_address)
             .await
         {
             Ok(maybe_contract) => {
@@ -361,8 +361,8 @@ impl Storage for DynamoStorage {
 
         match self
             .provider
-            .collection
-            .register_collection(&self.client, &info)
+            .contract
+            .register_contract(&self.client, &info)
             .await
         {
             Ok(_) => Ok(()),

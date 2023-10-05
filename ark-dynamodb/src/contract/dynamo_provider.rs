@@ -4,20 +4,20 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 
-use super::ArkCollectionProvider;
+use super::ArkContractProvider;
 use crate::{convert, EntityType, ProviderError};
 
-/// DynamoDB provider for collections.
-pub struct DynamoDbCollectionProvider {
+/// DynamoDB provider for contracts.
+pub struct DynamoDbContractProvider {
     table_name: String,
     key_prefix: String,
 }
 
-impl DynamoDbCollectionProvider {
+impl DynamoDbContractProvider {
     pub fn new(table_name: &str) -> Self {
-        DynamoDbCollectionProvider {
+        DynamoDbContractProvider {
             table_name: table_name.to_string(),
-            key_prefix: "COLLECTION".to_string(),
+            key_prefix: "CONTRACT".to_string(),
         }
     }
 
@@ -59,10 +59,10 @@ impl DynamoDbCollectionProvider {
 }
 
 #[async_trait]
-impl ArkCollectionProvider for DynamoDbCollectionProvider {
+impl ArkContractProvider for DynamoDbContractProvider {
     type Client = DynamoClient;
 
-    async fn register_collection(
+    async fn register_contract(
         &self,
         client: &Self::Client,
         info: &ContractInfo,
@@ -85,7 +85,7 @@ impl ArkCollectionProvider for DynamoDbCollectionProvider {
             .item("Data", AttributeValue::M(data))
             .item(
                 "Type",
-                AttributeValue::S(EntityType::Collection.to_string()),
+                AttributeValue::S(EntityType::Contract.to_string()),
             )
             .condition_expression("attribute_not_exists(PK)")
             .send()
@@ -95,7 +95,7 @@ impl ArkCollectionProvider for DynamoDbCollectionProvider {
         Ok(())
     }
 
-    async fn get_collection(
+    async fn get_contract(
         &self,
         client: &Self::Client,
         contract_address: &str,

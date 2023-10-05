@@ -1,7 +1,7 @@
-//! Collection module.
+//! Contract module.
 //!
 mod dynamo_provider;
-pub use dynamo_provider::DynamoDbCollectionProvider;
+pub use dynamo_provider::DynamoDbContractProvider;
 
 use arkproject::pontos::storage::types::ContractInfo;
 use async_trait::async_trait;
@@ -11,20 +11,20 @@ use mockall::automock;
 use crate::ProviderError;
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
-/// at the collection level.
+/// at the contract level.
 /// Mainly done for mocking purposes, as `Client` from the sdk is not a trait.
 #[cfg_attr(any(test, feature = "mock"), automock(type Client=aws_sdk_dynamodb::Client;))]
 #[async_trait]
-pub trait ArkCollectionProvider {
+pub trait ArkContractProvider {
     type Client;
 
-    async fn get_collection(
+    async fn get_contract(
         &self,
         client: &Self::Client,
         address: &str,
     ) -> Result<Option<ContractInfo>, ProviderError>;
 
-    async fn register_collection(
+    async fn register_contract(
         &self,
         client: &Self::Client,
         info: &ContractInfo,

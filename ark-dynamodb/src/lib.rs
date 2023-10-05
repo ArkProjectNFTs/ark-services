@@ -2,7 +2,7 @@
 //! of ark-services.
 //!
 pub mod block;
-pub mod collection;
+pub mod contract;
 pub mod event;
 pub mod storage;
 pub mod token;
@@ -12,7 +12,7 @@ pub(crate) mod convert;
 use aws_config::meta::region::RegionProviderChain;
 pub use aws_sdk_dynamodb::Client;
 use block::DynamoDbBlockProvider;
-use collection::DynamoDbCollectionProvider;
+use contract::DynamoDbContractProvider;
 use event::DynamoDbEventProvider;
 use std::fmt;
 use token::DynamoDbTokenProvider;
@@ -21,7 +21,7 @@ use token::DynamoDbTokenProvider;
 enum EntityType {
     Token,
     Block,
-    Collection,
+    Contract,
     Event,
 }
 
@@ -30,7 +30,7 @@ impl fmt::Display for EntityType {
         match self {
             EntityType::Token => write!(f, "Token"),
             EntityType::Block => write!(f, "Block"),
-            EntityType::Collection => write!(f, "Collection"),
+            EntityType::Contract => write!(f, "Contract"),
             EntityType::Event => write!(f, "Event"),
         }
     }
@@ -59,7 +59,7 @@ pub async fn init_aws_dynamo_client() -> Client {
 /// must be tested separately.
 pub struct ArkDynamoDbProvider {
     token: DynamoDbTokenProvider,
-    collection: DynamoDbCollectionProvider,
+    contract: DynamoDbContractProvider,
     event: DynamoDbEventProvider,
     block: DynamoDbBlockProvider,
 }
@@ -70,7 +70,7 @@ impl ArkDynamoDbProvider {
             token: DynamoDbTokenProvider::new(table_name),
             event: DynamoDbEventProvider::new(table_name),
             block: DynamoDbBlockProvider::new(table_name),
-            collection: DynamoDbCollectionProvider::new(table_name),
+            contract: DynamoDbContractProvider::new(table_name),
         }
     }
 }
