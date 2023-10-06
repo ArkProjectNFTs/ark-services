@@ -246,7 +246,8 @@ impl Storage for DynamoStorage {
             .token
             .get_token(&self.client, &token.contract_address, &token.token_id_hex)
             .await
-            .is_ok();
+            .map_err(|_| StorageError::DatabaseError)?
+            .is_some();
 
         if does_exist {
             match self
