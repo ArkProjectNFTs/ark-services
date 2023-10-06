@@ -29,14 +29,14 @@ async fn function_handler<P: ArkTokenProvider<Client = DynamoClient>>(
         Err(e) => return e.try_into(),
     };
 
-    let token_id = match common::get_query_string_hex_or_dec_param(&event, "id") {
+    let token_id_hex = match common::get_query_string_hex_or_dec_param(&event, "id") {
         Ok(t) => t,
         Err(e) => return e.try_into(),
     };
 
     if let Some(data) = ctx
         .provider
-        .get_token(&ctx.client, &address, &token_id)
+        .get_token(&ctx.client, &address, &token_id_hex)
         .await?
     {
         common::ok_body_rsp(&data)

@@ -122,7 +122,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression("SET Data.owner = :owner")
+            .update_expression("SET #data.#owner = :owner")
+            .expression_attribute_names("#data", "Data")
+            .expression_attribute_names("#owner", "Owner")
             .expression_attribute_values(":owner".to_string(), AttributeValue::S(owner.to_string()))
             .return_values(ReturnValue::AllNew)
             .send()
@@ -158,12 +160,22 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::N(info.mint_block_number.unwrap_or(0).to_string()),
         );
 
+        let mut names = HashMap::new();
+        names.insert("#data".to_string(), "Data".to_string());
+        names.insert("#addr".to_string(), "MintAddress".to_string());
+        names.insert("#tx".to_string(), "MintTransactionHash".to_string());
+        names.insert("#ts".to_string(), "MintTimestamp".to_string());
+        names.insert("#bn".to_string(), "MintBlockNumber".to_string());
+
         let update_item_output = client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression("SET Data.MintAddress = :addr, Data.MintTransactionHash = :tx, Data.MintTimestamp = :ts, Data.MintBlockNumber = :bn")
+            .update_expression(
+                "SET #data.#addr = :addr, #data.#tx = :tx, #data.#ts = :ts, #data.#bn = :bn",
+            )
+            .set_expression_attribute_names(Some(names))
             .set_expression_attribute_values(Some(values))
             .return_values(ReturnValue::AllNew)
             .send()
