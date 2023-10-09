@@ -21,8 +21,8 @@ jobs:
       - name: Set up AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1.5.5
         with:
-          aws-access-key-id: ${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR
@@ -31,7 +31,7 @@ jobs:
 
       - name: Build, Tag, and Push Docker Image to Amazon ECR
         run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} -f Dockerfile .
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} --build-arg AWS_ACCESS_KEY_ID=${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }} --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }} -f Dockerfile .
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
 
   update-task-definition:
@@ -60,8 +60,8 @@ jobs:
       - name: Set up AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1.5.5
         with:
-          aws-access-key-id: ${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR
