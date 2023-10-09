@@ -44,4 +44,10 @@ pub trait ArkTokenProvider {
         info: &TokenInfo,
         block_number: u64,
     ) -> Result<(), ProviderError>;
+
+    async fn get_contract_tokens(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+    ) -> Result<Vec<TokenInfo>, ProviderError>;
 }
