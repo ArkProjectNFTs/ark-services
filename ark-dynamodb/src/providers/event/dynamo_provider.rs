@@ -126,7 +126,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .item("Type".to_string(), AttributeValue::S("Event".to_string()))
             .item(
                 "GSI1PK".to_string(),
-                AttributeValue::S(format!("COLLECTION#{}", event.contract_address)),
+                AttributeValue::S(format!("CONTRACT#{}", event.contract_address)),
             )
             .item(
                 "GSI1SK".to_string(),

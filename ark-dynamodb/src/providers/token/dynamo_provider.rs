@@ -232,7 +232,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .item("Type".to_string(), AttributeValue::S("Token".to_string()))
             .item(
                 "GSI1PK".to_string(),
-                AttributeValue::S(format!("COLLECTION#{}", info.contract_address)),
+                AttributeValue::S(format!("CONTRACT#{}", info.contract_address)),
             )
             .item(
                 "GSI1SK".to_string(),
