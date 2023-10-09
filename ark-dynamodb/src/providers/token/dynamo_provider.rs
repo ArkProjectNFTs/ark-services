@@ -276,7 +276,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .set_key_condition_expression(Some("GSI1PK = :contract".to_string()))
             .expression_attribute_values(
                 ":contract".to_string(),
-                AttributeValue::S(format!("COLLECTION#{}", contract_address)),
+                AttributeValue::S(format!("CONTRACT#{}", contract_address)),
             )
             .send()
             .await
