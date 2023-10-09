@@ -134,7 +134,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
             )
             .item(
                 "GSI2PK".to_string(),
-                AttributeValue::S(format!("TOKEN#{}", event.token_id_hex)),
+                AttributeValue::S(format!(
+                    "TOKEN#{}#{}",
+                    event.contract_address, event.token_id_hex,
+                )),
             )
             .item(
                 "GSI2SK".to_string(),

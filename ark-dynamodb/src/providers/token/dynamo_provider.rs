@@ -269,15 +269,24 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         client: &Self::Client,
         contract_address: &str,
     ) -> Result<Vec<TokenInfo>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(
+            ":contract".to_string(),
+            AttributeValue::S(format!("CONTRACT#{}", contract_address)),
+        );
+        values.insert(
+            ":token".to_string(),
+            AttributeValue::S("TOKEN#".to_string()),
+        );
+
         let req = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
-            .set_key_condition_expression(Some("GSI1PK = :contract".to_string()))
-            .expression_attribute_values(
-                ":contract".to_string(),
-                AttributeValue::S(format!("CONTRACT#{}", contract_address)),
-            )
+            .set_key_condition_expression(Some(
+                "GSI1PK = :contract AND begins_with(GSI1SK, :token)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values))
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
@@ -285,6 +294,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let mut res = vec![];
         if let Some(items) = req.items {
             for i in items {
+                println!("ITEM {:?}", i);
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_info(&data)?);
             }
