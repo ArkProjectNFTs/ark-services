@@ -1,0 +1,13 @@
+{
+    "resource": "/",
+    "path": "/",
+    "httpMethod": "GET",
+    "multiValueHeaders": {
+        "Accept": ["*/*"]
+    },
+    "multiValueQueryStringParameters": {
+        "address": ["0x1234"],
+        "id": ["0x1234"]
+    },
+    "body": ""
+}

@@ -190,12 +190,33 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
     async fn get_token_events(
         &self,
-        _client: &Self::Client,
+        client: &Self::Client,
+        // TODO: check with @kwiss the indexes as we can query only on one index at a time?
+        // or several indexes?
         _contract_address: &str,
-        _token_id: &str,
+        token_hex_id: &str,
     ) -> Result<Vec<TokenEvent>, ProviderError> {
-        // TODO.
 
-        Ok(vec![])
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI2PK-GSI2SK-index")
+            .set_key_condition_expression(Some("GSI2PK = :token".to_string()))
+            .expression_attribute_values(
+                ":token".to_string(),
+                AttributeValue::S(format!("TOKEN#{}", token_hex_id)))
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_event(&data)?);
+            }
+        }
+
+        Ok(res)
     }
 }
