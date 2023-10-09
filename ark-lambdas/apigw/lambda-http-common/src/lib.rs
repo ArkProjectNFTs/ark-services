@@ -12,6 +12,11 @@ pub enum HttpParsingError {
     MissingParamError(String),
 }
 
+pub enum HttpParamSource {
+    Path,
+    QueryString,
+}
+
 impl TryFrom<HttpParsingError> for Response<Body> {
     type Error = Error;
 
@@ -63,18 +68,29 @@ pub fn internal_server_error_rsp(message: &str) -> Result<Response<Body>, Error>
         .map_err(Box::new)?)
 }
 
-/// Returns the value for the given param name into the query string parameters, None otherwise.
+/// Returns the value for the given parameter as a string. Returns an error if the parameter is not found.
 #[allow(clippy::bind_instead_of_map)]
-pub fn get_query_string_param(
+pub fn require_string_param(
     event: &Request,
     param_name: &str,
+    source: HttpParamSource,
 ) -> Result<String, HttpParsingError> {
-    if let Some(v) = event
-        .query_string_parameters_ref()
-        .and_then(|params| Some(params.first(param_name)))
-        .unwrap_or(None)
-        .map(|v| v.to_string())
-    {
+    let maybe_param = match source {
+        HttpParamSource::Path => {
+            event.path_parameters_ref()
+                .and_then(|params| Some(params.first(param_name)))
+                .unwrap_or(None)
+                .map(|v| v.to_string())
+        }
+        HttpParamSource::QueryString => {
+            event.query_string_parameters_ref()
+                .and_then(|params| Some(params.first(param_name)))
+                .unwrap_or(None)
+                .map(|v| v.to_string())
+        }
+    };
+
+    if let Some(v) = maybe_param {
         Ok(v)
     } else {
         Err(HttpParsingError::MissingParamError(format!(
@@ -83,19 +99,30 @@ pub fn get_query_string_param(
     }
 }
 
-/// Returns the padded hex string of a query string param expected to be a hex or
-/// a decimal number.
+/// Returns the padded hex string of parameter that can be an hexadecimal / decimal string.
+/// Returns an error if the parameter is not found.
 #[allow(clippy::bind_instead_of_map)]
-pub fn get_query_string_hex_or_dec_param(
+pub fn require_hex_or_dec_param(
     event: &Request,
     param_name: &str,
+    source: HttpParamSource,
 ) -> Result<String, HttpParsingError> {
-    if let Some(v) = event
-        .query_string_parameters_ref()
-        .and_then(|params| Some(params.first(param_name)))
-        .unwrap_or(None)
-        .map(|v| v.to_string())
-    {
+    let maybe_param = match source {
+        HttpParamSource::Path => {
+            event.path_parameters_ref()
+                .and_then(|params| Some(params.first(param_name)))
+                .unwrap_or(None)
+                .map(|v| v.to_string())
+        }
+        HttpParamSource::QueryString => {
+            event.query_string_parameters_ref()
+                .and_then(|params| Some(params.first(param_name)))
+                .unwrap_or(None)
+                .map(|v| v.to_string())
+        }
+    };
+
+    if let Some(v) = maybe_param {
         if v.starts_with("0x") {
             if is_hexadecimal_with_prefix(&v) {
                 Ok(pad_hex(&v))
@@ -124,18 +151,30 @@ pub fn get_query_string_hex_or_dec_param(
     }
 }
 
-/// Returns the value of a query string param expected to be a hexadecimal string.
+/// Returns the value of a parameter expected to be an hexadecimal string.
+/// Returns an error if the parameter is not found.
 #[allow(clippy::bind_instead_of_map)]
-pub fn get_query_string_hex_param(
+pub fn require_hex_param(
     event: &Request,
     param_name: &str,
+    source: HttpParamSource,
 ) -> Result<String, HttpParsingError> {
-    if let Some(v) = event
-        .query_string_parameters_ref()
-        .and_then(|params| Some(params.first(param_name)))
-        .unwrap_or(None)
-        .map(|v| v.to_string())
-    {
+    let maybe_param = match source {
+        HttpParamSource::Path => {
+            event.path_parameters_ref()
+                .and_then(|params| Some(params.first(param_name)))
+                .unwrap_or(None)
+                .map(|v| v.to_string())
+        }
+        HttpParamSource::QueryString => {
+            event.query_string_parameters_ref()
+                .and_then(|params| Some(params.first(param_name)))
+                .unwrap_or(None)
+                .map(|v| v.to_string())
+        }
+    };
+
+    if let Some(v) = maybe_param {
         if is_hexadecimal_with_prefix(&v) {
             Ok(pad_hex(&v))
         } else {
@@ -225,10 +264,23 @@ mod tests {
         params.insert("address".to_string(), "0x1234".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_param(&req, "address").unwrap();
+        let s = require_string_param(&req, "address", HttpParamSource::QueryString).unwrap();
         assert_eq!(s, "0x1234");
 
-        let s = get_query_string_param(&req, "other_param");
+        let s = require_string_param(&req, "other_param", HttpParamSource::QueryString);
+        assert!(s.is_err());
+    }
+
+    #[test]
+    fn test_get_path_param() {
+        let mut params = HashMap::new();
+        params.insert("address".to_string(), "0x1234".to_string());
+        let req = Request::default().with_path_parameters(params.clone());
+
+        let s = require_string_param(&req, "address", HttpParamSource::Path).unwrap();
+        assert_eq!(s, "0x1234");
+
+        let s = require_string_param(&req, "other_param", HttpParamSource::Path);
         assert!(s.is_err());
     }
 
@@ -238,7 +290,17 @@ mod tests {
         params.insert("address".to_string(), "0x1234".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_param(&req, "address").unwrap();
+        let s = require_hex_param(&req, "address", HttpParamSource::QueryString).unwrap();
+        assert_eq!(s, format!("0x{:064x}", 0x1234));
+    }
+
+    #[test]
+    fn test_get_path_param_hex() {
+        let mut params = HashMap::new();
+        params.insert("address".to_string(), "0x1234".to_string());
+        let req = Request::default().with_path_parameters(params.clone());
+
+        let s = require_hex_param(&req, "address", HttpParamSource::Path).unwrap();
         assert_eq!(s, format!("0x{:064x}", 0x1234));
     }
 
@@ -248,14 +310,14 @@ mod tests {
         params.insert("address".to_string(), "1234".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_param(&req, "address");
+        let s = require_hex_param(&req, "address", HttpParamSource::QueryString);
         assert!(s.is_err());
 
         let mut params = HashMap::new();
         params.insert("address".to_string(), "jfeoehguoirehgo".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_param(&req, "address");
+        let s = require_hex_param(&req, "address", HttpParamSource::QueryString);
         assert!(s.is_err());
     }
 
@@ -265,7 +327,7 @@ mod tests {
         params.insert("token_id".to_string(), "255".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_or_dec_param(&req, "token_id").unwrap();
+        let s = require_hex_or_dec_param(&req, "token_id", HttpParamSource::QueryString).unwrap();
         assert_eq!(s, format!("0x{:064x}", 0xff));
 
         let mut params = HashMap::new();
@@ -275,7 +337,7 @@ mod tests {
         );
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_or_dec_param(&req, "token_id").unwrap();
+        let s = require_hex_or_dec_param(&req, "token_id", HttpParamSource::QueryString).unwrap();
         assert_eq!(
             s,
             "0x06f5b84a20c71f393a8b5b4d74f62df2017b80bb5dcef199e2fa6952b4fc48a0"
@@ -288,14 +350,14 @@ mod tests {
         params.insert("token_id".to_string(), "255".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_or_dec_param(&req, "other_param");
+        let s = require_hex_or_dec_param(&req, "other_param", HttpParamSource::QueryString);
         assert!(s.is_err());
 
         let mut params = HashMap::new();
         params.insert("token_id".to_string(), "0xajfojigehih".to_string());
         let req = Request::default().with_query_string_parameters(params.clone());
 
-        let s = get_query_string_hex_or_dec_param(&req, "token_id");
+        let s = require_hex_or_dec_param(&req, "token_id", HttpParamSource::QueryString);
         assert!(s.is_err());
     }
 }

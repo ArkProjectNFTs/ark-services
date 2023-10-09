@@ -1,5 +1,4 @@
 [workspace.package]
-name = "ark-services"
 version = "0.1.0"
 authors = ["Screenshot Labs", "Starknet community"]
 license = "MIT OR Apache-2.0"
