@@ -1,14 +1,12 @@
 mod aws_s3_file_manager;
-mod dynamo_storage;
 mod pontos_observer;
 
-use crate::dynamo_storage::DynamoStorage;
 use anyhow::Result;
+use ark_dynamodb::storage::DynamoStorage;
 use arkproject::{
     pontos::{Pontos, PontosConfig},
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
-
 use dotenv::dotenv;
 use pontos_observer::PontosObserver;
 use regex::Regex;

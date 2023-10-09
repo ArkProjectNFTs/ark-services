@@ -1,0 +1,53 @@
+name: Test Workflow
+
+on:
+  workflow_dispatch:
+
+jobs:
+  push-docker-image:
+    runs-on: ubuntu-latest
+    name: Push Docker Image
+    env:
+      AWS_REGION: us-east-1
+      REPOSITORY: arkproject
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.5.5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1.3.3
+
+      - name: Debug
+        run: |
+          echo "Registry: ${{ steps.login-ecr.outputs.registry }}"
+
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:LATEST -f Dockerfile .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:LATEST
+
+      - name: Debug login-ecr outputs
+        run: |
+          echo "Login ECR Outputs: ${{ toJSON(steps.login-ecr.outputs) }}"
+
+    outputs:
+      registry: ${{ steps.login-ecr.outputs.registry }}
+
+  print-registry:
+    needs: push-docker-image
+    runs-on: ubuntu-latest
+    name: Print Docker Registry
+    env:
+      REPOSITORY: arkproject
+      TAG: "LATEST"
+    steps:
+      - name: Print Docker Registry
+        run: echo "${{ needs.push-docker-image.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}"

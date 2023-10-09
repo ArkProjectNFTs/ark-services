@@ -1,12 +1,11 @@
+use ark_dynamodb::storage::AWSDynamoStorage;
 use arkproject::pontos::{
     event_handler::EventHandler,
-    storage::types::{IndexerStatus, TokenEvent, TokenFromEvent},
+    storage::types::{IndexerStatus, TokenEvent, TokenInfo},
 };
 use async_trait::async_trait;
 use std::sync::Arc;
 use tracing::{debug, error, info};
-
-use crate::dynamo_storage::AWSDynamoStorage;
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
@@ -29,7 +28,7 @@ impl<S: AWSDynamoStorage> EventHandler for PontosObserver<S>
 where
     S: AWSDynamoStorage + Send + Sync,
 {
-    async fn on_token_registered(&self, _token: TokenFromEvent) {
+    async fn on_token_registered(&self, _token: TokenInfo) {
         info!("on_token_registered");
     }
 

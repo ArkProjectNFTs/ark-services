@@ -11,11 +11,25 @@ edition = "2021"
 
 [workspace]
 members = [
-  "ark-indexer"
+  "ark-indexer",
+  "ark-dynamodb",
+  "ark-lambdas/apigw/lambda-http-common",
+  "ark-lambdas/apigw/lambda-get-contract",
+  "ark-lambdas/apigw/lambda-get-token",
+  "ark-lambdas/apigw/lambda-get-token-events",
 ]
 resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0"
+ark-dynamodb = { path = "ark-dynamodb" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.0.6" }
+#arkproject = { path = "../ark-project"} 
 async-trait = "0.1.73"
+lambda-http-common = { path = "ark-lambdas/apigw/lambda-http-common" }
 tokio = { version = "1", features = ["full"] }
+serde = "1.0.160"
+serde_json = "1.0.96"
+serde_with = "2.3.2"
+starknet = "0.6.0"
+thiserror = "1.0.40"

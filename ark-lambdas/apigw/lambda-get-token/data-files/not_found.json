@@ -1,0 +1,13 @@
+{
+    "resource": "/token",
+    "path": "/token",
+    "httpMethod": "GET",
+    "multiValueHeaders": {
+        "Accept": ["*/*"]
+    },
+    "multiValueQueryStringParameters": {
+        "address": ["0x12312435"],
+        "id": ["0x1234567887"]
+    },
+    "body": ""
+}
