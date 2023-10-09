@@ -54,6 +54,15 @@ pub fn bad_request_rsp(message: &str) -> Result<Response<Body>, Error> {
         .map_err(Box::new)?)
 }
 
+/// Returns a `Reponse` with INTERNAL_SERVER_ERROR status and the given message as body.
+pub fn internal_server_error_rsp(message: &str) -> Result<Response<Body>, Error> {
+    Ok(Response::builder()
+        .status(500)
+        .header("Content-Type", "text/plain")
+        .body(message.into())
+        .map_err(Box::new)?)
+}
+
 /// Returns the value for the given param name into the query string parameters, None otherwise.
 #[allow(clippy::bind_instead_of_map)]
 pub fn get_query_string_param(

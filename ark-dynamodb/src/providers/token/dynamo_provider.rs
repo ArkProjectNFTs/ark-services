@@ -263,4 +263,33 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         Ok(())
     }
+
+    async fn get_contract_tokens(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+    ) -> Result<Vec<TokenInfo>, ProviderError> {
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI1PK-GSI1SK-index")
+            .set_key_condition_expression(Some("GSI1PK = :contract".to_string()))
+            .expression_attribute_values(
+                ":contract".to_string(),
+                AttributeValue::S(format!("CONTRACT#{}", contract_address)),
+            )
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_info(&data)?);
+            }
+        }
+
+        Ok(res)
+    }
 }
