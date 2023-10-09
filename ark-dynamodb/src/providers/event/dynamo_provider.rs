@@ -196,7 +196,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
         _contract_address: &str,
         token_hex_id: &str,
     ) -> Result<Vec<TokenEvent>, ProviderError> {
-
         let req = client
             .query()
             .table_name(&self.table_name)
@@ -204,7 +203,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .set_key_condition_expression(Some("GSI2PK = :token".to_string()))
             .expression_attribute_values(
                 ":token".to_string(),
-                AttributeValue::S(format!("TOKEN#{}", token_hex_id)))
+                AttributeValue::S(format!("TOKEN#{}", token_hex_id)),
+            )
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
