@@ -76,18 +76,16 @@ pub fn require_string_param(
     source: HttpParamSource,
 ) -> Result<String, HttpParsingError> {
     let maybe_param = match source {
-        HttpParamSource::Path => {
-            event.path_parameters_ref()
-                .and_then(|params| Some(params.first(param_name)))
-                .unwrap_or(None)
-                .map(|v| v.to_string())
-        }
-        HttpParamSource::QueryString => {
-            event.query_string_parameters_ref()
-                .and_then(|params| Some(params.first(param_name)))
-                .unwrap_or(None)
-                .map(|v| v.to_string())
-        }
+        HttpParamSource::Path => event
+            .path_parameters_ref()
+            .and_then(|params| Some(params.first(param_name)))
+            .unwrap_or(None)
+            .map(|v| v.to_string()),
+        HttpParamSource::QueryString => event
+            .query_string_parameters_ref()
+            .and_then(|params| Some(params.first(param_name)))
+            .unwrap_or(None)
+            .map(|v| v.to_string()),
     };
 
     if let Some(v) = maybe_param {
@@ -108,18 +106,16 @@ pub fn require_hex_or_dec_param(
     source: HttpParamSource,
 ) -> Result<String, HttpParsingError> {
     let maybe_param = match source {
-        HttpParamSource::Path => {
-            event.path_parameters_ref()
-                .and_then(|params| Some(params.first(param_name)))
-                .unwrap_or(None)
-                .map(|v| v.to_string())
-        }
-        HttpParamSource::QueryString => {
-            event.query_string_parameters_ref()
-                .and_then(|params| Some(params.first(param_name)))
-                .unwrap_or(None)
-                .map(|v| v.to_string())
-        }
+        HttpParamSource::Path => event
+            .path_parameters_ref()
+            .and_then(|params| Some(params.first(param_name)))
+            .unwrap_or(None)
+            .map(|v| v.to_string()),
+        HttpParamSource::QueryString => event
+            .query_string_parameters_ref()
+            .and_then(|params| Some(params.first(param_name)))
+            .unwrap_or(None)
+            .map(|v| v.to_string()),
     };
 
     if let Some(v) = maybe_param {
@@ -160,18 +156,16 @@ pub fn require_hex_param(
     source: HttpParamSource,
 ) -> Result<String, HttpParsingError> {
     let maybe_param = match source {
-        HttpParamSource::Path => {
-            event.path_parameters_ref()
-                .and_then(|params| Some(params.first(param_name)))
-                .unwrap_or(None)
-                .map(|v| v.to_string())
-        }
-        HttpParamSource::QueryString => {
-            event.query_string_parameters_ref()
-                .and_then(|params| Some(params.first(param_name)))
-                .unwrap_or(None)
-                .map(|v| v.to_string())
-        }
+        HttpParamSource::Path => event
+            .path_parameters_ref()
+            .and_then(|params| Some(params.first(param_name)))
+            .unwrap_or(None)
+            .map(|v| v.to_string()),
+        HttpParamSource::QueryString => event
+            .query_string_parameters_ref()
+            .and_then(|params| Some(params.first(param_name)))
+            .unwrap_or(None)
+            .map(|v| v.to_string()),
     };
 
     if let Some(v) = maybe_param {

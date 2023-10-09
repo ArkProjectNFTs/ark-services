@@ -1,10 +1,15 @@
-//! A Lambda function to get a token..
+//! A Lambda function to get information about a token.
 //!
-//! To work, this lambda expects two query string parameters:
-//!   * address: Contract address of the collection, in hexadecimal.
-//!   * id: The id of the token, in decimal. (TODO: revise the standard we want here).
+//! To work, this lambda expects the following path:
+//!     `../tokens/:contract_address/:token_id`
 //!
-//! `https://.../token?address=0x1234&id=1234`
+//! where:
+//!   * contract_address: Contract address of the collection, in hexadecimal.
+//!   * token_id: The id of the token, in hexadecimal or decimal.
+//!
+//! Examples:
+//! `https://.../tokens/0x1234/1`
+//! `https://.../tokens/0x1234/0x1`
 //!
 use ark_dynamodb::{
     init_aws_dynamo_client,
@@ -12,7 +17,7 @@ use ark_dynamodb::{
     Client as DynamoClient,
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
-use lambda_http_common as common;
+use lambda_http_common::{self as common, HttpParamSource};
 
 /// A struct to bundle all init required by the lambda.
 struct Ctx<P> {
@@ -24,15 +29,17 @@ async fn function_handler<P: ArkTokenProvider<Client = DynamoClient>>(
     ctx: &Ctx<P>,
     event: Request,
 ) -> Result<Response<Body>, Error> {
-    let address = match common::get_query_string_hex_param(&event, "address") {
+    let address = match common::require_hex_param(&event, "contract_address", HttpParamSource::Path)
+    {
         Ok(a) => a,
         Err(e) => return e.try_into(),
     };
 
-    let token_id_hex = match common::get_query_string_hex_or_dec_param(&event, "id") {
-        Ok(t) => t,
-        Err(e) => return e.try_into(),
-    };
+    let token_id_hex =
+        match common::require_hex_or_dec_param(&event, "token_id", HttpParamSource::Path) {
+            Ok(t) => t,
+            Err(e) => return e.try_into(),
+        };
 
     if let Some(data) = ctx
         .provider
@@ -90,10 +97,10 @@ mod tests {
         let token_id = "1".to_string();
 
         let mut params = HashMap::new();
-        params.insert("address".to_string(), address.clone());
-        params.insert("id".to_string(), token_id.clone());
+        params.insert("contract_address".to_string(), address.clone());
+        params.insert("token_id".to_string(), token_id.clone());
 
-        let req = Request::default().with_query_string_parameters(params.clone());
+        let req = Request::default().with_path_parameters(params.clone());
 
         let mut ctx = get_mock_ctx().await;
         ctx.provider.expect_get_token().returning(move |_, _, _| {
@@ -118,9 +125,9 @@ mod tests {
     #[tokio::test]
     async fn bad_hexadecimal_address() {
         let mut params = HashMap::new();
-        params.insert("address".to_string(), "1234".to_string());
-        params.insert("id".to_string(), "1".to_string());
-        let req = Request::default().with_query_string_parameters(params.clone());
+        params.insert("contract_address".to_string(), "1234".to_string());
+        params.insert("token_id".to_string(), "1".to_string());
+        let req = Request::default().with_path_parameters(params.clone());
 
         // No setup, as the lambda will return an error before any dynamodb stuff.
         let rsp = function_handler(&get_mock_ctx().await, req)
@@ -134,15 +141,18 @@ mod tests {
             _ => panic!("Body is expected to be a string"),
         };
 
-        assert_eq!(body, "Param address is expected to be hexadecimal string");
+        assert_eq!(
+            body,
+            "Param contract_address is expected to be hexadecimal string"
+        );
     }
 
     #[tokio::test]
     async fn missing_address() {
         let mut params = HashMap::new();
-        params.insert("id".to_string(), "1".to_string());
+        params.insert("token_id".to_string(), "1".to_string());
 
-        let req = Request::default().with_query_string_parameters(params.clone());
+        let req = Request::default().with_path_parameters(params.clone());
 
         // No setup, as the lambda will return an error before any dynamodb stuff.
         let rsp = function_handler(&get_mock_ctx().await, req)
@@ -156,6 +166,6 @@ mod tests {
             _ => panic!("Body is expected to be a string"),
         };
 
-        assert_eq!(body, "Param address is missing");
+        assert_eq!(body, "Param contract_address is missing");
     }
 }
