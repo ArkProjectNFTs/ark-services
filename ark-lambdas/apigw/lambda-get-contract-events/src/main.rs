@@ -1,15 +1,13 @@
-//! A Lambda function to get all the events for a token.
+//! A Lambda function to get all the events for a contract.
 //!
 //! To work, this lambda expects the following path:
-//!     `../events/{contract_address}/{token_id}`
+//!     `../events/{contract_address}`
 //!
 //! where:
 //!   * contract_address: Contract address of the collection, in hexadecimal.
-//!   * token_id: The id of the token, in hexadecimal or decimal.
 //!
 //! Examples:
-//! `https://.../events/0x1234/1`
-//! `https://.../events/0x1234/0x1`
+//! `https://.../events/0x1234`
 //!
 use ark_dynamodb::{
     init_aws_dynamo_client,
@@ -35,15 +33,9 @@ async fn function_handler<P: ArkEventProvider<Client = DynamoClient>>(
         Err(e) => return e.try_into(),
     };
 
-    let token_id_hex =
-        match common::require_hex_or_dec_param(&event, "token_id", HttpParamSource::Path) {
-            Ok(t) => t,
-            Err(e) => return e.try_into(),
-        };
-
     let events = ctx
         .provider
-        .get_token_events(&ctx.client, &address, &token_id_hex)
+        .get_contract_events(&ctx.client, &address)
         .await?;
 
     common::ok_body_rsp(&events)
