@@ -29,4 +29,9 @@ pub trait ArkContractProvider {
         client: &Self::Client,
         info: &ContractInfo,
     ) -> Result<(), ProviderError>;
+
+    async fn get_contracts(
+        &self,
+        client: &Self::Client,
+    ) -> Result<Vec<ContractInfo>, ProviderError>;
 }

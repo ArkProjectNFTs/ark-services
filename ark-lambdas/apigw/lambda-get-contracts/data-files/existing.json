@@ -1,0 +1,7 @@
+{
+    "httpMethod": "GET",
+    "multiValueHeaders": {
+        "Accept": ["*/*"]
+    },
+    "body": ""
+}
