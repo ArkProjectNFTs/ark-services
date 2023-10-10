@@ -126,30 +126,43 @@ impl AWSDynamoStorage for DynamoStorage {
             task_id, value
         );
 
-        let mut data = HashMap::new();
-        data.insert("status".to_string(), AttributeValue::S(value.to_string()));
-        data.insert(
-            "last_update".to_string(),
-            AttributeValue::N(unix_timestamp.to_string()),
+        let mut values = HashMap::new();
+        values.insert(
+            ":indexation_progress".to_string(),
+            AttributeValue::N(value.to_string()),
         );
+        values.insert(
+            ":last_update".to_string(),
+            AttributeValue::S(unix_timestamp.to_string()),
+        );
+
+        let mut names = HashMap::new();
+        names.insert("#data".to_string(), "Data".to_string());
+        names.insert(
+            "#indexation_progress".to_string(),
+            "indexation_progress".to_string(),
+        );
+        names.insert("#last_update".to_string(), "last_update".to_string());
 
         let response = self
             .client
             .update_item()
             .table_name(self.table_name.clone())
-            .key("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
-            .key("SK", AttributeValue::S("TASK".to_string()))
-            .update_expression("SET #Data = :data")
-            .expression_attribute_names("#Data", "Data")
-            .expression_attribute_values(":data".to_string(), AttributeValue::M(data))
+            .key("PK", AttributeValue::S("INDEXER".to_string()))
+            .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
+            .update_expression(
+                "SET #data.#indexation_progress = :indexation_progress, #data.#last_update = :last_update",
+            )
+            .set_expression_attribute_names(Some(names))
+            .set_expression_attribute_values(Some(values))
             .return_values(ReturnValue::AllNew)
             .send()
             .await;
 
         match response {
             Ok(_) => {
-                debug!(
-                    "Successfully updated indexer progress for task_id {}: value {}",
+                info!(
+                    "Successfully updated indexer progress for task_id={}: indexation_progress={}",
                     task_id, value
                 );
                 Ok(())
