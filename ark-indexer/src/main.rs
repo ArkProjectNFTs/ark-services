@@ -22,7 +22,10 @@ async fn main() -> Result<()> {
 
     init_tracing();
 
-    let is_head_of_chain = env::var("HEAD_OF_CHAIN").is_ok();
+    let is_head_of_chain = match std::env::var("HEAD_OF_CHAIN") {
+        Ok(val) => val == "true",
+        Err(_) => false,
+    };
 
     let (from_block, to_block) = if is_head_of_chain {
         (BlockId::Number(0), BlockId::Number(0))
@@ -46,7 +49,7 @@ async fn main() -> Result<()> {
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let force_mode = env::var("FORCE_MODE").is_ok();
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
-    let indexer_identifier = get_task_id();
+    let indexer_identifier = get_task_id(is_head_of_chain);
 
     info!(
         "🏁 Starting Indexer. Version={}, Identifier={}",
@@ -94,7 +97,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn get_task_id() -> String {
+fn get_task_id(is_head_of_chain: bool) -> String {
     match env::var("ECS_CONTAINER_METADATA_URI") {
         Ok(container_metadata_uri) => {
             let pattern = Regex::new(r"/v3/([a-f0-9]{32})-").unwrap();
@@ -106,7 +109,7 @@ fn get_task_id() -> String {
             task_id.to_string()
         }
         Err(_) => {
-            if env::var("HEAD_OF_CHAIN").is_ok() {
+            if is_head_of_chain {
                 String::from("LATEST")
             } else {
                 String::from("LOCALHOST")
