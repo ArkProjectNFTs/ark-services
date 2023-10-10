@@ -1,8 +1,13 @@
-//! A Lambda function to get a contract from it's address in hexadecimal representation.
+//! A Lambda function to get information about a collection contract.
 //!
-//! To work, this lambda expects the contract address as query string parameter "address".
+//! To work, this lambda expects the following path:
+//!     `../collections/{contract_address}`
 //!
-//! `https://.../contract?address=0x1234`
+//! where:
+//!   * contract_address: Contract address of the collection, in hexadecimal.
+//!
+//! Examples:
+//! `https://.../collections/0x1234`
 //!
 use ark_dynamodb::{
     init_aws_dynamo_client,
@@ -10,7 +15,7 @@ use ark_dynamodb::{
     Client as DynamoClient,
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
-use lambda_http_common as common;
+use lambda_http_common::{self as common, HttpParamSource};
 
 /// A struct to bundle all init required by the lambda.
 struct Ctx<P> {
@@ -22,7 +27,8 @@ async fn function_handler<P: ArkContractProvider<Client = DynamoClient>>(
     ctx: &Ctx<P>,
     event: Request,
 ) -> Result<Response<Body>, Error> {
-    let address = match common::get_query_string_hex_param(&event, "address") {
+    let address = match common::require_hex_param(&event, "contract_address", HttpParamSource::Path)
+    {
         Ok(a) => a,
         Err(e) => return e.try_into(),
     };
@@ -78,9 +84,9 @@ mod tests {
         let address = "0x1234".to_string();
 
         let mut params = HashMap::new();
-        params.insert("address".to_string(), address.clone());
+        params.insert("contract_address".to_string(), address.clone());
 
-        let req = Request::default().with_query_string_parameters(params.clone());
+        let req = Request::default().with_path_parameters(params.clone());
 
         let mut ctx = get_mock_ctx().await;
         ctx.provider.expect_get_contract().returning(move |_, _| {
@@ -101,8 +107,8 @@ mod tests {
     #[tokio::test]
     async fn bad_hexadecimal_address() {
         let mut params = HashMap::new();
-        params.insert("address".to_string(), "contractA".to_string());
-        let req = Request::default().with_query_string_parameters(params.clone());
+        params.insert("contract_address".to_string(), "contractA".to_string());
+        let req = Request::default().with_path_parameters(params.clone());
 
         // No setup, as the lambda will return an error before any dynamodb stuff.
         let rsp = function_handler(&get_mock_ctx().await, req)
@@ -116,7 +122,10 @@ mod tests {
             _ => panic!("Body is expected to be a string"),
         };
 
-        assert_eq!(body, "Param address is expected to be hexadecimal string");
+        assert_eq!(
+            body,
+            "Param contract_address is expected to be hexadecimal string"
+        );
     }
 
     #[tokio::test]
@@ -135,6 +144,6 @@ mod tests {
             _ => panic!("Body is expected to be a string"),
         };
 
-        assert_eq!(body, "Param address is missing");
+        assert_eq!(body, "Param contract_address is missing");
     }
 }

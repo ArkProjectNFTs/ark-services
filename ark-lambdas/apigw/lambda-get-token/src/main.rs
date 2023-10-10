@@ -1,7 +1,7 @@
 //! A Lambda function to get information about a token.
 //!
 //! To work, this lambda expects the following path:
-//!     `../tokens/:contract_address/:token_id`
+//!     `../tokens/{contract_address}/{token_id}`
 //!
 //! where:
 //!   * contract_address: Contract address of the collection, in hexadecimal.

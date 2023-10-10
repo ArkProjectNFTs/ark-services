@@ -1,12 +1,10 @@
 {
-    "resource": "/contract",
-    "path": "/contract",
     "httpMethod": "GET",
+    "pathParameters": {
+        "contract_address": "0x05004ab1e4f512e43f46311580dc4a0a053f146310c622344dfddab8fed7d5b0"
+    },
     "multiValueHeaders": {
         "Accept": ["*/*"]
-    },
-    "multiValueQueryStringParameters": {
-        "address": ["0x02c9bd6a59365026dbfe47dd760a20779579dc6075fe0ac5cda808a78fde42ad"]
     },
     "body": ""
 }

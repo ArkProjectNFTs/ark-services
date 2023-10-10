@@ -1,7 +1,7 @@
 //! A Lambda function to get all the tokens of a owner.
 //!
 //! To work, this lambda expects the following path:
-//!     `../tokens/owner/:owner_address`
+//!     `../tokens/owner/{owner_address}`
 //!
 //! where:
 //!   * owner_address: Contract address of the account contract (owner), in hexadecimal.

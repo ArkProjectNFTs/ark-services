@@ -1,7 +1,7 @@
 //! A Lambda function to get all the tokens of a contract.
 //!
 //! To work, this lambda expects the following path:
-//!     `../tokens/:contract_address`
+//!     `../tokens/{contract_address}`
 //!
 //! where:
 //!   * contract_address: Contract address of the collection, in hexadecimal.
