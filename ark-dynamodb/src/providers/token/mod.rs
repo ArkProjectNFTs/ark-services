@@ -50,4 +50,10 @@ pub trait ArkTokenProvider {
         client: &Self::Client,
         contract_address: &str,
     ) -> Result<Vec<TokenInfo>, ProviderError>;
+
+    async fn get_owner_tokens(
+        &self,
+        client: &Self::Client,
+        owner_address: &str,
+    ) -> Result<Vec<TokenInfo>, ProviderError>;
 }

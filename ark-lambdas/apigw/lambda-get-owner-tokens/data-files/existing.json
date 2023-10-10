@@ -1,0 +1,10 @@
+{
+    "httpMethod": "GET",
+    "pathParameters": {
+        "owner_address": "0x03648e54b75c8e6215864161feb24f694cf47018f8ee94f760a4d705ddb05bd6"
+    },
+    "multiValueHeaders": {
+        "Accept": ["*/*"]
+    },
+    "body": ""
+}
