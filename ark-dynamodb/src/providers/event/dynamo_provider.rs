@@ -134,7 +134,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
             )
             .item(
                 "GSI2PK".to_string(),
-                AttributeValue::S(format!("TOKEN#{}", event.token_id_hex)),
+                AttributeValue::S(format!(
+                    "TOKEN#{}#{}",
+                    event.contract_address, event.token_id_hex,
+                )),
             )
             .item(
                 "GSI2SK".to_string(),
@@ -190,12 +193,72 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
     async fn get_token_events(
         &self,
-        _client: &Self::Client,
-        _contract_address: &str,
-        _token_id: &str,
+        client: &Self::Client,
+        contract_address: &str,
+        token_hex_id: &str,
     ) -> Result<Vec<TokenEvent>, ProviderError> {
-        // TODO.
+        let mut values = HashMap::new();
+        values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
+        values.insert(
+            ":token".to_string(),
+            AttributeValue::S(format!("TOKEN#{}#{}", contract_address, token_hex_id)),
+        );
 
-        Ok(vec![])
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI2PK-GSI2SK-index")
+            .set_key_condition_expression(Some(
+                "GSI2PK = :token AND begins_with(GSI2SK, :event)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values))
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_event(&data)?);
+            }
+        }
+
+        Ok(res)
+    }
+
+    async fn get_contract_events(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+    ) -> Result<Vec<TokenEvent>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
+        values.insert(
+            ":contract".to_string(),
+            AttributeValue::S(format!("CONTRACT#{}", contract_address)),
+        );
+
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI1PK-GSI1SK-index")
+            .set_key_condition_expression(Some(
+                "GSI1PK = :contract AND begins_with(GSI1SK, :event)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values))
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_event(&data)?);
+            }
+        }
+
+        Ok(res)
     }
 }

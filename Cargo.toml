@@ -1,5 +1,4 @@
 [workspace.package]
-name = "ark-services"
 version = "0.1.0"
 authors = ["Screenshot Labs", "Starknet community"]
 license = "MIT OR Apache-2.0"
@@ -15,6 +14,10 @@ members = [
   "ark-dynamodb",
   "ark-lambdas/apigw/lambda-http-common",
   "ark-lambdas/apigw/lambda-get-contract",
+  "ark-lambdas/apigw/lambda-get-contracts",
+  "ark-lambdas/apigw/lambda-get-contract-tokens",
+  "ark-lambdas/apigw/lambda-get-contract-events",
+  "ark-lambdas/apigw/lambda-get-owner-tokens",
   "ark-lambdas/apigw/lambda-get-token",
   "ark-lambdas/apigw/lambda-get-token-events",
 ]

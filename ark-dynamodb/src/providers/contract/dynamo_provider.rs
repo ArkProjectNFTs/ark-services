@@ -76,7 +76,11 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .put_item()
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk.clone()))
-            .item("SK", AttributeValue::S(sk))
+            .item("SK", AttributeValue::S(sk.clone()))
+            // We can't filter on PK/SK to only get all contract, as the PK
+            // is required. So we duplicate info in the GSI1. TODO: investiagte more.
+            .item("GSI1PK".to_string(), AttributeValue::S(sk.clone()))
+            .item("GSI1SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),
                 AttributeValue::S(format!("BLOCK#{}", info.block_number)),
@@ -118,5 +122,38 @@ impl ArkContractProvider for DynamoDbContractProvider {
         } else {
             Ok(None)
         }
+    }
+
+    async fn get_contracts(
+        &self,
+        client: &Self::Client,
+    ) -> Result<Vec<ContractInfo>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(
+            ":contract".to_string(),
+            AttributeValue::S("CONTRACT".to_string()),
+        );
+
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI1PK-GSI1SK-index")
+            .set_key_condition_expression(Some(
+                "GSI1PK = :contract AND begins_with(GSI1SK, :contract)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values))
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_info(&data)?);
+            }
+        }
+
+        Ok(res)
     }
 }

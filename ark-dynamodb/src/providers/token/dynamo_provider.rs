@@ -263,4 +263,80 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         Ok(())
     }
+
+    async fn get_contract_tokens(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+    ) -> Result<Vec<TokenInfo>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(
+            ":contract".to_string(),
+            AttributeValue::S(format!("CONTRACT#{}", contract_address)),
+        );
+        values.insert(
+            ":token".to_string(),
+            AttributeValue::S("TOKEN#".to_string()),
+        );
+
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI1PK-GSI1SK-index")
+            .set_key_condition_expression(Some(
+                "GSI1PK = :contract AND begins_with(GSI1SK, :token)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values))
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_info(&data)?);
+            }
+        }
+
+        Ok(res)
+    }
+
+    async fn get_owner_tokens(
+        &self,
+        client: &Self::Client,
+        owner_address: &str,
+    ) -> Result<Vec<TokenInfo>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(
+            ":owner".to_string(),
+            AttributeValue::S(format!("OWNER#{}", owner_address)),
+        );
+        values.insert(
+            ":token".to_string(),
+            AttributeValue::S("TOKEN#".to_string()),
+        );
+
+        let req = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI2PK-GSI2SK-index")
+            .set_key_condition_expression(Some(
+                "GSI2PK = :owner AND begins_with(GSI2SK, :token)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values))
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = req.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_info(&data)?);
+            }
+        }
+
+        Ok(res)
+    }
 }
