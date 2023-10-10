@@ -26,12 +26,9 @@ Each lambda must live in a **separate crate**.
 cd lambdas/apigw/
 
 # Create the lambda crate with the prefix `lambda`.
-cargo lambda new lambda-<name_of_the_lambda>
+cargo lambda new --template https://github.com/ArkProjectNFTs/ark-lambda-default --http <name_of_your_lambda
 
-# Answer yes to `HTTP` lambda on creating the lambda.
-
-# Add the lambda as a member of to the top level workspace.
-cd ark-services/
+# Add the lambda as a member of to the top level workspace `Cargo.toml` of ark-services.
 ```
 
 ```toml
@@ -83,15 +80,19 @@ cargo build -p lambda-<name_of_the_lambda>
 ## Test the lambda
 
 To test the lambda, there are two solutions:
-* An interactive solution using `cargo lambda watch --env-file .aws` where you can invoke the lambda sending HTTP request to the local server started by `cargo lambda`. This is useful to test the lambda manually on the backend service it is connected to without having to deploy it.
+* An interactive solution using:
+  ```bash
+  cargo lambda watch --env-file .aws
+  ```
+  where you can invoke the lambda sending HTTP request to the local server started by `cargo lambda`. This is useful to test the lambda manually on the backend service it is connected to without having to deploy it.
 
   Natively, the lambda does not support HTTP request!! This is the Api Gateway that is converting for the lambda to be able to consume the request. So, to test a request with a body + path + query parameters etc.., we must use a special JSON file with the expected format by the lambda runtime.
   
-  You can find a example of this file into the `lambda-get-contract/data-files/http.json`. So we can configure several files, with good and bad data, or with various items we want to check from the DB.
+  You can find a example of this file into the `lambda-get-contract/data-files/*.json`. So we can configure several files, with good and bad data, or with various items we want to check from the DB.
 
-  To test with watch, open a first terminal and run `cargo lambda watch`. In an other terminal, you can then do:
+  To test with watch, open a first terminal and run `cargo lambda watch --env-file .aws`. In an other terminal, you can then do:
   ```bash
-  # In this example, we pass the a payload only!
+  # In this example, we pass the a payload only! Will not work, it's an example.
   cargo lambda invoke lambda-<name_of_the_lambda> --data-ascii "{ \"name\": \"everai\" }"
   
   # Or use a JSON file with the body direclty.
@@ -112,7 +113,11 @@ To test the lambda, there are two solutions:
   // Build a lambda with query string parameters:
   let mut params = HashMap::new();
   mocked.insert("name".to_string(), "everai".to_string());
+  // For query string parameters.
   let req = Request::default().with_query_string_parameters(params.clone());
+  
+  // For path parameters.
+  let req = Request::default().with_path_parameters(params.clone());
 
   let rsp = name_of_the_handler(req).await.expect("failed to handle request");
   
