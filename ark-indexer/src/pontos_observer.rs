@@ -5,7 +5,7 @@ use arkproject::pontos::{
 };
 use async_trait::async_trait;
 use std::sync::Arc;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,

@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
 
     init_tracing();
 
-    let is_head_of_chain = env::var("HEAD_OF_CHAIN").is_ok();
+    let is_head_of_chain = env::var("HEAD_OF_CHAIN").unwrap() == "true";
 
     let (from_block, to_block) = if is_head_of_chain {
         (BlockId::Number(0), BlockId::Number(0))
