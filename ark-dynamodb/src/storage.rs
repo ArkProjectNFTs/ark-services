@@ -128,21 +128,21 @@ impl AWSDynamoStorage for DynamoStorage {
 
         let mut values = HashMap::new();
         values.insert(
-            ":indexation_progress".to_string(),
+            ":IndexationProgress".to_string(),
             AttributeValue::N(value.to_string()),
         );
         values.insert(
-            ":last_update".to_string(),
+            ":LastUpdate".to_string(),
             AttributeValue::S(unix_timestamp.to_string()),
         );
 
         let mut names = HashMap::new();
-        names.insert("#data".to_string(), "Data".to_string());
+        names.insert("#Data".to_string(), "Data".to_string());
         names.insert(
-            "#indexation_progress".to_string(),
-            "indexation_progress".to_string(),
+            "#IndexationProgress".to_string(),
+            "IndexationProgress".to_string(),
         );
-        names.insert("#last_update".to_string(), "last_update".to_string());
+        names.insert("#LastUpdate".to_string(), "LastUpdate".to_string());
 
         let response = self
             .client
@@ -151,7 +151,7 @@ impl AWSDynamoStorage for DynamoStorage {
             .key("PK", AttributeValue::S("INDEXER".to_string()))
             .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .update_expression(
-                "SET #data.#indexation_progress = :indexation_progress, #data.#last_update = :last_update",
+                "SET #Data.#IndexationProgress = :IndexationProgress, #Data.#LastUpdate = :LastUpdate",
             )
             .set_expression_attribute_names(Some(names))
             .set_expression_attribute_values(Some(values))
