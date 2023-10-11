@@ -67,6 +67,7 @@ impl AWSDynamoStorage for DynamoStorage {
         let unix_timestamp = now.timestamp();
 
         let status_string = match status {
+            IndexerStatus::Requested => "requested",
             IndexerStatus::Running => "running",
             IndexerStatus::Stopped => "stopped",
         }
