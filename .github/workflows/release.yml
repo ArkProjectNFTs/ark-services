@@ -5,6 +5,19 @@ on:
     types: [published]
 
 jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    name: Discord Notification
+    steps:
+      - name: Send notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "🔗 A new release has been published (ark-services): ${{ env.TAG }}.\n\n*Changelog:*\n https://github.com/ArkProjectNFTs/ark-services/releases/tag/${{ env.TAG }}"
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
   push-docker-image:
     runs-on: ubuntu-latest
     name: Push Docker Image
@@ -101,16 +114,3 @@ jobs:
           task-definition: ${{ steps.add-env-var.outputs.task-definition }}
           service: "${{ env.SERVICE_NAME }}"
           cluster: "${{ env.CLUSTER_NAME }}"
-
-  discord-notification:
-    needs: "update-task-definition"
-    runs-on: ubuntu-latest
-    name: Discord Notification
-    steps:
-      - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              --data "{\"content\":\"🔗 A new release has been published (ark-services): ${env.TAG}.\
-              \n\n*Changelog:*\n${{ github.event.release.body }}\"}" \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
