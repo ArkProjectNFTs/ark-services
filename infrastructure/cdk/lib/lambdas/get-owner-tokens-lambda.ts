@@ -5,7 +5,8 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 
 export function getOwnerTokensLambda(scope: cdk.Stack) {
   const tableName = "ark_project_dev";
-  const getContractLambda = new lambda.Function(scope, "get-owner-tokens", {
+  const indexName = "GSI2PK-GSI2SK-index";
+  const getOwnerTokensLambda = new lambda.Function(scope, "get-owner-tokens", {
     code: lambda.Code.fromAsset("../../target/lambda/lambda-get-owner-tokens"),
     runtime: lambda.Runtime.PROVIDED_AL2,
     handler: "not.required",
@@ -15,13 +16,13 @@ export function getOwnerTokensLambda(scope: cdk.Stack) {
     },
     logRetention: RetentionDays.ONE_DAY,
   });
-  getContractLambda.addToRolePolicy(
+  getOwnerTokensLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem"],
+      actions: ["dynamodb:Query"],
       resources: [
-        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableName}`,
+        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableName}/index/${indexName}`,
       ],
     })
   );
-  return getContractLambda;
+  return getOwnerTokensLambda;
 }
