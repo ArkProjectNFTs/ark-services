@@ -5,7 +5,7 @@ import * as cdk from "aws-cdk-lib";
 export function ownerApi(scope: cdk.Stack, api: apigateway.RestApi) {
   const lambda = getOwnerTokensLambda(scope);
   const ownerResource = api.root.addResource("owner");
-  const ownerAddressResource = ownerResource.addResource("{address}");
+  const ownerAddressResource = ownerResource.addResource("{owner_address}");
 
   // Get all tokens for an owner
   ownerAddressResource.addMethod(

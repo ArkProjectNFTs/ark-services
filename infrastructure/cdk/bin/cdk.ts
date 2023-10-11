@@ -1,10 +1,12 @@
 #!/usr/bin/env node
-import 'source-map-support/register';
-import * as cdk from 'aws-cdk-lib';
-import { ArkStack } from '../lib/ark-stack';
+import "source-map-support/register";
+import * as cdk from "aws-cdk-lib";
+import { ArkStack } from "../lib/ark-stack";
 
 const app = new cdk.App();
-new ArkStack(app, 'CdkStack', {
+new ArkStack(app, "CdkStack", {
+  description:
+    "This stack provisions the infrastructure for the Ark Project, which includes API endpoints for contract management and token events. It integrates with DynamoDB for data storage and provides Lambda functions for specific API operations. The stack is designed to be environment-agnostic and can be deployed to any AWS region.",
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */

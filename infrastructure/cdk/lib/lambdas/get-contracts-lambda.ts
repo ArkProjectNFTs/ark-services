@@ -5,6 +5,7 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 
 export function getContractsLambda(scope: cdk.Stack) {
   const tableName = "ark_project_dev";
+  const indexName = "GSI1PK-GSI1SK-index";
   const getContractLambda = new lambda.Function(scope, "get-contracts", {
     code: lambda.Code.fromAsset("../../target/lambda/lambda-get-contracts"),
     runtime: lambda.Runtime.PROVIDED_AL2,
@@ -17,9 +18,9 @@ export function getContractsLambda(scope: cdk.Stack) {
   });
   getContractLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem"],
+      actions: ["dynamodb:Query"],
       resources: [
-        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableName}`,
+        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableName}/index/${indexName}`,
       ],
     })
   );
