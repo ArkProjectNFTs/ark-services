@@ -74,18 +74,18 @@ impl AWSDynamoStorage for DynamoStorage {
 
         let mut data = HashMap::new();
         data.insert(
-            "status".to_string(),
+            "Status".to_string(),
             AttributeValue::S(status_string.clone()),
         );
         data.insert(
-            "last_update".to_string(),
+            "LastUpdate".to_string(),
             AttributeValue::N(unix_timestamp.to_string()),
         );
         data.insert(
-            "version".to_string(),
+            "Version".to_string(),
             AttributeValue::S(indexer_version.clone()),
         );
-        data.insert("task_id".to_string(), AttributeValue::S(task_id.clone()));
+        data.insert("TaskId".to_string(), AttributeValue::S(task_id.clone()));
 
         let response = self
             .client
