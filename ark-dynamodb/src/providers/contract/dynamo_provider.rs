@@ -133,7 +133,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             ":contract".to_string(),
             AttributeValue::S("CONTRACT".to_string()),
         );
-
+        // TODO should be changed to PK instead of GSIPK
         let req = client
             .query()
             .table_name(&self.table_name)
