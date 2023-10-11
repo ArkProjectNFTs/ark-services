@@ -1,14 +1,16 @@
 //! Token module.
 //!
 mod dynamo_provider;
+pub mod types;
 pub use dynamo_provider::DynamoDbTokenProvider;
 
-use arkproject::pontos::storage::types::TokenInfo;
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
 
 use crate::ProviderError;
+
+use self::types::TokenData;
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.
@@ -28,7 +30,7 @@ pub trait ArkTokenProvider {
     async fn update_mint_data(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        info: &TokenData,
     ) -> Result<(), ProviderError>;
 
     async fn get_token(
@@ -36,12 +38,12 @@ pub trait ArkTokenProvider {
         client: &Self::Client,
         contract_address: &str,
         token_id: &str,
-    ) -> Result<Option<TokenInfo>, ProviderError>;
+    ) -> Result<Option<TokenData>, ProviderError>;
 
     async fn register_token(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        token_data: &TokenData,
         block_number: u64,
     ) -> Result<(), ProviderError>;
 
@@ -49,11 +51,11 @@ pub trait ArkTokenProvider {
         &self,
         client: &Self::Client,
         contract_address: &str,
-    ) -> Result<Vec<TokenInfo>, ProviderError>;
+    ) -> Result<Vec<TokenData>, ProviderError>;
 
     async fn get_owner_tokens(
         &self,
         client: &Self::Client,
         owner_address: &str,
-    ) -> Result<Vec<TokenInfo>, ProviderError>;
+    ) -> Result<Vec<TokenData>, ProviderError>;
 }

@@ -9,6 +9,7 @@
 //! Examples:
 //! `https://.../tokens/owner/0x1234`
 //!
+use ark_dynamodb::providers::token::types::TokenData;
 use ark_dynamodb::{
     init_aws_dynamo_client,
     providers::{ArkTokenProvider, DynamoDbTokenProvider},
@@ -16,7 +17,6 @@ use ark_dynamodb::{
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{self as common, HttpParamSource};
-
 /// A struct to bundle all init required by the lambda.
 struct Ctx<P> {
     client: DynamoClient,
@@ -93,7 +93,7 @@ mod tests {
         ctx.provider
             .expect_get_contract_tokens()
             .returning(move |_, _| {
-                Ok(vec![TokenInfo {
+                Ok(vec![TokenData {
                     mint_block_number: Some(123),
                     mint_timestamp: Some(8888),
                     mint_address: Some("0x1111".to_string()),

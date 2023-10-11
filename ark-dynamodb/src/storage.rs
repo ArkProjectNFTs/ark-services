@@ -18,6 +18,7 @@ use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
+use crate::providers::token::types::TokenData;
 use crate::providers::{ArkBlockProvider, ArkContractProvider, ArkEventProvider, ArkTokenProvider};
 use crate::ArkDynamoDbProvider;
 
@@ -222,7 +223,7 @@ impl Storage for DynamoStorage {
             }
         } else {
             // Token does not exist, create it with mint info.
-            let info = TokenInfo {
+            let token_data = TokenData {
                 mint_address: token.mint_address.clone(),
                 mint_transaction_hash: token.mint_transaction_hash.clone(),
                 mint_timestamp: token.mint_timestamp,
@@ -231,12 +232,13 @@ impl Storage for DynamoStorage {
                 contract_address: token.contract_address.clone(),
                 token_id: token.token_id.clone(),
                 token_id_hex: token.token_id_hex.clone(),
+                metadata: None,
             };
 
             match self
                 .provider
                 .token
-                .register_token(&self.client, &info, block_number)
+                .register_token(&self.client, &token_data, block_number)
                 .await
             {
                 Ok(_) => Ok(()),
@@ -283,18 +285,19 @@ impl Storage for DynamoStorage {
             }
         } else {
             // Create the full token entry.
-            let info = TokenInfo {
+            let token_data = TokenData {
                 owner: token.owner.clone(),
                 contract_address: token.contract_address.clone(),
                 token_id: token.token_id.clone(),
                 token_id_hex: token.token_id_hex.clone(),
+                metadata: None,
                 ..Default::default()
             };
 
             match self
                 .provider
                 .token
-                .register_token(&self.client, &info, block_number)
+                .register_token(&self.client, &token_data, block_number)
                 .await
             {
                 Ok(_) => Ok(()),
