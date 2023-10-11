@@ -14,7 +14,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🔗 A new release has been published (ark-services): ${{ env.TAG }}.\n\n*Changelog:*\n https://github.com/ArkProjectNFTs/ark-services/releases/tag/${{ env.TAG }}"
+                  "content": "🔗 A new release has been published (ark-services ${{ github.event.release.tag_name }}).\nChangelog: https://github.com/ArkProjectNFTs/ark-services/releases/tag/${{ github.event.release.tag_name }}"
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
