@@ -13,7 +13,7 @@ export function eventsApi(
   const eventTokenIdResource =
     eventContractAddressResource.addResource("{token_id}");
 
-  // Get all events for a contract OK
+  // Get all events for a contract
   eventContractAddressResource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(getContractEventsLambda(scope), {
@@ -21,7 +21,7 @@ export function eventsApi(
     })
   );
 
-  // Get all events for a token OK
+  // Get all events for a token
   eventTokenIdResource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(getTokenEventsLambda(scope), {
