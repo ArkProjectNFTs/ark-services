@@ -1,10 +1,12 @@
-use arkproject::pontos::storage::types::TokenInfo;
+use arkproject::metadata::types::TokenMetadata;
+use arkproject::pontos::storage::types::TokenMintInfo;
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 
 use super::ArkTokenProvider;
+use crate::providers::token::types::TokenData;
 use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for tokens.
@@ -27,79 +29,6 @@ impl DynamoDbTokenProvider {
 
     fn get_sk(&self) -> String {
         self.key_prefix.clone()
-    }
-
-    pub fn data_to_info(
-        data: &HashMap<String, AttributeValue>,
-    ) -> Result<TokenInfo, ProviderError> {
-        let mint_block_number = match convert::attr_to_u64(data, "MintBlockNumber") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-        let mint_timestamp = match convert::attr_to_u64(data, "MintTimestamp") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-        let mint_transaction_hash = match convert::attr_to_str(data, "MintTransactionHash") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-        let mint_address = match convert::attr_to_str(data, "MintAddress") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-
-        Ok(TokenInfo {
-            owner: convert::attr_to_str(data, "Owner")?,
-            contract_address: convert::attr_to_str(data, "ContractAddress")?,
-            token_id: convert::attr_to_str(data, "TokenId")?,
-            token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
-            mint_block_number,
-            mint_timestamp,
-            mint_transaction_hash,
-            mint_address,
-        })
-    }
-
-    pub fn info_to_data(info: &TokenInfo) -> HashMap<String, AttributeValue> {
-        let mut map = HashMap::new();
-        map.insert("Owner".to_string(), AttributeValue::S(info.owner.clone()));
-        map.insert(
-            "ContractAddress".to_string(),
-            AttributeValue::S(info.contract_address.clone()),
-        );
-        map.insert(
-            "TokenId".to_string(),
-            AttributeValue::S(info.token_id.clone()),
-        );
-        map.insert(
-            "TokenIdHex".to_string(),
-            AttributeValue::S(info.token_id_hex.clone()),
-        );
-
-        if let Some(v) = info.mint_block_number {
-            map.insert(
-                "MintBlockNumber".to_string(),
-                AttributeValue::N(v.to_string()),
-            );
-        }
-        if let Some(v) = info.mint_timestamp {
-            map.insert(
-                "MintTimestamp".to_string(),
-                AttributeValue::N(v.to_string()),
-            );
-        }
-        if let Some(v) = &info.mint_address {
-            map.insert("MintAddress".to_string(), AttributeValue::S(v.clone()));
-        }
-        if let Some(v) = &info.mint_transaction_hash {
-            map.insert(
-                "MintTransactionHash".to_string(),
-                AttributeValue::S(v.clone()),
-            );
-        }
-
-        map
     }
 }
 
@@ -137,46 +66,57 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn update_mint_data(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        contract_address: &str,
+        token_id_hex: &str,
+        info: &TokenMintInfo,
     ) -> Result<(), ProviderError> {
-        let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
+        let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
-
-        let mut values = HashMap::new();
-        values.insert(
-            ":addr".to_string(),
-            AttributeValue::S(info.mint_address.clone().unwrap_or_default()),
-        );
-        values.insert(
-            ":tx".to_string(),
-            AttributeValue::S(info.mint_transaction_hash.clone().unwrap_or_default()),
-        );
-        values.insert(
-            ":ts".to_string(),
-            AttributeValue::N(info.mint_timestamp.unwrap_or(0).to_string()),
-        );
-        values.insert(
-            ":bn".to_string(),
-            AttributeValue::N(info.mint_block_number.unwrap_or(0).to_string()),
-        );
+        let data = TokenData::mint_info_to_map(info);
 
         let mut names = HashMap::new();
         names.insert("#data".to_string(), "Data".to_string());
-        names.insert("#addr".to_string(), "MintAddress".to_string());
-        names.insert("#tx".to_string(), "MintTransactionHash".to_string());
-        names.insert("#ts".to_string(), "MintTimestamp".to_string());
-        names.insert("#bn".to_string(), "MintBlockNumber".to_string());
+        names.insert("#mint_info".to_string(), "MintInfo".to_string());
 
         let update_item_output = client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression(
-                "SET #data.#addr = :addr, #data.#tx = :tx, #data.#ts = :ts, #data.#bn = :bn",
-            )
+            .update_expression("SET #data.#mint_info = :info")
             .set_expression_attribute_names(Some(names))
-            .set_expression_attribute_values(Some(values))
+            .expression_attribute_values(":info", AttributeValue::M(data))
+            .return_values(ReturnValue::AllNew)
+            .send()
+            .await;
+
+        update_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn update_metadata(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+        token_id_hex: &str,
+        metadata: &TokenMetadata,
+    ) -> Result<(), ProviderError> {
+        let pk = self.get_pk(contract_address, token_id_hex);
+        let sk = self.get_sk();
+        let data = TokenData::metadata_to_map(metadata);
+
+        let mut names = HashMap::new();
+        names.insert("#data".to_string(), "Data".to_string());
+        names.insert("#metadata".to_string(), "Metadata".to_string());
+
+        let update_item_output = client
+            .update_item()
+            .table_name(self.table_name.clone())
+            .key("PK".to_string(), AttributeValue::S(pk))
+            .key("SK".to_string(), AttributeValue::S(sk))
+            .update_expression("SET #data.#metadata = :meta")
+            .set_expression_attribute_names(Some(names))
+            .expression_attribute_values(":meta", AttributeValue::M(data))
             .return_values(ReturnValue::AllNew)
             .send()
             .await;
@@ -190,7 +130,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         client: &Self::Client,
         contract_address: &str,
         token_id_hex: &str,
-    ) -> Result<Option<TokenInfo>, ProviderError> {
+    ) -> Result<Option<TokenData>, ProviderError> {
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
@@ -208,7 +148,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         if let Some(item) = &req.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(Some(Self::data_to_info(&data)?))
+            Ok(Some(data.try_into()?))
         } else {
             Ok(None)
         }
@@ -217,11 +157,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn register_token(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        info: &TokenData,
         block_number: u64,
     ) -> Result<(), ProviderError> {
-        let data = Self::info_to_data(info);
-
         let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
 
         let put_item_output = client
@@ -253,7 +191,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 AttributeValue::S(format!("BLOCK#{}", block_number)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
-            .item("Data".to_string(), AttributeValue::M(data))
+            .item("Data".to_string(), AttributeValue::M(info.into()))
             .item("Type", AttributeValue::S(EntityType::Token.to_string()))
             .return_values(ReturnValue::AllOld)
             .send()
@@ -268,7 +206,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         client: &Self::Client,
         contract_address: &str,
-    ) -> Result<Vec<TokenInfo>, ProviderError> {
+    ) -> Result<Vec<TokenData>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":contract".to_string(),
@@ -295,7 +233,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         if let Some(items) = req.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_info(&data)?);
+                res.push(data.try_into()?);
             }
         }
 
@@ -306,7 +244,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         client: &Self::Client,
         owner_address: &str,
-    ) -> Result<Vec<TokenInfo>, ProviderError> {
+    ) -> Result<Vec<TokenData>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":owner".to_string(),
@@ -333,7 +271,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         if let Some(items) = req.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_info(&data)?);
+                res.push(data.try_into()?);
             }
         }
 

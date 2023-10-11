@@ -2,6 +2,7 @@ use anyhow::Result;
 use arkproject::pontos::storage::{
     types::{
         BlockInfo, ContractInfo, ContractType, IndexerStatus, StorageError, TokenEvent, TokenInfo,
+        TokenMintInfo,
     },
     Storage,
 };
@@ -18,6 +19,7 @@ use tokio::time::sleep;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
+use crate::providers::token::types::TokenData;
 use crate::providers::{ArkBlockProvider, ArkContractProvider, ArkEventProvider, ArkTokenProvider};
 use crate::ArkDynamoDbProvider;
 
@@ -183,67 +185,27 @@ impl AWSDynamoStorage for DynamoStorage {
 impl Storage for DynamoStorage {
     async fn register_mint(
         &self,
-        token: &TokenInfo,
-        block_number: u64,
+        contract_address: &str,
+        token_id_hex: &str,
+        info: &TokenMintInfo,
+        _block_number: u64,
     ) -> Result<(), StorageError> {
-        info!("Registering mint {:?}", token);
+        info!(
+            "Registering mint {} {} {:?}",
+            contract_address, token_id_hex, info
+        );
 
-        let info_existing = match self
+        // Token always exist when a mint is registered.
+        match self
             .provider
             .token
-            .get_token(&self.client, &token.contract_address, &token.token_id_hex)
+            .update_mint_data(&self.client, contract_address, token_id_hex, info)
             .await
         {
-            Ok(i) => i,
+            Ok(_) => Ok(()),
             Err(e) => {
-                error!("Registering mint error {}", e.to_string());
+                error!("{}", e.to_string());
                 return Err(StorageError::DatabaseError);
-            }
-        };
-
-        if let Some(mut info) = info_existing {
-            // Token already exists, add mint info.
-            info.mint_address = token.mint_address.clone();
-            info.mint_transaction_hash = token.mint_transaction_hash.clone();
-            info.mint_timestamp = token.mint_timestamp;
-            info.mint_block_number = Some(block_number);
-
-            match self
-                .provider
-                .token
-                .update_mint_data(&self.client, &info)
-                .await
-            {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    error!("{}", e.to_string());
-                    return Err(StorageError::DatabaseError);
-                }
-            }
-        } else {
-            // Token does not exist, create it with mint info.
-            let info = TokenInfo {
-                mint_address: token.mint_address.clone(),
-                mint_transaction_hash: token.mint_transaction_hash.clone(),
-                mint_timestamp: token.mint_timestamp,
-                mint_block_number: Some(block_number),
-                owner: token.owner.clone(),
-                contract_address: token.contract_address.clone(),
-                token_id: token.token_id.clone(),
-                token_id_hex: token.token_id_hex.clone(),
-            };
-
-            match self
-                .provider
-                .token
-                .register_token(&self.client, &info, block_number)
-                .await
-            {
-                Ok(_) => Ok(()),
-                Err(e) => {
-                    error!("{}", e.to_string());
-                    return Err(StorageError::DatabaseError);
-                }
             }
         }
     }
@@ -283,7 +245,7 @@ impl Storage for DynamoStorage {
             }
         } else {
             // Create the full token entry.
-            let info = TokenInfo {
+            let data = TokenData {
                 owner: token.owner.clone(),
                 contract_address: token.contract_address.clone(),
                 token_id: token.token_id.clone(),
@@ -294,7 +256,7 @@ impl Storage for DynamoStorage {
             match self
                 .provider
                 .token
-                .register_token(&self.client, &info, block_number)
+                .register_token(&self.client, &data, block_number)
                 .await
             {
                 Ok(_) => Ok(()),
