@@ -210,7 +210,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refactor/token-data#36a5329da96c8b530f88de482fea2b81fa41f462"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -241,7 +241,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refactor/token-data#36a5329da96c8b530f88de482fea2b81fa41f462"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -265,7 +265,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refactor/token-data#36a5329da96c8b530f88de482fea2b81fa41f462"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -1237,7 +1237,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refactor/token-data#36a5329da96c8b530f88de482fea2b81fa41f462"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -2571,7 +2571,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=refactor/token-data#36a5329da96c8b530f88de482fea2b81fa41f462"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
 dependencies = [
  "anyhow",
  "ark-metadata",
