@@ -150,6 +150,8 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
     ) -> Result<(), ProviderError> {
         let gsi_pk = format!("BLOCK#{}", block_timestamp);
 
+        let mut capacity: f64 = 0.0;
+
         // Query for all items associated with the block number
         let query_output = client
             .query()
@@ -158,9 +160,14 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             .key_condition_expression("GSI4PK = :gsi_pk")
             .expression_attribute_values(":gsi_pk", AttributeValue::S(gsi_pk))
             .projection_expression("PK, SK") // Only retrieve necessary attributes
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("query error {:?}", e)))?;
+
+        if let Some(cc) = query_output.consumed_capacity {
+            capacity += cc.capacity_units.unwrap_or(0.0);
+        }
 
         // Prepare the items for batch deletion
         let mut write_requests: Vec<WriteRequest> = Vec::new();
@@ -184,9 +191,16 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             let batch_write_output = client
                 .batch_write_item()
                 .request_items(&self.table_name, chunk.to_vec())
+                .return_consumed_capacity(ReturnConsumedCapacity::Total)
                 .send()
                 .await
                 .map_err(|e| ProviderError::DatabaseError(format!("batch write error {:?}", e)))?;
+
+            if let Some(ccs) = batch_write_output.consumed_capacity {
+                for cc in ccs {
+                    capacity += cc.capacity_units.unwrap_or(0.0);
+                }
+            }
 
             // Handle unprocessed items if any
             if let Some(unprocessed_items) = batch_write_output.unprocessed_items {
@@ -194,33 +208,49 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
                     // Implement retry logic as per your use case
                     // Here, we'll simply wait for a second and try again
                     sleep(Duration::from_secs(1)).await;
-                    client
+                    let o = client
                         .batch_write_item()
                         .request_items(&self.table_name, retry_items.clone())
+                        .return_consumed_capacity(ReturnConsumedCapacity::Total)
                         .send()
                         .await
                         .map_err(|e| {
                             ProviderError::DatabaseError(format!("retry batch write error {:?}", e))
                         })?;
+
+                    if let Some(ccs) = o.consumed_capacity {
+                        for cc in ccs {
+                            capacity += cc.capacity_units.unwrap_or(0.0);
+                        }
+                    }
                 }
             }
         }
 
         // Delete the block entry only if we asked for.
+        // TODO: I think that in our design, this is not required as the block entry has
+        // also the GSI4PK set to the timestamp. So it will be deleted too.
         if let Some(block_number) = block_number {
             let pk_block = format!("BLOCK#{}", block_number);
             let sk_block = "BLOCK".to_string();
-            client
+            let o = client
                 .delete_item()
                 .table_name(&self.table_name)
                 .key("PK", AttributeValue::S(pk_block))
                 .key("SK", AttributeValue::S(sk_block))
+                .return_consumed_capacity(ReturnConsumedCapacity::Total)
                 .send()
                 .await
                 .map_err(|e| {
                     ProviderError::DatabaseError(format!("delete block entry error {:?}", e))
                 })?;
+
+            if let Some(cc) = o.consumed_capacity {
+                capacity += cc.capacity_units.unwrap_or(0.0);
+            }
         }
+
+        let _ = DynamoDbCapacityProvider::register_raw(client, "block_clean", capacity).await;
 
         Ok(())
     }

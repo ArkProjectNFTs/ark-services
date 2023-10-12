@@ -23,12 +23,17 @@ impl DynamoDbCapacityProvider {
             return Ok(());
         }
 
-        let capacity = consumed_capacity
-            .unwrap()
-            .capacity_units
-            .unwrap_or(0.0)
-            .to_string();
+        let capacity = consumed_capacity.unwrap().capacity_units.unwrap_or(0.0);
 
+        Self::register_raw(client, operation, capacity).await
+    }
+
+    /// Register the capacity used for the given operation.
+    pub async fn register_raw(
+        client: &DynamoClient,
+        operation: &str,
+        capacity: f64,
+    ) -> Result<(), ProviderError> {
         let mut items = HashMap::new();
 
         // TODO: PK must be something like the UserID or the APIKey, to ensure we can follow the consumption of each users.
@@ -39,7 +44,10 @@ impl DynamoDbCapacityProvider {
 
         items.insert("PK".to_string(), AttributeValue::S(pk));
         items.insert("SK".to_string(), AttributeValue::S(sk));
-        items.insert("Capacity".to_string(), AttributeValue::N(capacity));
+        items.insert(
+            "Capacity".to_string(),
+            AttributeValue::N(capacity.to_string()),
+        );
 
         let put_item_output = client
             .put_item()
