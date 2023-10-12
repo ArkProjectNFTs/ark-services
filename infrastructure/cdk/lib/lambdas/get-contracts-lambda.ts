@@ -2,9 +2,10 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cdk from "aws-cdk-lib";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { ArkStackProps } from "../types";
 
-export function getContractsLambda(scope: cdk.Stack) {
-  const tableName = "ark_project_dev";
+export function getContractsLambda(scope: cdk.Stack, props: ArkStackProps) {
+  const tableName = `ark_project_${props.envType}`;
   const indexName = "GSI1PK-GSI1SK-index";
   const getContractLambda = new lambda.Function(scope, "get-contracts", {
     code: lambda.Code.fromAsset("../../target/lambda/lambda-get-contracts"),

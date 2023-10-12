@@ -2,9 +2,10 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cdk from "aws-cdk-lib";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { ArkStackProps } from "../types";
 
-export function getOwnerTokensLambda(scope: cdk.Stack) {
-  const tableName = "ark_project_dev";
+export function getOwnerTokensLambda(scope: cdk.Stack, props: ArkStackProps) {
+  const tableName = `ark_project_${props.envType}`;
   const indexName = "GSI2PK-GSI2SK-index";
   const getOwnerTokensLambda = new lambda.Function(scope, "get-owner-tokens", {
     code: lambda.Code.fromAsset("../../target/lambda/lambda-get-owner-tokens"),
