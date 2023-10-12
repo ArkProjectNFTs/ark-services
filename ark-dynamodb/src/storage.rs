@@ -199,7 +199,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .token
-            .update_mint_data(&self.client, contract_address, token_id_hex, info)
+            .update_mint_info(&self.client, contract_address, token_id_hex, info)
             .await
         {
             Ok(_) => Ok(()),

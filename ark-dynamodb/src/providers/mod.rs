@@ -9,3 +9,6 @@ pub use block::{ArkBlockProvider, DynamoDbBlockProvider};
 
 pub mod contract;
 pub use contract::{ArkContractProvider, DynamoDbContractProvider};
+
+pub mod metrics;
+pub use metrics::DynamoDbCapacityProvider;

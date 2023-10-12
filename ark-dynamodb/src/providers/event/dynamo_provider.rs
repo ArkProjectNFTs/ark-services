@@ -1,11 +1,12 @@
 use arkproject::pontos::storage::types::{EventType, TokenEvent};
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, ReturnValue};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
 
 use super::ArkEventProvider;
+use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for events.
@@ -106,7 +107,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
     ) -> Result<(), ProviderError> {
         let data = Self::event_to_data(event);
 
-        let put_item_output = client
+        let r = client
             .put_item()
             .table_name(self.table_name.clone())
             .item(
@@ -145,10 +146,17 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .item("Data".to_string(), AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Event.to_string()))
             .return_values(ReturnValue::AllOld)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
-            .await;
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
-        put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "register_event",
+            r.consumed_capacity,
+        )
+        .await;
 
         Ok(())
     }
@@ -166,15 +174,23 @@ impl ArkEventProvider for DynamoDbEventProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let req = client
+        let r = client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        if let Some(item) = &req.item {
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_event",
+            r.consumed_capacity,
+        )
+        .await;
+
+        if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
             Ok(Some(Self::data_to_event(&data)?))
         } else {
@@ -195,7 +211,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             AttributeValue::S(format!("TOKEN#{}#{}", contract_address, token_hex_id)),
         );
 
-        let req = client
+        let r = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI2PK-GSI2SK-index")
@@ -203,12 +219,20 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI2PK = :token AND begins_with(GSI2SK, :event)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_token_events",
+            r.consumed_capacity,
+        )
+        .await;
+
         let mut res = vec![];
-        if let Some(items) = req.items {
+        if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);
@@ -230,7 +254,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             AttributeValue::S(format!("CONTRACT#{}", contract_address)),
         );
 
-        let req = client
+        let r = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -238,12 +262,20 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI1PK = :contract AND begins_with(GSI1SK, :event)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_contract_events",
+            r.consumed_capacity,
+        )
+        .await;
+
         let mut res = vec![];
-        if let Some(items) = req.items {
+        if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);

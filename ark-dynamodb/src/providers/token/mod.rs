@@ -28,7 +28,7 @@ pub trait ArkTokenProvider {
         owner: &str,
     ) -> Result<(), ProviderError>;
 
-    async fn update_mint_data(
+    async fn update_mint_info(
         &self,
         client: &Self::Client,
         contract_address: &str,
