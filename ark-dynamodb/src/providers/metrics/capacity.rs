@@ -8,6 +8,10 @@ use crate::ProviderError;
 
 pub struct DynamoDbCapacityProvider;
 
+// TODO: THIS IS NOT OPTI TO REGISTER THE CAPACITY ON EACH OPERATION.
+// For now, we're exploring the capacity system. But we need to think
+// to a better way to register using batches.
+
 impl DynamoDbCapacityProvider {
     /// Register the capacity used for the given operation.
     pub async fn register_consumed_capacity(
