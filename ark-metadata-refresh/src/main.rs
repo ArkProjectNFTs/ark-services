@@ -31,16 +31,20 @@ async fn main() -> Result<()> {
     let file_manager = LocalFileManager::default();
 
     let ipfs_gateway_uri = env::var("IPFS_GATEWAY_URI").expect("IPFS_GATEWAY_URI must be set");
-    let mut metadata_manager =
+    let metadata_manager =
         MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
 
-    match metadata_manager
-        .fetch_tokens_metadata(CacheOption::NoCache, ipfs_gateway_uri.as_str())
-        .await
-    {
-        Ok(_) => info!("Success"),
-        Err(e) => error!("Error: {:?}", e),
-    }
+    metadata_storage.find_token_ids_without_metadata();
+        
+    // metadata_storage.
+
+    // match metadata_manager
+    //     .fetch_tokens_metadata(CacheOption::NoCache, ipfs_gateway_uri.as_str())
+    //     .await
+    // {
+    //     Ok(_) => info!("Success"),
+    //     Err(e) => error!("Error: {:?}", e),
+    // }
 
     Ok(())
 }
