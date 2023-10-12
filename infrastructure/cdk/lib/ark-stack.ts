@@ -42,22 +42,26 @@ export class ArkStack extends cdk.Stack {
     const deploymentStage = api.deploymentStage;
 
     // Basic Free Plan
-    const basicPlan = api.addUsagePlan("BasicPlan", {
-      name: "Basic",
+    const basicPlan = api.addUsagePlan("ArkBasicPlan", {
+      name: "ArkApiBasic",
       throttle: {
         rateLimit: 5, // 5 requests per second
         burstLimit: 2, // Allow a burst of 2 requests
+      },
+      quota: {
+        limit: 100000, // 100000 requests per month
+        period: apigateway.Period.MONTH,
       },
     });
 
     // Add basic plan to API
     basicPlan.addApiStage({
-      stage: deploymentStage
+      stage: deploymentStage,
     });
 
     // Pay As You Go Plan
-    const payAsYouGoPlan = api.addUsagePlan("PayAsYouGoPlan", {
-      name: "PayAsYouGo",
+    const payAsYouGoPlan = api.addUsagePlan("ArkPayAsYouGoPlan", {
+      name: "ArkApiPayAsYouGo",
       throttle: {
         rateLimit: 100, // 100 requests per second
         burstLimit: 50, // Allow a burst of 50 requests
@@ -66,18 +70,18 @@ export class ArkStack extends cdk.Stack {
 
     // Add pay as you go plan to API
     payAsYouGoPlan.addApiStage({
-      stage: deploymentStage
+      stage: deploymentStage,
     });
 
     // Admin Unlimited Plan
-    const adminPlan = api.addUsagePlan("AdminPlan", {
-      name: "AdminUnlimited",
+    const adminPlan = api.addUsagePlan("ArkAdminPlan", {
+      name: "ArkApiAdmin",
       // No throttle means it's unlimited
     });
 
     // Add admin plan to API
     adminPlan.addApiStage({
-      stage: deploymentStage
+      stage: deploymentStage,
     });
 
     // Create a custom domain name
