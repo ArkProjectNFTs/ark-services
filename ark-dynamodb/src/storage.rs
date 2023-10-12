@@ -256,30 +256,7 @@ impl Storage for DynamoStorage {
                 .register_token(&self.client, &data, block_timestamp)
                 .await
             {
-                Ok(_) => {
-                    // TODO: waiting for metadata API, we register an empty
-                    // metadata content to provide front-end the data structure.
-                    // This MUST be removed once metadata are available.
-                    match self
-                        .provider
-                        .token
-                        .update_metadata(
-                            &self.client,
-                            &token.contract_address,
-                            &token.token_id_hex,
-                            &arkproject::metadata::types::TokenMetadata {
-                                ..Default::default()
-                            },
-                        )
-                        .await
-                    {
-                        Ok(_) => Ok(()),
-                        Err(e) => {
-                            error!("{}", e.to_string());
-                            return Err(StorageError::DatabaseError);
-                        }
-                    }
-                }
+                Ok(_) => Ok(()),
                 Err(e) => {
                     error!("{}", e.to_string());
                     return Err(StorageError::DatabaseError);
