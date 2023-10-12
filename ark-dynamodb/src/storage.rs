@@ -334,7 +334,11 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn register_contract_info(&self, info: &ContractInfo) -> Result<(), StorageError> {
+    async fn register_contract_info(
+        &self,
+        info: &ContractInfo,
+        block_number: u64,
+    ) -> Result<(), StorageError> {
         info!(
             "Registering contract info {:?} for contract {}",
             info.contract_type, info.contract_address
@@ -343,7 +347,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .contract
-            .register_contract(&self.client, info)
+            .register_contract(&self.client, info, block_number)
             .await
         {
             Ok(_) => Ok(()),

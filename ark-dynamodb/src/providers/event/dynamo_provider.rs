@@ -34,7 +34,6 @@ impl DynamoDbEventProvider {
         data: &HashMap<String, AttributeValue>,
     ) -> Result<TokenEvent, ProviderError> {
         Ok(TokenEvent {
-            block_number: convert::attr_to_u64(data, "BlockNumber")?,
             event_id: convert::attr_to_str(data, "EventId")?,
             event_type: EventType::from_str(&convert::attr_to_str(data, "EventType")?).unwrap(),
             timestamp: convert::attr_to_u64(data, "Timestamp")?,
@@ -79,10 +78,6 @@ impl DynamoDbEventProvider {
             AttributeValue::S(event.token_id_hex.clone()),
         );
         map.insert(
-            "BlockNumber".to_string(),
-            AttributeValue::N(event.block_number.to_string()),
-        );
-        map.insert(
             "ContractType".to_string(),
             AttributeValue::S(event.contract_type.clone().to_string()),
         );
@@ -93,10 +88,6 @@ impl DynamoDbEventProvider {
         map.insert(
             "EventId".to_string(),
             AttributeValue::S(event.event_id.clone()),
-        );
-        map.insert(
-            "BlockNumber".to_string(),
-            AttributeValue::N(event.block_number.to_string()),
         );
 
         map

@@ -33,7 +33,6 @@ impl DynamoDbContractProvider {
         data: &HashMap<String, AttributeValue>,
     ) -> Result<ContractInfo, ProviderError> {
         Ok(ContractInfo {
-            block_number: convert::attr_to_u64(data, "BlockNumber")?,
             contract_type: convert::attr_to_str(data, "ContractType")?,
             contract_address: convert::attr_to_str(data, "ContractAddress")?,
         })
@@ -41,10 +40,6 @@ impl DynamoDbContractProvider {
 
     pub fn info_to_data(info: &ContractInfo) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();
-        map.insert(
-            "BlockNumber".to_string(),
-            AttributeValue::N(info.block_number.to_string()),
-        );
         map.insert(
             "ContractType".to_string(),
             AttributeValue::S(info.contract_type.to_string()),
@@ -66,6 +61,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         &self,
         client: &Self::Client,
         info: &ContractInfo,
+        block_number: u64,
     ) -> Result<(), ProviderError> {
         let pk = self.get_pk(&info.contract_address);
         let sk = self.get_sk();
@@ -83,7 +79,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .item("GSI1SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", info.block_number)),
+                AttributeValue::S(format!("BLOCK#{}", block_number)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
             .item("Data", AttributeValue::M(data))
