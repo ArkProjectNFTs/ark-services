@@ -13,6 +13,7 @@ members = [
   "ark-indexer",
   "ark-dynamodb",
   "ark-lambdas/apigw/lambda-http-common",
+  "ark-lambdas/apigw/lambda-playground",
   "ark-lambdas/apigw/lambda-get-contract",
   "ark-lambdas/apigw/lambda-get-contracts",
   "ark-lambdas/apigw/lambda-get-contract-tokens",

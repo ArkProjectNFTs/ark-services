@@ -35,7 +35,7 @@ impl DynamoDbCapacityProvider {
         let random_uuid = Uuid::new_v4();
         let pk = random_uuid.to_hyphenated().to_string();
 
-        let sk = format!("{}#{}", operation.to_string(), now().to_string());
+        let sk = format!("{}#{}", operation, now());
 
         items.insert("PK".to_string(), AttributeValue::S(pk));
         items.insert("SK".to_string(), AttributeValue::S(sk));

@@ -1,9 +1,13 @@
 use arkproject::pontos::storage::types::{BlockIndexingStatus, BlockInfo};
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
+use aws_sdk_dynamodb::types::{
+    AttributeValue, DeleteRequest, ReturnConsumedCapacity, WriteRequest,
+};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
+use tokio::time::sleep;
+use tokio::time::Duration;
 
 use super::ArkBlockProvider;
 use crate::providers::DynamoDbCapacityProvider;
@@ -136,5 +140,88 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         } else {
             Ok(None)
         }
+    }
+
+    async fn clean(
+        &self,
+        client: &Self::Client,
+        block_timestamp: u64,
+        block_number: Option<u64>,
+    ) -> Result<(), ProviderError> {
+        let gsi_pk = format!("BLOCK#{}", block_timestamp);
+
+        // Query for all items associated with the block number
+        let query_output = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI4PK-GSI4SK-index") // Assuming your GSI for block association is named GSI4
+            .key_condition_expression("GSI4PK = :gsi_pk")
+            .expression_attribute_values(":gsi_pk", AttributeValue::S(gsi_pk))
+            .projection_expression("PK, SK") // Only retrieve necessary attributes
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("query error {:?}", e)))?;
+
+        // Prepare the items for batch deletion
+        let mut write_requests: Vec<WriteRequest> = Vec::new();
+        if let Some(items) = query_output.items {
+            for item in items {
+                if let Some(pk) = item.get("PK").cloned() {
+                    if let Some(sk) = item.get("SK").cloned() {
+                        let delete_request =
+                            DeleteRequest::builder().key("PK", pk).key("SK", sk).build();
+                        let write_request = WriteRequest::builder()
+                            .delete_request(delete_request)
+                            .build();
+                        write_requests.push(write_request);
+                    }
+                }
+            }
+        }
+
+        // Batch delete items in chunks of 25
+        for chunk in write_requests.chunks(25) {
+            let batch_write_output = client
+                .batch_write_item()
+                .request_items(&self.table_name, chunk.to_vec())
+                .send()
+                .await
+                .map_err(|e| ProviderError::DatabaseError(format!("batch write error {:?}", e)))?;
+
+            // Handle unprocessed items if any
+            if let Some(unprocessed_items) = batch_write_output.unprocessed_items {
+                if let Some(retry_items) = unprocessed_items.get(&self.table_name) {
+                    // Implement retry logic as per your use case
+                    // Here, we'll simply wait for a second and try again
+                    sleep(Duration::from_secs(1)).await;
+                    client
+                        .batch_write_item()
+                        .request_items(&self.table_name, retry_items.clone())
+                        .send()
+                        .await
+                        .map_err(|e| {
+                            ProviderError::DatabaseError(format!("retry batch write error {:?}", e))
+                        })?;
+                }
+            }
+        }
+
+        // Delete the block entry only if we asked for.
+        if let Some(block_number) = block_number {
+            let pk_block = format!("BLOCK#{}", block_number);
+            let sk_block = "BLOCK".to_string();
+            client
+                .delete_item()
+                .table_name(&self.table_name)
+                .key("PK", AttributeValue::S(pk_block))
+                .key("SK", AttributeValue::S(sk_block))
+                .send()
+                .await
+                .map_err(|e| {
+                    ProviderError::DatabaseError(format!("delete block entry error {:?}", e))
+                })?;
+        }
+
+        Ok(())
     }
 }

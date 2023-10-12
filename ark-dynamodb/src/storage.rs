@@ -9,14 +9,12 @@ use arkproject::pontos::storage::{
 use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::{
-    types::{AttributeValue, DeleteRequest, ReturnValue, WriteRequest},
+    types::{AttributeValue, ReturnValue},
     Client,
 };
 use chrono::Utc;
 use std::collections::HashMap;
 use std::str::FromStr;
-use tokio::time::sleep;
-use tokio::time::Duration;
 use tracing::{debug, error, info};
 
 use crate::providers::token::types::TokenData;
@@ -435,91 +433,18 @@ impl Storage for DynamoStorage {
             block_number,
             block_timestamp.to_string()
         );
-        let table_name = self.table_name.clone();
-        let gsi_pk = format!("BLOCK#{}", block_timestamp);
 
-        // Query for all items associated with the block number
-        let query_output = self
-            .client
-            .query()
-            .table_name(&table_name)
-            .index_name("GSI4PK-GSI4SK-index") // Assuming your GSI for block association is named GSI4
-            .key_condition_expression("GSI4PK = :gsi_pk")
-            .expression_attribute_values(":gsi_pk", AttributeValue::S(gsi_pk))
-            .projection_expression("PK, SK") // Only retrieve necessary attributes
-            .send()
+        match self
+            .provider
+            .block
+            .clean(&self.client, block_timestamp, block_number)
             .await
-            .map_err(|e| {
-                eprintln!("Query error: {:?}", e);
-                StorageError::DatabaseError
-            })?;
-
-        // Prepare the items for batch deletion
-        let mut write_requests: Vec<WriteRequest> = Vec::new();
-        if let Some(items) = query_output.items {
-            for item in items {
-                if let Some(pk) = item.get("PK").cloned() {
-                    if let Some(sk) = item.get("SK").cloned() {
-                        let delete_request =
-                            DeleteRequest::builder().key("PK", pk).key("SK", sk).build();
-                        let write_request = WriteRequest::builder()
-                            .delete_request(delete_request)
-                            .build();
-                        write_requests.push(write_request);
-                    }
-                }
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
-
-        // Batch delete items in chunks of 25
-        for chunk in write_requests.chunks(25) {
-            let batch_write_output = self
-                .client
-                .batch_write_item()
-                .request_items(&table_name, chunk.to_vec())
-                .send()
-                .await
-                .map_err(|e| {
-                    error!("Batch write error: {:?}", e);
-                    StorageError::DatabaseError
-                })?;
-
-            // Handle unprocessed items if any
-            if let Some(unprocessed_items) = batch_write_output.unprocessed_items {
-                if let Some(retry_items) = unprocessed_items.get(&table_name) {
-                    // Implement retry logic as per your use case
-                    // Here, we'll simply wait for a second and try again
-                    sleep(Duration::from_secs(1)).await;
-                    self.client
-                        .batch_write_item()
-                        .request_items(&table_name, retry_items.clone())
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            error!("Retry batch write error: {:?}", e);
-                            StorageError::DatabaseError
-                        })?;
-                }
-            }
-        }
-
-        // Delete the block entry only if we asked for.
-        if let Some(block_number) = block_number {
-            let pk_block = format!("BLOCK#{}", block_number);
-            let sk_block = "BLOCK".to_string();
-            self.client
-                .delete_item()
-                .table_name(&table_name)
-                .key("PK", AttributeValue::S(pk_block))
-                .key("SK", AttributeValue::S(sk_block))
-                .send()
-                .await
-                .map_err(|e| {
-                    error!("Delete block entry error: {:?}", e);
-                    StorageError::DatabaseError
-                })?;
-        }
-
-        Ok(())
     }
 }

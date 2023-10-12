@@ -31,4 +31,11 @@ pub trait ArkBlockProvider {
         client: &Self::Client,
         block_number: u64,
     ) -> Result<Option<BlockInfo>, ProviderError>;
+
+    async fn clean(
+        &self,
+        client: &Self::Client,
+        block_timestamp: u64,
+        block_number: Option<u64>,
+    ) -> Result<(), ProviderError>;
 }
