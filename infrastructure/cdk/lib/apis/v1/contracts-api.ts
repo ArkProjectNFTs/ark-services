@@ -1,15 +1,15 @@
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import { getContractsLambda } from "../lambdas/get-contracts-lambda";
-import { getContractLambda } from "../lambdas/get-contract-lambda";
+import { getContractsLambda } from "../../lambdas/v1/get-contracts-lambda";
+import { getContractLambda } from "../../lambdas/v1/get-contract-lambda";
 import * as cdk from "aws-cdk-lib";
-import { ArkStackProps } from "../types";
+import { ArkStackProps } from "../../types";
 
 export function contractsApi(
   scope: cdk.Stack,
-  api: apigateway.RestApi,
+  versionedRoot: apigateway.IResource,
   props: ArkStackProps
 ) {
-  const contracts = api.root.addResource("contracts");
+  const contracts = versionedRoot.addResource("contracts");
   const contractsContractAddressRessource =
     contracts.addResource("{contract_address}");
 
@@ -24,5 +24,5 @@ export function contractsApi(
     "GET",
     new apigateway.LambdaIntegration(getContractLambda(scope, props), { proxy: true })
   );
-  return api;
+  return versionedRoot;
 }

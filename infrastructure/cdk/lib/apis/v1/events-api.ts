@@ -1,15 +1,15 @@
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import { getContractEventsLambda } from "../lambdas/get-contract-events-lambda";
-import { getTokenEventsLambda } from "../lambdas/get-token-events-lambda";
+import { getContractEventsLambda } from "../../lambdas/v1/get-contract-events-lambda";
+import { getTokenEventsLambda } from "../../lambdas/v1/get-token-events-lambda";
 import * as cdk from "aws-cdk-lib";
-import { ArkStackProps } from "../types";
+import { ArkStackProps } from "../../types";
 
 export function eventsApi(
   scope: cdk.Stack,
-  api: apigateway.RestApi,
+  versionedRoot: apigateway.IResource,
   props: ArkStackProps
 ) {
-  const eventsResource = api.root.addResource("events");
+  const eventsResource = versionedRoot.addResource("events");
   const eventContractAddressResource =
     eventsResource.addResource("{contract_address}");
   const eventTokenIdResource =
@@ -31,5 +31,5 @@ export function eventsApi(
     })
   );
 
-  return api;
+  return versionedRoot;
 }

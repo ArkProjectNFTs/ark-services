@@ -2,17 +2,12 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as cdk from "aws-cdk-lib";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
-import { ArkStackProps } from "../types";
+import { ArkStackProps } from "../../types";
 
-export function getContractEventsLambda(
-  scope: cdk.Stack,
-  props: ArkStackProps
-) {
+export function getTokenLambda(scope: cdk.Stack, props: ArkStackProps) {
   const tableName = `ark_project_${props.envType}`;
-  const getContractLambda = new lambda.Function(scope, "get-contract-events", {
-    code: lambda.Code.fromAsset(
-      "../../target/lambda/lambda-get-contract-events"
-    ),
+  const getContractLambda = new lambda.Function(scope, "get-token", {
+    code: lambda.Code.fromAsset("../../target/lambda/lambda-get-token"),
     runtime: lambda.Runtime.PROVIDED_AL2,
     handler: "not.required",
     environment: {
@@ -23,10 +18,9 @@ export function getContractEventsLambda(
   });
   getContractLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query"],
+      actions: ["dynamodb:GetItem"],
       resources: [
-        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_dev`,
-        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_dev/index/GSI1PK-GSI1SK-index`,
+        `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableName}`,
       ],
     })
   );

@@ -1,10 +1,10 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import { contractsApi } from "./apis/contracts-api";
-import { eventsApi } from "./apis/events-api";
-import { tokensApi } from "./apis/tokens-api";
-import { ownerApi } from "./apis/owner-api";
+import { contractsApi } from "./apis/v1/contracts-api";
+import { eventsApi } from "./apis/v1/events-api";
+import { tokensApi } from "./apis/v1/tokens-api";
+import { ownerApi } from "./apis/v1/owner-api";
 import { ArkStackProps } from "./types";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
@@ -12,7 +12,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
-    const stageName = props.branch === "main" ? "prod" : "dev";
+    const stageName = props.branch === "main" ? "prod" : "staging";
     const apiName = `ark-project-${props.envType}-api`;
 
     const subdomainStageName = props.branch === "main" ? "" : "staging.";
@@ -39,6 +39,47 @@ export class ArkStack extends cdk.Stack {
       },
     });
 
+    const deploymentStage = api.deploymentStage;
+
+    // Basic Free Plan
+    const basicPlan = api.addUsagePlan("BasicPlan", {
+      name: "Basic",
+      throttle: {
+        rateLimit: 5, // 5 requests per second
+        burstLimit: 2, // Allow a burst of 2 requests
+      },
+    });
+
+    // Add basic plan to API
+    basicPlan.addApiStage({
+      stage: deploymentStage
+    });
+
+    // Pay As You Go Plan
+    const payAsYouGoPlan = api.addUsagePlan("PayAsYouGoPlan", {
+      name: "PayAsYouGo",
+      throttle: {
+        rateLimit: 100, // 100 requests per second
+        burstLimit: 50, // Allow a burst of 50 requests
+      },
+    });
+
+    // Add pay as you go plan to API
+    payAsYouGoPlan.addApiStage({
+      stage: deploymentStage
+    });
+
+    // Admin Unlimited Plan
+    const adminPlan = api.addUsagePlan("AdminPlan", {
+      name: "AdminUnlimited",
+      // No throttle means it's unlimited
+    });
+
+    // Add admin plan to API
+    adminPlan.addApiStage({
+      stage: deploymentStage
+    });
+
     // Create a custom domain name
     const customDomain = new apigateway.DomainName(
       this,
@@ -56,15 +97,18 @@ export class ArkStack extends cdk.Stack {
       restApi: api,
     });
 
+    // Create a CNAME record for the custom domain
     new route53.CnameRecord(this, "ApiGatewayCnameRecord", {
       recordName: subDomainName,
       zone: hostedZone,
       domainName: customDomain.domainNameAliasDomainName,
     });
 
-    contractsApi(this, api, props);
-    eventsApi(this, api, props);
-    tokensApi(this, api, props);
-    ownerApi(this, api, props);
+    // V1 API
+    const versionedRoot = api.root.addResource("v1");
+    contractsApi(this, versionedRoot, props);
+    eventsApi(this, versionedRoot, props);
+    tokensApi(this, versionedRoot, props);
+    ownerApi(this, versionedRoot, props);
   }
 }

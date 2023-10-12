@@ -1,20 +1,21 @@
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
-import { getOwnerTokensLambda } from "../lambdas/get-owner-tokens-lambda";
+import { getOwnerTokensLambda } from "../../lambdas/v1/get-owner-tokens-lambda";
 import * as cdk from "aws-cdk-lib";
-import { ArkStackProps } from "../types";
+import { ArkStackProps } from "../../types";
 
 export function ownerApi(
   scope: cdk.Stack,
-  api: apigateway.RestApi,
+  versionedRoot: apigateway.IResource,
   props: ArkStackProps
 ) {
-  const ownerResource = api.root.addResource("owner");
+  const ownerResource = versionedRoot.addResource("owners");
   const ownerAddressResource = ownerResource.addResource("{owner_address}");
+  const ownerTokensRessource = ownerAddressResource.addResource("tokens");
 
   // Get all tokens for an owner
-  ownerAddressResource.addMethod(
+  ownerTokensRessource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(getOwnerTokensLambda(scope, props), { proxy: true })
   );
-  return api;
+  return versionedRoot;
 }

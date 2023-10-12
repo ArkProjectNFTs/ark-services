@@ -9,8 +9,9 @@ const app = new cdk.App();
 
 const envType = app.node.tryGetContext("envType") || process.env.ENV_TYPE;
 const branch = app.node.tryGetContext("branch") || process.env.BRANCH;
+const stageName = branch === "main" ? "prod" : "staging";
 
-new ArkStack(app, `ArkStack-${envType}-${branch}`, {
+new ArkStack(app, `ArkStack-${envType}-${stageName}`, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
     region: process.env.AWS_REGION  // or whatever region you want to deploy to
