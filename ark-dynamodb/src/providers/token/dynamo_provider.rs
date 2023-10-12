@@ -131,9 +131,13 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression("SET #data.#metadata = :meta")
+            .update_expression("SET #data.#metadata = :meta, GSI5PK = :meta_state")
             .set_expression_attribute_names(Some(names))
             .expression_attribute_values(":meta", AttributeValue::M(data))
+            .expression_attribute_values(
+                ":meta_state",
+                AttributeValue::S("METADATA#true".to_string()),
+            )
             .return_values(ReturnValue::AllNew)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
@@ -225,6 +229,17 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
+            .item(
+                "GSI5PK".to_string(),
+                AttributeValue::S("METADATA#false".to_string()),
+            )
+            .item(
+                "GSI5SK".to_string(),
+                AttributeValue::S(format!(
+                    "CONTRACT#{}#{}",
+                    info.contract_address, block_timestamp
+                )),
+            )
             .item("Data".to_string(), AttributeValue::M(info.into()))
             .item("Type", AttributeValue::S(EntityType::Token.to_string()))
             .return_consumed_capacity(ReturnConsumedCapacity::Total)

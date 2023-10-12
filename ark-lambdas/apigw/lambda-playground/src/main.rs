@@ -1,23 +1,44 @@
+#![allow(dead_code)]
+
 //! A playground to interact with dynamodb locally using providers.
 //!
 use ark_dynamodb::{init_aws_dynamo_client, providers::*, Client as DynamoClient};
+use arkproject::metadata::types::TokenMetadata;
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common as common;
 
 /// A struct to bundle all init required by the lambda.
 struct Ctx {
     client: DynamoClient,
-    _token: DynamoDbTokenProvider,
+    token: DynamoDbTokenProvider,
     _contract: DynamoDbContractProvider,
     _event: DynamoDbEventProvider,
     block: DynamoDbBlockProvider,
 }
 
 async fn function_handler(ctx: &Ctx, _event: Request) -> Result<Response<Body>, Error> {
-    match ctx.block.clean(&ctx.client, 1694176591, None).await {
+    let md = TokenMetadata {
+        ..Default::default()
+    };
+
+    match ctx
+        .token
+        .update_metadata(
+            &ctx.client,
+            "0x05004ab1e4f512e43f46311580dc4a0a053f146310c622344dfddab8fed7d5b0",
+            "0x00000000000000000000000000000000000000000000000000000000000001a4",
+            &md,
+        )
+        .await
+    {
         Ok(_) => (),
         Err(e) => println!("ERR____ {:?}", e),
     };
+
+    // match ctx.block.clean(&ctx.client, 1694176591, None).await {
+    //     Ok(_) => (),
+    //     Err(e) => println!("ERR____ {:?}", e),
+    // };
 
     common::ok_body_rsp(&1)
 }
@@ -36,7 +57,7 @@ async fn main() -> Result<(), Error> {
 
     let ctx = Ctx {
         client: init_aws_dynamo_client().await,
-        _token: DynamoDbTokenProvider::new(&table_name),
+        token: DynamoDbTokenProvider::new(&table_name),
         _contract: DynamoDbContractProvider::new(&table_name),
         _event: DynamoDbEventProvider::new(&table_name),
         block: DynamoDbBlockProvider::new(&table_name),
