@@ -191,7 +191,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         client: &Self::Client,
         info: &TokenData,
-        block_number: u64,
+        block_timestamp: u64,
     ) -> Result<(), ProviderError> {
         let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
 
@@ -222,7 +222,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .item("GSI3SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", block_number)),
+                AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
             .item("Data".to_string(), AttributeValue::M(info.into()))

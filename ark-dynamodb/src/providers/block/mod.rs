@@ -22,6 +22,7 @@ pub trait ArkBlockProvider {
         &self,
         client: &Self::Client,
         block_number: u64,
+        block_timestamp: u64,
         info: &BlockInfo,
     ) -> Result<(), ProviderError>;
 

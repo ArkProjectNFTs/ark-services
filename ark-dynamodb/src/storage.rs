@@ -188,7 +188,6 @@ impl Storage for DynamoStorage {
         contract_address: &str,
         token_id_hex: &str,
         info: &TokenMintInfo,
-        _block_number: u64,
     ) -> Result<(), StorageError> {
         info!(
             "Registering mint {} {} {:?}",
@@ -213,7 +212,7 @@ impl Storage for DynamoStorage {
     async fn register_token(
         &self,
         token: &TokenInfo,
-        block_number: u64,
+        block_timestamp: u64,
     ) -> Result<(), StorageError> {
         debug!("Registering token {:?}", token);
 
@@ -256,7 +255,7 @@ impl Storage for DynamoStorage {
             match self
                 .provider
                 .token
-                .register_token(&self.client, &data, block_number)
+                .register_token(&self.client, &data, block_timestamp)
                 .await
             {
                 Ok(_) => {
@@ -294,7 +293,7 @@ impl Storage for DynamoStorage {
     async fn register_event(
         &self,
         event: &TokenEvent,
-        block_number: u64,
+        block_timestamp: u64,
     ) -> Result<(), StorageError> {
         info!("Registering event {:?}", event);
 
@@ -318,7 +317,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .event
-            .register_event(&self.client, event, block_number)
+            .register_event(&self.client, event, block_timestamp)
             .await
         {
             Ok(_) => Ok(()),
@@ -360,7 +359,7 @@ impl Storage for DynamoStorage {
     async fn register_contract_info(
         &self,
         info: &ContractInfo,
-        block_number: u64,
+        block_timestamp: u64,
     ) -> Result<(), StorageError> {
         info!(
             "Registering contract info {:?} for contract {}",
@@ -370,7 +369,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .contract
-            .register_contract(&self.client, info, block_number)
+            .register_contract(&self.client, info, block_timestamp)
             .await
         {
             Ok(_) => Ok(()),
@@ -381,13 +380,18 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn set_block_info(&self, block_number: u64, info: BlockInfo) -> Result<(), StorageError> {
+    async fn set_block_info(
+        &self,
+        block_number: u64,
+        block_timestamp: u64,
+        info: BlockInfo,
+    ) -> Result<(), StorageError> {
         info!("Setting block info {:?} for block #{}", info, block_number);
 
         match self
             .provider
             .block
-            .set_info(&self.client, block_number, &info)
+            .set_info(&self.client, block_number, block_timestamp, &info)
             .await
         {
             Ok(_) => Ok(()),
@@ -421,10 +425,18 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn clean_block(&self, block_number: u64) -> Result<(), StorageError> {
-        info!("Cleaning block #{}", block_number);
+    async fn clean_block(
+        &self,
+        block_timestamp: u64,
+        block_number: Option<u64>,
+    ) -> Result<(), StorageError> {
+        info!(
+            "Cleaning block #{:?} [ts: {}]",
+            block_number,
+            block_timestamp.to_string()
+        );
         let table_name = self.table_name.clone();
-        let gsi_pk = format!("BLOCK#{}", block_number);
+        let gsi_pk = format!("BLOCK#{}", block_timestamp);
 
         // Query for all items associated with the block number
         let query_output = self
@@ -491,33 +503,23 @@ impl Storage for DynamoStorage {
             }
         }
 
-        // Delete the block entry
-        let pk_block = format!("BLOCK#{}", block_number);
-        let sk_block = "BLOCK".to_string();
-        self.client
-            .delete_item()
-            .table_name(&table_name)
-            .key("PK", AttributeValue::S(pk_block))
-            .key("SK", AttributeValue::S(sk_block))
-            .send()
-            .await
-            .map_err(|e| {
-                error!("Delete block entry error: {:?}", e);
-                StorageError::DatabaseError
-            })?;
+        // Delete the block entry only if we asked for.
+        if let Some(block_number) = block_number {
+            let pk_block = format!("BLOCK#{}", block_number);
+            let sk_block = "BLOCK".to_string();
+            self.client
+                .delete_item()
+                .table_name(&table_name)
+                .key("PK", AttributeValue::S(pk_block))
+                .key("SK", AttributeValue::S(sk_block))
+                .send()
+                .await
+                .map_err(|e| {
+                    error!("Delete block entry error: {:?}", e);
+                    StorageError::DatabaseError
+                })?;
+        }
 
-        Ok(())
-    }
-
-    async fn update_last_pending_block(
-        &self,
-        _block_number: u64,
-        _block_timestamp: u64,
-    ) -> Result<(), StorageError> {
-        // TODO: when this is called, we've successfully process the `pending`
-        // block that became the `latest`.
-        // So we should update the storage with the new block number
-        // based on the timestamp to identify the block.
         Ok(())
     }
 }

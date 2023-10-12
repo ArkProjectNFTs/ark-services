@@ -62,7 +62,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         &self,
         client: &Self::Client,
         info: &ContractInfo,
-        block_number: u64,
+        block_timestamp: u64,
     ) -> Result<(), ProviderError> {
         let pk = self.get_pk(&info.contract_address);
         let sk = self.get_sk();
@@ -80,7 +80,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .item("GSI1SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", block_number)),
+                AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
             .item("Data", AttributeValue::M(data))

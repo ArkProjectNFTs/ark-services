@@ -103,7 +103,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
         &self,
         client: &Self::Client,
         event: &TokenEvent,
-        block_number: u64,
+        block_timestamp: u64,
     ) -> Result<(), ProviderError> {
         let data = Self::event_to_data(event);
 
@@ -137,7 +137,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             )
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", block_number)),
+                AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item(
                 "GSI4SK".to_string(),

@@ -1,11 +1,12 @@
 use arkproject::pontos::storage::types::{BlockIndexingStatus, BlockInfo};
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::AttributeValue;
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
 
 use super::ArkBlockProvider;
+use crate::providers::DynamoDbCapacityProvider;
 use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for blocks.
@@ -69,28 +70,34 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         &self,
         client: &Self::Client,
         block_number: u64,
+        block_timestamp: u64,
         info: &BlockInfo,
     ) -> Result<(), ProviderError> {
-        // Construct the data map for the block
         let data = DynamoDbBlockProvider::info_to_data(info);
 
-        // Upsert the block info
-        let put_item_output = client
+        let r = client
             .put_item()
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(self.get_pk(block_number)))
             .item("SK", AttributeValue::S(self.get_sk()))
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(self.get_pk(block_number)),
+                AttributeValue::S(self.get_pk(block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(self.get_sk()))
             .item("Data", AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Block.to_string()))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
-            .await;
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
-        put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "block_set_info",
+            r.consumed_capacity,
+        )
+        .await;
 
         Ok(())
     }
@@ -107,15 +114,23 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let req = client
+        let r = client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        if let Some(item) = &req.item {
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "block_get_info",
+            r.consumed_capacity,
+        )
+        .await;
+
+        if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
             Ok(Some(DynamoDbBlockProvider::data_to_info(&data)?))
         } else {
