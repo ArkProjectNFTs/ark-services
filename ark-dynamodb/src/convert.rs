@@ -61,3 +61,19 @@ pub fn attr_to_str(
         )))
     }
 }
+
+/// Returns the `String` value for the given attribute, or None if not found.
+pub fn attr_to_opt_str(
+    data: &HashMap<String, AttributeValue>,
+    attr: &str,
+) -> Result<Option<String>, ProviderError> {
+    if let Some(a) = data.get(attr) {
+        let s = a.as_s().map_err(|_e| {
+            ProviderError::DataValueError(format!("Expecting S for attribute {}", attr))
+        })?;
+
+        Ok(Some(s.to_string()))
+    } else {
+        Ok(None)
+    }
+}

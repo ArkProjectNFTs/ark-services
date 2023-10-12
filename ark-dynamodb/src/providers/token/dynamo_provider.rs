@@ -1,10 +1,13 @@
-use arkproject::pontos::storage::types::TokenInfo;
+use arkproject::metadata::types::TokenMetadata;
+use arkproject::pontos::storage::types::TokenMintInfo;
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnValue};
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, ReturnValue};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 
 use super::ArkTokenProvider;
+use crate::providers::metrics::DynamoDbCapacityProvider;
+use crate::providers::token::types::TokenData;
 use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for tokens.
@@ -28,79 +31,6 @@ impl DynamoDbTokenProvider {
     fn get_sk(&self) -> String {
         self.key_prefix.clone()
     }
-
-    pub fn data_to_info(
-        data: &HashMap<String, AttributeValue>,
-    ) -> Result<TokenInfo, ProviderError> {
-        let mint_block_number = match convert::attr_to_u64(data, "MintBlockNumber") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-        let mint_timestamp = match convert::attr_to_u64(data, "MintTimestamp") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-        let mint_transaction_hash = match convert::attr_to_str(data, "MintTransactionHash") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-        let mint_address = match convert::attr_to_str(data, "MintAddress") {
-            Ok(v) => Some(v),
-            _ => None,
-        };
-
-        Ok(TokenInfo {
-            owner: convert::attr_to_str(data, "Owner")?,
-            contract_address: convert::attr_to_str(data, "ContractAddress")?,
-            token_id: convert::attr_to_str(data, "TokenId")?,
-            token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
-            mint_block_number,
-            mint_timestamp,
-            mint_transaction_hash,
-            mint_address,
-        })
-    }
-
-    pub fn info_to_data(info: &TokenInfo) -> HashMap<String, AttributeValue> {
-        let mut map = HashMap::new();
-        map.insert("Owner".to_string(), AttributeValue::S(info.owner.clone()));
-        map.insert(
-            "ContractAddress".to_string(),
-            AttributeValue::S(info.contract_address.clone()),
-        );
-        map.insert(
-            "TokenId".to_string(),
-            AttributeValue::S(info.token_id.clone()),
-        );
-        map.insert(
-            "TokenIdHex".to_string(),
-            AttributeValue::S(info.token_id_hex.clone()),
-        );
-
-        if let Some(v) = info.mint_block_number {
-            map.insert(
-                "MintBlockNumber".to_string(),
-                AttributeValue::N(v.to_string()),
-            );
-        }
-        if let Some(v) = info.mint_timestamp {
-            map.insert(
-                "MintTimestamp".to_string(),
-                AttributeValue::N(v.to_string()),
-            );
-        }
-        if let Some(v) = &info.mint_address {
-            map.insert("MintAddress".to_string(), AttributeValue::S(v.clone()));
-        }
-        if let Some(v) = &info.mint_transaction_hash {
-            map.insert(
-                "MintTransactionHash".to_string(),
-                AttributeValue::S(v.clone()),
-            );
-        }
-
-        map
-    }
 }
 
 #[async_trait]
@@ -117,7 +47,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
 
-        let update_item_output = client
+        let r = client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
@@ -127,61 +57,96 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .expression_attribute_names("#owner", "Owner")
             .expression_attribute_values(":owner".to_string(), AttributeValue::S(owner.to_string()))
             .return_values(ReturnValue::AllNew)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
-            .await;
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
-        update_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "update_owner",
+            r.consumed_capacity,
+        )
+        .await;
+
         Ok(())
     }
 
-    async fn update_mint_data(
+    async fn update_mint_info(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
+        contract_address: &str,
+        token_id_hex: &str,
+        info: &TokenMintInfo,
     ) -> Result<(), ProviderError> {
-        let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
+        let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
-
-        let mut values = HashMap::new();
-        values.insert(
-            ":addr".to_string(),
-            AttributeValue::S(info.mint_address.clone().unwrap_or_default()),
-        );
-        values.insert(
-            ":tx".to_string(),
-            AttributeValue::S(info.mint_transaction_hash.clone().unwrap_or_default()),
-        );
-        values.insert(
-            ":ts".to_string(),
-            AttributeValue::N(info.mint_timestamp.unwrap_or(0).to_string()),
-        );
-        values.insert(
-            ":bn".to_string(),
-            AttributeValue::N(info.mint_block_number.unwrap_or(0).to_string()),
-        );
+        let data = TokenData::mint_info_to_map(info);
 
         let mut names = HashMap::new();
         names.insert("#data".to_string(), "Data".to_string());
-        names.insert("#addr".to_string(), "MintAddress".to_string());
-        names.insert("#tx".to_string(), "MintTransactionHash".to_string());
-        names.insert("#ts".to_string(), "MintTimestamp".to_string());
-        names.insert("#bn".to_string(), "MintBlockNumber".to_string());
+        names.insert("#mint_info".to_string(), "MintInfo".to_string());
 
-        let update_item_output = client
+        let r = client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression(
-                "SET #data.#addr = :addr, #data.#tx = :tx, #data.#ts = :ts, #data.#bn = :bn",
-            )
+            .update_expression("SET #data.#mint_info = :info")
             .set_expression_attribute_names(Some(names))
-            .set_expression_attribute_values(Some(values))
+            .expression_attribute_values(":info", AttributeValue::M(data))
             .return_values(ReturnValue::AllNew)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
-            .await;
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
-        update_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "update_mint_info",
+            r.consumed_capacity,
+        )
+        .await;
+
+        Ok(())
+    }
+
+    async fn update_metadata(
+        &self,
+        client: &Self::Client,
+        contract_address: &str,
+        token_id_hex: &str,
+        metadata: &TokenMetadata,
+    ) -> Result<(), ProviderError> {
+        let pk = self.get_pk(contract_address, token_id_hex);
+        let sk = self.get_sk();
+        let data = TokenData::metadata_to_map(metadata);
+
+        let mut names = HashMap::new();
+        names.insert("#data".to_string(), "Data".to_string());
+        names.insert("#metadata".to_string(), "Metadata".to_string());
+
+        let r = client
+            .update_item()
+            .table_name(self.table_name.clone())
+            .key("PK".to_string(), AttributeValue::S(pk))
+            .key("SK".to_string(), AttributeValue::S(sk))
+            .update_expression("SET #data.#metadata = :meta")
+            .set_expression_attribute_names(Some(names))
+            .expression_attribute_values(":meta", AttributeValue::M(data))
+            .return_values(ReturnValue::AllNew)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "update_metadata",
+            r.consumed_capacity,
+        )
+        .await;
+
         Ok(())
     }
 
@@ -190,7 +155,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         client: &Self::Client,
         contract_address: &str,
         token_id_hex: &str,
-    ) -> Result<Option<TokenInfo>, ProviderError> {
+    ) -> Result<Option<TokenData>, ProviderError> {
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
@@ -198,17 +163,25 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let req = client
+        let r = client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        if let Some(item) = &req.item {
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_token",
+            r.consumed_capacity,
+        )
+        .await;
+
+        if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(Some(Self::data_to_info(&data)?))
+            Ok(Some(data.try_into()?))
         } else {
             Ok(None)
         }
@@ -217,15 +190,14 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn register_token(
         &self,
         client: &Self::Client,
-        info: &TokenInfo,
-        block_number: u64,
+        info: &TokenData,
+        block_timestamp: u64,
     ) -> Result<(), ProviderError> {
-        let data = Self::info_to_data(info);
-
         let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
 
-        let put_item_output = client
+        let r = client
             .put_item()
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .table_name(self.table_name.clone())
             .item("PK".to_string(), AttributeValue::S(pk.clone()))
             .item("SK".to_string(), AttributeValue::S(self.get_sk()))
@@ -250,16 +222,23 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .item("GSI3SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", block_number)),
+                AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
-            .item("Data".to_string(), AttributeValue::M(data))
+            .item("Data".to_string(), AttributeValue::M(info.into()))
             .item("Type", AttributeValue::S(EntityType::Token.to_string()))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .return_values(ReturnValue::AllOld)
             .send()
-            .await;
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
-        put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "register_token",
+            r.consumed_capacity,
+        )
+        .await;
 
         Ok(())
     }
@@ -268,7 +247,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         client: &Self::Client,
         contract_address: &str,
-    ) -> Result<Vec<TokenInfo>, ProviderError> {
+    ) -> Result<Vec<TokenData>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":contract".to_string(),
@@ -279,7 +258,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
-        let req = client
+        let r = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -287,15 +266,23 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 "GSI1PK = :contract AND begins_with(GSI1SK, :token)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_contract_tokens",
+            r.consumed_capacity,
+        )
+        .await;
+
         let mut res = vec![];
-        if let Some(items) = req.items {
+        if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_info(&data)?);
+                res.push(data.try_into()?);
             }
         }
 
@@ -306,7 +293,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         client: &Self::Client,
         owner_address: &str,
-    ) -> Result<Vec<TokenInfo>, ProviderError> {
+    ) -> Result<Vec<TokenData>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":owner".to_string(),
@@ -317,7 +304,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
-        let req = client
+        let r = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI2PK-GSI2SK-index")
@@ -325,15 +312,23 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 "GSI2PK = :owner AND begins_with(GSI2SK, :token)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_owner_tokens",
+            r.consumed_capacity,
+        )
+        .await;
+
         let mut res = vec![];
-        if let Some(items) = req.items {
+        if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_info(&data)?);
+                res.push(data.try_into()?);
             }
         }
 

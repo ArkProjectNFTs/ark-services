@@ -78,8 +78,8 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ark_dynamodb::providers::token::types::TokenData;
     use ark_dynamodb::{init_aws_dynamo_client, providers::token::MockArkTokenProvider};
-    use arkproject::pontos::storage::types::TokenInfo;
     use lambda_http::{Body, RequestExt};
 
     use std::collections::HashMap;
@@ -104,10 +104,7 @@ mod tests {
 
         let mut ctx = get_mock_ctx().await;
         ctx.provider.expect_get_token().returning(move |_, _, _| {
-            Ok(Some(TokenInfo {
-                mint_block_number: Some(123),
-                mint_timestamp: Some(8888),
-                mint_address: Some("0x1111".to_string()),
+            Ok(Some(TokenData {
                 owner: "0x2222".to_string(),
                 token_id: token_id.clone(),
                 contract_address: "0x3333".to_string(),

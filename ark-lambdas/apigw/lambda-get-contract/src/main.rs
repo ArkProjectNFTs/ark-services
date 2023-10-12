@@ -91,7 +91,6 @@ mod tests {
         let mut ctx = get_mock_ctx().await;
         ctx.provider.expect_get_contract().returning(move |_, _| {
             Ok(Some(ContractInfo {
-                block_number: 123,
                 contract_type: "ERC721".to_string(),
                 contract_address: address.clone(),
             }))

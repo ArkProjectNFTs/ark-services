@@ -1,10 +1,11 @@
 use arkproject::pontos::storage::types::ContractInfo;
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::AttributeValue;
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 
 use super::ArkContractProvider;
+use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for contracts.
@@ -33,7 +34,6 @@ impl DynamoDbContractProvider {
         data: &HashMap<String, AttributeValue>,
     ) -> Result<ContractInfo, ProviderError> {
         Ok(ContractInfo {
-            block_number: convert::attr_to_u64(data, "BlockNumber")?,
             contract_type: convert::attr_to_str(data, "ContractType")?,
             contract_address: convert::attr_to_str(data, "ContractAddress")?,
         })
@@ -41,10 +41,6 @@ impl DynamoDbContractProvider {
 
     pub fn info_to_data(info: &ContractInfo) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();
-        map.insert(
-            "BlockNumber".to_string(),
-            AttributeValue::N(info.block_number.to_string()),
-        );
         map.insert(
             "ContractType".to_string(),
             AttributeValue::S(info.contract_type.to_string()),
@@ -66,13 +62,14 @@ impl ArkContractProvider for DynamoDbContractProvider {
         &self,
         client: &Self::Client,
         info: &ContractInfo,
+        block_timestamp: u64,
     ) -> Result<(), ProviderError> {
         let pk = self.get_pk(&info.contract_address);
         let sk = self.get_sk();
 
         let data = Self::info_to_data(info);
 
-        let put_item_output = client
+        let r = client
             .put_item()
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk.clone()))
@@ -83,16 +80,24 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .item("GSI1SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI4PK".to_string(),
-                AttributeValue::S(format!("BLOCK#{}", info.block_number)),
+                AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
             .item("Data", AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Contract.to_string()))
             .condition_expression("attribute_not_exists(PK)")
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
-            .await;
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
-        put_item_output.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "register_contract",
+            r.consumed_capacity,
+        )
+        .await;
+
         Ok(())
     }
 
@@ -108,15 +113,23 @@ impl ArkContractProvider for DynamoDbContractProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let req = client
+        let r = client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        if let Some(item) = &req.item {
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_contract",
+            r.consumed_capacity,
+        )
+        .await;
+
+        if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
             Ok(Some(Self::data_to_info(&data)?))
         } else {
@@ -134,7 +147,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             AttributeValue::S("CONTRACT".to_string()),
         );
 
-        let req = client
+        let r = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -142,12 +155,20 @@ impl ArkContractProvider for DynamoDbContractProvider {
                 "GSI1PK = :contract AND begins_with(GSI1SK, :contract)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            client,
+            "get_contracts",
+            r.consumed_capacity,
+        )
+        .await;
+
         let mut res = vec![];
-        if let Some(items) = req.items {
+        if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_info(&data)?);
