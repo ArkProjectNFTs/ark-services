@@ -2,12 +2,11 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { getContractEventsLambda } from "../../lambdas/v1/get-contract-events-lambda";
 import { getTokenEventsLambda } from "../../lambdas/v1/get-token-events-lambda";
 import * as cdk from "aws-cdk-lib";
-import { ArkStackProps } from "../../types";
 
 export function eventsApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
-  props: ArkStackProps
+  stages: string[]
 ) {
   const eventsResource = versionedRoot.addResource("events");
   const eventContractAddressResource =
@@ -18,15 +17,18 @@ export function eventsApi(
   // Get all events for a contract
   eventContractAddressResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractEventsLambda(scope, props), {
-      proxy: true,
-    })
+    new apigateway.LambdaIntegration(
+      getContractEventsLambda(scope, stages),
+      {
+        proxy: true,
+      }
+    )
   );
 
   // Get all events for a token
   eventTokenIdResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getTokenEventsLambda(scope, props), {
+    new apigateway.LambdaIntegration(getTokenEventsLambda(scope, stages), {
       proxy: true,
     })
   );

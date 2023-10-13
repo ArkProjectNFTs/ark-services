@@ -7,17 +7,16 @@ import { config } from "dotenv";
 config();
 const app = new cdk.App();
 
-const envType = app.node.tryGetContext("envType") || process.env.ENV_TYPE;
 const branch = app.node.tryGetContext("branch") || process.env.BRANCH;
-const stageName = branch === "main" ? "prod" : "staging";
-
-new ArkStack(app, `ArkStack-${envType}-${stageName}`, {
+const apiName = branch === "main" ? "production" : "staging";
+const stages = ["mainnet", "testnet"]
+new ArkStack(app, `ArkStack-${apiName}`, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
     region: process.env.AWS_REGION  // or whatever region you want to deploy to
   },
-  envType: envType,
   branch: branch,
+  stages: stages,
   description:
     "This stack provisions the infrastructure for the Ark Project, which includes API endpoints for contract management and token events. It integrates with DynamoDB for data storage and provides Lambda functions for specific API operations. The stack is designed to be environment-agnostic and can be deployed to any AWS region.",
   /* If you don't specify 'env', this stack will be environment-agnostic.

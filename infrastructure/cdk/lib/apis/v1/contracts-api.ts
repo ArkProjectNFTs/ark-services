@@ -2,12 +2,11 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { getContractsLambda } from "../../lambdas/v1/get-contracts-lambda";
 import { getContractLambda } from "../../lambdas/v1/get-contract-lambda";
 import * as cdk from "aws-cdk-lib";
-import { ArkStackProps } from "../../types";
 
 export function contractsApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
-  props: ArkStackProps
+  stages: string[]
 ) {
   const contracts = versionedRoot.addResource("contracts");
   const contractsContractAddressRessource =
@@ -16,13 +15,13 @@ export function contractsApi(
   // Get all contracts
   contracts.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractsLambda(scope, props), { proxy: true })
+    new apigateway.LambdaIntegration(getContractsLambda(scope, stages), { proxy: true })
   );
 
   // Get a specific contract
   contractsContractAddressRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractLambda(scope, props), { proxy: true })
+    new apigateway.LambdaIntegration(getContractLambda(scope, stages), { proxy: true })
   );
   return versionedRoot;
 }

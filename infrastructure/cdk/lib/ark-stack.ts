@@ -8,111 +8,120 @@ import { ownerApi } from "./apis/v1/owner-api";
 import { ArkStackProps } from "./types";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
+import * as logs from "aws-cdk-lib/aws-logs";
 
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
-    const stageName = props.branch === "main" ? "prod" : "staging";
-    const apiName = `ark-project-${props.envType}-api`;
+    const apiSuffix = props.branch === "main" ? "production" : "staging";
+    const apiName = `ark-project-api-${apiSuffix}`;
 
-    const subdomainStageName = props.branch === "main" ? "" : "staging.";
-    const subdomainEnvName = props.envType === "mainnet" ? "" : "-testnet";
+    const api = new apigateway.RestApi(
+      this,
+      `ark-project-api-gateway-${apiSuffix}`,
+      {
+        restApiName: apiName,
+        deploy: false, // Important: Disable automatic deployment
+      }
+    );
+
+    // V1 API
+    const versionedRoot = api.root.addResource("v1");
+
+    contractsApi(this, versionedRoot, props.stages);
+    eventsApi(this, versionedRoot, props.stages);
+    tokensApi(this, versionedRoot, props.stages);
+    ownerApi(this, versionedRoot, props.stages);
+
+    //loop foreach stage in props.stages
+    props.stages.forEach((stage: string) => {
+      this.createStage(api, apiName, apiSuffix, stage);
+    });
+  }
+
+  private createStage(
+    api: apigateway.RestApi,
+    apiName: string,
+    apiSuffix: string,
+    stageName: string
+  ) {
+    // Create deployment
+    const deployment = new apigateway.Deployment(
+      this,
+      `ark-project-deployment-${apiSuffix}-${stageName}`,
+      { api }
+    );
+
+    // Create a log group for the stage
+    const stageLogGroup = new logs.LogGroup(
+      this,
+      `ark-project-log-${stageName}`
+    );
+
+    // Create stage and point it to the latest deployment
+    const stage = new apigateway.Stage(this, `ark-project-stage-${apiSuffix}-${stageName}`, {
+      deployment,
+      stageName,
+      variables: {
+        tableName: `ark_project_${stageName}`,
+      },
+      accessLogDestination: new apigateway.LogGroupLogDestination(
+        stageLogGroup
+      ),
+      accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+    });
+
     const domainName = "arkproject.dev";
-    const subDomainName = `${subdomainStageName}api${subdomainEnvName}.${domainName}`;
+    const subdomainEnvName = apiSuffix === "production" ? "" : "staging.";
+    const subdomainStageName = stageName === "mainnet" ? "" : "testnet-";
+    const apiURL = `${subdomainEnvName}${subdomainStageName}api.${domainName}`;
 
     // Fetch the hosted zone and create a CNAME record
-    const hostedZone = route53.HostedZone.fromLookup(this, "HostedZone", {
+    const hostedZone = route53.HostedZone.fromLookup(this, `ark-project-hosted-zone-${apiSuffix}-${stageName}`, {
       domainName: domainName,
     });
 
     // Create an ACM certificate
-    const certificate = new acm.Certificate(this, "ApiCertificate", {
-      domainName: subDomainName,
-      validation: acm.CertificateValidation.fromDns(hostedZone), // Use DNS validation
-    });
-
-    // Create the API Gateway without the domain
-    const api = new apigateway.RestApi(this, "ArkProjectApi", {
-      restApiName: apiName,
-      deployOptions: {
-        stageName: stageName,
-      },
-    });
-
-    const deploymentStage = api.deploymentStage;
-
-    // Basic Free Plan
-    const basicPlan = api.addUsagePlan("ArkBasicPlan", {
-      name: "ArkApiBasic",
-      throttle: {
-        rateLimit: 5, // 5 requests per second
-        burstLimit: 2, // Allow a burst of 2 requests
-      },
-      quota: {
-        limit: 100000, // 100000 requests per month
-        period: apigateway.Period.MONTH,
-      },
-    });
-
-    // Add basic plan to API
-    basicPlan.addApiStage({
-      stage: deploymentStage,
-    });
-
-    // Pay As You Go Plan
-    const payAsYouGoPlan = api.addUsagePlan("ArkPayAsYouGoPlan", {
-      name: "ArkApiPayAsYouGo",
-      throttle: {
-        rateLimit: 100, // 100 requests per second
-        burstLimit: 50, // Allow a burst of 50 requests
-      },
-    });
-
-    // Add pay as you go plan to API
-    payAsYouGoPlan.addApiStage({
-      stage: deploymentStage,
-    });
-
-    // Admin Unlimited Plan
-    const adminPlan = api.addUsagePlan("ArkAdminPlan", {
-      name: "ArkApiAdmin",
-      // No throttle means it's unlimited
-    });
-
-    // Add admin plan to API
-    adminPlan.addApiStage({
-      stage: deploymentStage,
-    });
+    const certificate = new acm.Certificate(
+      this,
+      `ark-project-certificate-${apiSuffix}-${stageName}`,
+      {
+        domainName: apiURL,
+        validation: acm.CertificateValidation.fromDns(hostedZone), // Use DNS validation
+      }
+    );
 
     // Create a custom domain name
     const customDomain = new apigateway.DomainName(
       this,
-      `ApiCustomDomain${props.branch}${props.envType}`,
+      `ark-project-custom-domain-${apiSuffix}-${stageName}`,
       {
-        domainName: subDomainName,
+        domainName: apiURL,
         certificate: certificate,
-        endpointType: apigateway.EndpointType.EDGE, // or REGIONAL based on your needs
+        endpointType: apigateway.EndpointType.REGIONAL,
       }
     );
 
-    // Associate the custom domain with the API
-    new apigateway.BasePathMapping(this, "BasePathMapping", {
-      domainName: customDomain,
-      restApi: api,
-    });
+    // Associate the custom domain with the stage
+    new apigateway.BasePathMapping(
+      this,
+      `ark-project-basepath-mapping-${apiSuffix}-${stageName}`,
+      {
+        domainName: customDomain,
+        restApi: api,
+        stage: stage,
+      }
+    );
 
     // Create a CNAME record for the custom domain
-    new route53.CnameRecord(this, "ApiGatewayCnameRecord", {
-      recordName: subDomainName,
-      zone: hostedZone,
-      domainName: customDomain.domainNameAliasDomainName,
-    });
-
-    // V1 API
-    const versionedRoot = api.root.addResource("v1");
-    contractsApi(this, versionedRoot, props);
-    eventsApi(this, versionedRoot, props);
-    tokensApi(this, versionedRoot, props);
-    ownerApi(this, versionedRoot, props);
+    new route53.CnameRecord(
+      this,
+      `ark-project-cname-record-${apiSuffix}-${stageName}`,
+      {
+        recordName: apiURL,
+        zone: hostedZone,
+        domainName: customDomain.domainNameAliasDomainName,
+      }
+    );
   }
 }

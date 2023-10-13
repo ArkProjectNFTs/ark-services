@@ -2,12 +2,11 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { getContractTokensLambda } from "../../lambdas/v1/get-contract-tokens-lambda";
 import { getTokenLambda } from "../../lambdas/v1/get-token-lambda";
 import * as cdk from "aws-cdk-lib";
-import { ArkStackProps } from "../../types";
 
 export function tokensApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
-  props: ArkStackProps
+  stages: string[]
 ) {
   const tokensResource = versionedRoot.addResource("tokens");
   const tokenContractAddressResource =
@@ -18,7 +17,7 @@ export function tokensApi(
   // Get all tokens for a contract
   tokenContractAddressResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractTokensLambda(scope, props), {
+    new apigateway.LambdaIntegration(getContractTokensLambda(scope, stages), {
       proxy: true,
     })
   );
@@ -26,7 +25,7 @@ export function tokensApi(
   // Get a specific token for a contract
   tokensTokenIdResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getTokenLambda(scope, props), {
+    new apigateway.LambdaIntegration(getTokenLambda(scope, stages), {
       proxy: true,
     })
   );
