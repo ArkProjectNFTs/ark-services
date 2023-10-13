@@ -1,6 +1,6 @@
 use arkproject::pontos::storage::types::{EventType, TokenEvent};
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, ReturnValue};
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -13,13 +13,15 @@ use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 pub struct DynamoDbEventProvider {
     table_name: String,
     key_prefix: String,
+    limit: Option<i32>,
 }
 
 impl DynamoDbEventProvider {
-    pub fn new(table_name: &str) -> Self {
+    pub fn new(table_name: &str, limit: Option<i32>) -> Self {
         DynamoDbEventProvider {
             table_name: table_name.to_string(),
             key_prefix: "EVENT".to_string(),
+            limit,
         }
     }
 
@@ -146,7 +148,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
             )
             .item("Data".to_string(), AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Event.to_string()))
-            .return_values(ReturnValue::AllOld)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -226,6 +227,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             ))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .set_expression_attribute_values(Some(values))
+            .set_limit(self.limit)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -275,6 +277,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             ))
             .set_expression_attribute_values(Some(values))
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .set_limit(self.limit)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;

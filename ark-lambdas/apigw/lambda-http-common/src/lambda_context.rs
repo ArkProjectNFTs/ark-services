@@ -11,6 +11,7 @@ use crate::LambdaHttpError;
 #[derive(Debug)]
 pub struct LambdaCtx {
     pub table_name: String,
+    pub max_items_limit: Option<i32>,
     pub paginator: DynamoDbPaginator,
     pub db: DynamoDbCtx,
 }
@@ -22,12 +23,14 @@ impl LambdaCtx {
     /// 1. Stage variables:
     ///    * `tableName` -> name of the dynamodb table.
     ///    * `paginationCache` -> redis URL for pagination cache.
+    ///    * `maxItemsLimit` -> the maximum limit of items returned by dynamodb. The hard limit hard coded is 250.
     ///
     /// 2. Headers:
     ///    * `Authorization` -> API key as Authorization bearer.
     ///
     /// 3. Query String params:
     ///    * `cursor` -> the cursor to be used (optional).
+    #[allow(clippy::redundant_closure)]
     pub async fn from_event(event: &Request) -> Result<Self, LambdaHttpError> {
         let stage_vars = event.stage_variables();
         let table_name = &stage_vars
@@ -37,9 +40,14 @@ impl LambdaCtx {
             .first("paginationCache")
             .expect("paginationCache must be set in stage variables");
 
+        let max_items_limit = stage_vars
+            .first("maxItemsLimit")
+            .as_ref()
+            .map(|v| v.parse::<i32>().expect("Invalid i32 for max items"));
+
         let paginator = DynamoDbPaginator::new(pagination_db);
 
-        let maybe_cursor = params::string_param(&event, "cursor", HttpParamSource::QueryString);
+        let maybe_cursor = params::string_param(event, "cursor", HttpParamSource::QueryString);
 
         let last_evaluated_key = if let Some(c) = maybe_cursor {
             paginator
@@ -60,6 +68,7 @@ impl LambdaCtx {
             paginator,
             db,
             table_name: table_name.to_string(),
+            max_items_limit,
         })
     }
 }

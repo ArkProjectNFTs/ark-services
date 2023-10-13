@@ -63,13 +63,13 @@ impl DynamoDbPaginator {
     /// retrieval. Returns `None` if the cursor is not existing.
     pub fn store_cursor(
         &self,
-        lek: Option<HashMap<String, AttributeValue>>,
+        last_evaluated_key: &Option<HashMap<String, AttributeValue>>,
     ) -> Result<Option<String>, ProviderError> {
-        if let Some(lek) = lek {
+        if let Some(lek) = last_evaluated_key {
             if let Ok(mut conn) = self.client.get_connection() {
                 let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
 
-                for (key, value) in &lek {
+                for (key, value) in lek {
                     let value = value
                         .as_s()
                         .expect("Paginator service only support String keys in LEK");

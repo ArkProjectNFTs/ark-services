@@ -9,41 +9,32 @@
 //! Examples:
 //! `https://.../tokens/0x1234`
 //!
-use ark_dynamodb::{
-    init_aws_dynamo_client,
-    providers::{ArkTokenProvider, DynamoDbTokenProvider},
-    Client as DynamoClient,
-};
+use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
-use lambda_http_common::{self as common, HttpParamSource};
+use lambda_http_common::{
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+};
 
-/// A struct to bundle all init required by the lambda.
-struct Ctx<P> {
-    client: DynamoClient,
-    provider: P,
+async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    let ctx = LambdaCtx::from_event(&event).await?;
+
+    let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
+
+    let address = get_params(&event)?;
+
+    let rsp = provider.get_contract_tokens(&ctx.db, &address).await?;
+
+    let items = rsp.inner();
+    let cursor = ctx.paginator.store_cursor(&rsp.lek)?;
+
+    common::ok_body_rsp(&ArkApiResponse {
+        cursor,
+        result: items,
+    })
 }
 
-async fn function_handler<P: ArkTokenProvider<Client = DynamoClient>>(
-    ctx: &Ctx<P>,
-    event: Request,
-) -> Result<Response<Body>, Error> {
-    let address = match common::require_hex_param(&event, "contract_address", HttpParamSource::Path)
-    {
-        Ok(a) => a,
-        Err(e) => return e.try_into(),
-    };
-
-    match ctx
-        .provider
-        .get_contract_tokens(&ctx.client, &address)
-        .await
-    {
-        Ok(data) => common::ok_body_rsp(&data),
-        Err(e) => {
-            println!("{:?}", e);
-            common::internal_server_error_rsp(&e.to_string())
-        }
-    }
+fn get_params(event: &Request) -> Result<String, LambdaHttpError> {
+    common::require_hex_param(event, "contract_address", HttpParamSource::Path)
 }
 
 #[tokio::main]
@@ -56,15 +47,8 @@ async fn main() -> Result<(), Error> {
         .without_time()
         .init();
 
-    let table_name = std::env::var("ARK_TABLE_NAME").expect("ARK_TABLE_NAME must be set");
-
-    let ctx = Ctx {
-        client: init_aws_dynamo_client().await,
-        provider: DynamoDbTokenProvider::new(&table_name),
-    };
-
     run(service_fn(|event: Request| async {
-        function_handler(&ctx, event).await
+        function_handler(event).await
     }))
     .await
 }
@@ -72,21 +56,12 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_dynamodb::providers::token::types::TokenData;
-    use ark_dynamodb::{init_aws_dynamo_client, providers::token::MockArkTokenProvider};
-    use lambda_http::{Body, RequestExt};
-
+    use lambda_http::RequestExt;
+    use lambda_http_common::format::pad_hex;
     use std::collections::HashMap;
 
-    async fn get_mock_ctx() -> Ctx<MockArkTokenProvider> {
-        Ctx {
-            client: init_aws_dynamo_client().await,
-            provider: MockArkTokenProvider::default(),
-        }
-    }
-
     #[tokio::test]
-    async fn request_ok() {
+    async fn params_ok() {
         let address = "0x1234".to_string();
 
         let mut params = HashMap::new();
@@ -94,68 +69,47 @@ mod tests {
 
         let req = Request::default().with_path_parameters(params.clone());
 
-        let mut ctx = get_mock_ctx().await;
-        ctx.provider
-            .expect_get_contract_tokens()
-            .returning(move |_, _| {
-                Ok(vec![TokenData {
-                    owner: "0x2222".to_string(),
-                    token_id: "1234".to_string(),
-                    contract_address: "0x3333".to_string(),
-                    ..Default::default()
-                }])
-            });
+        let address = get_params(&req).unwrap();
 
-        let rsp = function_handler(&ctx, req)
-            .await
-            .expect("failed to handle request");
-
-        assert_eq!(rsp.status(), 200);
+        assert_eq!(address, pad_hex(&address));
     }
 
     #[tokio::test]
-    async fn bad_hexadecimal_address() {
+    async fn parmas_bad_hexadecimal_address() {
         let mut params = HashMap::new();
         params.insert("contract_address".to_string(), "1234".to_string());
+
         let req = Request::default().with_path_parameters(params.clone());
 
-        // No setup, as the lambda will return an error before any dynamodb stuff.
-        let rsp = function_handler(&get_mock_ctx().await, req)
-            .await
-            .expect("failed to handle request");
-
-        assert_eq!(rsp.status(), 400);
-
-        let body = match rsp.body() {
-            Body::Text(t) => t,
-            _ => panic!("Body is expected to be a string"),
-        };
-
-        assert_eq!(
-            body,
-            "Param contract_address is expected to be hexadecimal string"
-        );
+        match get_params(&req) {
+            Ok(_) => panic!("expecting error"),
+            Err(e) => match e {
+                LambdaHttpError::ParamParsing(s) => {
+                    assert_eq!(
+                        s,
+                        "Param contract_address is expected to be hexadecimal string"
+                    )
+                }
+                _ => panic!("expected ParamParsing"),
+            },
+        }
     }
 
     #[tokio::test]
-    async fn missing_address() {
+    async fn params_missing_address() {
         let mut params = HashMap::new();
-        params.insert("token_id".to_string(), "1".to_string());
+        params.insert("blabla".to_string(), "1".to_string());
 
         let req = Request::default().with_path_parameters(params.clone());
 
-        // No setup, as the lambda will return an error before any dynamodb stuff.
-        let rsp = function_handler(&get_mock_ctx().await, req)
-            .await
-            .expect("failed to handle request");
-
-        assert_eq!(rsp.status(), 400);
-
-        let body = match rsp.body() {
-            Body::Text(t) => t,
-            _ => panic!("Body is expected to be a string"),
-        };
-
-        assert_eq!(body, "Param contract_address is missing");
+        match get_params(&req) {
+            Ok(_) => panic!("expecting error"),
+            Err(e) => match e {
+                LambdaHttpError::ParamMissing(s) => {
+                    assert_eq!(s, "Param contract_address is missing")
+                }
+                _ => panic!("expected ParamMissing"),
+            },
+        }
     }
 }

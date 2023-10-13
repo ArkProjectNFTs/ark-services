@@ -83,6 +83,8 @@ pub fn internal_server_error_rsp(message: &str) -> Result<Response<Body>, Error>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::format::*;
+    use lambda_http::{Request, RequestExt};
     use std::collections::HashMap;
 
     #[test]

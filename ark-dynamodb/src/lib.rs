@@ -127,7 +127,7 @@ impl ArkDynamoDbProvider {
     pub fn new(table_name: &str, limit: Option<i32>) -> Self {
         ArkDynamoDbProvider {
             token: DynamoDbTokenProvider::new(table_name, limit),
-            event: DynamoDbEventProvider::new(table_name),
+            event: DynamoDbEventProvider::new(table_name, limit),
             block: DynamoDbBlockProvider::new(table_name),
             contract: DynamoDbContractProvider::new(table_name, limit),
         }
