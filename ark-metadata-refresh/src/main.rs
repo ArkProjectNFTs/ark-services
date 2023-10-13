@@ -5,14 +5,17 @@ use std::env;
 
 use anyhow::Result;
 use arkproject::{
-    metadata::{metadata_manager::{CacheOption, MetadataManager}, file_manager::LocalFileManager},
-    starknet::{
-        client::{StarknetClient, StarknetClientHttp},
+    metadata::{
+        file_manager::LocalFileManager,
+        metadata_manager::{CacheOption, MetadataManager},
+        storage::Storage,
     },
+    starknet::client::{StarknetClient, StarknetClientHttp},
 };
 use aws_s3_file_manager::AWSFileManager;
 use dotenv::dotenv;
 use metadata_storage::MetadataStorage;
+use starknet::core::types::FieldElement;
 use tracing::{error, info, span, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
@@ -20,6 +23,7 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 async fn main() -> Result<()> {
     dotenv().ok();
     init_tracing();
+    info!("Starting metadata refresh");
 
     let table_name: String =
         env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
@@ -31,11 +35,13 @@ async fn main() -> Result<()> {
     let file_manager = LocalFileManager::default();
 
     let ipfs_gateway_uri = env::var("IPFS_GATEWAY_URI").expect("IPFS_GATEWAY_URI must be set");
-    let metadata_manager =
-        MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
+    let metadata_manager = MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
 
-    metadata_storage.find_token_ids_without_metadata();
-        
+    match metadata_storage.find_token_ids_without_metadata().await {
+        Ok(_) => info!("Success"),
+        Err(e) => error!("Error: {:?}", e),
+    };
+
     // metadata_storage.
 
     // match metadata_manager
@@ -49,7 +55,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-pub fn init_tracing() {
+fn init_tracing() {
     // Initialize the LogTracer to convert `log` records to `tracing` events
     tracing_log::LogTracer::init().expect("Setting log tracer failed.");
 
