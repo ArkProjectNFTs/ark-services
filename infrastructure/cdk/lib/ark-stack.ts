@@ -28,6 +28,12 @@ export class ArkStack extends cdk.Stack {
     // V1 API
     const versionedRoot = api.root.addResource("v1");
 
+    versionedRoot.addCorsPreflight({
+      allowOrigins: apigateway.Cors.ALL_ORIGINS, // or specify the exact origins
+      allowMethods: apigateway.Cors.ALL_METHODS, // or specify the exact methods
+      // you can also add other headers, allowCredentials, etc.
+    });
+    
     contractsApi(this, versionedRoot, props.stages);
     eventsApi(this, versionedRoot, props.stages);
     tokensApi(this, versionedRoot, props.stages);
