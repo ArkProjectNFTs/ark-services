@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use super::ArkContractProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
-use crate::{convert, EntityType, ProviderError, DynamoDbOutput, DynamoDbCtx};
+use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 
 /// DynamoDB provider for contracts.
 pub struct DynamoDbContractProvider {
@@ -71,7 +71,8 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         let data = Self::info_to_data(info);
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .put_item()
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk.clone()))
@@ -115,7 +116,8 @@ impl ArkContractProvider for DynamoDbContractProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
@@ -133,7 +135,10 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(DynamoDbOutput::new(Some(Self::data_to_info(&data)?), &r.consumed_capacity))
+            Ok(DynamoDbOutput::new(
+                Some(Self::data_to_info(&data)?),
+                &r.consumed_capacity,
+            ))
         } else {
             Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
         }
@@ -149,7 +154,8 @@ impl ArkContractProvider for DynamoDbContractProvider {
             AttributeValue::S("CONTRACT".to_string()),
         );
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -179,6 +185,10 @@ impl ArkContractProvider for DynamoDbContractProvider {
             }
         }
 
-        Ok(DynamoDbOutput::new_lek(res, &r.consumed_capacity, r.last_evaluated_key))
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
     }
 }

@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use mockall::automock;
 
 use crate::providers::token::types::TokenData;
-use crate::{ProviderError, DynamoDbOutput, DynamoDbCtx};
+use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.

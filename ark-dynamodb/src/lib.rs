@@ -1,9 +1,9 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub mod pagination;
 pub mod providers;
 pub mod storage;
-pub mod pagination;
 
 pub(crate) mod convert;
 
@@ -13,8 +13,8 @@ pub use aws_sdk_dynamodb::Client;
 use providers::{
     DynamoDbBlockProvider, DynamoDbContractProvider, DynamoDbEventProvider, DynamoDbTokenProvider,
 };
-use std::fmt;
 use std::collections::HashMap;
+use std::fmt;
 
 /// A context for dynamodb AWS execution.
 #[derive(Debug)]
@@ -46,7 +46,11 @@ impl<T> DynamoDbOutput<T> {
         }
     }
 
-    pub fn new_lek(inner: T, consumed_capacity: &Option<ConsumedCapacity>, lek: Option<HashMap<String, AttributeValue>>) -> Self {
+    pub fn new_lek(
+        inner: T,
+        consumed_capacity: &Option<ConsumedCapacity>,
+        lek: Option<HashMap<String, AttributeValue>>,
+    ) -> Self {
         let mut o = Self::new(inner, consumed_capacity);
         o.lek = lek;
         o

@@ -1,8 +1,11 @@
 pub mod params;
-pub use params::HttpParamSource;
+pub use params::*;
 
 pub mod format;
+pub mod lambda_context;
+pub use lambda_context::LambdaCtx;
 
+use ark_dynamodb::ProviderError;
 use lambda_http::{Body, Error, Response};
 use serde::Serialize;
 
@@ -16,23 +19,26 @@ pub struct ArkApiResponse<T: Serialize> {
 
 /// Generic errors for http parsing.
 #[derive(Debug, thiserror::Error)]
-pub enum HttpParsingError {
+pub enum LambdaHttpError {
     #[error("Bad param")]
-    ParamError(String),
+    ParamParsing(String),
     #[error("Missing param")]
-    MissingParamError(String),
+    ParamMissing(String),
+    #[error(transparent)]
+    Provider(ProviderError),
 }
 
-impl TryFrom<HttpParsingError> for Response<Body> {
+impl TryFrom<LambdaHttpError> for Response<Body> {
     type Error = Error;
 
-    fn try_from(e: HttpParsingError) -> Result<Self, Self::Error> {
+    fn try_from(e: LambdaHttpError) -> Result<Self, Self::Error> {
         Ok(Response::builder()
             .status(400)
             .header("Content-Type", "text/plain")
             .body(match e {
-                HttpParsingError::ParamError(s) => s.into(),
-                HttpParsingError::MissingParamError(s) => s.into(),
+                LambdaHttpError::ParamParsing(s) => s.into(),
+                LambdaHttpError::ParamMissing(s) => s.into(),
+                LambdaHttpError::Provider(s) => s.to_string().into(),
             })
             .map_err(Box::new)?)
     }

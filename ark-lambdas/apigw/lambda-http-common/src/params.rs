@@ -3,7 +3,7 @@ use num_bigint::BigUint;
 use num_traits::Num;
 
 use crate::format::*;
-use crate::HttpParsingError;
+use crate::LambdaHttpError;
 
 /// Source of the parameter in the HTTP request.
 pub enum HttpParamSource {
@@ -34,13 +34,13 @@ pub fn require_string_param(
     event: &Request,
     param_name: &str,
     source: HttpParamSource,
-) -> Result<String, HttpParsingError> {
+) -> Result<String, LambdaHttpError> {
     let maybe_param = string_param(event, param_name, source);
 
     if let Some(v) = maybe_param {
         Ok(v)
     } else {
-        Err(HttpParsingError::MissingParamError(format!(
+        Err(LambdaHttpError::ParamMissing(format!(
             "Param {param_name} is missing"
         )))
     }
@@ -53,7 +53,7 @@ pub fn require_hex_or_dec_param(
     event: &Request,
     param_name: &str,
     source: HttpParamSource,
-) -> Result<String, HttpParsingError> {
+) -> Result<String, LambdaHttpError> {
     let maybe_param = string_param(event, param_name, source);
 
     if let Some(v) = maybe_param {
@@ -61,7 +61,7 @@ pub fn require_hex_or_dec_param(
             if is_hexadecimal_with_prefix(&v) {
                 Ok(pad_hex(&v))
             } else {
-                Err(HttpParsingError::ParamError(format!(
+                Err(LambdaHttpError::ParamParsing(format!(
                     "Param {param_name} is expected to be valid hex string or decimal string"
                 )))
             }
@@ -69,7 +69,7 @@ pub fn require_hex_or_dec_param(
             let biguint = match BigUint::from_str_radix(&v, 10) {
                 Ok(i) => i,
                 Err(_) => {
-                    return Err(HttpParsingError::ParamError(format!(
+                    return Err(LambdaHttpError::ParamParsing(format!(
                         "Param {param_name} out of range decimal value"
                     )))
                 }
@@ -79,7 +79,7 @@ pub fn require_hex_or_dec_param(
             Ok(format!("0x{:064x}", biguint))
         }
     } else {
-        Err(HttpParsingError::MissingParamError(format!(
+        Err(LambdaHttpError::ParamMissing(format!(
             "Param {param_name} is missing"
         )))
     }
@@ -92,19 +92,19 @@ pub fn require_hex_param(
     event: &Request,
     param_name: &str,
     source: HttpParamSource,
-) -> Result<String, HttpParsingError> {
+) -> Result<String, LambdaHttpError> {
     let maybe_param = string_param(event, param_name, source);
 
     if let Some(v) = maybe_param {
         if is_hexadecimal_with_prefix(&v) {
             Ok(pad_hex(&v))
         } else {
-            Err(HttpParsingError::ParamError(format!(
+            Err(LambdaHttpError::ParamParsing(format!(
                 "Param {param_name} is expected to be hexadecimal string"
             )))
         }
     } else {
-        Err(HttpParsingError::MissingParamError(format!(
+        Err(LambdaHttpError::ParamMissing(format!(
             "Param {param_name} is missing"
         )))
     }

@@ -52,5 +52,6 @@ impl LambdaUsageProvider {
 fn now() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .expect("Error getting time").as_secs()
+        .expect("Error getting time")
+        .as_secs()
 }

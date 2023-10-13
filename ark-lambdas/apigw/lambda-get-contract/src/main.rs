@@ -15,7 +15,7 @@ use ark_dynamodb::{
     Client as DynamoClient,
 };
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
-use lambda_http_common::{self as common, HttpParamSource};
+use lambda_http_common::{self as common, ArkApiResponse, HttpParamSource};
 
 /// A struct to bundle all init required by the lambda.
 struct Ctx<P> {
@@ -33,8 +33,13 @@ async fn function_handler<P: ArkContractProvider<Client = DynamoClient>>(
         Err(e) => return e.try_into(),
     };
 
-    if let Some(data) = ctx.provider.get_contract(&ctx.client, &address).await? {
-        common::ok_body_rsp(&data)
+    let rsp = ctx.provider.get_contract(&ctx.client, &address).await?;
+
+    if let Some(data) = rsp.inner() {
+        common::ok_body_rsp(&ArkApiResponse {
+            cursor: None,
+            result: data,
+        })
     } else {
         common::not_found_rsp()
     }
@@ -54,7 +59,7 @@ async fn main() -> Result<(), Error> {
 
     let ctx = Ctx {
         client: init_aws_dynamo_client().await,
-        provider: DynamoDbContractProvider::new(&table_name),
+        provider: DynamoDbContractProvider::new(&table_name, None),
     };
 
     run(service_fn(|event: Request| async {
@@ -66,7 +71,9 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_dynamodb::{init_aws_dynamo_client, providers::contract::MockArkContractProvider};
+    use ark_dynamodb::{
+        init_aws_dynamo_client, providers::contract::MockArkContractProvider, DynamoDbOutput,
+    };
     use arkproject::pontos::storage::types::ContractInfo;
     use lambda_http::{Body, RequestExt};
 
@@ -90,10 +97,10 @@ mod tests {
 
         let mut ctx = get_mock_ctx().await;
         ctx.provider.expect_get_contract().returning(move |_, _| {
-            Ok(Some(ContractInfo {
+            Ok(DynamoDbOutput::new(Some(ContractInfo {
                 contract_type: "ERC721".to_string(),
                 contract_address: address.clone(),
-            }))
+            })))
         });
 
         let rsp = function_handler(&ctx, req)

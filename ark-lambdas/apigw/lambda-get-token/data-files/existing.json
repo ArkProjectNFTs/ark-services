@@ -7,5 +7,15 @@
     "multiValueHeaders": {
         "Accept": ["*/*"]
     },
-    "body": ""
+    "stageVariables": {
+        "tableName": "ark_project_dev",
+        "paginationCache": "redis://127.0.0.1:6379"
+    },
+    "lambdaContext": {
+        "requestId": "deef4878-7910-11e6-8f14-25afc3e9ae33",
+	"identity": {
+            "apiKey": "theApiKey",
+            "apiKeyId": "theApiKeyId"
+	}
+    }
 }

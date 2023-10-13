@@ -1,7 +1,7 @@
 use aws_sdk_dynamodb::types::{AttributeValue, ConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH, Duration};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 use crate::ProviderError;
@@ -23,7 +23,11 @@ impl DynamoDbCapacityProvider {
             return Ok(());
         }
 
-        let capacity = consumed_capacity.clone().unwrap().capacity_units.unwrap_or(0.0);
+        let capacity = consumed_capacity
+            .clone()
+            .unwrap()
+            .capacity_units
+            .unwrap_or(0.0);
 
         Self::register_raw(client, operation, capacity).await
     }
@@ -65,7 +69,7 @@ fn get_ttl() -> u64 {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Error getting time");
-    
+
     // 1 days ttl for statistics and cost estimation.
     (now + Duration::from_secs(24 * 60 * 60)).as_secs()
 }

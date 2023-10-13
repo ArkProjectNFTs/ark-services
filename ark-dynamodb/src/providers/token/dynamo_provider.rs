@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use super::ArkTokenProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::providers::token::types::TokenData;
-use crate::{convert, EntityType, ProviderError, DynamoDbOutput, DynamoDbCtx};
+use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -49,7 +49,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
@@ -88,7 +89,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         names.insert("#data".to_string(), "Data".to_string());
         names.insert("#mint_info".to_string(), "MintInfo".to_string());
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
@@ -126,7 +128,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         names.insert("#data".to_string(), "Data".to_string());
         names.insert("#metadata".to_string(), "Metadata".to_string());
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .update_item()
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
@@ -166,7 +169,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
@@ -199,7 +203,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .put_item()
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .table_name(self.table_name.clone())
@@ -272,7 +277,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -302,7 +308,11 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
-        Ok(DynamoDbOutput::new_lek(res, &r.consumed_capacity, r.last_evaluated_key))
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
     }
 
     async fn get_owner_tokens(
@@ -320,7 +330,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI2PK-GSI2SK-index")
@@ -349,6 +360,10 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
-        Ok(DynamoDbOutput::new_lek(res, &r.consumed_capacity, r.last_evaluated_key))
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
     }
 }

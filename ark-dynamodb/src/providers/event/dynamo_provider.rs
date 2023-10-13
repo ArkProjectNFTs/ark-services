@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use super::ArkEventProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
-use crate::{convert, EntityType, ProviderError, DynamoDbOutput, DynamoDbCtx};
+use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 
 /// DynamoDB provider for events.
 pub struct DynamoDbEventProvider {
@@ -107,7 +107,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let data = Self::event_to_data(event);
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .put_item()
             .table_name(self.table_name.clone())
             .item(
@@ -174,7 +175,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
@@ -192,7 +194,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(DynamoDbOutput::new(Some(Self::data_to_event(&data)?), &r.consumed_capacity))
+            Ok(DynamoDbOutput::new(
+                Some(Self::data_to_event(&data)?),
+                &r.consumed_capacity,
+            ))
         } else {
             Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
         }
@@ -211,7 +216,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
             AttributeValue::S(format!("TOKEN#{}#{}", contract_address, token_hex_id)),
         );
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI2PK-GSI2SK-index")
@@ -240,7 +246,11 @@ impl ArkEventProvider for DynamoDbEventProvider {
             }
         }
 
-        Ok(DynamoDbOutput::new_lek(res, &r.consumed_capacity, r.last_evaluated_key))
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
     }
 
     async fn get_contract_events(
@@ -255,7 +265,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
             AttributeValue::S(format!("CONTRACT#{}", contract_address)),
         );
 
-        let r = ctx.client
+        let r = ctx
+            .client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -283,6 +294,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
             }
         }
 
-        Ok(DynamoDbOutput::new_lek(res, &r.consumed_capacity, r.last_evaluated_key))
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
     }
 }

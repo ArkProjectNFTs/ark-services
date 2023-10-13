@@ -8,7 +8,7 @@ use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
 
-use crate::{ProviderError, DynamoDbCtx, DynamoDbOutput};
+use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the event level.
