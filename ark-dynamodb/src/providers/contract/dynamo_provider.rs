@@ -6,19 +6,21 @@ use std::collections::HashMap;
 
 use super::ArkContractProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
-use crate::{convert, EntityType, ProviderError};
+use crate::{convert, EntityType, ProviderError, DynamoDbOutput, DynamoDbCtx};
 
 /// DynamoDB provider for contracts.
 pub struct DynamoDbContractProvider {
     table_name: String,
     key_prefix: String,
+    limit: Option<i32>,
 }
 
 impl DynamoDbContractProvider {
-    pub fn new(table_name: &str) -> Self {
+    pub fn new(table_name: &str, limit: Option<i32>) -> Self {
         DynamoDbContractProvider {
             table_name: table_name.to_string(),
             key_prefix: "CONTRACT".to_string(),
+            limit,
         }
     }
 
@@ -60,16 +62,16 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
     async fn register_contract(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         info: &ContractInfo,
         block_timestamp: u64,
-    ) -> Result<(), ProviderError> {
+    ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(&info.contract_address);
         let sk = self.get_sk();
 
         let data = Self::info_to_data(info);
 
-        let r = client
+        let r = ctx.client
             .put_item()
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(pk.clone()))
@@ -92,20 +94,20 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
 
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            client,
+            &ctx.client,
             "register_contract",
-            r.consumed_capacity,
+            &r.consumed_capacity,
         )
         .await;
 
-        Ok(())
+        Ok(().into())
     }
 
     async fn get_contract(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
-    ) -> Result<Option<ContractInfo>, ProviderError> {
+    ) -> Result<DynamoDbOutput<Option<ContractInfo>>, ProviderError> {
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
@@ -113,7 +115,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let r = client
+        let r = ctx.client
             .get_item()
             .table_name(&self.table_name)
             .set_key(Some(key))
@@ -123,31 +125,31 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            client,
+            &ctx.client,
             "get_contract",
-            r.consumed_capacity,
+            &r.consumed_capacity,
         )
         .await;
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(Some(Self::data_to_info(&data)?))
+            Ok(DynamoDbOutput::new(Some(Self::data_to_info(&data)?), &r.consumed_capacity))
         } else {
-            Ok(None)
+            Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
         }
     }
 
     async fn get_contracts(
         &self,
-        client: &Self::Client,
-    ) -> Result<Vec<ContractInfo>, ProviderError> {
+        ctx: &DynamoDbCtx,
+    ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":contract".to_string(),
             AttributeValue::S("CONTRACT".to_string()),
         );
 
-        let r = client
+        let r = ctx.client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI1PK-GSI1SK-index")
@@ -155,15 +157,17 @@ impl ArkContractProvider for DynamoDbContractProvider {
                 "GSI1PK = :contract AND begins_with(GSI1SK, :contract)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .set_limit(self.limit)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            client,
+            &ctx.client,
             "get_contracts",
-            r.consumed_capacity,
+            &r.consumed_capacity,
         )
         .await;
 
@@ -175,6 +179,6 @@ impl ArkContractProvider for DynamoDbContractProvider {
             }
         }
 
-        Ok(res)
+        Ok(DynamoDbOutput::new_lek(res, &r.consumed_capacity, r.last_evaluated_key))
     }
 }

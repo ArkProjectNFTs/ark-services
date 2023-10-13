@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use mockall::automock;
 
 use crate::providers::token::types::TokenData;
-use crate::ProviderError;
+use crate::{ProviderError, DynamoDbOutput, DynamoDbCtx};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.
@@ -22,51 +22,51 @@ pub trait ArkTokenProvider {
 
     async fn update_owner(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id_hex: &str,
         owner: &str,
-    ) -> Result<(), ProviderError>;
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn update_mint_info(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id_hex: &str,
         info: &TokenMintInfo,
-    ) -> Result<(), ProviderError>;
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn update_metadata(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id_hex: &str,
         metadata: &TokenMetadata,
-    ) -> Result<(), ProviderError>;
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn get_token(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id: &str,
-    ) -> Result<Option<TokenData>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Option<TokenData>>, ProviderError>;
 
     async fn register_token(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         info: &TokenData,
         block_number: u64,
-    ) -> Result<(), ProviderError>;
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn get_contract_tokens(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
-    ) -> Result<Vec<TokenData>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
 
     async fn get_owner_tokens(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         owner_address: &str,
-    ) -> Result<Vec<TokenData>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
 }

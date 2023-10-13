@@ -99,7 +99,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
             client,
             "block_set_info",
-            r.consumed_capacity,
+            &r.consumed_capacity,
         )
         .await;
 
@@ -130,7 +130,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
             client,
             "block_get_info",
-            r.consumed_capacity,
+            &r.consumed_capacity,
         )
         .await;
 
