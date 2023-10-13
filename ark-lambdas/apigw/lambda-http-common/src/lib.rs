@@ -1,7 +1,18 @@
-use lambda_http::{Body, Error, Request, RequestExt, Response};
-use num_bigint::BigUint;
-use num_traits::Num;
+pub mod params;
+pub use params::HttpParamSource;
+
+pub mod format;
+
+use lambda_http::{Body, Error, Response};
 use serde::Serialize;
+
+/// Generic response returned from any http lambda.
+#[derive(Debug, Serialize)]
+pub struct ArkApiResponse<T: Serialize> {
+    pub cursor: Option<String>,
+    pub result: T,
+    // To be extended as needed.
+}
 
 /// Generic errors for http parsing.
 #[derive(Debug, thiserror::Error)]
@@ -10,11 +21,6 @@ pub enum HttpParsingError {
     ParamError(String),
     #[error("Missing param")]
     MissingParamError(String),
-}
-
-pub enum HttpParamSource {
-    Path,
-    QueryString,
 }
 
 impl TryFrom<HttpParsingError> for Response<Body> {
@@ -66,164 +72,6 @@ pub fn internal_server_error_rsp(message: &str) -> Result<Response<Body>, Error>
         .header("Content-Type", "text/plain")
         .body(message.into())
         .map_err(Box::new)?)
-}
-
-/// Returns the value for the given parameter as a string. Returns an error if the parameter is not found.
-#[allow(clippy::bind_instead_of_map)]
-pub fn require_string_param(
-    event: &Request,
-    param_name: &str,
-    source: HttpParamSource,
-) -> Result<String, HttpParsingError> {
-    let maybe_param = match source {
-        HttpParamSource::Path => event
-            .path_parameters_ref()
-            .and_then(|params| Some(params.first(param_name)))
-            .unwrap_or(None)
-            .map(|v| v.to_string()),
-        HttpParamSource::QueryString => event
-            .query_string_parameters_ref()
-            .and_then(|params| Some(params.first(param_name)))
-            .unwrap_or(None)
-            .map(|v| v.to_string()),
-    };
-
-    if let Some(v) = maybe_param {
-        Ok(v)
-    } else {
-        Err(HttpParsingError::MissingParamError(format!(
-            "Param {param_name} is missing"
-        )))
-    }
-}
-
-/// Returns the padded hex string of parameter that can be an hexadecimal / decimal string.
-/// Returns an error if the parameter is not found.
-#[allow(clippy::bind_instead_of_map)]
-pub fn require_hex_or_dec_param(
-    event: &Request,
-    param_name: &str,
-    source: HttpParamSource,
-) -> Result<String, HttpParsingError> {
-    let maybe_param = match source {
-        HttpParamSource::Path => event
-            .path_parameters_ref()
-            .and_then(|params| Some(params.first(param_name)))
-            .unwrap_or(None)
-            .map(|v| v.to_string()),
-        HttpParamSource::QueryString => event
-            .query_string_parameters_ref()
-            .and_then(|params| Some(params.first(param_name)))
-            .unwrap_or(None)
-            .map(|v| v.to_string()),
-    };
-
-    if let Some(v) = maybe_param {
-        if v.starts_with("0x") {
-            if is_hexadecimal_with_prefix(&v) {
-                Ok(pad_hex(&v))
-            } else {
-                Err(HttpParsingError::ParamError(format!(
-                    "Param {param_name} is expected to be valid hex string or decimal string"
-                )))
-            }
-        } else {
-            let biguint = match BigUint::from_str_radix(&v, 10) {
-                Ok(i) => i,
-                Err(_) => {
-                    return Err(HttpParsingError::ParamError(format!(
-                        "Param {param_name} out of range decimal value"
-                    )))
-                }
-            };
-
-            // We always work with fully padded hex strings.
-            Ok(format!("0x{:064x}", biguint))
-        }
-    } else {
-        Err(HttpParsingError::MissingParamError(format!(
-            "Param {param_name} is missing"
-        )))
-    }
-}
-
-/// Returns the value of a parameter expected to be an hexadecimal string.
-/// Returns an error if the parameter is not found.
-#[allow(clippy::bind_instead_of_map)]
-pub fn require_hex_param(
-    event: &Request,
-    param_name: &str,
-    source: HttpParamSource,
-) -> Result<String, HttpParsingError> {
-    let maybe_param = match source {
-        HttpParamSource::Path => event
-            .path_parameters_ref()
-            .and_then(|params| Some(params.first(param_name)))
-            .unwrap_or(None)
-            .map(|v| v.to_string()),
-        HttpParamSource::QueryString => event
-            .query_string_parameters_ref()
-            .and_then(|params| Some(params.first(param_name)))
-            .unwrap_or(None)
-            .map(|v| v.to_string()),
-    };
-
-    if let Some(v) = maybe_param {
-        if is_hexadecimal_with_prefix(&v) {
-            Ok(pad_hex(&v))
-        } else {
-            Err(HttpParsingError::ParamError(format!(
-                "Param {param_name} is expected to be hexadecimal string"
-            )))
-        }
-    } else {
-        Err(HttpParsingError::MissingParamError(format!(
-            "Param {param_name} is missing"
-        )))
-    }
-}
-
-/// Pads an hexadecimal value to be 32 bytes long + 0x prefix.
-pub fn pad_hex(input: &str) -> String {
-    if input.len() > 64 + 2 {
-        return String::new();
-    }
-
-    if input.len() == 64 + 2 {
-        return input.to_string();
-    }
-
-    let s = input.strip_prefix("0x").unwrap_or(input);
-
-    let mut padded = String::with_capacity(64);
-    let padding_count = 64 - s.len();
-
-    for _ in 0..padding_count {
-        padded.push('0');
-    }
-
-    padded.push_str(s);
-
-    format!("0x{padded}")
-}
-
-/// Returns true if the given string is an hexadecimal string with `0x` prefix, false otherwise.
-pub fn is_hexadecimal_with_prefix(input: &str) -> bool {
-    if input.len() < 3 {
-        return false;
-    }
-
-    if &input[0..2] != "0x" {
-        return false;
-    }
-
-    for c in input[2..].chars() {
-        if !c.is_ascii_hexdigit() {
-            return false;
-        }
-    }
-
-    true
 }
 
 #[cfg(test)]
