@@ -54,7 +54,6 @@ jobs:
 
       - name: Build Rust Lambda with Cargo
         run: |
-          cd ark-lambdas
           pip install cargo-lambda
           cargo lambda build --release
 
