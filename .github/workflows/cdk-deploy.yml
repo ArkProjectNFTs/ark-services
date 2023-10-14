@@ -1,0 +1,91 @@
+name: CDK Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - "infrastructure/cdk/**"
+      - "ark-lambdas/**"
+      - "ark-dynamodb/**"
+  pull_request:
+    types: [opened, synchronize, closed]
+    paths:
+      - "infrastructure/cdk/**"
+      - "ark-lambdas/**"
+      - "ark-dynamodb/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "14"
+
+      - name: Install Dependencies
+        run: |
+          cd infrastructure/cdk
+          npm ci
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-build-cache-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build Rust Lambda with Cargo
+        run: |
+          cd ark-lambdas
+          pip install cargo-lambda
+          cargo lambda build --release
+
+      - name: CDK Bootstrap (if necessary)
+        run: |
+          cd infrastructure/cdk
+          npx cdk bootstrap
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: CDK Deploy (on push)
+        if: github.event_name == 'push'
+        run: |
+          cd infrastructure/cdk
+          npx cdk deploy --require-approval never -c branch=${{ github.ref }} -c isPullRequest=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: CDK Deploy (on PR open/synchronize)
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')
+        run: |
+          cd infrastructure/cdk
+          npx cdk deploy pr-${{ github.event.number }} --require-approval never -c branch=${{ github.head_ref }} -c isPullRequest=true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: CDK Destroy (on PR close)
+        if: github.event_name == 'pull_request' && github.event.action == 'closed'
+        run: |
+          cd infrastructure/cdk
+          npx cdk destroy pr-${{ github.event.number }} --force
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
