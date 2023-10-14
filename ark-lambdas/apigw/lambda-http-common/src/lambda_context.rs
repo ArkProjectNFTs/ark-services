@@ -14,6 +14,9 @@ pub struct LambdaCtx {
     pub max_items_limit: Option<i32>,
     pub paginator: DynamoDbPaginator,
     pub db: DynamoDbCtx,
+    pub api_key: String,
+    pub req_id: String,
+    pub function_name: String,
 }
 
 impl LambdaCtx {
@@ -47,6 +50,12 @@ impl LambdaCtx {
 
         let paginator = DynamoDbPaginator::new(pagination_db);
 
+        // TODO: api key from header.
+
+        let lctx = event.lambda_context();
+        let req_id = lctx.request_id;
+        let function_name = lctx.env_config.function_name.clone();
+
         let maybe_cursor = params::string_param(event, "cursor", HttpParamSource::QueryString);
 
         let last_evaluated_key = if let Some(c) = maybe_cursor {
@@ -69,6 +78,9 @@ impl LambdaCtx {
             db,
             table_name: table_name.to_string(),
             max_items_limit,
+            api_key: String::from("TODO"),
+            req_id,
+            function_name,
         })
     }
 }

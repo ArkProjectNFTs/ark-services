@@ -10,7 +10,7 @@ use lambda_http_common::{self as common, ArkApiResponse, LambdaCtx};
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
 
-    let provider = DynamoDbContractProvider::new(&ctx.table_name, None);
+    let provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let rsp = provider.get_contracts(&ctx.db).await?;
 
