@@ -8,13 +8,25 @@ config();
 const app = new cdk.App();
 
 const branch = app.node.tryGetContext("branch") || process.env.BRANCH;
-const isPullRequest = app.node.tryGetContext("isPullRequest") || process.env.IS_PULL_REQUEST;
-const apiName = branch === "main" ? "production" : "staging";
-const stages = ["mainnet", "testnet"]
-new ArkStack(app, `ArkStack-${apiName}`, {
+const isPullRequest =
+  app.node.tryGetContext("isPullRequest") || process.env.IS_PULL_REQUEST;
+const stages = ["mainnet", "testnet"];
+
+const prNumber = app.node.tryGetContext("prNumber") || process.env.PR_NUMBER;
+
+let stackNameSuffix;
+if (isPullRequest) {
+  stackNameSuffix = `pr-${prNumber}`;
+} else {
+  stackNameSuffix = branch === "main" ? "production" : "staging";
+}
+
+const stackName = `ArkStack-${stackNameSuffix}`;
+
+new ArkStack(app, stackName, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION  // or whatever region you want to deploy to
+    region: process.env.AWS_REGION, // or whatever region you want to deploy to
   },
   branch: branch,
   stages: stages,
