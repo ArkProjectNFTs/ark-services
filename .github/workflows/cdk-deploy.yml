@@ -57,7 +57,7 @@ jobs:
       - name: Cache Cargo target dir
         uses: actions/cache@v2
         with:
-          path: ark-lambdas/target
+          path: target/lambda
           key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-target-
