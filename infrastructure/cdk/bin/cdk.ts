@@ -8,15 +8,29 @@ config();
 const app = new cdk.App();
 
 const branch = app.node.tryGetContext("branch") || process.env.BRANCH;
-const apiName = branch === "main" ? "production" : "staging";
-const stages = ["mainnet", "testnet"]
-new ArkStack(app, `ArkStack-${apiName}`, {
+const isPullRequest =
+  app.node.tryGetContext("isPullRequest") || process.env.IS_PULL_REQUEST;
+const stages = ["mainnet", "testnet"];
+
+const prNumber = app.node.tryGetContext("prNumber") || process.env.PR_NUMBER;
+
+let stackNameSuffix;
+if (isPullRequest) {
+  stackNameSuffix = `pr-${prNumber}`;
+} else {
+  stackNameSuffix = branch === "main" ? "production" : "staging";
+}
+
+const stackName = `ArkStack-${stackNameSuffix}`;
+
+new ArkStack(app, stackName, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION  // or whatever region you want to deploy to
+    region: process.env.AWS_REGION, // or whatever region you want to deploy to
   },
   branch: branch,
   stages: stages,
+  isPullRequest: isPullRequest,
   description:
     "This stack provisions the infrastructure for the Ark Project, which includes API endpoints for contract management and token events. It integrates with DynamoDB for data storage and provides Lambda functions for specific API operations. The stack is designed to be environment-agnostic and can be deployed to any AWS region.",
   /* If you don't specify 'env', this stack will be environment-agnostic.
