@@ -96,23 +96,23 @@ export class ArkStack extends cdk.Stack {
         cacheTtl: cdk.Duration.seconds(0),
         cacheDataEncrypted: true,
         cacheClusterSize: "0.5",
-        methodOptions: {
-          "/contracts/*": {
-            cachingEnabled: true,
-            cacheDataEncrypted: cacheSettings.dataEncrypted,
-            cacheTtl: cacheSettings.cacheTtl,
-          },
-          "/events/*": {
-            cachingEnabled: true,
-            cacheDataEncrypted: cacheSettings.dataEncrypted,
-            cacheTtl: cacheSettings.cacheTtl,
-          },
-          "/tokens/*": {
-            cachingEnabled: true,
-            cacheDataEncrypted: cacheSettings.dataEncrypted,
-            cacheTtl: cacheSettings.cacheTtl,
-          },
-        },
+        // methodOptions: {
+        //   "/contracts/*": {
+        //     cachingEnabled: true,
+        //     cacheDataEncrypted: cacheSettings.dataEncrypted,
+        //     cacheTtl: cacheSettings.cacheTtl,
+        //   },
+        //   "/events/*": {
+        //     cachingEnabled: true,
+        //     cacheDataEncrypted: cacheSettings.dataEncrypted,
+        //     cacheTtl: cacheSettings.cacheTtl,
+        //   },
+        //   "/tokens/*": {
+        //     cachingEnabled: true,
+        //     cacheDataEncrypted: cacheSettings.dataEncrypted,
+        //     cacheTtl: cacheSettings.cacheTtl,
+        //   },
+        // },
       }
     );
 
