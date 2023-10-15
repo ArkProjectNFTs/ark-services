@@ -10,6 +10,11 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as logs from "aws-cdk-lib/aws-logs";
 
+const cacheSettings = {
+  cacheTtl: cdk.Duration.minutes(5),
+  dataEncrypted: true
+};
+
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
@@ -87,6 +92,27 @@ export class ArkStack extends cdk.Stack {
           stageLogGroup
         ),
         accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+        cachingEnabled: true,
+        cacheTtl: cdk.Duration.seconds(0),
+        cacheDataEncrypted: true,
+        cacheClusterSize: "0.5",
+        methodOptions: {
+          "/contracts/*": {
+            cachingEnabled: true,
+            cacheDataEncrypted: cacheSettings.dataEncrypted,
+            cacheTtl: cacheSettings.cacheTtl,
+          },
+          "/events/*": {
+            cachingEnabled: true,
+            cacheDataEncrypted: cacheSettings.dataEncrypted,
+            cacheTtl: cacheSettings.cacheTtl,
+          },
+          "/tokens/*": {
+            cachingEnabled: true,
+            cacheDataEncrypted: cacheSettings.dataEncrypted,
+            cacheTtl: cacheSettings.cacheTtl,
+          },
+        },
       }
     );
 
