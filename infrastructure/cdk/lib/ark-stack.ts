@@ -12,7 +12,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 
 const cacheSettings = {
   cacheTtl: cdk.Duration.minutes(5),
-  dataEncrypted: true
+  dataEncrypted: true,
 };
 
 export class ArkStack extends cdk.Stack {
@@ -27,8 +27,10 @@ export class ArkStack extends cdk.Stack {
     } else {
       apiSuffix = "staging";
     }
-    
-    const apiName = `ark-project-api-${apiSuffix}${props.isPullRequest ? "_pr" : ""}`;
+
+    const apiName = `ark-project-api-${apiSuffix}${
+      props.isPullRequest ? "_pr" : ""
+    }`;
 
     const api = new apigateway.RestApi(
       this,
@@ -68,7 +70,9 @@ export class ArkStack extends cdk.Stack {
     // Create deployment
     const deployment = new apigateway.Deployment(
       this,
-      `ark-project-deployment-${apiSuffix}-${stageName}${isPullRequest ? "_pr" : ""}`,
+      `ark-project-deployment-${apiSuffix}-${stageName}${
+        isPullRequest ? "_pr" : ""
+      }`,
       { api }
     );
 
@@ -81,14 +85,16 @@ export class ArkStack extends cdk.Stack {
     // Create stage and point it to the latest deployment
     const stage = new apigateway.Stage(
       this,
-      `ark-project-stage-${apiSuffix}-${stageName}${isPullRequest ? "_pr" : ""}`,
+      `ark-project-stage-${apiSuffix}-${stageName}${
+        isPullRequest ? "_pr" : ""
+      }`,
       {
         deployment,
         stageName,
         variables: {
           tableName: `ark_project_${stageName}`,
-          paginationCache: 'redis://ipfs.arkproject.dev:6379',
-          maxItemsLimit: '100',
+          paginationCache: "redis://ipfs.arkproject.dev:6379",
+          maxItemsLimit: "100",
         },
         accessLogDestination: new apigateway.LogGroupLogDestination(
           stageLogGroup
