@@ -54,6 +54,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Cache Cargo target dir
         uses: actions/cache@v2
         with:
