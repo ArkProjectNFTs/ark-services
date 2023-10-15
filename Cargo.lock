@@ -271,6 +271,7 @@ dependencies = [
  "num-traits",
  "regex",
  "starknet",
+ "tracing",
  "url",
 ]
 

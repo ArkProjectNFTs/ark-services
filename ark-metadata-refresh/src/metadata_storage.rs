@@ -37,7 +37,28 @@ impl Storage for MetadataStorage {
         token_id: CairoU256,
         token_metadata: TokenMetadata,
     ) -> Result<(), StorageError> {
-        Err(StorageError::DatabaseError)
+        
+        let pk = format!("TOKEN#0x{:064x}#{}", contract_address, token_id.to_hex());
+        info!("pk: {:?}", pk);
+
+        info!("token_metadata: {:?}", token_metadata);
+
+        // let r = self.client
+        // .update_item()
+        // .table_name(self.table_name.clone())
+        // .key("PK".to_string(), AttributeValue::S(pk))
+        // .key("SK".to_string(), AttributeValue::S(sk))
+        // .update_expression("SET #data.#owner = :owner")
+        // .expression_attribute_names("#data", "Data")
+        // .expression_attribute_names("#owner", "Owner")
+        // .expression_attribute_values(":owner".to_string(), AttributeValue::S(owner.to_string()))
+        // .return_values(ReturnValue::AllNew)
+        // .return_consumed_capacity(ReturnConsumedCapacity::Total)
+        // .send()
+        // .await
+        // .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+
+        Ok(())
     }
 
     async fn has_token_metadata(
@@ -78,6 +99,8 @@ impl Storage for MetadataStorage {
 
         if let Some(items) = query_output.items {
             for item in items.iter() {
+                info!("item: {:?}", item);
+
                 if let Some(data) = item.get("Data") {
                     if data.is_m() {
                         let data_m = data.as_m().unwrap();
@@ -87,12 +110,15 @@ impl Storage for MetadataStorage {
                             match FieldElement::from_hex_be(contract_address_attribute_value) {
                                 Ok(contract_address) => {
                                     if let Some(AttributeValue::S(token_id_attribute_value)) =
-                                        data_m.get("TokenId")
+                                        data_m.get("TokenIdHex")
                                     {
-                                        let token_id = match CairoU256::from_hex_be(
-                                            token_id_attribute_value,
-                                        ) {
+                                        info!(
+                                            "token_id_attribute_value: {:?}",
+                                            token_id_attribute_value
+                                        );
+                                        match CairoU256::from_hex_be(token_id_attribute_value) {
                                             Ok(token_id) => {
+                                                info!("token_id: {:?}", token_id);
                                                 results.push((contract_address, token_id));
                                             }
                                             Err(_) => continue,
