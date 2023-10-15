@@ -13,7 +13,7 @@ use aws_sdk_dynamodb::{
     Client,
 };
 use starknet::core::types::FieldElement;
-use tracing::{info, instrument};
+use tracing::{field::Field, info, instrument};
 
 #[derive(Debug)]
 pub struct MetadataStorage {
@@ -31,7 +31,7 @@ impl MetadataStorage {
 
 #[async_trait]
 impl Storage for MetadataStorage {
-    fn register_token_metadata(
+    async fn register_token_metadata(
         &self,
         contract_address: &FieldElement,
         token_id: CairoU256,
@@ -40,7 +40,7 @@ impl Storage for MetadataStorage {
         Err(StorageError::DatabaseError)
     }
 
-    fn has_token_metadata(
+    async fn has_token_metadata(
         &self,
         contract_address: FieldElement,
         token_id: CairoU256,
@@ -48,7 +48,7 @@ impl Storage for MetadataStorage {
         Err(StorageError::DatabaseError)
     }
 
-    fn find_token_ids_without_metadata_in_collection(
+    async fn find_token_ids_without_metadata_in_collection(
         &self,
         contract_address: FieldElement,
     ) -> Result<Vec<CairoU256>, StorageError> {
@@ -64,7 +64,7 @@ impl Storage for MetadataStorage {
             .client
             .query()
             .table_name(&self.table_name)
-            .index_name("GSI5PK-GSI5SK-index") // Assuming your GSI for block association is named GSI4
+            .index_name("GSI5PK-GSI5SK-index")
             .key_condition_expression("GSI5PK = :gsi_pk")
             .expression_attribute_values(
                 ":gsi_pk",
@@ -74,29 +74,39 @@ impl Storage for MetadataStorage {
             .await
             .map_err(|_| StorageError::DatabaseError)?;
 
+        let mut results: Vec<(FieldElement, CairoU256)> = Vec::new();
+
         if let Some(items) = query_output.items {
-            let item = items.get(0).unwrap();
-            info!("first item: {:?}", item);
-            if let Some(data) = item.get("Data") {
-                let data_m = data.as_m().unwrap();
-                let contract_address_attribute_value = data_m.get("ContractAddress").unwrap().as_s().unwrap();
-                let contract_address = FieldElement::from_hex_be(contract_address_attribute_value);
-
-                let token_id_attribute_value = data_m.get("TokenId").unwrap();
-
-                info!(
-                    "contract_address: {:?}, token_id={:?}",
-                    contract_address,
-                    token_id_attribute_value
-                );
+            for item in items.iter() {
+                if let Some(data) = item.get("Data") {
+                    if data.is_m() {
+                        let data_m = data.as_m().unwrap();
+                        if let Some(AttributeValue::S(contract_address_attribute_value)) =
+                            data_m.get("ContractAddress")
+                        {
+                            match FieldElement::from_hex_be(contract_address_attribute_value) {
+                                Ok(contract_address) => {
+                                    if let Some(AttributeValue::S(token_id_attribute_value)) =
+                                        data_m.get("TokenId")
+                                    {
+                                        let token_id = match CairoU256::from_hex_be(
+                                            token_id_attribute_value,
+                                        ) {
+                                            Ok(token_id) => {
+                                                results.push((contract_address, token_id));
+                                            }
+                                            Err(_) => continue,
+                                        };
+                                    }
+                                }
+                                Err(_) => continue,
+                            };
+                        }
+                    }
+                }
             }
-
-            // for item in items {
-            //     if let Some(pk) = item.get("PK").cloned() {
-            //     }
-            // }
         }
 
-        Err(StorageError::DatabaseError)
+        Ok(results)
     }
 }

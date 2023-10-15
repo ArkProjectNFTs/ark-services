@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
         Err(e) => error!("Error: {:?}", e),
     };
 
-    // metadata_storage.
+    // metadata_manager.refresh_token_metadata(contract_address, token_id, cache, ipfs_gateway_uri);
 
     // match metadata_manager
     //     .fetch_tokens_metadata(CacheOption::NoCache, ipfs_gateway_uri.as_str())
