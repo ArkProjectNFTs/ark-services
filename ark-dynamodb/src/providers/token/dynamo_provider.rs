@@ -266,6 +266,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         ctx: &DynamoDbCtx,
         contract_address: &str,
+        tokens_ids: &[String],
     ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
@@ -277,6 +278,29 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
+        let filter_expression = if tokens_ids.is_empty() {
+            None
+        } else {
+            let mut s = "GSI2SK IN (".to_string();
+
+            for (idx, id) in tokens_ids.iter().enumerate() {
+                let token_val = format!(":token{}", idx);
+
+                values.insert(
+                    token_val.clone(),
+                    AttributeValue::S(format!("TOKEN#{}#{}", contract_address, id.clone())),
+                );
+
+                if idx < tokens_ids.len() - 1 {
+                    s.push_str(&format!("{},", token_val));
+                } else {
+                    s.push_str(&format!("{})", token_val));
+                }
+            }
+
+            Some(s)
+        };
+
         let r = ctx
             .client
             .query()
@@ -287,6 +311,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             ))
             .set_expression_attribute_values(Some(values))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .set_filter_expression(filter_expression)
             .set_limit(self.limit)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()

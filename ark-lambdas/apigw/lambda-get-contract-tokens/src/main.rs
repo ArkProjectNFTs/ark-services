@@ -23,35 +23,17 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let address = get_params(&event)?;
     let tokens_ids = get_tokens_ids(&event)?;
 
-    if tokens_ids.is_empty() {
-        // Regular query with pagination.
-        let rsp = provider.get_contract_tokens(&ctx.db, &address).await?;
+    let rsp = provider
+        .get_contract_tokens(&ctx.db, &address, &tokens_ids)
+        .await?;
 
-        let items = rsp.inner();
-        let cursor = ctx.paginator.store_cursor(&rsp.lek)?;
+    let items = rsp.inner();
+    let cursor = ctx.paginator.store_cursor(&rsp.lek)?;
 
-        common::ok_body_rsp(&ArkApiResponse {
-            cursor,
-            result: items,
-        })
-    } else {
-        // Returns only the tokens ids that were asked by the user.
-        let mut out = vec![];
-        for t_id in tokens_ids {
-            if let Some(data) = provider
-                .get_token(&ctx.db, &address, &t_id)
-                .await?
-                .into_inner()
-            {
-                out.push(data);
-            }
-        }
-
-        common::ok_body_rsp(&ArkApiResponse {
-            cursor: None,
-            result: out,
-        })
-    }
+    common::ok_body_rsp(&ArkApiResponse {
+        cursor,
+        result: items,
+    })
 }
 
 fn get_params(event: &Request) -> Result<String, LambdaHttpError> {
