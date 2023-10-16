@@ -54,6 +54,7 @@ async fn main() -> Result<()> {
                                 token_id,
                                 ImageCacheOption::Save,
                                 ipfs_gateway_uri.as_str(),
+                                Duration::from_secs(5),
                             )
                             .await
                         {
