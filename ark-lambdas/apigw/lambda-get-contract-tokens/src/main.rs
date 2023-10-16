@@ -161,7 +161,7 @@ mod tests {
     fn params_tokens_ids() {
         let mut params = HashMap::new();
         params.insert(
-            "token_id".to_string(),
+            "tokens_ids".to_string(),
             vec!["0x123".to_string(), "0x77".to_string(), "255".to_string()],
         );
 
