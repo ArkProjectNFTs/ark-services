@@ -233,6 +233,7 @@ name = "ark-metadata-refresh"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ark-dynamodb",
  "arkproject",
  "async-trait",
  "aws-config",
@@ -271,7 +272,6 @@ dependencies = [
  "num-traits",
  "regex",
  "starknet",
- "tracing",
  "url",
 ]
 

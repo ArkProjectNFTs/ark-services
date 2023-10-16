@@ -1,10 +1,9 @@
-use arkproject::metadata::types::TokenMetadata;
+use crate::{convert, ProviderError};
+use arkproject::metadata::types::{DisplayType, MetadataAttributeValue, TokenMetadata};
 use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-use crate::{convert, ProviderError};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TokenData {
@@ -71,6 +70,63 @@ impl TokenData {
             "YoutubeUrl".to_string(),
             AttributeValue::S(meta.youtube_url.clone().unwrap_or_default()),
         );
+
+        if let Some(attributes) = &meta.attributes {
+            let mut attributes_hashmap: HashMap<String, AttributeValue> = HashMap::new();
+            for (index, attribute) in attributes.iter().enumerate() {
+                // if let Some(display_type) = attribute.display_type {
+                //     match display_type {
+                //         DisplayType::Number() => attributes_hashmap.insert(
+                //             String::from("DisplayType"),
+                //             AttributeValue::S(String::from("number")),
+                //         ),
+                //         DisplayType::BoostNumber() => attributes_hashmap.insert(
+                //             String::from("DisplayType"),
+                //             AttributeValue::S(String::from("boost_number")),
+                //         ),
+                //         DisplayType::BoostPercentage() => attributes_hashmap.insert(
+                //             String::from("DisplayType"),
+                //             AttributeValue::S(String::from("boost_percentage")),
+                //         ),
+                //         DisplayType::Date() => attributes_hashmap.insert(
+                //             String::from("DisplayType"),
+                //             AttributeValue::S(String::from("date")),
+                //         ),
+                //         _ => {
+                //             // TODO
+                //         }
+                //     }
+                // }
+
+                if let Some(trait_type) = &attribute.trait_type {
+                    attributes_hashmap.insert(
+                        String::from("TraitType"),
+                        AttributeValue::S(trait_type.to_string()),
+                    );
+                }
+
+                match &attribute.value {
+                    MetadataAttributeValue::String(value) => {
+                        let attribute_value = AttributeValue::S(value.clone());
+                        attributes_hashmap.insert(String::from("Value"), attribute_value);
+                    }
+                    MetadataAttributeValue::Bool(value) => {
+                        let attribute_value = AttributeValue::Bool(value.clone());
+                        attributes_hashmap.insert(String::from("Value"), attribute_value);
+                    }
+                    MetadataAttributeValue::Number(value) => {
+                        let attribute_value = AttributeValue::N(value.to_string());
+                        attributes_hashmap.insert(String::from("Value"), attribute_value);
+                    }
+                    _ => {}
+                };
+            }
+
+            map.insert(
+                String::from("Attributes"),
+                AttributeValue::M(attributes_hashmap),
+            );
+        }
 
         map
     }

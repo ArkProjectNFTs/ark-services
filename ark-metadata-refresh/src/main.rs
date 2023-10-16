@@ -1,9 +1,9 @@
 mod aws_s3_file_manager;
-mod metadata_storage;
 
 use std::{env, time::Duration};
 
 use anyhow::Result;
+use ark_dynamodb::metadata_storage::MetadataStorage;
 use arkproject::{
     metadata::{
         file_manager::LocalFileManager,
@@ -14,7 +14,6 @@ use arkproject::{
 };
 
 use dotenv::dotenv;
-use metadata_storage::MetadataStorage;
 use tokio::time::sleep;
 use tracing::{error, info, span, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
@@ -51,7 +50,7 @@ async fn main() -> Result<()> {
                             .refresh_token_metadata(
                                 contract_address,
                                 token_id,
-                                CacheOption::NoCache,
+                                CacheOption::Cache,
                                 ipfs_gateway_uri.as_str(),
                             )
                             .await

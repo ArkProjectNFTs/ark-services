@@ -1,6 +1,7 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub mod metadata_storage;
 pub mod pagination;
 pub mod providers;
 pub mod storage;

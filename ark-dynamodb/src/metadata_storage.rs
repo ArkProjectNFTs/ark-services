@@ -8,24 +8,28 @@ use arkproject::{
 };
 use async_trait::async_trait;
 use aws_config::load_from_env;
-use aws_sdk_dynamodb::{
-    types::{AttributeValue, ReturnConsumedCapacity},
-    Client,
-};
+use aws_sdk_dynamodb::{types::AttributeValue, Client};
 use starknet::core::types::FieldElement;
-use tracing::{field::Field, info, instrument};
+use tracing::{error, info};
 
-#[derive(Debug)]
+use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider};
+
 pub struct MetadataStorage {
     client: Client,
     table_name: String,
+    provider: ArkDynamoDbProvider,
 }
 
 impl MetadataStorage {
     pub async fn new(table_name: String) -> Self {
         let config = load_from_env().await;
         let client = Client::new(&config);
-        Self { client, table_name }
+        let provider = ArkDynamoDbProvider::new(&table_name);
+        Self {
+            client,
+            table_name,
+            provider,
+        }
     }
 }
 
@@ -37,28 +41,26 @@ impl Storage for MetadataStorage {
         token_id: CairoU256,
         token_metadata: TokenMetadata,
     ) -> Result<(), StorageError> {
-        
-        let pk = format!("TOKEN#0x{:064x}#{}", contract_address, token_id.to_hex());
-        info!("pk: {:?}", pk);
+        let token_id_hex = token_id.to_hex();
+        let contract_address_hex = format!("0x{:064x}", contract_address);
 
-        info!("token_metadata: {:?}", token_metadata);
-
-        // let r = self.client
-        // .update_item()
-        // .table_name(self.table_name.clone())
-        // .key("PK".to_string(), AttributeValue::S(pk))
-        // .key("SK".to_string(), AttributeValue::S(sk))
-        // .update_expression("SET #data.#owner = :owner")
-        // .expression_attribute_names("#data", "Data")
-        // .expression_attribute_names("#owner", "Owner")
-        // .expression_attribute_values(":owner".to_string(), AttributeValue::S(owner.to_string()))
-        // .return_values(ReturnValue::AllNew)
-        // .return_consumed_capacity(ReturnConsumedCapacity::Total)
-        // .send()
-        // .await
-        // .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
-
-        Ok(())
+        match self
+            .provider
+            .token
+            .update_metadata(
+                &self.client,
+                contract_address_hex.as_str(),
+                token_id_hex.clone().as_str(),
+                &token_metadata,
+            )
+            .await
+        {
+            Ok(()) => Ok(()),
+            Err(e) => {
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
+            }
+        }
     }
 
     async fn has_token_metadata(
