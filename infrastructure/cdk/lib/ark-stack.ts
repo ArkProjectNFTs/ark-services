@@ -88,7 +88,7 @@ export class ArkStack extends cdk.Stack {
         variables: {
           tableName: `ark_project_${stageName}`,
           paginationCache: 'ark-api-pagination.adsnrq.clustercfg.use1.cache.amazonaws.com:6379',
-          maxItemsLimit: 100,
+          maxItemsLimit: '100',
         },
         accessLogDestination: new apigateway.LogGroupLogDestination(
           stageLogGroup
