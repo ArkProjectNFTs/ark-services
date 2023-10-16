@@ -9,12 +9,10 @@ import { ArkStackProps } from "./types";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as logs from "aws-cdk-lib/aws-logs";
-import * as elasticache from "aws-cdk-lib/aws-elasticache";
-import * as ec2 from "aws-cdk-lib/aws-ec2";
 
 const cacheSettings = {
   cacheTtl: cdk.Duration.minutes(5),
-  dataEncrypted: true,
+  dataEncrypted: true
 };
 
 export class ArkStack extends cdk.Stack {
@@ -29,10 +27,8 @@ export class ArkStack extends cdk.Stack {
     } else {
       apiSuffix = "staging";
     }
-
-    const apiName = `ark-project-api-${apiSuffix}${
-      props.isPullRequest ? "_pr" : ""
-    }`;
+    
+    const apiName = `ark-project-api-${apiSuffix}${props.isPullRequest ? "_pr" : ""}`;
 
     const api = new apigateway.RestApi(
       this,
@@ -57,14 +53,9 @@ export class ArkStack extends cdk.Stack {
     tokensApi(this, versionedRoot, props.stages);
     ownerApi(this, versionedRoot, props.stages);
 
-    // Elasticache
-    const vpc = ec2.Vpc.fromLookup(this, "DefaultVPC", {
-      isDefault: true, // adjust this as per your needs, maybe you have a custom VPC
-    });
-
     //loop foreach stage in props.stages
     props.stages.forEach((stage: string) => {
-      this.createStage(api, apiSuffix, stage, props.isPullRequest, vpc);
+      this.createStage(api, apiSuffix, stage, props.isPullRequest);
     });
   }
 
@@ -72,15 +63,12 @@ export class ArkStack extends cdk.Stack {
     api: apigateway.RestApi,
     apiSuffix: string,
     stageName: string,
-    isPullRequest: boolean,
-    vpc: ec2.IVpc
+    isPullRequest: boolean
   ) {
     // Create deployment
     const deployment = new apigateway.Deployment(
       this,
-      `ark-project-deployment-${apiSuffix}-${stageName}${
-        isPullRequest ? "_pr" : ""
-      }`,
+      `ark-project-deployment-${apiSuffix}-${stageName}${isPullRequest ? "_pr" : ""}`,
       { api }
     );
 
@@ -90,47 +78,17 @@ export class ArkStack extends cdk.Stack {
       `ark-project-log-${stageName}${isPullRequest ? "_pr" : ""}`
     );
 
-    const redisSecurityGroup = new ec2.SecurityGroup(
-      this,
-      `ark-project-redis-securitygroup-${apiSuffix}-${stageName}${
-        isPullRequest ? "_pr" : ""
-      }`,
-      {
-        vpc: vpc,
-        description: "Security group for Redis ElastiCache",
-        allowAllOutbound: true,
-      }
-    );
-
-    const redisCluster = new elasticache.CfnCacheCluster(
-      this,
-      `ark-project-elasticache-redis-${apiSuffix}-${stageName}${
-        isPullRequest ? "_pr" : ""
-      }`,
-      {
-        cacheNodeType: "cache.t3.small", // Choose your node type
-        engine: "redis",
-        numCacheNodes: 1,
-        vpcSecurityGroupIds: [redisSecurityGroup.securityGroupId],
-        cacheSubnetGroupName: "default", // Ensure the default subnet group is available in your VPC or create a new one
-      }
-    );
-
     // Create stage and point it to the latest deployment
     const stage = new apigateway.Stage(
       this,
-      `ark-project-stage-${apiSuffix}-${stageName}${
-        isPullRequest ? "_pr" : ""
-      }`,
+      `ark-project-stage-${apiSuffix}-${stageName}${isPullRequest ? "_pr" : ""}`,
       {
         deployment,
         stageName,
         variables: {
-          pagination_db: `${redisCluster.attrRedisEndpointAddress}:${redisCluster.attrRedisEndpointPort}`,
           tableName: `ark_project_${stageName}`,
-          paginationCache:
-            "ark-api-pagination.adsnrq.clustercfg.use1.cache.amazonaws.com:6379",
-          maxItemsLimit: "100",
+          paginationCache: 'ark-api-pagination.adsnrq.clustercfg.use1.cache.amazonaws.com:6379',
+          maxItemsLimit: '100',
         },
         accessLogDestination: new apigateway.LogGroupLogDestination(
           stageLogGroup
