@@ -1,6 +1,4 @@
 use lambda_http::{Request, RequestExt};
-use num_bigint::BigUint;
-use num_traits::Num;
 
 use crate::format::*;
 use crate::LambdaHttpError;
@@ -57,27 +55,7 @@ pub fn require_hex_or_dec_param(
     let maybe_param = string_param(event, param_name, source);
 
     if let Some(v) = maybe_param {
-        if v.starts_with("0x") {
-            if is_hexadecimal_with_prefix(&v) {
-                Ok(pad_hex(&v))
-            } else {
-                Err(LambdaHttpError::ParamParsing(format!(
-                    "Param {param_name} is expected to be valid hex string or decimal string"
-                )))
-            }
-        } else {
-            let biguint = match BigUint::from_str_radix(&v, 10) {
-                Ok(i) => i,
-                Err(_) => {
-                    return Err(LambdaHttpError::ParamParsing(format!(
-                        "Param {param_name} out of range decimal value"
-                    )))
-                }
-            };
-
-            // We always work with fully padded hex strings.
-            Ok(format!("0x{:064x}", biguint))
-        }
+        Ok(hex_or_dec_from_str(&v, param_name)?)
     } else {
         Err(LambdaHttpError::ParamMissing(format!(
             "Param {param_name} is missing"
