@@ -9,7 +9,7 @@
 //! Examples:
 //! `https://.../collections/0x1234`
 //!
-use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider, LambdaUsageProvider};
+use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
@@ -23,16 +23,6 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let address = get_params(&event)?;
 
     let rsp = provider.get_contract(&ctx.db, &address).await?;
-
-    LambdaUsageProvider::register_usage(
-        &ctx.db.client,
-        &ctx.req_id,
-        &ctx.api_key,
-        &ctx.function_name,
-        rsp.capacity,
-        0,
-    )
-    .await?;
 
     if let Some(data) = rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {

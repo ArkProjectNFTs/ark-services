@@ -44,7 +44,6 @@ impl LambdaUsageProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
-
         Ok(())
     }
 }
