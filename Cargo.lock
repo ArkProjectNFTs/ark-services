@@ -211,20 +211,20 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.1.1#ef4b8d67cfca5cb9300d6c5f9fceac3618cfade8"
 dependencies = [
  "anyhow",
  "ark-starknet",
  "async-trait",
  "base64 0.21.4",
  "dotenv",
- "log",
  "reqwest",
  "serde",
  "serde_derive",
  "serde_json",
  "starknet",
  "tokio",
+ "tracing",
  "urlencoding",
 ]
 
@@ -242,12 +242,13 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.1.1#ef4b8d67cfca5cb9300d6c5f9fceac3618cfade8"
 dependencies = [
  "anyhow",
  "async-trait",
  "mockall",
  "num-bigint",
+ "num-traits",
  "regex",
  "starknet",
  "url",
@@ -266,7 +267,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.1.1#ef4b8d67cfca5cb9300d6c5f9fceac3618cfade8"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -1248,7 +1249,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.1.1#ef4b8d67cfca5cb9300d6c5f9fceac3618cfade8"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -2583,7 +2584,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.0.8#3bab14b5baa09b4aea7df0f46981a8ecbb44390b"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.1.1#ef4b8d67cfca5cb9300d6c5f9fceac3618cfade8"
 dependencies = [
  "anyhow",
  "ark-metadata",
