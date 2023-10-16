@@ -96,13 +96,13 @@ impl fmt::Display for EntityType {
 /// Generic errors for providers.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
-    #[error("Database error")]
+    #[error("Database error: {0}")]
     DatabaseError(String),
-    #[error("Missing data error")]
+    #[error("Missing data error: {0}")]
     MissingDataError(String),
-    #[error("Data value error")]
+    #[error("Data value error: {0}")]
     DataValueError(String),
-    #[error("Pagination cache error")]
+    #[error("Pagination cache error: {0}")]
     PaginationCacheError(String),
 }
 

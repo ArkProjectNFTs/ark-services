@@ -1,11 +1,15 @@
 {
     "httpMethod": "GET",
+    "pathParameters": {
+        "contract_address": "0x02e24bd7683c01cb2e4e48148e254f2a0d44ee526cff3c703d6031a685f1700d"
+    },
     "multiValueHeaders": {
         "Accept": ["*/*"]
     },
     "stageVariables": {
-        "tableName": "ark_project_dev",
+        "tableName": "ark_project_testnet",
         "paginationCache": "redis://ipfs.arkproject.dev:6379",
         "maxItemsLimit": "100"
     }
 }
+

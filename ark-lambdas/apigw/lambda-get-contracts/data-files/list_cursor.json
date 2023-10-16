@@ -8,7 +8,7 @@
     },
     "stageVariables": {
         "tableName": "ark_project_dev",
-        "paginationCache": "redis://127.0.0.1:6379",
+        "paginationCache": "redis://ipfs.arkproject.dev:6379",
         "maxItemsLimit": "1"
     }
 }
