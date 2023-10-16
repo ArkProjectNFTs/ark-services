@@ -92,7 +92,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
-            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
             &ctx.client,
