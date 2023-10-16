@@ -8,7 +8,7 @@ use arkproject::{
 };
 use async_trait::async_trait;
 use aws_config::load_from_env;
-use aws_sdk_dynamodb::{types::AttributeValue, Client};
+use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
 use tracing::{error, info};
 
@@ -16,7 +16,6 @@ use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider};
 
 pub struct MetadataStorage {
     client: Client,
-    table_name: String,
     provider: ArkDynamoDbProvider,
 }
 
@@ -25,11 +24,7 @@ impl MetadataStorage {
         let config = load_from_env().await;
         let client = Client::new(&config);
         let provider = ArkDynamoDbProvider::new(&table_name);
-        Self {
-            client,
-            table_name,
-            provider,
-        }
+        Self { client, provider }
     }
 }
 
@@ -65,76 +60,36 @@ impl Storage for MetadataStorage {
 
     async fn has_token_metadata(
         &self,
-        contract_address: FieldElement,
-        token_id: CairoU256,
+        _contract_address: FieldElement,
+        _token_id: CairoU256,
     ) -> Result<bool, StorageError> {
         Err(StorageError::DatabaseError)
     }
 
     async fn find_token_ids_without_metadata_in_collection(
         &self,
-        contract_address: FieldElement,
+        _contract_address: FieldElement,
     ) -> Result<Vec<CairoU256>, StorageError> {
         info!("find_token_ids_without_metadata_in_collection...");
-
         Err(StorageError::DatabaseError)
     }
 
     async fn find_token_ids_without_metadata(
         &self,
     ) -> Result<Vec<(FieldElement, CairoU256)>, StorageError> {
-        let query_output = self
-            .client
-            .query()
-            .table_name(&self.table_name)
-            .index_name("GSI5PK-GSI5SK-index")
-            .key_condition_expression("GSI5PK = :gsi_pk")
-            .expression_attribute_values(
-                ":gsi_pk",
-                AttributeValue::S(String::from("METADATA#false")),
-            )
-            .send()
+        match self
+            .provider
+            .token
+            .get_token_without_metadata(&self.client)
             .await
-            .map_err(|_| StorageError::DatabaseError)?;
-
-        let mut results: Vec<(FieldElement, CairoU256)> = Vec::new();
-
-        if let Some(items) = query_output.items {
-            for item in items.iter() {
-                info!("item: {:?}", item);
-
-                if let Some(data) = item.get("Data") {
-                    if data.is_m() {
-                        let data_m = data.as_m().unwrap();
-                        if let Some(AttributeValue::S(contract_address_attribute_value)) =
-                            data_m.get("ContractAddress")
-                        {
-                            match FieldElement::from_hex_be(contract_address_attribute_value) {
-                                Ok(contract_address) => {
-                                    if let Some(AttributeValue::S(token_id_attribute_value)) =
-                                        data_m.get("TokenIdHex")
-                                    {
-                                        info!(
-                                            "token_id_attribute_value: {:?}",
-                                            token_id_attribute_value
-                                        );
-                                        match CairoU256::from_hex_be(token_id_attribute_value) {
-                                            Ok(token_id) => {
-                                                info!("token_id: {:?}", token_id);
-                                                results.push((contract_address, token_id));
-                                            }
-                                            Err(_) => continue,
-                                        };
-                                    }
-                                }
-                                Err(_) => continue,
-                            };
-                        }
-                    }
-                }
+        {
+            Ok(tokens) => {
+                return Ok(tokens);
+            }
+            Err(e) => {
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError);
             }
         }
-
-        Ok(results)
     }
 }

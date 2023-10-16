@@ -126,7 +126,7 @@ dependencies = [
  "arkproject",
  "async-trait",
  "aws-config",
- "aws-sdk-dynamodb",
+ "aws-sdk-dynamodb 0.31.1",
  "aws-sdk-s3 0.30.0",
  "chrono",
  "log",
@@ -196,7 +196,7 @@ dependencies = [
  "arkproject",
  "async-trait",
  "aws-config",
- "aws-sdk-dynamodb",
+ "aws-sdk-dynamodb 0.31.1",
  "aws-sdk-s3 0.31.2",
  "chrono",
  "dotenv",
@@ -237,8 +237,8 @@ dependencies = [
  "arkproject",
  "async-trait",
  "aws-config",
- "aws-sdk-dynamodb",
- "aws-sdk-s3 0.31.2",
+ "aws-sdk-dynamodb 0.33.0",
+ "aws-sdk-s3 0.33.0",
  "chrono",
  "dotenv",
  "regex",
@@ -470,6 +470,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "aws-sdk-dynamodb"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6c39120bb76fe32e13d4c0e9be67f3732f80ee63faee2c74ebf9ade4705b106"
+dependencies = [
+ "aws-credential-types",
+ "aws-http",
+ "aws-runtime",
+ "aws-smithy-async",
+ "aws-smithy-client",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-types",
+ "bytes",
+ "fastrand",
+ "http",
+ "regex",
+ "tokio-stream",
+ "tracing",
+]
+
+[[package]]
 name = "aws-sdk-s3"
 version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -506,6 +531,38 @@ name = "aws-sdk-s3"
 version = "0.31.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c681fef332c3462634cd97fced8d1ac3cfdf790829bd7bfb4006cfba76712053"
+dependencies = [
+ "aws-credential-types",
+ "aws-http",
+ "aws-runtime",
+ "aws-sigv4",
+ "aws-smithy-async",
+ "aws-smithy-checksums",
+ "aws-smithy-client",
+ "aws-smithy-eventstream",
+ "aws-smithy-http",
+ "aws-smithy-json",
+ "aws-smithy-runtime",
+ "aws-smithy-runtime-api",
+ "aws-smithy-types",
+ "aws-smithy-xml",
+ "aws-types",
+ "bytes",
+ "http",
+ "http-body",
+ "once_cell",
+ "percent-encoding",
+ "regex",
+ "tokio-stream",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "aws-sdk-s3"
+version = "0.33.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73018483d9cb78e1a0d4dcbc94327b01d532e7cb28f26c5bceff97f8f0e4c6eb"
 dependencies = [
  "aws-credential-types",
  "aws-http",

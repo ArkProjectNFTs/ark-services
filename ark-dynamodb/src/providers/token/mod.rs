@@ -1,6 +1,7 @@
 //! Token module.
 //!
 mod dynamo_provider;
+use arkproject::starknet::CairoU256;
 pub use dynamo_provider::DynamoDbTokenProvider;
 pub mod types;
 
@@ -9,6 +10,7 @@ use arkproject::pontos::storage::types::TokenMintInfo;
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
+use starknet::core::types::FieldElement;
 
 use crate::providers::token::types::TokenData;
 use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
@@ -50,6 +52,11 @@ pub trait ArkTokenProvider {
         contract_address: &str,
         token_id: &str,
     ) -> Result<DynamoDbOutput<Option<TokenData>>, ProviderError>;
+
+    async fn get_token_without_metadata(
+        &self,
+        client: &Self::Client,
+    ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError>;
 
     async fn register_token(
         &self,

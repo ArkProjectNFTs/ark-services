@@ -2,7 +2,7 @@ use anyhow::Result;
 use arkproject::metadata::file_manager::{FileInfo, FileManager};
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::ByteStream;
-use tracing::debug;
+use tracing::info;
 
 /// FileManager implementation that saves files to AWS S3.
 ///
@@ -24,7 +24,7 @@ impl AWSFileManager {
 #[async_trait]
 impl FileManager for AWSFileManager {
     async fn save(&self, file: &FileInfo) -> Result<()> {
-        debug!("Uploading {} to AWS...", file.name);
+        info!("Uploading {} to AWS...", file.name);
 
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_s3::Client::new(&config);
@@ -42,6 +42,8 @@ impl FileManager for AWSFileManager {
             .body(body)
             .send()
             .await?;
+
+        info!("Uploaded {} to AWS", file.name);
 
         Ok(())
     }

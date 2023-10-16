@@ -1,5 +1,5 @@
 use crate::{convert, ProviderError};
-use arkproject::metadata::types::{DisplayType, MetadataAttributeValue, TokenMetadata};
+use arkproject::metadata::types::{MetadataAttributeValue, TokenMetadata};
 use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ impl TokenData {
 
         if let Some(attributes) = &meta.attributes {
             let mut attributes_hashmap: HashMap<String, AttributeValue> = HashMap::new();
-            for (index, attribute) in attributes.iter().enumerate() {
+            for (_, attribute) in attributes.iter().enumerate() {
                 // if let Some(display_type) = attribute.display_type {
                 //     match display_type {
                 //         DisplayType::Number() => attributes_hashmap.insert(
@@ -111,7 +111,7 @@ impl TokenData {
                         attributes_hashmap.insert(String::from("Value"), attribute_value);
                     }
                     MetadataAttributeValue::Bool(value) => {
-                        let attribute_value = AttributeValue::Bool(value.clone());
+                        let attribute_value = AttributeValue::Bool(*value);
                         attributes_hashmap.insert(String::from("Value"), attribute_value);
                     }
                     MetadataAttributeValue::Number(value) => {
