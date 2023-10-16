@@ -57,9 +57,14 @@ export class ArkStack extends cdk.Stack {
     tokensApi(this, versionedRoot, props.stages);
     ownerApi(this, versionedRoot, props.stages);
 
+    // Elasticache
+    const vpc = ec2.Vpc.fromLookup(this, "DefaultVPC", {
+      isDefault: true, // adjust this as per your needs, maybe you have a custom VPC
+    });
+
     //loop foreach stage in props.stages
     props.stages.forEach((stage: string) => {
-      this.createStage(api, apiSuffix, stage, props.isPullRequest);
+      this.createStage(api, apiSuffix, stage, props.isPullRequest, vpc);
     });
   }
 
@@ -67,7 +72,8 @@ export class ArkStack extends cdk.Stack {
     api: apigateway.RestApi,
     apiSuffix: string,
     stageName: string,
-    isPullRequest: boolean
+    isPullRequest: boolean,
+    vpc: ec2.IVpc
   ) {
     // Create deployment
     const deployment = new apigateway.Deployment(
@@ -83,11 +89,6 @@ export class ArkStack extends cdk.Stack {
       this,
       `ark-project-log-${stageName}${isPullRequest ? "_pr" : ""}`
     );
-
-    // Elasticache
-    const vpc = ec2.Vpc.fromLookup(this, "DefaultVPC", {
-      isDefault: true, // adjust this as per your needs, maybe you have a custom VPC
-    });
 
     const redisSecurityGroup = new ec2.SecurityGroup(
       this,
