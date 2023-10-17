@@ -118,48 +118,48 @@ export class ArkStack extends cdk.Stack {
       }
     );
 
-    // Basic Free Plan
-    const basicPlan = api.addUsagePlan("ArkBasicPlan", {
-      name: "ArkApiBasic",
-      throttle: {
-        rateLimit: 5, // 5 requests per second
-        burstLimit: 2, // Allow a burst of 2 requests
-      },
-      quota: {
-        limit: 100000, // 100000 requests per month
-        period: apigateway.Period.MONTH,
-      },
-    });
+    // // Basic Free Plan
+    // const basicPlan = api.addUsagePlan("ArkBasicPlan", {
+    //   name: "ArkApiBasic",
+    //   throttle: {
+    //     rateLimit: 5, // 5 requests per second
+    //     burstLimit: 2, // Allow a burst of 2 requests
+    //   },
+    //   quota: {
+    //     limit: 100000, // 100000 requests per month
+    //     period: apigateway.Period.MONTH,
+    //   },
+    // });
 
-    // Add basic plan to API
-    basicPlan.addApiStage({
-      stage: stage,
-    });
+    // // Add basic plan to API
+    // basicPlan.addApiStage({
+    //   stage: stage,
+    // });
 
-    // Pay As You Go Plan
-    const payAsYouGoPlan = api.addUsagePlan("ArkPayAsYouGoPlan", {
-      name: "ArkApiPayAsYouGo",
-      throttle: {
-        rateLimit: 100, // 100 requests per second
-        burstLimit: 50, // Allow a burst of 50 requests
-      },
-    });
+    // // Pay As You Go Plan
+    // const payAsYouGoPlan = api.addUsagePlan("ArkPayAsYouGoPlan", {
+    //   name: "ArkApiPayAsYouGo",
+    //   throttle: {
+    //     rateLimit: 100, // 100 requests per second
+    //     burstLimit: 50, // Allow a burst of 50 requests
+    //   },
+    // });
 
-    // Add pay as you go plan to API
-    payAsYouGoPlan.addApiStage({
-      stage: stage,
-    });
+    // // Add pay as you go plan to API
+    // payAsYouGoPlan.addApiStage({
+    //   stage: stage,
+    // });
 
-    // Admin Unlimited Plan
-    const adminPlan = api.addUsagePlan("ArkAdminPlan", {
-      name: "ArkApiAdmin",
-      // No throttle means it's unlimited
-    });
+    // // Admin Unlimited Plan
+    // const adminPlan = api.addUsagePlan("ArkAdminPlan", {
+    //   name: "ArkApiAdmin",
+    //   // No throttle means it's unlimited
+    // });
 
-    // Add admin plan to API
-    adminPlan.addApiStage({
-      stage: stage,
-    });
+    // // Add admin plan to API
+    // adminPlan.addApiStage({
+    //   stage: stage,
+    // });
 
     // If this is a pull request, don't create a custom domain
     if (!isPullRequest) {
