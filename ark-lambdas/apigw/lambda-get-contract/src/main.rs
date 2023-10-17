@@ -9,35 +9,33 @@
 //! Examples:
 //! `https://.../collections/0x1234`
 //!
-use ark_dynamodb::{
-    init_aws_dynamo_client,
-    providers::{ArkContractProvider, DynamoDbContractProvider},
-    Client as DynamoClient,
-};
+use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
-use lambda_http_common::{self as common, HttpParamSource};
+use lambda_http_common::{
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+};
 
-/// A struct to bundle all init required by the lambda.
-struct Ctx<P> {
-    client: DynamoClient,
-    provider: P,
-}
+async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    let ctx = LambdaCtx::from_event(&event).await?;
 
-async fn function_handler<P: ArkContractProvider<Client = DynamoClient>>(
-    ctx: &Ctx<P>,
-    event: Request,
-) -> Result<Response<Body>, Error> {
-    let address = match common::require_hex_param(&event, "contract_address", HttpParamSource::Path)
-    {
-        Ok(a) => a,
-        Err(e) => return e.try_into(),
-    };
+    let provider = DynamoDbContractProvider::new(&ctx.table_name, None);
 
-    if let Some(data) = ctx.provider.get_contract(&ctx.client, &address).await? {
-        common::ok_body_rsp(&data)
+    let address = get_params(&event)?;
+
+    let rsp = provider.get_contract(&ctx.db, &address).await?;
+
+    if let Some(data) = rsp.inner() {
+        common::ok_body_rsp(&ArkApiResponse {
+            cursor: None,
+            result: data,
+        })
     } else {
         common::not_found_rsp()
     }
+}
+
+fn get_params(event: &Request) -> Result<String, LambdaHttpError> {
+    common::require_hex_param(event, "contract_address", HttpParamSource::Path)
 }
 
 #[tokio::main]
@@ -50,15 +48,8 @@ async fn main() -> Result<(), Error> {
         .without_time()
         .init();
 
-    let table_name = std::env::var("ARK_TABLE_NAME").expect("ARK_TABLE_NAME must be set");
-
-    let ctx = Ctx {
-        client: init_aws_dynamo_client().await,
-        provider: DynamoDbContractProvider::new(&table_name),
-    };
-
     run(service_fn(|event: Request| async {
-        function_handler(&ctx, event).await
+        function_handler(event).await
     }))
     .await
 }
@@ -66,21 +57,12 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_dynamodb::{init_aws_dynamo_client, providers::contract::MockArkContractProvider};
-    use arkproject::pontos::storage::types::ContractInfo;
-    use lambda_http::{Body, RequestExt};
-
+    use lambda_http::RequestExt;
+    use lambda_http_common::format::pad_hex;
     use std::collections::HashMap;
 
-    async fn get_mock_ctx() -> Ctx<MockArkContractProvider> {
-        Ctx {
-            client: init_aws_dynamo_client().await,
-            provider: MockArkContractProvider::default(),
-        }
-    }
-
     #[tokio::test]
-    async fn request_ok() {
+    async fn params_ok() {
         let address = "0x1234".to_string();
 
         let mut params = HashMap::new();
@@ -88,61 +70,47 @@ mod tests {
 
         let req = Request::default().with_path_parameters(params.clone());
 
-        let mut ctx = get_mock_ctx().await;
-        ctx.provider.expect_get_contract().returning(move |_, _| {
-            Ok(Some(ContractInfo {
-                contract_type: "ERC721".to_string(),
-                contract_address: address.clone(),
-            }))
-        });
+        let address = get_params(&req).unwrap();
 
-        let rsp = function_handler(&ctx, req)
-            .await
-            .expect("failed to handle request");
-
-        assert_eq!(rsp.status(), 200);
+        assert_eq!(address, pad_hex(&address));
     }
 
     #[tokio::test]
-    async fn bad_hexadecimal_address() {
+    async fn parmas_bad_hexadecimal_address() {
         let mut params = HashMap::new();
-        params.insert("contract_address".to_string(), "contractA".to_string());
+        params.insert("contract_address".to_string(), "1234".to_string());
+
         let req = Request::default().with_path_parameters(params.clone());
 
-        // No setup, as the lambda will return an error before any dynamodb stuff.
-        let rsp = function_handler(&get_mock_ctx().await, req)
-            .await
-            .expect("failed to handle request");
-
-        assert_eq!(rsp.status(), 400);
-
-        let body = match rsp.body() {
-            Body::Text(t) => t,
-            _ => panic!("Body is expected to be a string"),
-        };
-
-        assert_eq!(
-            body,
-            "Param contract_address is expected to be hexadecimal string"
-        );
+        match get_params(&req) {
+            Ok(_) => panic!("expecting error"),
+            Err(e) => match e {
+                LambdaHttpError::ParamParsing(s) => {
+                    assert_eq!(
+                        s,
+                        "Param contract_address is expected to be hexadecimal string"
+                    )
+                }
+                _ => panic!("expected ParamParsing"),
+            },
+        }
     }
 
     #[tokio::test]
-    async fn missing_address() {
-        let req = Request::default();
+    async fn params_missing_address() {
+        let mut params = HashMap::new();
+        params.insert("blabla".to_string(), "1".to_string());
 
-        // No setup, as the lambda will return an error before any dynamodb stuff.
-        let rsp = function_handler(&get_mock_ctx().await, req)
-            .await
-            .expect("failed to handle request");
+        let req = Request::default().with_path_parameters(params.clone());
 
-        assert_eq!(rsp.status(), 400);
-
-        let body = match rsp.body() {
-            Body::Text(t) => t,
-            _ => panic!("Body is expected to be a string"),
-        };
-
-        assert_eq!(body, "Param contract_address is missing");
+        match get_params(&req) {
+            Ok(_) => panic!("expecting error"),
+            Err(e) => match e {
+                LambdaHttpError::ParamMissing(s) => {
+                    assert_eq!(s, "Param contract_address is missing")
+                }
+                _ => panic!("expected ParamMissing"),
+            },
+        }
     }
 }

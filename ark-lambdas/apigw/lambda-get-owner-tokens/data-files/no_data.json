@@ -1,10 +1,14 @@
 {
     "httpMethod": "GET",
     "pathParameters": {
-        "owner_address": "0x112233"
+        "owner_address": "0x1234"
     },
     "multiValueHeaders": {
         "Accept": ["*/*"]
     },
-    "body": ""
+    "stageVariables": {
+        "tableName": "ark_project_dev",
+        "paginationCache": "redis://127.0.0.1:6379",
+        "maxItemsLimit": "100"
+    }
 }

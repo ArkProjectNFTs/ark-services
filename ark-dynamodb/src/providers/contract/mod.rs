@@ -8,7 +8,7 @@ use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
 
-use crate::ProviderError;
+use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the contract level.
@@ -20,19 +20,19 @@ pub trait ArkContractProvider {
 
     async fn get_contract(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         address: &str,
-    ) -> Result<Option<ContractInfo>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Option<ContractInfo>>, ProviderError>;
 
     async fn register_contract(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         info: &ContractInfo,
         block_number: u64,
-    ) -> Result<(), ProviderError>;
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn get_contracts(
         &self,
-        client: &Self::Client,
-    ) -> Result<Vec<ContractInfo>, ProviderError>;
+        ctx: &DynamoDbCtx,
+    ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError>;
 }

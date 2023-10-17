@@ -1,17 +1,78 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub mod pagination;
 pub mod providers;
 pub mod storage;
 
 pub(crate) mod convert;
 
 use aws_config::meta::region::RegionProviderChain;
+use aws_sdk_dynamodb::types::{AttributeValue, ConsumedCapacity};
 pub use aws_sdk_dynamodb::Client;
 use providers::{
     DynamoDbBlockProvider, DynamoDbContractProvider, DynamoDbEventProvider, DynamoDbTokenProvider,
 };
+use std::collections::HashMap;
 use std::fmt;
+
+/// A context for dynamodb AWS execution.
+#[derive(Debug)]
+pub struct DynamoDbCtx {
+    pub client: Client,
+    pub exclusive_start_key: Option<HashMap<String, AttributeValue>>,
+}
+
+/// A response from dynamodb operation.
+#[derive(Debug, Default)]
+pub struct DynamoDbOutput<T> {
+    inner: T,
+    pub lek: Option<HashMap<String, AttributeValue>>,
+    pub capacity: f64,
+}
+
+impl<T> DynamoDbOutput<T> {
+    pub fn new(inner: T, consumed_capacity: &Option<ConsumedCapacity>) -> Self {
+        let capacity = if let Some(cc) = consumed_capacity {
+            cc.capacity_units.unwrap_or(0.0)
+        } else {
+            0.0
+        };
+
+        Self {
+            inner,
+            capacity,
+            lek: None,
+        }
+    }
+
+    pub fn new_lek(
+        inner: T,
+        consumed_capacity: &Option<ConsumedCapacity>,
+        lek: Option<HashMap<String, AttributeValue>>,
+    ) -> Self {
+        let mut o = Self::new(inner, consumed_capacity);
+        o.lek = lek;
+        o
+    }
+
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
+
+    pub fn inner(&self) -> &T {
+        &self.inner
+    }
+}
+
+impl From<()> for DynamoDbOutput<()> {
+    fn from(unit: ()) -> Self {
+        Self {
+            inner: unit,
+            ..Default::default()
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 enum EntityType {
@@ -35,12 +96,14 @@ impl fmt::Display for EntityType {
 /// Generic errors for providers.
 #[derive(Debug, thiserror::Error)]
 pub enum ProviderError {
-    #[error("Database error")]
+    #[error("Database error: {0}")]
     DatabaseError(String),
-    #[error("Missing data error")]
+    #[error("Missing data error: {0}")]
     MissingDataError(String),
-    #[error("Data value error")]
+    #[error("Data value error: {0}")]
     DataValueError(String),
+    #[error("Pagination cache error: {0}")]
+    PaginationCacheError(String),
 }
 
 /// Returns a newly initialized DynamoClient.
@@ -54,19 +117,19 @@ pub async fn init_aws_dynamo_client() -> Client {
 /// This is not aims to be tested directly, as each provider
 /// must be tested separately.
 pub struct ArkDynamoDbProvider {
-    token: DynamoDbTokenProvider,
-    contract: DynamoDbContractProvider,
-    event: DynamoDbEventProvider,
-    block: DynamoDbBlockProvider,
+    pub token: DynamoDbTokenProvider,
+    pub contract: DynamoDbContractProvider,
+    pub event: DynamoDbEventProvider,
+    pub block: DynamoDbBlockProvider,
 }
 
 impl ArkDynamoDbProvider {
-    pub fn new(table_name: &str) -> Self {
+    pub fn new(table_name: &str, limit: Option<i32>) -> Self {
         ArkDynamoDbProvider {
-            token: DynamoDbTokenProvider::new(table_name),
-            event: DynamoDbEventProvider::new(table_name),
+            token: DynamoDbTokenProvider::new(table_name, limit),
+            event: DynamoDbEventProvider::new(table_name, limit),
             block: DynamoDbBlockProvider::new(table_name),
-            contract: DynamoDbContractProvider::new(table_name),
+            contract: DynamoDbContractProvider::new(table_name, limit),
         }
     }
 }

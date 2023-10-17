@@ -41,33 +41,20 @@ members = [
 
 ## Implement a lambda
 
-To allow easy testing with mocking, the lambda must be built with a context
-that bundle all the dependencies on external trait.
+To implement a lambda, the best idea is to take inspiration from already written code.
 
-Take the example of `lambda-get-contract`:
+The key points to building a lambda are the following:
 
-```rust
-struct Ctx<P> {
-    client: DynamoClient,
-    provider: P,
-}
-
-async fn function_handler<P: ArkContractProvider<Client = DynamoClient>>(
-    ctx: &Ctx<P>,
-    event: Request,
-) -> Result<Response<Body>, Error> {
-...
-}
+* Initialization of the lambda context based on the HTTP request:
+```rust,ignore
+let ctx = LambdaCtx::from_event(&event).await?;
 ```
-
-The `Ctx` is only generic for provider, which is a trait required in this specific
-case to fetch data related to a contract.
-
-The `Ctx` does take ownership of the client and the provider, as the lambda lifecycle is short, and the init is done only once.
-
-There is no need to internalize the `client` inside the `provider` as we want to keep the best flexibility to implement the lambda functionalities.
-
-Depending on your need, don't hesitate to populate the `Ctx` accordingly and adjust the generic types of the lambda function.
+  This will give you already initialized `LambdaCtx` with:
+      - The dynamodb context, where the `Client` and the `last_evaluated_key` can be found. This allows dynamodb operation to be autonomous for pagination and client usage.
+      - `table_name`, the table name extracted from the request stage variables.
+      - `max_items_limit`, the maximum items that can be retrieved from the database at once, extracted from the request stage variables.
+      
+      - `paginator`, a convenient structure to deal with caching systems for pagination. The paginator automatically loads the `cursor` that may be passed as query string parameter.
 
 ## Build a lambda
 

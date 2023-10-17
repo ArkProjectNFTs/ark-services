@@ -6,6 +6,6 @@
     "stageVariables": {
         "tableName": "ark_project_dev",
         "paginationCache": "redis://ipfs.arkproject.dev:6379",
-        "maxItemsLimit": "100"
+        "maxItemsLimit": "1"
     }
 }
