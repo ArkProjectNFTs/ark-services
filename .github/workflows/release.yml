@@ -18,7 +18,7 @@ jobs:
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
-  push-docker-image:
+  push-ark-indexer-image:
     runs-on: ubuntu-latest
     name: Push Docker Image
     env:
@@ -47,11 +47,43 @@ jobs:
           INDEXER_AWS_ACCESS_KEY_ID: ${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }}
           INDEXER_AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }}
         run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} --build-arg AWS_ACCESS_KEY_ID=${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }} --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }} -f Dockerfile .
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} --build-arg AWS_ACCESS_KEY_ID=${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }} --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }} -f .github/docker/ark-indexer/Dockerfile .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
+
+  push-ark-metadata-image:
+    runs-on: ubuntu-latest
+    name: Push Docker Image
+    env:
+      AWS_REGION: us-east-1
+      REPOSITORY: arkproject-metadata
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.5.5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1.3.3
+
+      - name: Build, Tag, and Push Docker Image to Amazon ECR
+        env:
+          INDEXER_AWS_ACCESS_KEY_ID: ${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }}
+          INDEXER_AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }}
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }} --build-arg AWS_ACCESS_KEY_ID=${{ secrets.INDEXER_AWS_ACCESS_KEY_ID }} --build-arg AWS_SECRET_ACCESS_KEY=${{ secrets.INDEXER_AWS_SECRET_ACCESS_KEY }} -f .github/docker/ark-metadata-refresh/Dockerfile .
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.REPOSITORY }}:${{ env.TAG }}
 
   update-task-definition:
-    needs: push-docker-image
+    needs: push-ark-indexer-image
     runs-on: ubuntu-latest
     name: Update ECS Task Definitions
     strategy:
