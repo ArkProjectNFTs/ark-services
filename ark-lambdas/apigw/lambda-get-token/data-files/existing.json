@@ -7,5 +7,9 @@
     "multiValueHeaders": {
         "Accept": ["*/*"]
     },
-    "body": ""
+    "stageVariables": {
+        "tableName": "ark_project_dev",
+        "paginationCache": "redis://127.0.0.1:6379",
+        "maxItemsLimit": "100"
+    }
 }

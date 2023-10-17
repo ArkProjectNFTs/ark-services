@@ -8,7 +8,7 @@ use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
 
-use crate::ProviderError;
+use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the event level.
@@ -19,28 +19,28 @@ pub trait ArkEventProvider {
 
     async fn get_event(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
         event_id: &str,
-    ) -> Result<Option<TokenEvent>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Option<TokenEvent>>, ProviderError>;
 
     async fn register_event(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         event: &TokenEvent,
         block_number: u64,
-    ) -> Result<(), ProviderError>;
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn get_token_events(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id: &str,
-    ) -> Result<Vec<TokenEvent>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
 
     async fn get_contract_events(
         &self,
-        client: &Self::Client,
+        ctx: &DynamoDbCtx,
         contract_address: &str,
-    ) -> Result<Vec<TokenEvent>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
 }

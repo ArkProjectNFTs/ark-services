@@ -1,11 +1,14 @@
 {
     "httpMethod": "GET",
+    "queryStringParameters": {
+        "cursor": "c0a622c8-2773-4015-ac98-fe13f011e19a"
+    },
     "multiValueHeaders": {
         "Accept": ["*/*"]
     },
     "stageVariables": {
         "tableName": "ark_project_dev",
         "paginationCache": "redis://ipfs.arkproject.dev:6379",
-        "maxItemsLimit": "100"
+        "maxItemsLimit": "1"
     }
 }

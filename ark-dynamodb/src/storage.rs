@@ -19,10 +19,10 @@ use tracing::{debug, error, info};
 
 use crate::providers::token::types::TokenData;
 use crate::providers::{ArkBlockProvider, ArkContractProvider, ArkEventProvider, ArkTokenProvider};
-use crate::ArkDynamoDbProvider;
+use crate::{ArkDynamoDbProvider, DynamoDbCtx};
 
 pub struct DynamoStorage {
-    client: Client,
+    ctx: DynamoDbCtx,
     table_name: String,
     provider: ArkDynamoDbProvider,
 }
@@ -31,9 +31,16 @@ impl DynamoStorage {
     pub async fn new(table_name: String) -> Self {
         let config = load_from_env().await;
         let client = Client::new(&config);
-        let provider = ArkDynamoDbProvider::new(&table_name);
-        Self {
+        let ctx = DynamoDbCtx {
             client,
+            exclusive_start_key: None,
+        };
+
+        // Internally, we want more items to be loaded until reaching 1MB.
+        let limit = Some(1000);
+        let provider = ArkDynamoDbProvider::new(&table_name, limit);
+        Self {
+            ctx,
             table_name,
             provider,
         }
@@ -89,6 +96,7 @@ impl AWSDynamoStorage for DynamoStorage {
         data.insert("TaskId".to_string(), AttributeValue::S(task_id.clone()));
 
         let response = self
+            .ctx
             .client
             .put_item()
             .table_name(self.table_name.clone())
@@ -146,6 +154,7 @@ impl AWSDynamoStorage for DynamoStorage {
         names.insert("#LastUpdate".to_string(), "LastUpdate".to_string());
 
         let response = self
+            .ctx
             .client
             .update_item()
             .table_name(self.table_name.clone())
@@ -196,7 +205,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .token
-            .update_mint_info(&self.client, contract_address, token_id_hex, info)
+            .update_mint_info(&self.ctx, contract_address, token_id_hex, info)
             .await
         {
             Ok(_) => Ok(()),
@@ -217,9 +226,10 @@ impl Storage for DynamoStorage {
         let does_exist = self
             .provider
             .token
-            .get_token(&self.client, &token.contract_address, &token.token_id_hex)
+            .get_token(&self.ctx, &token.contract_address, &token.token_id_hex)
             .await
             .map_err(|_| StorageError::DatabaseError)?
+            .into_inner()
             .is_some();
 
         if does_exist {
@@ -227,7 +237,7 @@ impl Storage for DynamoStorage {
                 .provider
                 .token
                 .update_owner(
-                    &self.client,
+                    &self.ctx,
                     &token.contract_address,
                     &token.token_id_hex,
                     &token.owner,
@@ -253,7 +263,7 @@ impl Storage for DynamoStorage {
             match self
                 .provider
                 .token
-                .register_token(&self.client, &data, block_timestamp)
+                .register_token(&self.ctx, &data, block_timestamp)
                 .await
             {
                 Ok(_) => Ok(()),
@@ -275,7 +285,7 @@ impl Storage for DynamoStorage {
         let info = match self
             .provider
             .event
-            .get_event(&self.client, &event.contract_address, &event.event_id)
+            .get_event(&self.ctx, &event.contract_address, &event.event_id)
             .await
         {
             Ok(i) => i,
@@ -285,14 +295,14 @@ impl Storage for DynamoStorage {
             }
         };
 
-        if info.is_some() {
+        if info.inner().is_some() {
             return Err(StorageError::AlreadyExists);
         }
 
         match self
             .provider
             .event
-            .register_event(&self.client, event, block_timestamp)
+            .register_event(&self.ctx, event, block_timestamp)
             .await
         {
             Ok(_) => Ok(()),
@@ -312,11 +322,11 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .contract
-            .get_contract(&self.client, contract_address)
+            .get_contract(&self.ctx, contract_address)
             .await
         {
             Ok(maybe_contract) => {
-                if let Some(contract) = maybe_contract {
+                if let Some(contract) = maybe_contract.into_inner() {
                     // unwrap should be safe here as the type is controlled by
                     // the `ContractInfo` directly.
                     Ok(ContractType::from_str(&contract.contract_type).unwrap())
@@ -344,7 +354,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .contract
-            .register_contract(&self.client, info, block_timestamp)
+            .register_contract(&self.ctx, info, block_timestamp)
             .await
         {
             Ok(_) => Ok(()),
@@ -366,7 +376,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .block
-            .set_info(&self.client, block_number, block_timestamp, &info)
+            .set_info(&self.ctx.client, block_number, block_timestamp, &info)
             .await
         {
             Ok(_) => Ok(()),
@@ -383,7 +393,7 @@ impl Storage for DynamoStorage {
         let info = match self
             .provider
             .block
-            .get_info(&self.client, block_number)
+            .get_info(&self.ctx.client, block_number)
             .await
         {
             Ok(i) => i,
@@ -414,7 +424,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .block
-            .clean(&self.client, block_timestamp, block_number)
+            .clean(&self.ctx.client, block_timestamp, block_number)
             .await
         {
             Ok(_) => Ok(()),
