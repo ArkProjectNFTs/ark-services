@@ -1,7 +1,5 @@
 mod aws_s3_file_manager;
 
-use std::{env, time::Duration};
-
 use anyhow::Result;
 use ark_dynamodb::metadata_storage::MetadataStorage;
 use arkproject::{
@@ -11,8 +9,9 @@ use arkproject::{
     },
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
-
 use dotenv::dotenv;
+use starknet::core::types::FieldElement;
+use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{error, info, span, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
@@ -39,15 +38,28 @@ async fn main() -> Result<()> {
     let mut metadata_manager =
         MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
 
+    let contract_address_filter = match env::var("METADATA_CONTRACT_ADDRESS_FILTER") {
+        Ok(value) => {
+            let contract_address_field_element = FieldElement::from_hex_be(value.as_str())
+                .expect("Invalid METADATA_CONTRACT_ADDRESS_FILTER");
+            Some(contract_address_field_element)
+        }
+        Err(_) => None,
+    };
+
     loop {
-        match metadata_storage.find_token_ids_without_metadata().await {
+        match metadata_storage
+            .find_token_ids_without_metadata(contract_address_filter)
+            .await
+        {
             Ok(tokens) => {
                 if tokens.is_empty() {
                     info!("No tokens to refresh (without metadata)");
                     sleep(Duration::from_secs(10)).await;
                     continue;
                 } else {
-                    for (contract_address, token_id) in tokens {
+                    for token in tokens {
+                        let (contract_address, token_id) = token;
                         match metadata_manager
                             .refresh_token_metadata(
                                 contract_address,

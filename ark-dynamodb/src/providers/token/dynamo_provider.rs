@@ -200,16 +200,22 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn get_token_without_metadata(
         &self,
         client: &Self::Client,
+        contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError> {
+        let sort_key = match contract_address_filter {
+            Some(contract_address) => format!("CONTRACT#0x{:064x}", contract_address),
+            None => "CONTRACT".to_string(),
+        };
         let query_result = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI5PK-GSI5SK-index")
-            .key_condition_expression("GSI5PK = :gsi_pk")
+            .key_condition_expression("GSI5PK = :gsi_pk AND begins_with(GSI5SK, :gsi_sk)")
             .expression_attribute_values(
                 ":gsi_pk",
                 AttributeValue::S(String::from("METADATA#false")),
             )
+            .expression_attribute_values(":gsi_sk", AttributeValue::S(sort_key))
             .send()
             .await;
 
@@ -241,11 +247,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                                 if let Some(AttributeValue::S(token_id_attribute_value)) =
                                     data_m.get("TokenIdHex")
                                 {
-                                    info!(
-                                        "token_id_attribute_value: {:?}",
-                                        token_id_attribute_value
-                                    );
-
                                     let cairo_u256_result =
                                         CairoU256::from_hex_be(token_id_attribute_value);
 
@@ -265,7 +266,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                         }
                     }
                 }
-
                 return Ok(results);
             }
             Err(_) => {

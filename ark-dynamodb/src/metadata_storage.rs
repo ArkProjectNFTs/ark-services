@@ -1,3 +1,4 @@
+use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 use anyhow::Result;
 use arkproject::{
     metadata::{
@@ -10,9 +11,7 @@ use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
-use tracing::{error, info};
-
-use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
+use tracing::error;
 
 pub struct MetadataStorage {
     ctx: DynamoDbCtx,
@@ -76,21 +75,14 @@ impl Storage for MetadataStorage {
         Err(StorageError::DatabaseError)
     }
 
-    async fn find_token_ids_without_metadata_in_collection(
-        &self,
-        _contract_address: FieldElement,
-    ) -> Result<Vec<CairoU256>, StorageError> {
-        info!("find_token_ids_without_metadata_in_collection...");
-        Err(StorageError::DatabaseError)
-    }
-
     async fn find_token_ids_without_metadata(
         &self,
+        contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, StorageError> {
         match self
             .provider
             .token
-            .get_token_without_metadata(&self.ctx.client)
+            .get_token_without_metadata(&self.ctx.client, contract_address_filter)
             .await
         {
             Ok(tokens) => {
