@@ -12,10 +12,11 @@ use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
 use tracing::{error, info};
 
-use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider};
+use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 
 pub struct MetadataStorage {
-    client: Client,
+    ctx: DynamoDbCtx,
+    table_name: String,
     provider: ArkDynamoDbProvider,
 }
 
@@ -23,8 +24,19 @@ impl MetadataStorage {
     pub async fn new(table_name: String) -> Self {
         let config = load_from_env().await;
         let client = Client::new(&config);
-        let provider = ArkDynamoDbProvider::new(&table_name);
-        Self { client, provider }
+        let ctx = DynamoDbCtx {
+            client,
+            exclusive_start_key: None,
+        };
+
+        // Internally, we want more items to be loaded until reaching 1MB.
+        let limit = Some(1000);
+        let provider = ArkDynamoDbProvider::new(&table_name, limit);
+        Self {
+            ctx,
+            table_name,
+            provider,
+        }
     }
 }
 
@@ -39,18 +51,21 @@ impl Storage for MetadataStorage {
         let token_id_hex = token_id.to_hex();
         let contract_address_hex = format!("0x{:064x}", contract_address);
 
-        match self
+        let result = self
             .provider
             .token
             .update_metadata(
-                &self.client,
+                &self.ctx,
                 contract_address_hex.as_str(),
                 token_id_hex.clone().as_str(),
                 &token_metadata,
             )
-            .await
-        {
-            Ok(()) => Ok(()),
+            .await;
+
+        match result {
+            Ok(_) => {
+                return Ok(());
+            }
             Err(e) => {
                 error!("{}", e.to_string());
                 return Err(StorageError::DatabaseError);
@@ -80,7 +95,7 @@ impl Storage for MetadataStorage {
         match self
             .provider
             .token
-            .get_token_without_metadata(&self.client)
+            .get_token_without_metadata(&self.ctx.client)
             .await
         {
             Ok(tokens) => {
