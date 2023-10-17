@@ -112,4 +112,21 @@ mod tests {
             },
         }
     }
+
+    #[tokio::test]
+    async fn params_address_lowercase() {
+        let mut params = HashMap::new();
+        params.insert(
+            "owner_address".to_string(),
+            "0x00A3244a4d2C7C69C70951A003eBA5c32707Cef3CdfB6B27cA63582f51aee078".to_string(),
+        );
+
+        let req = Request::default().with_path_parameters(params.clone());
+
+        let address = get_params(&req).unwrap();
+        assert_eq!(
+            address,
+            "0x00a3244a4d2c7c69c70951a003eba5c32707cef3cdfb6b27ca63582f51aee078"
+        );
+    }
 }
