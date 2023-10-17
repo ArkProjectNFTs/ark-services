@@ -105,7 +105,7 @@ pub enum ProviderError {
     DataValueError(String),
     #[error("Pagination cache error: {0}")]
     PaginationCacheError(String),
-    #[error("Parsing error")]
+    #[error("Parsing error: {0}")]
     ParsingError(String),
 }
 
