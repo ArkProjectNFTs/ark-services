@@ -21,13 +21,14 @@ members = [
   "ark-lambdas/apigw/lambda-get-owner-tokens",
   "ark-lambdas/apigw/lambda-get-token",
   "ark-lambdas/apigw/lambda-get-token-events",
+  "ark-metadata-refresh",
 ]
 resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0"
 ark-dynamodb = { path = "ark-dynamodb" }
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.1.1" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.1.2" }
 #arkproject = { path = "../ark-project"} 
 async-trait = "0.1.73"
 lambda-http-common = { path = "ark-lambdas/apigw/lambda-http-common" }

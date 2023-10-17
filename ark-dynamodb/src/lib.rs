@@ -1,6 +1,7 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub mod metadata_storage;
 pub mod pagination;
 pub mod providers;
 pub mod storage;
@@ -104,6 +105,8 @@ pub enum ProviderError {
     DataValueError(String),
     #[error("Pagination cache error: {0}")]
     PaginationCacheError(String),
+    #[error("Parsing error")]
+    ParsingError(String),
 }
 
 /// Returns a newly initialized DynamoClient.

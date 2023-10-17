@@ -1,14 +1,16 @@
-use arkproject::metadata::types::TokenMetadata;
-use arkproject::pontos::storage::types::TokenMintInfo;
-use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
-use aws_sdk_dynamodb::Client as DynamoClient;
-use std::collections::HashMap;
-
 use super::ArkTokenProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::providers::token::types::TokenData;
 use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
+use arkproject::metadata::types::TokenMetadata;
+use arkproject::pontos::storage::types::TokenMintInfo;
+use arkproject::starknet::CairoU256;
+use async_trait::async_trait;
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
+use aws_sdk_dynamodb::Client as DynamoClient;
+use starknet::core::types::FieldElement;
+use std::collections::HashMap;
+use tracing::info;
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -192,6 +194,85 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             Ok(DynamoDbOutput::new(Some(token_data), &r.consumed_capacity))
         } else {
             Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
+        }
+    }
+
+    async fn get_token_without_metadata(
+        &self,
+        client: &Self::Client,
+    ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError> {
+        let query_result = client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI5PK-GSI5SK-index")
+            .key_condition_expression("GSI5PK = :gsi_pk")
+            .expression_attribute_values(
+                ":gsi_pk",
+                AttributeValue::S(String::from("METADATA#false")),
+            )
+            .send()
+            .await;
+
+        match query_result {
+            Ok(query_output) => {
+                if query_output.items.is_none() {
+                    return Ok(vec![]);
+                }
+
+                let mut results: Vec<(FieldElement, CairoU256)> = Vec::new();
+                let items = query_output.items.unwrap();
+
+                for item in items.iter() {
+                    if let Some(data) = item.get("Data") {
+                        if data.is_m() {
+                            let data_m = data.as_m().unwrap();
+                            if let Some(AttributeValue::S(contract_address_attribute_value)) =
+                                data_m.get("ContractAddress")
+                            {
+                                let contract_address =
+                                    FieldElement::from_hex_be(contract_address_attribute_value)
+                                        .map_err(|_| {
+                                            ProviderError::ParsingError(
+                                                "Contract address is not a valid field element"
+                                                    .to_string(),
+                                            )
+                                        })?;
+
+                                if let Some(AttributeValue::S(token_id_attribute_value)) =
+                                    data_m.get("TokenIdHex")
+                                {
+                                    info!(
+                                        "token_id_attribute_value: {:?}",
+                                        token_id_attribute_value
+                                    );
+
+                                    let cairo_u256_result =
+                                        CairoU256::from_hex_be(token_id_attribute_value);
+
+                                    match cairo_u256_result {
+                                        Ok(token_id) => {
+                                            info!("token_id: {:?}", token_id);
+                                            results.push((contract_address, token_id));
+                                        }
+                                        Err(_) => {
+                                            return Err(ProviderError::DataValueError(
+                                                String::from("Invalid token id"),
+                                            ));
+                                        }
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Ok(results);
+            }
+            Err(_) => {
+                return Err(ProviderError::DatabaseError(String::from(
+                    "Failed to query DynamoDB",
+                )));
+            }
         }
     }
 
