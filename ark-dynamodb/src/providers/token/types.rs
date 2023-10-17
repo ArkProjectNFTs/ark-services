@@ -74,29 +74,34 @@ impl TokenData {
         if let Some(attributes) = &meta.attributes {
             let mut attributes_hashmap: HashMap<String, AttributeValue> = HashMap::new();
             for (_, attribute) in attributes.iter().enumerate() {
-                // if let Some(display_type) = attribute.display_type {
-                //     match display_type {
-                //         DisplayType::Number() => attributes_hashmap.insert(
-                //             String::from("DisplayType"),
-                //             AttributeValue::S(String::from("number")),
-                //         ),
-                //         DisplayType::BoostNumber() => attributes_hashmap.insert(
-                //             String::from("DisplayType"),
-                //             AttributeValue::S(String::from("boost_number")),
-                //         ),
-                //         DisplayType::BoostPercentage() => attributes_hashmap.insert(
-                //             String::from("DisplayType"),
-                //             AttributeValue::S(String::from("boost_percentage")),
-                //         ),
-                //         DisplayType::Date() => attributes_hashmap.insert(
-                //             String::from("DisplayType"),
-                //             AttributeValue::S(String::from("date")),
-                //         ),
-                //         _ => {
-                //             // TODO
-                //         }
-                //     }
-                // }
+                if let Some(display_type) = &attribute.display_type {
+                    match display_type {
+                        arkproject::metadata::types::DisplayType::Number => {
+                            attributes_hashmap.insert(
+                                String::from("DisplayType"),
+                                AttributeValue::S(String::from("number")),
+                            );
+                        }
+                        arkproject::metadata::types::DisplayType::BoostPercentage => {
+                            attributes_hashmap.insert(
+                                String::from("DisplayType"),
+                                AttributeValue::S(String::from("boost_number")),
+                            );
+                        }
+                        arkproject::metadata::types::DisplayType::BoostNumber => {
+                            attributes_hashmap.insert(
+                                String::from("DisplayType"),
+                                AttributeValue::S(String::from("boost_percentage")),
+                            );
+                        }
+                        arkproject::metadata::types::DisplayType::Date => {
+                            attributes_hashmap.insert(
+                                String::from("DisplayType"),
+                                AttributeValue::S(String::from("date")),
+                            );
+                        }
+                    }
+                }
 
                 if let Some(trait_type) = &attribute.trait_type {
                     attributes_hashmap.insert(
