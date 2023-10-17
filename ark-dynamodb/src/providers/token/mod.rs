@@ -56,6 +56,7 @@ pub trait ArkTokenProvider {
     async fn get_token_without_metadata(
         &self,
         client: &Self::Client,
+        contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError>;
 
     async fn register_token(
