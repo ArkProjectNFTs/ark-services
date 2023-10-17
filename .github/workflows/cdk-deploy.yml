@@ -84,7 +84,9 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cd infrastructure/cdk
-          pnpm cdk deploy --require-approval never -c branch=${{ github.ref }} -c isPullRequest=false
+          pnpm cdk deploy --require-approval never -c branch=${{ github.ref_name }} -c isPullRequest=false
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "GitHub Ref Name: ${{ github.ref_name }}"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
