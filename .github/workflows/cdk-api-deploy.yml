@@ -72,7 +72,7 @@ jobs:
       - name: CDK Bootstrap (if necessary)
         run: |
           cd infrastructure/cdk
-          pnpm cdk bootstrap
+          pnpm cdk bootstrap -c branch=${{ github.ref_name }} -c isPullRequest=${{ github.event_name == 'pull_request' }} -c prNumber=${{ github.event.number || '' }} -c targetBranch=${{ github.event.pull_request.base.ref || '' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
