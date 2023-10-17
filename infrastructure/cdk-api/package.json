@@ -1,5 +1,5 @@
 {
-  "name": "cdk",
+  "name": "cdk-api",
   "version": "0.1.0",
   "bin": {
     "cdk": "bin/cdk.js"
