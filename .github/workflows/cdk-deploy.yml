@@ -94,7 +94,7 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: CDK Deploy (on PR open/synchronize)
-        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize' && github.event.pull_request.head.ref != 'dev' && github.event.pull_request.base.ref != 'main')
         run: |
           cd infrastructure/cdk
           pnpm cdk deploy --require-approval never -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }}
