@@ -1,4 +1,4 @@
-name: APIs CDK deploy on push and PR to main
+name: CDK API Stack Deploy on Main & PR
 
 on:
   push:
