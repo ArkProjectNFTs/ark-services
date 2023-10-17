@@ -14,8 +14,12 @@ const stages = ["mainnet", "testnet"];
 
 const prNumber = app.node.tryGetContext("prNumber") || process.env.PR_NUMBER;
 
+console.log('Branch:', branch);
+console.log('Is Pull Request:', isPullRequest);
+console.log('PR Number:', prNumber);
+
 let stackNameSuffix;
-if (isPullRequest) {
+if (isPullRequest === 'true') {
   stackNameSuffix = `pr-${prNumber}`;
 } else {
   stackNameSuffix = branch === "main" ? "production" : "staging";
