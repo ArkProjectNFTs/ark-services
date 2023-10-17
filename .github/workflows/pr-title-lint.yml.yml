@@ -1,4 +1,4 @@
-name: "Lint PR"
+name: "Lint PR for Semantic Title"
 
 on:
   pull_request_target:
