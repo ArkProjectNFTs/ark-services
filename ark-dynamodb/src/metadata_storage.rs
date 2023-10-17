@@ -16,7 +16,6 @@ use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 
 pub struct MetadataStorage {
     ctx: DynamoDbCtx,
-    table_name: String,
     provider: ArkDynamoDbProvider,
 }
 
@@ -32,11 +31,7 @@ impl MetadataStorage {
         // Internally, we want more items to be loaded until reaching 1MB.
         let limit = Some(1000);
         let provider = ArkDynamoDbProvider::new(&table_name, limit);
-        Self {
-            ctx,
-            table_name,
-            provider,
-        }
+        Self { ctx, provider }
     }
 }
 
