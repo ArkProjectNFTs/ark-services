@@ -55,6 +55,7 @@ pub fn require_hex_or_dec_param(
     let maybe_param = string_param(event, param_name, source);
 
     if let Some(v) = maybe_param {
+        let v = v.to_lowercase();
         Ok(hex_or_dec_from_str(&v, param_name)?)
     } else {
         Err(LambdaHttpError::ParamMissing(format!(
@@ -74,6 +75,8 @@ pub fn require_hex_param(
     let maybe_param = string_param(event, param_name, source);
 
     if let Some(v) = maybe_param {
+        let v = v.to_lowercase();
+
         if is_hexadecimal_with_prefix(&v) {
             Ok(pad_hex(&v))
         } else {
