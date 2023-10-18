@@ -10,31 +10,29 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as logs from "aws-cdk-lib/aws-logs";
 
-const cacheSettings = {
-  cacheTtl: cdk.Duration.minutes(5),
-  dataEncrypted: true,
-};
+// const cacheSettings = {
+//   cacheTtl: cdk.Duration.minutes(5),
+//   dataEncrypted: true,
+// };
 
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
-    let apiSuffix: string;
+    let apiSuffix: string= "default";
 
     if (props.isPullRequest) {
-      apiSuffix = props.branch;
-    } else if (props.branch === "main") {
+      apiSuffix = `pr_${props.prNumber}`;
+    } else if (props.isRelease) {
       apiSuffix = "production";
-    } else {
+    } else if (props.branch === "main") {
       apiSuffix = "staging";
     }
 
-    const apiName = `ark-project-api-${apiSuffix}${
-      props.isPullRequest ? "_pr" : ""
-    }`;
+    const apiName = `ark-project-api-${apiSuffix}`;
 
     const api = new apigateway.RestApi(
       this,
-      `ark-project-api-gateway-${apiSuffix}${props.isPullRequest ? "_pr" : ""}`,
+      `ark-project-api-gateway-${apiSuffix}`,
       {
         restApiName: apiName,
         deploy: false, // Important: Disable automatic deployment
@@ -70,24 +68,20 @@ export class ArkStack extends cdk.Stack {
     // Create deployment
     const deployment = new apigateway.Deployment(
       this,
-      `ark-project-deployment-${apiSuffix}-${stageName}${
-        isPullRequest ? "_pr" : ""
-      }`,
+      `ark-project-deployment-${apiSuffix}-${stageName}`,
       { api }
     );
 
     // Create a log group for the stage
     const stageLogGroup = new logs.LogGroup(
       this,
-      `ark-project-log-${stageName}${isPullRequest ? "_pr" : ""}`
+      `ark-project-log-${stageName}`
     );
 
     // Create stage and point it to the latest deployment
     const stage = new apigateway.Stage(
       this,
-      `ark-project-stage-${apiSuffix}-${stageName}${
-        isPullRequest ? "_pr" : ""
-      }`,
+      `ark-project-stage-${apiSuffix}-${stageName}`,
       {
         deployment,
         stageName,
