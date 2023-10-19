@@ -1,5 +1,5 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { type NextAuthOptions } from "next-auth";
+import { type NextAuthOptions, type User } from "next-auth";
 import { getServerSession } from "next-auth/next";
 import EmailProvider from "next-auth/providers/email";
 import { Resend } from "resend";
@@ -7,6 +7,22 @@ import { Resend } from "resend";
 import LoginVerificationCode from "~/emails/login-verification-code";
 import { env } from "~/env.mjs";
 import { db } from "./db";
+
+type UserId = string;
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: UserId;
+  }
+}
+
+declare module "next-auth" {
+  interface Session {
+    user: User & {
+      id: UserId;
+    };
+  }
+}
 
 const resend = new Resend(env.RESEND_API_KEY);
 
@@ -33,8 +49,14 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: "/login/verify",
   },
   callbacks: {
+    signIn({ user }) {
+      const email = user.email ?? "";
+      const [, domain] = email.split("@");
+
+      return domain === "screenshot.co";
+    },
     session({ token, session }) {
-      if (token) {
+      if (token && session.user) {
         session.user.id = token.id;
         session.user.name = token.name;
         session.user.email = token.email;
