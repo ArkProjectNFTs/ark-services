@@ -9,9 +9,9 @@ use arkproject::{
     },
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
+use core::panic;
 use dotenv::dotenv;
 use starknet::core::types::FieldElement;
-use core::panic;
 use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{error, info, span, Level};
@@ -31,29 +31,29 @@ async fn main() -> Result<()> {
         env::var("AWS_NFT_IMAGE_BUCKET_NAME").expect("AWS_NFT_IMAGE_BUCKET_NAME must be set");
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
 
-
-
-
     let ipfs_timeout_duration = match env::var("METADATA_IPFS_TIMEOUT_IN_SEC") {
         Ok(value) => {
-            let timeout = value.parse::<u64>().expect("Invalid METADATA_IPFS_TIMEOUT_IN_SEC");
+            let timeout = value
+                .parse::<u64>()
+                .expect("Invalid METADATA_IPFS_TIMEOUT_IN_SEC");
             Duration::from_secs(timeout)
         }
         Err(_) => {
             panic!("METADATA_IPFS_TIMEOUT_IN_SEC must be set");
-        },
+        }
     };
 
     let loop_delay_duration = match env::var("METADATA_LOOP_DELAY_IN_SEC") {
         Ok(value) => {
-            let timeout = value.parse::<u64>().expect("Invalid METADATA_LOOP_DELAY_IN_SEC");
+            let timeout = value
+                .parse::<u64>()
+                .expect("Invalid METADATA_LOOP_DELAY_IN_SEC");
             Duration::from_secs(timeout)
         }
         Err(_) => {
             panic!("METADATA_LOOP_DELAY_IN_SEC must be set");
-        },
+        }
     };
-
 
     let metadata_storage = MetadataStorage::new(table_name).await;
     let starknet_client = StarknetClientHttp::new(&rpc_url)?;
