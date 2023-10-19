@@ -11,6 +11,7 @@ use arkproject::{
 };
 use dotenv::dotenv;
 use starknet::core::types::FieldElement;
+use core::panic;
 use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{error, info, span, Level};
@@ -30,6 +31,30 @@ async fn main() -> Result<()> {
         env::var("AWS_NFT_IMAGE_BUCKET_NAME").expect("AWS_NFT_IMAGE_BUCKET_NAME must be set");
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
 
+
+
+
+    let ipfs_timeout_duration = match env::var("METADATA_IPFS_TIMEOUT_IN_SEC") {
+        Ok(value) => {
+            let timeout = value.parse::<u64>().expect("Invalid METADATA_IPFS_TIMEOUT_IN_SEC");
+            Duration::from_secs(timeout)
+        }
+        Err(_) => {
+            panic!("METADATA_IPFS_TIMEOUT_IN_SEC must be set");
+        },
+    };
+
+    let loop_delay_duration = match env::var("METADATA_LOOP_DELAY_IN_SEC") {
+        Ok(value) => {
+            let timeout = value.parse::<u64>().expect("Invalid METADATA_LOOP_DELAY_IN_SEC");
+            Duration::from_secs(timeout)
+        }
+        Err(_) => {
+            panic!("METADATA_LOOP_DELAY_IN_SEC must be set");
+        },
+    };
+
+
     let metadata_storage = MetadataStorage::new(table_name).await;
     let starknet_client = StarknetClientHttp::new(&rpc_url)?;
     let file_manager = AWSFileManager::new(bucket_name);
@@ -38,10 +63,10 @@ async fn main() -> Result<()> {
     let mut metadata_manager =
         MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
 
-    let contract_address_filter = match env::var("METADATA_CONTRACT_ADDRESS_FILTER") {
+    let contract_address_filter = match env::var("METADATA_CONTRACT_FILTER") {
         Ok(value) => {
             let contract_address_field_element = FieldElement::from_hex_be(value.as_str())
-                .expect("Invalid METADATA_CONTRACT_ADDRESS_FILTER");
+                .expect("Invalid METADATA_CONTRACT_FILTER");
             Some(contract_address_field_element)
         }
         Err(_) => None,
@@ -55,7 +80,7 @@ async fn main() -> Result<()> {
             Ok(tokens) => {
                 if tokens.is_empty() {
                     info!("No tokens to refresh (without metadata)");
-                    sleep(Duration::from_secs(10)).await;
+                    sleep(loop_delay_duration).await;
                     continue;
                 } else {
                     for token in tokens {
@@ -66,7 +91,7 @@ async fn main() -> Result<()> {
                                 token_id,
                                 ImageCacheOption::Save,
                                 ipfs_gateway_uri.as_str(),
-                                Duration::from_secs(5),
+                                ipfs_timeout_duration,
                             )
                             .await
                         {
@@ -79,7 +104,7 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 error!("Error: {:?}", e);
-                sleep(Duration::from_secs(10)).await;
+                sleep(loop_delay_duration).await;
                 continue;
             }
         };
