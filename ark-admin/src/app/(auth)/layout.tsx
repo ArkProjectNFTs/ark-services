@@ -18,21 +18,21 @@ export default async function AuthLayout({
   return (
     <html
       lang="en"
-      className="light"
+      className="light h-full"
       style={{ colorScheme: "light" }}
       suppressHydrationWarning
     >
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="light"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <body className="h-full">
+      <body className="h-full">
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
           <Toaster />
-        </body>
-      </ThemeProvider>
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
