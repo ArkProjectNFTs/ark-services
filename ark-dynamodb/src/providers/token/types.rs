@@ -72,64 +72,69 @@ impl TokenData {
         );
 
         if let Some(attributes) = &meta.normalized.attributes {
-            let mut attributes_hashmap: HashMap<String, AttributeValue> = HashMap::new();
-            for (_, attribute) in attributes.iter().enumerate() {
+            let mut attribute_values = vec![];
+
+            for attribute in attributes {
+                let mut attribute_map = HashMap::new();
+
                 if let Some(display_type) = &attribute.display_type {
-                    match display_type {
-                        arkproject::metadata::types::DisplayType::Number => {
-                            attributes_hashmap.insert(
-                                String::from("DisplayType"),
-                                AttributeValue::S(String::from("number")),
-                            );
-                        }
-                        arkproject::metadata::types::DisplayType::BoostPercentage => {
-                            attributes_hashmap.insert(
-                                String::from("DisplayType"),
-                                AttributeValue::S(String::from("boost_number")),
-                            );
-                        }
-                        arkproject::metadata::types::DisplayType::BoostNumber => {
-                            attributes_hashmap.insert(
-                                String::from("DisplayType"),
-                                AttributeValue::S(String::from("boost_percentage")),
-                            );
-                        }
-                        arkproject::metadata::types::DisplayType::Date => {
-                            attributes_hashmap.insert(
-                                String::from("DisplayType"),
-                                AttributeValue::S(String::from("date")),
-                            );
-                        }
-                    }
+                    attribute_map.insert(
+                        String::from("DisplayType"),
+                        AttributeValue::S(display_type.to_string()),
+                    );
                 }
 
                 if let Some(trait_type) = &attribute.trait_type {
-                    attributes_hashmap.insert(
+                    attribute_map.insert(
                         String::from("TraitType"),
-                        AttributeValue::S(trait_type.to_string()),
+                        AttributeValue::S(trait_type.clone()),
                     );
                 }
 
                 match &attribute.value {
                     MetadataAttributeValue::String(value) => {
-                        let attribute_value = AttributeValue::S(value.clone());
-                        attributes_hashmap.insert(String::from("Value"), attribute_value);
+                        attribute_map.insert("Value".to_string(), AttributeValue::S(value.clone()));
                     }
                     MetadataAttributeValue::Bool(value) => {
-                        let attribute_value = AttributeValue::Bool(*value);
-                        attributes_hashmap.insert(String::from("Value"), attribute_value);
+                        attribute_map
+                            .insert("Value".to_string(), AttributeValue::Bool(value.clone()));
+                    }
+                    MetadataAttributeValue::BoolVec(values) => {
+                        let attribute_values: Vec<AttributeValue> = values
+                            .into_iter()
+                            .map(|value| AttributeValue::Bool(value.clone()))
+                            .collect();
+                        attribute_map
+                            .insert("Value".to_string(), AttributeValue::L(attribute_values));
                     }
                     MetadataAttributeValue::Number(value) => {
-                        let attribute_value = AttributeValue::N(value.to_string());
-                        attributes_hashmap.insert(String::from("Value"), attribute_value);
+                        attribute_map
+                            .insert("Value".to_string(), AttributeValue::N(value.to_string()));
                     }
-                    _ => {}
+                    MetadataAttributeValue::NumberVec(values) => {
+                        let attribute_values: Vec<AttributeValue> = values
+                            .into_iter()
+                            .map(|value| AttributeValue::N(value.to_string()))
+                            .collect();
+                        attribute_map
+                            .insert("Value".to_string(), AttributeValue::L(attribute_values));
+                    }
+                    MetadataAttributeValue::StringVec(values) => {
+                        let attribute_values: Vec<AttributeValue> = values
+                            .into_iter()
+                            .map(|value| AttributeValue::S(value.clone()))
+                            .collect();
+                        attribute_map
+                            .insert("Value".to_string(), AttributeValue::L(attribute_values));
+                    }
                 };
+
+                attribute_values.push(AttributeValue::M(attribute_map));
             }
 
             map.insert(
-                String::from("Attributes"),
-                AttributeValue::M(attributes_hashmap),
+                "Attributes".to_string(),
+                AttributeValue::L(attribute_values),
             );
         }
 
