@@ -96,13 +96,12 @@ impl TokenData {
                         attribute_map.insert("Value".to_string(), AttributeValue::S(value.clone()));
                     }
                     MetadataAttributeValue::Bool(value) => {
-                        attribute_map
-                            .insert("Value".to_string(), AttributeValue::Bool(value.clone()));
+                        attribute_map.insert("Value".to_string(), AttributeValue::Bool(*value));
                     }
                     MetadataAttributeValue::BoolVec(values) => {
                         let attribute_values: Vec<AttributeValue> = values
-                            .into_iter()
-                            .map(|value| AttributeValue::Bool(value.clone()))
+                            .iter()
+                            .map(|value| AttributeValue::Bool(*value))
                             .collect();
                         attribute_map
                             .insert("Value".to_string(), AttributeValue::L(attribute_values));
@@ -113,7 +112,7 @@ impl TokenData {
                     }
                     MetadataAttributeValue::NumberVec(values) => {
                         let attribute_values: Vec<AttributeValue> = values
-                            .into_iter()
+                            .iter()
                             .map(|value| AttributeValue::N(value.to_string()))
                             .collect();
                         attribute_map
@@ -121,7 +120,7 @@ impl TokenData {
                     }
                     MetadataAttributeValue::StringVec(values) => {
                         let attribute_values: Vec<AttributeValue> = values
-                            .into_iter()
+                            .iter()
                             .map(|value| AttributeValue::S(value.clone()))
                             .collect();
                         attribute_map
