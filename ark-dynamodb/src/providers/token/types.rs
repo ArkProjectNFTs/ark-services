@@ -36,37 +36,37 @@ impl TokenData {
     }
 
     pub fn metadata_to_map(meta: &TokenMetadata) -> HashMap<String, AttributeValue> {
-        let mut map = HashMap::new();
+        let mut metadata_map = HashMap::new();
 
-        map.insert(
+        metadata_map.insert(
             "Image".to_string(),
             AttributeValue::S(meta.normalized.image.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "ImageData".to_string(),
             AttributeValue::S(meta.normalized.image_data.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "ExternalUrl".to_string(),
             AttributeValue::S(meta.normalized.external_url.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "Description".to_string(),
             AttributeValue::S(meta.normalized.description.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "Name".to_string(),
             AttributeValue::S(meta.normalized.name.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "BackgroundColor".to_string(),
             AttributeValue::S(meta.normalized.background_color.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "AnimationUrl".to_string(),
             AttributeValue::S(meta.normalized.animation_url.clone().unwrap_or_default()),
         );
-        map.insert(
+        metadata_map.insert(
             "YoutubeUrl".to_string(),
             AttributeValue::S(meta.normalized.youtube_url.clone().unwrap_or_default()),
         );
@@ -131,11 +131,23 @@ impl TokenData {
                 attribute_values.push(AttributeValue::M(attribute_map));
             }
 
-            map.insert(
+            metadata_map.insert(
                 "Attributes".to_string(),
                 AttributeValue::L(attribute_values),
             );
+
+            metadata_map.insert(
+                String::from("RawMetadata"),
+                AttributeValue::S(meta.raw.clone()),
+            );
         }
+
+        let mut map: HashMap<String, AttributeValue> = HashMap::new();
+        map.insert(
+            String::from("RawMetadata"),
+            AttributeValue::S(meta.raw.clone()),
+        );
+        map.insert(String::from("Metadata"), AttributeValue::M(metadata_map));
 
         map
     }
@@ -168,7 +180,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
                     // TODO: attributes -> Vec of attributes.
                     attributes: None,
                 },
-                raw: String::from(""),
+                raw: convert::attr_to_str(&m, "RawMetadata")?,
             }),
             _ => None,
         };
@@ -212,5 +224,96 @@ impl From<&TokenData> for HashMap<String, AttributeValue> {
         }
 
         map
+    }
+}
+
+#[cfg(test)]
+#[cfg(test)]
+mod tests {
+    use arkproject::metadata::types::MetadataAttribute;
+
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_metadata_to_map() {
+        let mock_metadata = TokenMetadata {
+            normalized: NormalizedMetadata {
+                image: Some("image_url".to_string()),
+                image_data: Some("image_data".to_string()),
+                external_url: Some("external_url".to_string()),
+                description: Some("description".to_string()),
+                name: Some("name".to_string()),
+                background_color: Some("color".to_string()),
+                animation_url: Some("animation_url".to_string()),
+                youtube_url: Some("youtube_url".to_string()),
+                attributes: Some(vec![MetadataAttribute {
+                    display_type: None,
+                    trait_type: Some("trait".to_string()),
+                    value: MetadataAttributeValue::String("value".to_string()),
+                }]),
+            },
+            raw: "raw_metadata".to_string(),
+        };
+
+        // Call the function
+        let result_map = TokenData::metadata_to_map(&mock_metadata);
+
+        // Build the expected result
+        let mut expected_map: HashMap<String, AttributeValue> = HashMap::new();
+        expected_map.insert(
+            "Image".to_string(),
+            AttributeValue::S("image_url".to_string()),
+        );
+        expected_map.insert(
+            "ImageData".to_string(),
+            AttributeValue::S("image_data".to_string()),
+        );
+        expected_map.insert(
+            "ExternalUrl".to_string(),
+            AttributeValue::S("external_url".to_string()),
+        );
+        expected_map.insert(
+            "Description".to_string(),
+            AttributeValue::S("description".to_string()),
+        );
+        expected_map.insert("Name".to_string(), AttributeValue::S("name".to_string()));
+        expected_map.insert(
+            "BackgroundColor".to_string(),
+            AttributeValue::S("color".to_string()),
+        );
+        expected_map.insert(
+            "AnimationUrl".to_string(),
+            AttributeValue::S("animation_url".to_string()),
+        );
+        expected_map.insert(
+            "YoutubeUrl".to_string(),
+            AttributeValue::S("youtube_url".to_string()),
+        );
+
+        let mut attribute_map = HashMap::new();
+        attribute_map.insert(
+            "TraitType".to_string(),
+            AttributeValue::S("trait".to_string()),
+        );
+        attribute_map.insert("Value".to_string(), AttributeValue::S("value".to_string()));
+        expected_map.insert(
+            "Attributes".to_string(),
+            AttributeValue::L(vec![AttributeValue::M(attribute_map)]),
+        );
+
+        expected_map.insert(
+            "RawMetadata".to_string(),
+            AttributeValue::S("raw_metadata".to_string()),
+        );
+
+        let mut final_expected_map: HashMap<String, AttributeValue> = HashMap::new();
+        final_expected_map.insert(
+            "RawMetadata".to_string(),
+            AttributeValue::S("raw_metadata".to_string()),
+        );
+        final_expected_map.insert("Metadata".to_string(), AttributeValue::M(expected_map));
+
+        assert_eq!(result_map, final_expected_map);
     }
 }
