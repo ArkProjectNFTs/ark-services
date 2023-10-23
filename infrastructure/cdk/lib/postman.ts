@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-export async function exportToPostman(env: string, stage: string, postmanApiKey: string, restApiId: string, region: string) {
+export async function exportToPostman(apiSuffix: string, stage: string, postmanApiKey: string, restApiId: string, region: string) {
     try {
         // Fetch the OpenAPI definition from API Gateway
         const apiExportUrl = `https://apigateway.${region}.amazonaws.com/restapis/${restApiId}/stages/${stage}/exports/oas30?extensions=postman`;
@@ -17,7 +17,7 @@ export async function exportToPostman(env: string, stage: string, postmanApiKey:
         const apiDefinition = await apiResponse.json() as { paths: string[] };
 
         // Update Postman collection
-        const collectionName = `ARK Project - ${env} - ${stage}`;
+        const collectionName = `ARK Project - ${apiSuffix} - ${stage}`;
         const headers = {
             'X-Api-Key': postmanApiKey,
             'Content-Type': 'application/json'
@@ -30,7 +30,7 @@ export async function exportToPostman(env: string, stage: string, postmanApiKey:
                 collection: {
                     info: {
                         name: collectionName,
-                        description: `API Collection for ${env} environment on ${stage} stage.`,
+                        description: `API Collection for ${apiSuffix} environment on ${stage} stage.`,
                         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
                     },
                     item: apiDefinition.paths // Convert the Swagger paths to Postman format
