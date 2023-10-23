@@ -9,6 +9,7 @@ import { ArkStackProps } from "./types";
 import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as logs from "aws-cdk-lib/aws-logs";
+import { exportToPostman } from "./postman";
 
 // const cacheSettings = {
 //   cacheTtl: cdk.Duration.minutes(5),
@@ -18,7 +19,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
-    let apiSuffix: string= "default";
+    let apiSuffix: string = "default";
 
     if (props.isPullRequest) {
       apiSuffix = `pr_${props.prNumber}`;
@@ -53,9 +54,18 @@ export class ArkStack extends cdk.Stack {
     tokensApi(this, versionedRoot, props.stages);
     ownerApi(this, versionedRoot, props.stages);
 
+    const postmanApiKey = process.env.POSTMAN_API_KEY || "";
+    const awsRegion = process.env.AWS_REGION || "";
     //loop foreach stage in props.stages
-    props.stages.forEach((stage: string) => {
+    props.stages.forEach(async (stage: string) => {
       this.createStage(api, apiSuffix, stage, props.isPullRequest);
+      await exportToPostman(
+        apiSuffix,
+        stage,
+        postmanApiKey,
+        api.restApiId,
+        awsRegion
+      );
     });
   }
 
