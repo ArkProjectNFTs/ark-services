@@ -2,7 +2,7 @@ use anyhow::Result;
 use arkproject::metadata::file_manager::{FileInfo, FileManager};
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::ByteStream;
-use tracing::{info, error, debug};
+use tracing::{debug, error, info};
 
 /// FileManager implementation that saves files to AWS S3.
 ///
@@ -54,7 +54,7 @@ impl FileManager for AWSFileManager {
                     "Failed to upload {} to AWS: {}",
                     file.name,
                     e
-                ))
+                ));
             }
         }
     }

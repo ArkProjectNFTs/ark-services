@@ -62,7 +62,7 @@ impl Storage for MetadataStorage {
             }
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError("".to_string()));
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -72,7 +72,7 @@ impl Storage for MetadataStorage {
         _contract_address: FieldElement,
         _token_id: CairoU256,
     ) -> Result<bool, StorageError> {
-        Err(StorageError::DatabaseError("".to_string()))
+        Err(StorageError::DatabaseError("Not implemented".to_string()))
     }
 
     async fn find_token_ids_without_metadata(
@@ -88,9 +88,7 @@ impl Storage for MetadataStorage {
             Ok(tokens) => {
                 return Ok(tokens);
             }
-            Err(e) => {
-                return Err(StorageError::DatabaseError(e.to_string()));
-            }
+            Err(e) => Err(StorageError::DatabaseError(e.to_string())),
         }
     }
 }

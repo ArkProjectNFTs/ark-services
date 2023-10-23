@@ -35,43 +35,55 @@ impl TokenData {
         map
     }
 
-    pub fn metadata_to_map(meta: &TokenMetadata) -> HashMap<String, AttributeValue> {
+    pub fn metadata_to_map(metadata: &TokenMetadata) -> HashMap<String, AttributeValue> {
         let mut metadata_map = HashMap::new();
 
         metadata_map.insert(
             "Image".to_string(),
-            AttributeValue::S(meta.normalized.image.clone().unwrap_or_default()),
+            AttributeValue::S(metadata.normalized.image.clone().unwrap_or_default()),
         );
         metadata_map.insert(
             "ImageData".to_string(),
-            AttributeValue::S(meta.normalized.image_data.clone().unwrap_or_default()),
+            AttributeValue::S(metadata.normalized.image_data.clone().unwrap_or_default()),
         );
         metadata_map.insert(
             "ExternalUrl".to_string(),
-            AttributeValue::S(meta.normalized.external_url.clone().unwrap_or_default()),
+            AttributeValue::S(metadata.normalized.external_url.clone().unwrap_or_default()),
         );
         metadata_map.insert(
             "Description".to_string(),
-            AttributeValue::S(meta.normalized.description.clone().unwrap_or_default()),
+            AttributeValue::S(metadata.normalized.description.clone().unwrap_or_default()),
         );
         metadata_map.insert(
             "Name".to_string(),
-            AttributeValue::S(meta.normalized.name.clone().unwrap_or_default()),
+            AttributeValue::S(metadata.normalized.name.clone().unwrap_or_default()),
         );
         metadata_map.insert(
             "BackgroundColor".to_string(),
-            AttributeValue::S(meta.normalized.background_color.clone().unwrap_or_default()),
+            AttributeValue::S(
+                metadata
+                    .normalized
+                    .background_color
+                    .clone()
+                    .unwrap_or_default(),
+            ),
         );
         metadata_map.insert(
             "AnimationUrl".to_string(),
-            AttributeValue::S(meta.normalized.animation_url.clone().unwrap_or_default()),
+            AttributeValue::S(
+                metadata
+                    .normalized
+                    .animation_url
+                    .clone()
+                    .unwrap_or_default(),
+            ),
         );
         metadata_map.insert(
             "YoutubeUrl".to_string(),
-            AttributeValue::S(meta.normalized.youtube_url.clone().unwrap_or_default()),
+            AttributeValue::S(metadata.normalized.youtube_url.clone().unwrap_or_default()),
         );
 
-        if let Some(attributes) = &meta.normalized.attributes {
+        if let Some(attributes) = &metadata.normalized.attributes {
             let mut attribute_values = vec![];
 
             for attribute in attributes {
@@ -138,14 +150,14 @@ impl TokenData {
 
             metadata_map.insert(
                 String::from("RawMetadata"),
-                AttributeValue::S(meta.raw.clone()),
+                AttributeValue::S(metadata.raw.clone()),
             );
         }
 
         let mut map: HashMap<String, AttributeValue> = HashMap::new();
         map.insert(
             String::from("RawMetadata"),
-            AttributeValue::S(meta.raw.clone()),
+            AttributeValue::S(metadata.raw.clone()),
         );
         map.insert(String::from("Metadata"), AttributeValue::M(metadata_map));
 
@@ -238,6 +250,7 @@ mod tests {
     #[test]
     fn test_metadata_to_map() {
         let mock_metadata = TokenMetadata {
+            raw: "{ \"image\": \"image_url\" }".to_string(),
             normalized: NormalizedMetadata {
                 image: Some("image_url".to_string()),
                 image_data: Some("image_data".to_string()),
@@ -253,7 +266,6 @@ mod tests {
                     value: MetadataAttributeValue::String("value".to_string()),
                 }]),
             },
-            raw: "raw_metadata".to_string(),
         };
 
         // Call the function
