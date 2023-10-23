@@ -23,8 +23,6 @@ use crate::aws_s3_file_manager::AWSFileManager;
 async fn main() -> Result<()> {
     dotenv().ok();
     init_tracing();
-    info!("Starting metadata refresh");
-
     let table_name: String =
         env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let bucket_name =
@@ -85,6 +83,13 @@ async fn main() -> Result<()> {
                 } else {
                     for token in tokens {
                         let (contract_address, token_id) = token;
+
+                        info!(
+                            "🔄 Refreshing metadata. Contract address: 0x{:064x} - Token ID: {}",
+                            contract_address,
+                            token_id.to_decimal(false)
+                        );
+
                         match metadata_manager
                             .refresh_token_metadata(
                                 contract_address,
@@ -95,7 +100,7 @@ async fn main() -> Result<()> {
                             )
                             .await
                         {
-                            Ok(_) => info!("Success"),
+                            Ok(_) => info!("✅ Metadata refreshed successfully"),
                             Err(e) => error!("Error: {:?}", e),
                         }
                     }

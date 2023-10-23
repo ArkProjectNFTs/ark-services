@@ -10,7 +10,6 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
-use tracing::info;
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -232,38 +231,61 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                     if let Some(data) = item.get("Data") {
                         if data.is_m() {
                             let data_m = data.as_m().unwrap();
-                            if let Some(AttributeValue::S(contract_address_attribute_value)) =
-                                data_m.get("ContractAddress")
-                            {
-                                let contract_address =
-                                    FieldElement::from_hex_be(contract_address_attribute_value)
-                                        .map_err(|_| {
-                                            ProviderError::ParsingError(
-                                                "Contract address is not a valid field element"
-                                                    .to_string(),
-                                            )
-                                        })?;
 
-                                if let Some(AttributeValue::S(token_id_attribute_value)) =
-                                    data_m.get("TokenIdHex")
-                                {
-                                    let cairo_u256_result =
-                                        CairoU256::from_hex_be(token_id_attribute_value);
+                            // Extracting contract address
+                            match data_m.get("ContractAddress") {
+                                Some(AttributeValue::S(contract_address_attribute_value)) => {
+                                    let contract_address_result =
+                                        FieldElement::from_hex_be(contract_address_attribute_value);
 
-                                    match cairo_u256_result {
-                                        Ok(token_id) => {
-                                            info!("token_id: {:?}", token_id);
-                                            results.push((contract_address, token_id));
-                                        }
+                                    let contract_address = match contract_address_result {
+                                        Ok(address) => address,
                                         Err(_) => {
-                                            return Err(ProviderError::DataValueError(
-                                                String::from("Invalid token id"),
-                                            ));
+                                            return Err(ProviderError::ParsingError(format!(
+                                                "Failed to parse contract address from: {}",
+                                                contract_address_attribute_value
+                                            )));
                                         }
                                     };
+
+                                    // Extracting token ID
+                                    if let Some(AttributeValue::S(token_id_attribute_value)) =
+                                        data_m.get("TokenIdHex")
+                                    {
+                                        let cairo_u256_result =
+                                            CairoU256::from_hex_be(token_id_attribute_value);
+
+                                        match cairo_u256_result {
+                                            Ok(token_id) => {
+                                                results.push((contract_address, token_id));
+                                            }
+                                            Err(_) => {
+                                                return Err(ProviderError::DataValueError(
+                                                    format!(
+                                                        "Failed to parse token ID from: {}",
+                                                        token_id_attribute_value
+                                                    ),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    return Err(ProviderError::DataValueError(
+                                        "ContractAddress attribute not found or not a string."
+                                            .to_string(),
+                                    ));
                                 }
                             }
+                        } else {
+                            return Err(ProviderError::DataValueError(
+                                "Data attribute is not a map.".to_string(),
+                            ));
                         }
+                    } else {
+                        return Err(ProviderError::DataValueError(
+                            "Data attribute missing.".to_string(),
+                        ));
                     }
                 }
                 return Ok(results);
