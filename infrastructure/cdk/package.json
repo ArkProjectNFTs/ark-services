@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@aws-cdk/aws-elasticache": "^1.204.0",
+    "@types/node-fetch": "^2.6.7",
     "aws-cdk-lib": "2.100.0",
     "cargo-lambda-cdk": "^0.0.17",
     "aws-sdk": "^2.1478.0",
