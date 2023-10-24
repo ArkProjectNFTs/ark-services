@@ -1,5 +1,8 @@
 use crate::{convert, ProviderError};
-use arkproject::metadata::types::{MetadataAttributeValue, NormalizedMetadata, TokenMetadata};
+use anyhow::{anyhow, Result};
+use arkproject::metadata::types::{
+    DisplayType, MetadataAttribute, MetadataTraitValue, NormalizedMetadata, TokenMetadata,
+};
 use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
@@ -104,42 +107,14 @@ impl TokenData {
                 }
 
                 match &attribute.value {
-                    MetadataAttributeValue::String(value) => {
+                    MetadataTraitValue::String(value) => {
                         attribute_map.insert("Value".to_string(), AttributeValue::S(value.clone()));
                     }
-                    MetadataAttributeValue::Bool(value) => {
-                        attribute_map.insert("Value".to_string(), AttributeValue::Bool(*value));
-                    }
-                    MetadataAttributeValue::BoolVec(values) => {
-                        let attribute_values: Vec<AttributeValue> = values
-                            .iter()
-                            .map(|value| AttributeValue::Bool(*value))
-                            .collect();
-                        attribute_map
-                            .insert("Value".to_string(), AttributeValue::L(attribute_values));
-                    }
-                    MetadataAttributeValue::Number(value) => {
+                    MetadataTraitValue::Number(value) => {
                         attribute_map
                             .insert("Value".to_string(), AttributeValue::N(value.to_string()));
                     }
-                    MetadataAttributeValue::NumberVec(values) => {
-                        let attribute_values: Vec<AttributeValue> = values
-                            .iter()
-                            .map(|value| AttributeValue::N(value.to_string()))
-                            .collect();
-                        attribute_map
-                            .insert("Value".to_string(), AttributeValue::L(attribute_values));
-                    }
-                    MetadataAttributeValue::StringVec(values) => {
-                        let attribute_values: Vec<AttributeValue> = values
-                            .iter()
-                            .map(|value| AttributeValue::S(value.clone()))
-                            .collect();
-                        attribute_map
-                            .insert("Value".to_string(), AttributeValue::L(attribute_values));
-                    }
                 };
-
                 attribute_values.push(AttributeValue::M(attribute_map));
             }
 
@@ -147,14 +122,10 @@ impl TokenData {
                 "Attributes".to_string(),
                 AttributeValue::L(attribute_values),
             );
-
-            metadata_map.insert(
-                String::from("RawMetadata"),
-                AttributeValue::S(metadata.raw.clone()),
-            );
         }
 
         let mut map: HashMap<String, AttributeValue> = HashMap::new();
+
         map.insert(
             String::from("RawMetadata"),
             AttributeValue::S(metadata.raw.clone()),
@@ -162,6 +133,84 @@ impl TokenData {
         map.insert(String::from("Metadata"), AttributeValue::M(metadata_map));
 
         map
+    }
+}
+
+fn extract_attributes_from_hashmap(
+    map: HashMap<String, AttributeValue>,
+) -> Result<Vec<MetadataAttribute>> {
+    if let Some(AttributeValue::L(attributes_list_av)) = map.get("Attributes") {
+        let mut attributes: Vec<MetadataAttribute> = vec![];
+        for attr_value_map in attributes_list_av {
+            if attr_value_map.is_m() {
+                let attr_value = attr_value_map.as_m().unwrap();
+                let display_type_str = convert::attr_to_opt_str(attr_value, "DisplayType")?;
+                let display_type = display_type_str.map(|s| match s.as_str() {
+                    "number" => DisplayType::Number,
+                    "boost_number" => DisplayType::BoostNumber,
+                    "boost_percentage" => DisplayType::BoostPercentage,
+                    "date" => DisplayType::Date,
+                    _ => DisplayType::Number,
+                });
+                let trait_type = convert::attr_to_opt_str(attr_value, "TraitType")?;
+
+                let value = if let Some(attribute_value) = attr_value.get("Value") {
+                    if attribute_value.is_s() {
+                        MetadataTraitValue::String(attribute_value.as_s().unwrap().to_string())
+                    } else {
+                        MetadataTraitValue::String(String::from(""))
+                    }
+                } else {
+                    MetadataTraitValue::String(String::from(""))
+                };
+
+                let metadata_attribute = MetadataAttribute {
+                    display_type,
+                    trait_type,
+                    value,
+                };
+
+                attributes.push(metadata_attribute);
+            }
+        }
+        return Ok(attributes);
+    }
+    Err(anyhow!("Attributes not found"))
+}
+
+fn extract_normalized_metadata_from_hashmap(
+    map: HashMap<String, AttributeValue>,
+) -> Result<NormalizedMetadata> {
+    match map.get("NormalizedMetadata") {
+        Some(AttributeValue::M(normalized_metadata_hashmap)) => {
+            let attributes =
+                match extract_attributes_from_hashmap(normalized_metadata_hashmap.clone()) {
+                    Ok(attributes) => Some(attributes),
+                    _ => None,
+                };
+
+            let normalized_metadata = NormalizedMetadata {
+                image: convert::attr_to_opt_str(normalized_metadata_hashmap, "Image")?,
+                image_data: convert::attr_to_opt_str(normalized_metadata_hashmap, "ImageData")?,
+                external_url: convert::attr_to_opt_str(normalized_metadata_hashmap, "ExternalUrl")?,
+                description: convert::attr_to_opt_str(normalized_metadata_hashmap, "Description")?,
+                name: convert::attr_to_opt_str(normalized_metadata_hashmap, "Name")?,
+                background_color: convert::attr_to_opt_str(
+                    normalized_metadata_hashmap,
+                    "BackgroundColor",
+                )?,
+                animation_url: convert::attr_to_opt_str(
+                    normalized_metadata_hashmap,
+                    "AnimationUrl",
+                )?,
+                youtube_url: convert::attr_to_opt_str(normalized_metadata_hashmap, "YoutubeUrl")?,
+                attributes,
+                properties: None, // TODO
+            };
+
+            Ok(normalized_metadata)
+        }
+        _ => Err(anyhow!("NormalizedMetadata not found")),
     }
 }
 
@@ -178,23 +227,23 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             _ => None,
         };
 
-        let metadata = match convert::attr_to_map(&data, "Metadata") {
-            Ok(m) => Some(TokenMetadata {
-                normalized: NormalizedMetadata {
-                    image: convert::attr_to_opt_str(&m, "Image")?,
-                    image_data: convert::attr_to_opt_str(&m, "ImageData")?,
-                    external_url: convert::attr_to_opt_str(&m, "ExternalUrl")?,
-                    description: convert::attr_to_opt_str(&m, "Description")?,
-                    name: convert::attr_to_opt_str(&m, "Name")?,
-                    background_color: convert::attr_to_opt_str(&m, "BackgroundColor")?,
-                    animation_url: convert::attr_to_opt_str(&m, "AnimationUrl")?,
-                    youtube_url: convert::attr_to_opt_str(&m, "YoutubeUrl")?,
-                    // TODO: attributes -> Vec of attributes.
-                    attributes: None,
-                },
-                raw: convert::attr_to_str(&m, "RawMetadata")?,
-            }),
-            _ => None,
+        let m = convert::attr_to_map(&data, "Metadata")?;
+
+        let normalized_metadata =
+            extract_normalized_metadata_from_hashmap(m.clone()).map_err(|_| {
+                ProviderError::DataValueError(String::from(
+                    "Extracting normalized metadata from hashmap failed",
+                ))
+            })?;
+
+        let raw_metadata = match m.get("RawMetadata") {
+            Some(AttributeValue::S(s)) => s.clone(),
+            _ => String::from(""),
+        };
+
+        let metadata = TokenMetadata {
+            raw: raw_metadata.clone(),
+            normalized: normalized_metadata,
         };
 
         Ok(TokenData {
@@ -203,7 +252,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             token_id: convert::attr_to_str(&data, "TokenId")?,
             token_id_hex: convert::attr_to_str(&data, "TokenIdHex")?,
             mint_info,
-            metadata,
+            metadata: Some(metadata),
         })
     }
 }
@@ -240,7 +289,6 @@ impl From<&TokenData> for HashMap<String, AttributeValue> {
 }
 
 #[cfg(test)]
-#[cfg(test)]
 mod tests {
     use super::*;
     use arkproject::metadata::types::MetadataAttribute;
@@ -249,7 +297,6 @@ mod tests {
     #[test]
     fn test_metadata_to_map() {
         let mock_metadata = TokenMetadata {
-            raw: "{ \"image\": \"image_url\" }".to_string(),
             normalized: NormalizedMetadata {
                 image: Some("image_url".to_string()),
                 image_data: Some("image_data".to_string()),
@@ -262,9 +309,12 @@ mod tests {
                 attributes: Some(vec![MetadataAttribute {
                     display_type: None,
                     trait_type: Some("trait".to_string()),
-                    value: MetadataAttributeValue::String("value".to_string()),
+                    value: MetadataTraitValue::String("value".to_string()),
                 }]),
+                properties: None,
             },
+            raw: "{ \"image\": \"image_url\" }".to_string(),
+            ..Default::default()
         };
 
         // Call the function
