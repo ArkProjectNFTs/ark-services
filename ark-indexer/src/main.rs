@@ -100,6 +100,7 @@ async fn main() -> Result<()> {
 fn get_task_id(is_head_of_chain: bool) -> String {
     match env::var("ECS_CONTAINER_METADATA_URI") {
         Ok(container_metadata_uri) => {
+            debug!("ECS_CONTAINER_METADATA_URI={}", container_metadata_uri);
             let pattern = Regex::new(r"/v3/([a-f0-9]{32})-").unwrap();
             let task_id = pattern
                 .captures(container_metadata_uri.as_str())

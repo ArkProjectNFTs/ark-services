@@ -158,8 +158,8 @@ impl AWSDynamoStorage for DynamoStorage {
             .client
             .update_item()
             .table_name(self.table_name.clone())
-            .key("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
-            .key("SK", AttributeValue::S("TASK".to_string()))
+            .key("PK", AttributeValue::S("INDEXER".to_string()))
+            .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .update_expression(
                 "SET #Data.#IndexationProgress = :IndexationProgress, #Data.#LastUpdate = :LastUpdate",
             )
