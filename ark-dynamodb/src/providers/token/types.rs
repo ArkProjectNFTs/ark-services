@@ -116,7 +116,7 @@ impl TokenData {
                         attributes_hashmap.insert(String::from("Value"), attribute_value);
                     }
                     MetadataAttributeValue::Bool(value) => {
-                        let attribute_value = AttributeValue::Bool(value.clone());
+                        let attribute_value = AttributeValue::Bool(*value);
                         attributes_hashmap.insert(String::from("Value"), attribute_value);
                     }
                     MetadataAttributeValue::Number(value) => {
