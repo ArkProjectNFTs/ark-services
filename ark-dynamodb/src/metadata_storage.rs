@@ -1,3 +1,4 @@
+use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 use anyhow::Result;
 use arkproject::{
     metadata::{
@@ -11,8 +12,6 @@ use aws_config::load_from_env;
 use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
 use tracing::error;
-
-use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 
 pub struct MetadataStorage {
     ctx: DynamoDbCtx,
@@ -63,7 +62,7 @@ impl Storage for MetadataStorage {
             }
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError("".to_string()));
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -73,25 +72,23 @@ impl Storage for MetadataStorage {
         _contract_address: FieldElement,
         _token_id: CairoU256,
     ) -> Result<bool, StorageError> {
-        Err(StorageError::DatabaseError("".to_string()))
+        Err(StorageError::DatabaseError("Not implemented".to_string()))
     }
 
     async fn find_token_ids_without_metadata(
         &self,
-        _contract_address_filter: Option<FieldElement>,
+        contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, StorageError> {
         match self
             .provider
             .token
-            .get_token_without_metadata(&self.ctx.client)
+            .get_token_without_metadata(&self.ctx.client, contract_address_filter)
             .await
         {
             Ok(tokens) => {
                 return Ok(tokens);
             }
-            Err(e) => {
-                return Err(StorageError::DatabaseError(e.to_string()));
-            }
+            Err(e) => Err(StorageError::DatabaseError(e.to_string())),
         }
     }
 }

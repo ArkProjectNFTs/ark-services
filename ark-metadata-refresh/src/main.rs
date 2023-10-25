@@ -1,7 +1,5 @@
 mod aws_s3_file_manager;
 
-use std::{env, time::Duration};
-
 use anyhow::Result;
 use ark_dynamodb::metadata_storage::MetadataStorage;
 use arkproject::{
@@ -11,8 +9,10 @@ use arkproject::{
     },
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
-
+use core::panic;
 use dotenv::dotenv;
+use starknet::core::types::FieldElement;
+use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{error, info, span, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
@@ -23,13 +23,35 @@ use crate::aws_s3_file_manager::AWSFileManager;
 async fn main() -> Result<()> {
     dotenv().ok();
     init_tracing();
-    info!("Starting metadata refresh");
-
     let table_name: String =
         env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let bucket_name =
         env::var("AWS_NFT_IMAGE_BUCKET_NAME").expect("AWS_NFT_IMAGE_BUCKET_NAME must be set");
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
+
+    let ipfs_timeout_duration = match env::var("METADATA_IPFS_TIMEOUT_IN_SEC") {
+        Ok(value) => {
+            let timeout = value
+                .parse::<u64>()
+                .expect("Invalid METADATA_IPFS_TIMEOUT_IN_SEC");
+            Duration::from_secs(timeout)
+        }
+        Err(_) => {
+            panic!("METADATA_IPFS_TIMEOUT_IN_SEC must be set");
+        }
+    };
+
+    let loop_delay_duration = match env::var("METADATA_LOOP_DELAY_IN_SEC") {
+        Ok(value) => {
+            let timeout = value
+                .parse::<u64>()
+                .expect("Invalid METADATA_LOOP_DELAY_IN_SEC");
+            Duration::from_secs(timeout)
+        }
+        Err(_) => {
+            panic!("METADATA_LOOP_DELAY_IN_SEC must be set");
+        }
+    };
 
     let metadata_storage = MetadataStorage::new(table_name).await;
     let starknet_client = StarknetClientHttp::new(&rpc_url)?;
@@ -39,26 +61,46 @@ async fn main() -> Result<()> {
     let mut metadata_manager =
         MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
 
+    let contract_address_filter = match env::var("METADATA_CONTRACT_FILTER") {
+        Ok(value) => {
+            let contract_address_field_element = FieldElement::from_hex_be(value.as_str())
+                .expect("Invalid METADATA_CONTRACT_FILTER");
+            Some(contract_address_field_element)
+        }
+        Err(_) => None,
+    };
+
     loop {
-        match metadata_storage.find_token_ids_without_metadata(None).await {
+        match metadata_storage
+            .find_token_ids_without_metadata(contract_address_filter)
+            .await
+        {
             Ok(tokens) => {
                 if tokens.is_empty() {
                     info!("No tokens to refresh (without metadata)");
-                    sleep(Duration::from_secs(10)).await;
+                    sleep(loop_delay_duration).await;
                     continue;
                 } else {
-                    for (contract_address, token_id) in tokens {
+                    for token in tokens {
+                        let (contract_address, token_id) = token;
+
+                        info!(
+                            "🔄 Refreshing metadata. Contract address: 0x{:064x} - Token ID: {}",
+                            contract_address,
+                            token_id.to_decimal(false)
+                        );
+
                         match metadata_manager
                             .refresh_token_metadata(
                                 contract_address,
                                 token_id,
                                 ImageCacheOption::Save,
                                 ipfs_gateway_uri.as_str(),
-                                Duration::from_secs(5),
+                                ipfs_timeout_duration,
                             )
                             .await
                         {
-                            Ok(_) => info!("Success"),
+                            Ok(_) => info!("✅ Metadata refreshed successfully"),
                             Err(e) => error!("Error: {:?}", e),
                         }
                     }
@@ -67,7 +109,7 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 error!("Error: {:?}", e);
-                sleep(Duration::from_secs(10)).await;
+                sleep(loop_delay_duration).await;
                 continue;
             }
         };

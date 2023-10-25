@@ -1,6 +1,6 @@
-use super::ArkTokenProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::providers::token::types::TokenData;
+use crate::providers::ArkTokenProvider;
 use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 use arkproject::metadata::types::TokenMetadata;
 use arkproject::pontos::storage::types::TokenMintInfo;
@@ -10,7 +10,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
-use tracing::info;
+use tracing::trace;
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -49,6 +49,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         owner: &str,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
+        trace!("Updating owner for token: {}", pk);
+
         let sk = self.get_sk();
 
         let r = ctx
@@ -124,6 +126,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
+
+        trace!("Updating metadata for token: PK={}, SK={}", pk, sk);
+
         let data = TokenData::metadata_to_map(metadata);
 
         let mut names = HashMap::new();
@@ -200,16 +205,22 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn get_token_without_metadata(
         &self,
         client: &Self::Client,
+        contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError> {
+        let sort_key = match contract_address_filter {
+            Some(contract_address) => format!("CONTRACT#0x{:064x}", contract_address),
+            None => "CONTRACT".to_string(),
+        };
         let query_result = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI5PK-GSI5SK-index")
-            .key_condition_expression("GSI5PK = :gsi_pk")
+            .key_condition_expression("GSI5PK = :gsi_pk AND begins_with(GSI5SK, :gsi_sk)")
             .expression_attribute_values(
                 ":gsi_pk",
                 AttributeValue::S(String::from("METADATA#false")),
             )
+            .expression_attribute_values(":gsi_sk", AttributeValue::S(sort_key))
             .send()
             .await;
 
@@ -226,46 +237,63 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                     if let Some(data) = item.get("Data") {
                         if data.is_m() {
                             let data_m = data.as_m().unwrap();
-                            if let Some(AttributeValue::S(contract_address_attribute_value)) =
-                                data_m.get("ContractAddress")
-                            {
-                                let contract_address =
-                                    FieldElement::from_hex_be(contract_address_attribute_value)
-                                        .map_err(|_| {
-                                            ProviderError::ParsingError(
-                                                "Contract address is not a valid field element"
-                                                    .to_string(),
-                                            )
-                                        })?;
 
-                                if let Some(AttributeValue::S(token_id_attribute_value)) =
-                                    data_m.get("TokenIdHex")
-                                {
-                                    info!(
-                                        "token_id_attribute_value: {:?}",
-                                        token_id_attribute_value
-                                    );
+                            // Extracting contract address
+                            match data_m.get("ContractAddress") {
+                                Some(AttributeValue::S(contract_address_attribute_value)) => {
+                                    let contract_address_result =
+                                        FieldElement::from_hex_be(contract_address_attribute_value);
 
-                                    let cairo_u256_result =
-                                        CairoU256::from_hex_be(token_id_attribute_value);
-
-                                    match cairo_u256_result {
-                                        Ok(token_id) => {
-                                            info!("token_id: {:?}", token_id);
-                                            results.push((contract_address, token_id));
-                                        }
+                                    let contract_address = match contract_address_result {
+                                        Ok(address) => address,
                                         Err(_) => {
-                                            return Err(ProviderError::DataValueError(
-                                                String::from("Invalid token id"),
-                                            ));
+                                            return Err(ProviderError::ParsingError(format!(
+                                                "Failed to parse contract address from: {}",
+                                                contract_address_attribute_value
+                                            )));
                                         }
                                     };
+
+                                    // Extracting token ID
+                                    if let Some(AttributeValue::S(token_id_attribute_value)) =
+                                        data_m.get("TokenIdHex")
+                                    {
+                                        let cairo_u256_result =
+                                            CairoU256::from_hex_be(token_id_attribute_value);
+
+                                        match cairo_u256_result {
+                                            Ok(token_id) => {
+                                                results.push((contract_address, token_id));
+                                            }
+                                            Err(_) => {
+                                                return Err(ProviderError::DataValueError(
+                                                    format!(
+                                                        "Failed to parse token ID from: {}",
+                                                        token_id_attribute_value
+                                                    ),
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                                _ => {
+                                    return Err(ProviderError::DataValueError(
+                                        "ContractAddress attribute not found or not a string."
+                                            .to_string(),
+                                    ));
                                 }
                             }
+                        } else {
+                            return Err(ProviderError::DataValueError(
+                                "Data attribute is not a map.".to_string(),
+                            ));
                         }
+                    } else {
+                        return Err(ProviderError::DataValueError(
+                            "Data attribute missing.".to_string(),
+                        ));
                     }
                 }
-
                 return Ok(results);
             }
             Err(_) => {
@@ -283,6 +311,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         block_timestamp: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
+
+        trace!("Puting item in dynamo db: {}", pk);
 
         let r = ctx
             .client
