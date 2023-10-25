@@ -80,29 +80,38 @@ impl AWSDynamoStorage for DynamoStorage {
         }
         .to_string();
 
-        let mut data = HashMap::new();
-        data.insert(
-            "Status".to_string(),
+        let mut names = HashMap::new();
+        names.insert("#Data".to_string(), "Data".to_string());
+        names.insert("#Status".to_string(), "Status".to_string());
+        names.insert("#LastUpdate".to_string(), "LastUpdate".to_string());
+        names.insert("#Version".to_string(), "Version".to_string());
+
+        let mut values = HashMap::new();
+        values.insert(
+            ":Status".to_string(),
             AttributeValue::S(status_string.clone()),
         );
-        data.insert(
-            "LastUpdate".to_string(),
+        values.insert(
+            ":LastUpdate".to_string(),
             AttributeValue::N(unix_timestamp.to_string()),
         );
-        data.insert(
-            "Version".to_string(),
+        values.insert(
+            ":Version".to_string(),
             AttributeValue::S(indexer_version.clone()),
         );
-        data.insert("TaskId".to_string(), AttributeValue::S(task_id.clone()));
 
         let response = self
             .ctx
             .client
-            .put_item()
+            .update_item()
             .table_name(self.table_name.clone())
-            .item("PK", AttributeValue::S("INDEXER".to_string()))
-            .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
-            .item("Data", AttributeValue::M(data))
+            .key("PK", AttributeValue::S("INDEXER".to_string()))
+            .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
+            .update_expression(
+                "SET #Data.#Status = :Status, #Data.#LastUpdate = :LastUpdate, #Data.#Version = :Version",
+            )
+            .set_expression_attribute_names(Some(names))
+            .set_expression_attribute_values(Some(values))
             .send()
             .await;
 
