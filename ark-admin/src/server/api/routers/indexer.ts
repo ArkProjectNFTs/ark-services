@@ -145,8 +145,8 @@ export const indexerRouter = createTRPCRouter({
 
             console.log("=> commandOutput", commandOutput);
 
-            if (commandOutput.tasks?.[0]?.taskArn) {
-              const taskId = commandOutput.tasks[0].taskArn.split("/").pop();
+            for (const task of commandOutput.tasks ?? []) {
+              const taskId = task.taskArn.split("/").pop();
               const creationDate = Math.floor(Date.now() / 1000);
 
               const putRequest = await dynamodb.putItem({
