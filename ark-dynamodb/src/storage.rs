@@ -100,8 +100,8 @@ impl AWSDynamoStorage for DynamoStorage {
             .client
             .put_item()
             .table_name(self.table_name.clone())
-            .item("PK", AttributeValue::S(format!("INDEXER#{}", task_id)))
-            .item("SK", AttributeValue::S("TASK".to_string()))
+            .item("PK", AttributeValue::S("INDEXER".to_string()))
+            .item("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .item("Type", AttributeValue::S("IndexerTask".to_string()))
             .item("Data", AttributeValue::M(data))
             .send()
