@@ -28,7 +28,9 @@ const getTableName = (network: Network): string => {
   return network === "mainnet" ? "ark_project_mainnet" : "ark_project_testnet";
 };
 
-const fetchTasks = async (network: Network) => {
+const fetchTasks = async (
+  network: Network,
+): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
     TableName: getTableName(network),
     IndexName: "GSI1PK-GSI1SK-index",
@@ -38,28 +40,21 @@ const fetchTasks = async (network: Network) => {
     ScanIndexForward: false,
   });
 
-  const command = new ListTasksCommand({ cluster: ECS_CLUSTER });
-  const ecsOutput = await client.send(command);
-  return { dynamoResult, ecsOutput };
+  // const command = new ListTasksCommand({ cluster: ECS_CLUSTER });
+  // const ecsOutput = await client.send(command);
+  return dynamoResult.Items ?? [];
 };
 
-const mapDynamoItem = (
-  item: Record<string, AttributeValue>,
-  ecsOutput: ListTasksCommandOutput,
-) => {
+const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
   const regex = /TASK#([a-fA-F0-9]+)/;
   const match = item.SK?.S?.match(regex);
   const taskId = match?.[1] ?? "";
-  const isRunning = ecsOutput.taskArns?.some((arn: string) =>
-    arn.includes(taskId),
-  );
-
   return {
     indexationProgress: item.Data?.M?.IndexationProgress?.N
       ? parseInt(item.Data.M.IndexationProgress.N.toString())
       : 0,
     taskId,
-    isRunning,
+    status: item.Data?.M?.Status?.S ?? "",
     from: item.Data?.M?.From?.N ? parseInt(item.Data.M.From.N.toString()) : 0,
     to: item.Data?.M?.To?.N ? parseInt(item.Data.M.To.N.toString()) : 0,
     version: item?.Data?.M?.Version?.S,
@@ -68,32 +63,34 @@ const mapDynamoItem = (
   };
 };
 
+type IndexerTask = {
+  indexationProgress: number;
+  taskId: string;
+  status: string;
+  from: number;
+  to: number;
+  version: string | undefined;
+  updatedAt: string | undefined;
+  createdAt: string | undefined;
+};
+
 export const indexerRouter = createTRPCRouter({
   allTasks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }: { input: { network: Network } }) => {
       try {
-        const { dynamoResult, ecsOutput } = await fetchTasks(input.network);
-        const result =
-          dynamoResult.Items?.reduce<
-            {
-              indexationProgress: number;
-              taskId: string;
-              isRunning: boolean | undefined;
-              from: number;
-              to: number;
-              version: string | undefined;
-              updatedAt: string | undefined;
-              createdAt: string | undefined;
-            }[]
-          >((acc, item) => {
-            if (item.Data?.M) {
-              return acc.concat(mapDynamoItem(item, ecsOutput));
-            }
-            return acc;
-          }, []) ?? [];
+        const tasks = await fetchTasks(input.network);
 
-        return result;
+        // console.log("=> tasks", tasks);
+
+        return tasks.reduce<IndexerTask[]>((acc, task) => {
+          if (task.Data?.M) {
+            const item = mapDynamoItem(task);
+            console.log("=> item", item);
+            return acc.concat(item);
+          }
+          return acc;
+        }, []);
       } catch (error) {
         console.error(error);
         return [];

@@ -9,7 +9,6 @@ import { TaskColumns } from "./TaskColumns";
 export interface TaskData {
   indexationProgress: number;
   taskId: string;
-  isRunning?: boolean;
   from: number;
   to: number;
   version?: string;

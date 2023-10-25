@@ -25,7 +25,7 @@
     "@auth/core": "^0.16.1",
     "@auth/prisma-adapter": "^1.0.3",
     "@aws-sdk/client-api-gateway": "^3.405.0",
-    "@aws-sdk/client-dynamodb": "^3.429.0",
+    "@aws-sdk/client-dynamodb": "^3.435.0",
     "@aws-sdk/client-ecs": "^3.429.0",
     "@aws-sdk/credential-provider-node": "^3.405.0",
     "@heroicons/react": "^2.0.18",
