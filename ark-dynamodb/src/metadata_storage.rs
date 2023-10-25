@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
-use tracing::{error, info};
+use tracing::error;
 
 use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 
@@ -63,7 +63,7 @@ impl Storage for MetadataStorage {
             }
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError("".to_string()));
             }
         }
     }
@@ -73,19 +73,12 @@ impl Storage for MetadataStorage {
         _contract_address: FieldElement,
         _token_id: CairoU256,
     ) -> Result<bool, StorageError> {
-        Err(StorageError::DatabaseError)
-    }
-
-    async fn find_token_ids_without_metadata_in_collection(
-        &self,
-        _contract_address: FieldElement,
-    ) -> Result<Vec<CairoU256>, StorageError> {
-        info!("find_token_ids_without_metadata_in_collection...");
-        Err(StorageError::DatabaseError)
+        Err(StorageError::DatabaseError("".to_string()))
     }
 
     async fn find_token_ids_without_metadata(
         &self,
+        _contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, StorageError> {
         match self
             .provider
@@ -97,8 +90,7 @@ impl Storage for MetadataStorage {
                 return Ok(tokens);
             }
             Err(e) => {
-                error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
