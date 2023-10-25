@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{convert, ProviderError};
 use anyhow::{anyhow, Result};
 use arkproject::metadata::types::{
@@ -6,7 +8,6 @@ use arkproject::metadata::types::{
 use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TokenData {
@@ -39,29 +40,29 @@ impl TokenData {
     }
 
     pub fn metadata_to_map(metadata: &TokenMetadata) -> HashMap<String, AttributeValue> {
-        let mut metadata_map = HashMap::new();
+        let mut normalized_metadata = HashMap::new();
 
-        metadata_map.insert(
+        normalized_metadata.insert(
             "Image".to_string(),
             AttributeValue::S(metadata.normalized.image.clone().unwrap_or_default()),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "ImageData".to_string(),
             AttributeValue::S(metadata.normalized.image_data.clone().unwrap_or_default()),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "ExternalUrl".to_string(),
             AttributeValue::S(metadata.normalized.external_url.clone().unwrap_or_default()),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "Description".to_string(),
             AttributeValue::S(metadata.normalized.description.clone().unwrap_or_default()),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "Name".to_string(),
             AttributeValue::S(metadata.normalized.name.clone().unwrap_or_default()),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "BackgroundColor".to_string(),
             AttributeValue::S(
                 metadata
@@ -71,7 +72,7 @@ impl TokenData {
                     .unwrap_or_default(),
             ),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "AnimationUrl".to_string(),
             AttributeValue::S(
                 metadata
@@ -81,7 +82,7 @@ impl TokenData {
                     .unwrap_or_default(),
             ),
         );
-        metadata_map.insert(
+        normalized_metadata.insert(
             "YoutubeUrl".to_string(),
             AttributeValue::S(metadata.normalized.youtube_url.clone().unwrap_or_default()),
         );
@@ -118,7 +119,7 @@ impl TokenData {
                 attribute_values.push(AttributeValue::M(attribute_map));
             }
 
-            metadata_map.insert(
+            normalized_metadata.insert(
                 "Attributes".to_string(),
                 AttributeValue::L(attribute_values),
             );
@@ -130,7 +131,10 @@ impl TokenData {
             String::from("RawMetadata"),
             AttributeValue::S(metadata.raw.clone()),
         );
-        map.insert(String::from("Metadata"), AttributeValue::M(metadata_map));
+        map.insert(
+            String::from("NormalizedMetadata"),
+            AttributeValue::M(normalized_metadata),
+        );
 
         map
     }
@@ -295,6 +299,139 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn test_mint_info_to_map() {
+        let mock_mint_info = TokenMintInfo {
+            address: "0x1234".to_string(),
+            timestamp: 12345678,
+            transaction_hash: "0x5678".to_string(),
+        };
+
+        let result_map = TokenData::mint_info_to_map(&mock_mint_info);
+
+        let mut expected_map = HashMap::new();
+        expected_map.insert(
+            "Timestamp".to_string(),
+            AttributeValue::N("12345678".to_string()),
+        );
+        expected_map.insert(
+            "Address".to_string(),
+            AttributeValue::S("0x1234".to_string()),
+        );
+        expected_map.insert(
+            "TransactionHash".to_string(),
+            AttributeValue::S("0x5678".to_string()),
+        );
+
+        assert_eq!(result_map, expected_map);
+    }
+
+    #[test]
+    fn test_try_from() {
+        let mock_data = {
+            let mut map = HashMap::new();
+            map.insert(
+                "Owner".to_string(),
+                AttributeValue::S("owner_address".to_string()),
+            );
+            map.insert(
+                "ContractAddress".to_string(),
+                AttributeValue::S("contract_address".to_string()),
+            );
+            map.insert(
+                "TokenId".to_string(),
+                AttributeValue::S("token_id".to_string()),
+            );
+            map.insert(
+                "TokenIdHex".to_string(),
+                AttributeValue::S("token_id_hex".to_string()),
+            );
+
+            let mut metadata = HashMap::new();
+            metadata.insert(
+                "RawMetadata".to_string(),
+                AttributeValue::S("{ \"image\": \"image_url\" }".to_string()),
+            );
+
+            let mut normalized_metadata = HashMap::new();
+            normalized_metadata.insert(
+                "Image".to_string(),
+                AttributeValue::S("image_url".to_string()),
+            );
+
+            metadata.insert(
+                "NormalizedMetadata".to_string(),
+                AttributeValue::M(normalized_metadata),
+            );
+
+            map.insert("Metadata".to_string(), AttributeValue::M(metadata));
+
+            map
+        };
+
+        let token_data = TokenData::try_from(mock_data).unwrap();
+
+        assert_eq!(token_data.owner, "owner_address");
+        let metadata_result = token_data.metadata.unwrap();
+        assert_eq!(metadata_result.raw, "{ \"image\": \"image_url\" }");
+
+        println!(
+            "metadata_result.normalized: {:?}",
+            metadata_result.normalized
+        );
+        assert_eq!(metadata_result.normalized.image.unwrap(), "image_url");
+    }
+
+    #[test]
+    fn test_from() {
+        let mock_token_data = TokenData {
+            owner: "0x0131E3134b75c5fB3B7c0BDdDF4289625d0030F796c4F9D30dB45da472574199".to_string(),
+            contract_address: "contract_address".to_string(),
+            token_id: "token_id".to_string(),
+            token_id_hex: "token_id_hex".to_string(),
+            mint_info: Some(TokenMintInfo {
+                address: String::from(
+                    "0x0131E3134b75c5fB3B7c0BDdDF4289625d0030F796c4F9D30dB45da472574199",
+                ),
+                timestamp: 1698237736,
+                transaction_hash: String::from("0x01"),
+            }),
+            metadata: Some(TokenMetadata {
+                normalized: NormalizedMetadata {
+                    image: Some(String::from("image_url")),
+                    image_data: Some(String::from("")),
+                    external_url: Some(String::from("")),
+                    description: Some(String::from("")),
+                    name: Some(String::from("")),
+                    attributes: Some(vec![]),
+                    properties: None,
+                    background_color: Some(String::from("")),
+                    animation_url: Some(String::from("")),
+                    youtube_url: Some(String::from("")),
+                },
+                raw: String::from("{ \"image\": \"image_url\" }"),
+            }),
+        };
+
+        let result_map: HashMap<String, AttributeValue> = (&mock_token_data).into();
+        let owner = result_map.get("Owner").unwrap().as_s().unwrap();
+
+        assert_eq!(
+            owner,
+            "0x0131E3134b75c5fB3B7c0BDdDF4289625d0030F796c4F9D30dB45da472574199"
+        );
+
+        let metadata = result_map.get("Metadata").unwrap().as_m().unwrap();
+        let raw_metadata = metadata.get("RawMetadata").unwrap().as_s().unwrap();
+        let normalized_metadata = metadata.get("NormalizedMetadata").unwrap().as_m().unwrap();
+
+        assert_eq!(raw_metadata, "{ \"image\": \"image_url\" }");
+        assert_eq!(
+            normalized_metadata.get("Image").unwrap().as_s().unwrap(),
+            &"image_url"
+        );
+    }
+
+    #[test]
     fn test_metadata_to_map() {
         let mock_metadata = TokenMetadata {
             normalized: NormalizedMetadata {
@@ -314,7 +451,6 @@ mod tests {
                 properties: None,
             },
             raw: "{ \"image\": \"image_url\" }".to_string(),
-            ..Default::default()
         };
 
         // Call the function

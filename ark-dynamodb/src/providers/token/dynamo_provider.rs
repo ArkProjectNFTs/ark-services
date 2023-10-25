@@ -10,6 +10,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
+use tracing::trace;
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -48,6 +49,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         owner: &str,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
+        trace!("Updating owner for token: {}", pk);
+
         let sk = self.get_sk();
 
         let r = ctx
@@ -123,6 +126,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
         let sk = self.get_sk();
+
+        trace!("Updating metadata for token: PK={}, SK={}", pk, sk);
+
         let data = TokenData::metadata_to_map(metadata);
 
         let mut names = HashMap::new();
@@ -305,6 +311,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         block_timestamp: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let pk = self.get_pk(&info.contract_address, &info.token_id_hex);
+
+        trace!("Puting item in dynamo db: {}", pk);
 
         let r = ctx
             .client
