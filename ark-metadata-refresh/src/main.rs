@@ -40,7 +40,7 @@ async fn main() -> Result<()> {
         MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
 
     loop {
-        match metadata_storage.find_token_ids_without_metadata().await {
+        match metadata_storage.find_token_ids_without_metadata(None).await {
             Ok(tokens) => {
                 if tokens.is_empty() {
                     info!("No tokens to refresh (without metadata)");

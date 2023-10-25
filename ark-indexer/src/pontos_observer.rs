@@ -36,10 +36,10 @@ where
         info!("on_event_registered");
     }
 
-    async fn on_block_processing(&self, block_number: u64) {
+    async fn on_block_processing(&self, block_timestamp: u64, block_number: Option<u64>) {
         info!(
-            "Block processing: block_number={}, indexer_identifier={}, indexer_version={}",
-            block_number, self.indexer_identifier, self.indexer_version
+            "Block processing: block_number={:?}, indexer_identifier={}, indexer_version={}, block_timestamp={}",
+            block_number, self.indexer_identifier, self.indexer_version, block_timestamp
         );
 
         match self
@@ -60,7 +60,7 @@ where
         }
     }
 
-    async fn on_terminated(&self, block_number: u64, indexation_progress: f64) {
+    async fn on_block_processed(&self, block_number: u64, indexation_progress: f64) {
         info!(
             "Block processed: block_number={}, indexation_progress={}",
             block_number, indexation_progress
@@ -68,6 +68,18 @@ where
         let _ = self
             .storage
             .update_indexer_progress(self.indexer_identifier.clone(), indexation_progress)
+            .await;
+    }
+
+    async fn on_indexation_range_completed(&self) {
+        info!("Indexation completed: {}", self.indexer_identifier);
+        let _ = self
+            .storage
+            .update_indexer_task_status(
+                self.indexer_identifier.clone(),
+                self.indexer_version.clone(),
+                IndexerStatus::Stopped,
+            )
             .await;
     }
 }

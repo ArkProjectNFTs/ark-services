@@ -1,5 +1,5 @@
 use crate::{convert, ProviderError};
-use arkproject::metadata::types::{MetadataAttributeValue, TokenMetadata};
+use arkproject::metadata::types::{MetadataAttributeValue, NormalizedMetadata, TokenMetadata};
 use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
@@ -40,38 +40,38 @@ impl TokenData {
 
         map.insert(
             "Image".to_string(),
-            AttributeValue::S(meta.image.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.image.clone().unwrap_or_default()),
         );
         map.insert(
             "ImageData".to_string(),
-            AttributeValue::S(meta.image_data.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.image_data.clone().unwrap_or_default()),
         );
         map.insert(
             "ExternalUrl".to_string(),
-            AttributeValue::S(meta.external_url.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.external_url.clone().unwrap_or_default()),
         );
         map.insert(
             "Description".to_string(),
-            AttributeValue::S(meta.description.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.description.clone().unwrap_or_default()),
         );
         map.insert(
             "Name".to_string(),
-            AttributeValue::S(meta.name.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.name.clone().unwrap_or_default()),
         );
         map.insert(
             "BackgroundColor".to_string(),
-            AttributeValue::S(meta.background_color.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.background_color.clone().unwrap_or_default()),
         );
         map.insert(
             "AnimationUrl".to_string(),
-            AttributeValue::S(meta.animation_url.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.animation_url.clone().unwrap_or_default()),
         );
         map.insert(
             "YoutubeUrl".to_string(),
-            AttributeValue::S(meta.youtube_url.clone().unwrap_or_default()),
+            AttributeValue::S(meta.normalized.youtube_url.clone().unwrap_or_default()),
         );
 
-        if let Some(attributes) = &meta.attributes {
+        if let Some(attributes) = &meta.normalized.attributes {
             let mut attributes_hashmap: HashMap<String, AttributeValue> = HashMap::new();
             for (_, attribute) in attributes.iter().enumerate() {
                 if let Some(display_type) = &attribute.display_type {
@@ -116,7 +116,7 @@ impl TokenData {
                         attributes_hashmap.insert(String::from("Value"), attribute_value);
                     }
                     MetadataAttributeValue::Bool(value) => {
-                        let attribute_value = AttributeValue::Bool(*value);
+                        let attribute_value = AttributeValue::Bool(value.clone());
                         attributes_hashmap.insert(String::from("Value"), attribute_value);
                     }
                     MetadataAttributeValue::Number(value) => {
@@ -152,16 +152,19 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
 
         let metadata = match convert::attr_to_map(&data, "Metadata") {
             Ok(m) => Some(TokenMetadata {
-                image: convert::attr_to_opt_str(&m, "Image")?,
-                image_data: convert::attr_to_opt_str(&m, "ImageData")?,
-                external_url: convert::attr_to_opt_str(&m, "ExternalUrl")?,
-                description: convert::attr_to_opt_str(&m, "Description")?,
-                name: convert::attr_to_opt_str(&m, "Name")?,
-                background_color: convert::attr_to_opt_str(&m, "BackgroundColor")?,
-                animation_url: convert::attr_to_opt_str(&m, "AnimationUrl")?,
-                youtube_url: convert::attr_to_opt_str(&m, "YoutubeUrl")?,
-                // TODO: attributes -> Vec of attributes.
-                attributes: None,
+                normalized: NormalizedMetadata {
+                    image: convert::attr_to_opt_str(&m, "Image")?,
+                    image_data: convert::attr_to_opt_str(&m, "ImageData")?,
+                    external_url: convert::attr_to_opt_str(&m, "ExternalUrl")?,
+                    description: convert::attr_to_opt_str(&m, "Description")?,
+                    name: convert::attr_to_opt_str(&m, "Name")?,
+                    background_color: convert::attr_to_opt_str(&m, "BackgroundColor")?,
+                    animation_url: convert::attr_to_opt_str(&m, "AnimationUrl")?,
+                    youtube_url: convert::attr_to_opt_str(&m, "YoutubeUrl")?,
+                    // TODO: attributes -> Vec of attributes.
+                    attributes: None,
+                },
+                raw: String::from(""),
             }),
             _ => None,
         };
