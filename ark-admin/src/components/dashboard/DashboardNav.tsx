@@ -15,6 +15,14 @@ export default function DashboardNav({ className, ...props }: ProjectNavProps) {
       title: "Dashboard",
       href: `/dashboard`,
     },
+    {
+      title: "Tasks",
+      href: "/tasks",
+    },
+    {
+      title: "Blocks",
+      href: "/blocks",
+    },
   ];
 
   return (

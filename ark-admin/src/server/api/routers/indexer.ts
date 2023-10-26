@@ -3,6 +3,7 @@ import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
 import { runTask } from "~/lib/awsTasksSpawner";
+import { fetchLastBlock } from "~/lib/fetchLastBlock";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 const ECS_CLUSTER = "arn:aws:ecs:us-east-1:223605539824:cluster/ark-indexers";
@@ -73,6 +74,19 @@ type IndexerTask = {
 };
 
 export const indexerRouter = createTRPCRouter({
+  allBlocks: protectedProcedure
+    .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
+    .query(async ({ input }) => {
+      const latest = await fetchLastBlock(input.network);
+      const blocks = getRandomNumbers(5895, 0, latest);
+
+      console.log("latest block id", latest);
+
+      return {
+        blocks,
+        latest,
+      };
+    }),
   allTasks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }: { input: { network: Network } }) => {

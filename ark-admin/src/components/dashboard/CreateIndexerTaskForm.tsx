@@ -1,3 +1,5 @@
+"use client";
+
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -16,10 +18,8 @@ import {
 import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
 import { Checkbox } from "../ui/checkbox";
-
-interface CreateIndexerTaskFromProps {
-  network: "mainnet" | "testnet";
-}
+import { useToast } from "../ui/use-toast";
+import { useNetwork } from "./NetworkProvider";
 
 const createIndexerTaskFormSchema = z.object({
   from: z.string(),
@@ -39,23 +39,35 @@ const defaultValues: Partial<CreateIndexerTaskFormValues> = {
   logLevel: "info",
 };
 
-export default function CreateIndexerTaskFrom(
-  props: CreateIndexerTaskFromProps,
-) {
-  const { mutateAsync: spawnTasks } = api.indexer.spawnTasks.useMutation();
+export default function CreateIndexerTaskFrom() {
+  const { network } = useNetwork();
+  const { toast } = useToast();
+  const { mutateAsync: spawnTasks } = api.indexer.spawnTasks.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Tasks created",
+        description: "The tasks were created successfully",
+      });
+    },
+    onError: (error) => {
+      console.log(error);
+      toast({
+        title: "An error occured",
+        description: "The tasks could not be created",
+      });
+    },
+  });
   const form = useForm<CreateIndexerTaskFormValues>({
     resolver: zodResolver(createIndexerTaskFormSchema),
     defaultValues,
   });
-
-  form.handleSubmit;
 
   async function onSubmit(data: CreateIndexerTaskFormValues) {
     await spawnTasks({
       from: parseInt(data.from),
       to: parseInt(data.to),
       numberOfTasks: parseInt(data.numberOfTasks),
-      network: props.network,
+      network,
       forceMode: data.forceMode,
     });
   }

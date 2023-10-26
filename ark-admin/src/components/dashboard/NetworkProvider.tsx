@@ -33,6 +33,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
 
 export const useNetwork = (): NetworkContextType => {
   const context = useContext(NetworkContext);
+
   if (!context) {
     throw new Error("useNetwork must be used within a NetworkProvider");
   }
