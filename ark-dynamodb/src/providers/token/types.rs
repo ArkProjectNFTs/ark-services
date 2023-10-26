@@ -125,7 +125,6 @@ impl TokenData {
         }
 
         let mut map: HashMap<String, AttributeValue> = HashMap::new();
-
         map.insert(
             String::from("RawMetadata"),
             AttributeValue::S(metadata.raw.clone()),

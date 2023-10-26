@@ -2346,6 +2346,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "lambda-post-refresh-token-metadata"
+version = "0.1.0"
+dependencies = [
+ "ark-dynamodb",
+ "arkproject",
+ "lambda-http-common",
+ "lambda_http",
+ "lambda_runtime",
+ "mockall",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lambda_http"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
