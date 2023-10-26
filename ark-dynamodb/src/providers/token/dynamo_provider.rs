@@ -9,9 +9,10 @@ use arkproject::starknet::CairoU256;
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
+use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -188,7 +189,13 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         trace!("Updating metadata for token: PK={}, SK={}", pk, sk);
 
-        let data = TokenData::metadata_to_map(metadata);
+        let mut data = TokenData::metadata_to_map(metadata);
+        let now = Utc::now();
+        let timestamp = now.timestamp();
+        data.insert(
+            "MetadataUpdatedAt".to_string(),
+            AttributeValue::N(timestamp.to_string()),
+        );
 
         let mut names = HashMap::new();
         names.insert("#data".to_string(), "Data".to_string());
@@ -228,11 +235,10 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         contract_address: &str,
         token_id_hex: &str,
     ) -> Result<DynamoDbOutput<Option<TokenData>>, ProviderError> {
+        let pk = self.get_pk(contract_address, token_id_hex);
+        info!("get_token: pk={}", pk);
         let mut key = HashMap::new();
-        key.insert(
-            "PK".to_string(),
-            AttributeValue::S(self.get_pk(contract_address, token_id_hex)),
-        );
+        key.insert("PK".to_string(), AttributeValue::S(pk));
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
         let r = ctx

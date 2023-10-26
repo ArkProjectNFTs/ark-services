@@ -525,6 +525,11 @@ mod tests {
             AttributeValue::S("{ \"image\": \"image_url\" }".to_string()),
         );
 
+        final_expected_map.insert(
+            "MetadataUpdatedAt".to_string(),
+            AttributeValue::N("1698346591".to_string()),
+        );
+
         assert_eq!(result_map.get("Image"), final_expected_map.get("Image"));
 
         assert_eq!(

@@ -1,15 +1,15 @@
 {
-    "httpMethod": "GET",
-    "pathParameters": {
-        "contract_address": "0x1234",
-        "token_id": "0x22333"
-    },
-    "multiValueHeaders": {
-        "Accept": ["*/*"]
-    },
-    "stageVariables": {
-        "tableName": "ark_project_dev",
-        "paginationCache": "redis://127.0.0.1:6379",
-        "maxItemsLimit": "100"
-    }
+  "httpMethod": "POST",
+  "pathParameters": {
+    "contract_address": "0x1234",
+    "token_id": "0"
+  },
+  "multiValueHeaders": {
+    "Accept": ["*/*"]
+  },
+  "stageVariables": {
+    "tableName": "ark_project_testnet",
+    "paginationCache": "redis://127.0.0.1:6379",
+    "maxItemsLimit": "100"
+  }
 }
