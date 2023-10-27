@@ -15,6 +15,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { api } from "~/trpc/react";
+import { Checkbox } from "../ui/checkbox";
 
 interface CreateIndexerTaskFromProps {
   network: "mainnet" | "testnet";
@@ -24,6 +25,7 @@ const createIndexerTaskFormSchema = z.object({
   from: z.string(),
   to: z.string(),
   numberOfTasks: z.string(),
+  forceMode: z.boolean(),
 });
 
 type CreateIndexerTaskFormValues = z.infer<typeof createIndexerTaskFormSchema>;
@@ -32,6 +34,7 @@ const defaultValues: Partial<CreateIndexerTaskFormValues> = {
   from: "0",
   to: "1000",
   numberOfTasks: "3",
+  forceMode: false,
 };
 
 export default function CreateIndexerTaskFrom(
@@ -51,6 +54,7 @@ export default function CreateIndexerTaskFrom(
       to: parseInt(data.to),
       numberOfTasks: parseInt(data.numberOfTasks),
       network: props.network,
+      forceMode: data.forceMode,
     });
   }
 
@@ -73,7 +77,6 @@ export default function CreateIndexerTaskFrom(
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="to"
@@ -90,7 +93,6 @@ export default function CreateIndexerTaskFrom(
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="numberOfTasks"
@@ -106,6 +108,27 @@ export default function CreateIndexerTaskFrom(
           )}
         />
 
+        <FormField
+          control={form.control}
+          name="forceMode"
+          render={({ field }) => (
+            <FormItem>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={field.name}
+                  checked={field.value}
+                  onCheckedChange={(value) =>
+                    form.setValue(field.name, value as boolean)
+                  }
+                />
+                <FormLabel htmlFor={field.name}>Force Mode</FormLabel>
+              </div>
+              <FormDescription>
+                Initiate re-indexing regardless of blocks previously indexed
+              </FormDescription>
+            </FormItem>
+          )}
+        />
         <Button type="submit">Create Tasks</Button>
       </form>
     </Form>

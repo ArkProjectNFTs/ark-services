@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Progress } from "~/components/ui/progress";
+import { Checkbox } from "../ui/checkbox";
 import { DataTableColumnHeader } from "./DataTableColumnHeader";
 import { type TaskData } from "./IndexerTasksList";
 
@@ -125,6 +126,21 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
     ),
     cell: ({ row }) => {
       return <div className="flex items-center">{row.getValue("version")}</div>;
+    },
+  },
+  {
+    accessorKey: "forceMode",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Force Mode" />
+    ),
+    cell: ({ row }) => {
+      const value: boolean = row.getValue("forceMode") ?? false;
+      console.log("value force mode: ", value);
+      return (
+        <div className="flex items-center space-x-2">
+          <Checkbox checked={value} />
+        </div>
+      );
     },
   },
   {
