@@ -95,6 +95,27 @@ export const indexerRouter = createTRPCRouter({
       }
     }),
 
+  deleteTask: protectedProcedure
+    .input(
+      z.object({
+        taskId: z.string(),
+        network: z.enum(["testnet", "mainnet"]),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        await dynamodb.deleteItem({
+          Key: {
+            PK: { S: "INDEXER" },
+            SK: { S: `TASK#${input.taskId}` },
+          },
+          TableName: getTableName(input.network),
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }),
+
   spawnTasks: protectedProcedure
     .input(
       z.object({

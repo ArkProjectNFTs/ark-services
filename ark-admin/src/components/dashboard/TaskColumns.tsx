@@ -1,19 +1,12 @@
 "use client";
 
 import { type ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal } from "lucide-react";
 import moment from "moment";
 
-import { Button } from "~/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
 import { Progress } from "~/components/ui/progress";
 import { Checkbox } from "../ui/checkbox";
+import CopyPasteLabel from "./CopyPasteLabel";
+import DashboardRowActions from "./DashboardRowActions";
 import { DataTableColumnHeader } from "./DataTableColumnHeader";
 import { type TaskData } from "./IndexerTasksList";
 
@@ -44,11 +37,13 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Task Id" />
     ),
-    cell: ({ row }) => (
-      <div className="w-[150px] overflow-hidden text-ellipsis">
-        {row.getValue("taskId")}
-      </div>
-    ),
+    cell: ({ row }) => {
+      return (
+        <div className="w-[150px] cursor-pointer overflow-hidden text-ellipsis">
+          <CopyPasteLabel label={row.getValue("taskId")} />
+        </div>
+      );
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -146,42 +141,6 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
   {
     id: "actions",
     enableHiding: false,
-    cell: ({ row }) => {
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => {
-                const taskId = row.getValue<string>("taskId");
-                const url = `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Fecs$252Fark-indexer-mainnet/log-events/ecs$252Fark_indexer$252F${taskId}`;
-                window.open(url, "_blank");
-              }}
-            >
-              View logs
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onClick={() => {
-                const taskId = row.getValue<string>("taskId");
-                const url = `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:live-tail$3FlogGroupArns$3D~(~'arn*3aaws*3alogs*3aus-east-1*3a223605539824*3alog-group*3a*2fecs*2fark-indexer-mainnet*3a*2a)$26logStreamNames$3D~(~'ecs*2fark_indexer*2f${taskId})`;
-                window.open(url, "_blank");
-              }}
-            >
-              Log stream
-            </DropdownMenuItem>
-            {/* <DropdownMenuSeparator />
-            <DropdownMenuItem>View logs</DropdownMenuItem> */}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
+    cell: ({ row }) => <DashboardRowActions row={row} />,
   },
 ];
