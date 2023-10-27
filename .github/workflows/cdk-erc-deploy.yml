@@ -30,10 +30,19 @@ jobs:
         run: |
           cd infrastructure/cdk-ecr
           cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
-
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
       - name: Output ECR Repository URL
         run: |
           cd infrastructure/cdk-ecr
           ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
           echo "ECR Repository URL: $ECR_URL"
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
