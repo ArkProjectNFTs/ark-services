@@ -27,12 +27,14 @@ console.log(`------------------------------------`);
 console.log(`- Branch: ${baseBranch}`);
 console.log(`- Is a Release?: ${isRelease ? "Yes" : "No"}`);
 console.log(`- Is a Pull Request?: ${isPullRequest ? "Yes" : "No"}`);
+console.log(`- Target Branch: ${targetBranch}`);
+
 if (isPullRequest) {
   console.log(`- Pull Request Number: ${prNumber}`);
 }
 console.log(`------------------------------------`);
 
-if (isPullRequest && (!targetBranch || targetBranch !== "main")) {
+if (isPullRequest && targetBranch && targetBranch !== "main") {
   throw new Error(
     "Pull Requests can only target the 'main' branch for deployments."
   );
