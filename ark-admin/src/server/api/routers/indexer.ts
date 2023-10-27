@@ -1,9 +1,5 @@
 import { DynamoDB, type AttributeValue } from "@aws-sdk/client-dynamodb";
-import {
-  ECSClient,
-  ListTasksCommand,
-  type ListTasksCommandOutput,
-} from "@aws-sdk/client-ecs";
+import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
 import { runTask } from "~/lib/awsTasksSpawner";
@@ -60,6 +56,7 @@ const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
     version: item?.Data?.M?.Version?.S,
     updatedAt: item?.Data?.M?.LastUpdate?.N,
     createdAt: item?.Data?.M?.CreatedAt?.N,
+    forceMode: item?.Data?.M?.ForceMode?.BOOL,
   };
 };
 
@@ -69,9 +66,10 @@ type IndexerTask = {
   status: string;
   from: number;
   to: number;
-  version: string | undefined;
-  updatedAt: string | undefined;
-  createdAt: string | undefined;
+  version?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  forceMode?: boolean;
 };
 
 export const indexerRouter = createTRPCRouter({
@@ -104,48 +102,42 @@ export const indexerRouter = createTRPCRouter({
         to: z.number().min(0),
         numberOfTasks: z.number().min(1),
         network: z.enum(["testnet", "mainnet"]),
+        forceMode: z.boolean().optional(),
       }),
     )
-    .mutation(
-      async ({
-        input,
-      }: {
-        input: {
-          from: number;
-          to: number;
-          numberOfTasks: number;
-          network: Network;
-        };
-      }) => {
-        const rangeSize = Math.floor(
-          (input.to - input.from + 1) / input.numberOfTasks,
-        );
-        const subnetId =
-          input.network === "mainnet"
-            ? "subnet-0c28889f016ad63f5"
-            : "subnet-05ebee80f9f4299a5";
-        const taskDefinition =
-          input.network === "mainnet"
-            ? "ark-indexer-task-mainnet"
-            : "ark-indexer-task-testnet";
-        try {
-          for (let i = 0; i < input.numberOfTasks; i++) {
-            const subFrom = input.from + rangeSize * i;
-            const subTo = Math.min(subFrom + rangeSize - 1, input.to);
+    .mutation(async ({ input }) => {
+      console.log("spawnTasks() input:", input);
 
-            const commandOptions = {
-              cluster: ECS_CLUSTER,
-              network: input.network,
-              from: subFrom,
-              to: subTo,
-              subnetId,
-              taskDefinition,
-            };
-            const commandOutput = await runTask(client, commandOptions);
+      const rangeSize = Math.floor(
+        (input.to - input.from + 1) / input.numberOfTasks,
+      );
+      const subnetId =
+        input.network === "mainnet"
+          ? "subnet-0c28889f016ad63f5"
+          : "subnet-05ebee80f9f4299a5";
+      const taskDefinition =
+        input.network === "mainnet"
+          ? "ark-indexer-task-mainnet"
+          : "ark-indexer-task-testnet";
+      try {
+        for (let i = 0; i < input.numberOfTasks; i++) {
+          const subFrom = input.from + rangeSize * i;
+          const subTo = Math.min(subFrom + rangeSize - 1, input.to);
 
-            console.log("=> commandOutput", commandOutput);
+          const commandOptions = {
+            cluster: ECS_CLUSTER,
+            network: input.network,
+            from: subFrom,
+            to: subTo,
+            subnetId,
+            taskDefinition,
+          };
+          const commandOutput = await runTask(client, commandOptions);
 
-            for (const task of commandOutput.tasks ?? []) {
+          console.log("=> commandOutput", commandOutput);
+
+          for (const task of commandOutput.tasks ?? []) {
+            if (task.taskArn) {
               const taskId = task.taskArn.split("/").pop();
               const creationDate = Math.floor(Date.now() / 1000);
 
@@ -164,6 +156,7 @@ export const indexerRouter = createTRPCRouter({
                       IndexationProgress: { N: "0" },
                       LastUpdate: { N: creationDate.toString() },
                       CreatedAt: { N: creationDate.toString() },
+                      ForceMode: { BOOL: input.forceMode ?? false },
                     },
                   },
                 },
@@ -172,9 +165,9 @@ export const indexerRouter = createTRPCRouter({
               console.log("=> putRequest", putRequest);
             }
           }
-        } catch (error) {
-          console.error(error);
         }
-      },
-    ),
+      } catch (error) {
+        console.error(error);
+      }
+    }),
 });
