@@ -12,24 +12,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Setup Node.js environment
-      uses: actions/setup-node@v2
-      with:
-        node-version: '18'
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
 
-    - name: Install CDK
-      run: |
-        npm install -g aws-cdk
-        npm install
+      - name: Install CDK
+        run: |
+          cd infrastructure/cdk-ecr
+          npm install -g aws-cdk
+          npm install
 
-    - name: Deploy CDK stack
-      run: cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
+      - name: Deploy CDK stack
+        run: |
+          cd infrastructure/cdk-ecr
+          cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
 
-    - name: Output ECR Repository URL
-      run: |
-        ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
-        echo "ECR Repository URL: $ECR_URL"
-        echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+      - name: Output ECR Repository URL
+        run: |
+          cd infrastructure/cdk-ecr
+          ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
+          echo "ECR Repository URL: $ECR_URL"
+          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
