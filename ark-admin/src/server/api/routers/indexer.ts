@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { runTask } from "~/lib/awsTasksSpawner";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
+import { splitIntoRanges } from "~/lib/splitIntoRanges";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 const ECS_CLUSTER = "arn:aws:ecs:us-east-1:223605539824:cluster/ark-indexers";
@@ -20,6 +21,20 @@ const client = new ECSClient({
 const dynamodb = new DynamoDB({ region: AWS_REGION });
 
 type Network = "testnet" | "mainnet";
+
+function getRandomNumber(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function getRandomNumbers(n: number, min: number, max: number) {
+  const numbers: number[] = [];
+
+  for (let i = 0; i < n; i++) {
+    numbers.push(getRandomNumber(min, max));
+  }
+
+  return numbers.sort((a, b) => a - b);
+}
 
 const getTableName = (network: Network): string => {
   return network === "mainnet" ? "ark_project_mainnet" : "ark_project_testnet";
@@ -73,18 +88,48 @@ type IndexerTask = {
   forceMode?: boolean;
 };
 
+function containsNumbersInRange(arr: number[], start: number, end: number) {
+  const numSet = new Set(arr);
+
+  for (let i = start; i <= end; i++) {
+    if (numSet.has(i)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function numbersInRange(arr: number[], start: number, end: number) {
+  const numSet = new Set(arr);
+  const result: number[] = [];
+
+  for (let i = start; i <= end; i++) {
+    if (numSet.has(i)) {
+      result.push(i);
+    }
+  }
+
+  return result;
+}
+
 export const indexerRouter = createTRPCRouter({
   allBlocks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }) => {
       const latest = await fetchLastBlock(input.network);
-      const blocks = getRandomNumbers(5895, 0, latest);
-
-      console.log("latest block id", latest);
+      const blocks = getRandomNumbers(500, 24, 100000);
+      const ranges = splitIntoRanges(latest, 120).map(([start, end]) => ({
+        start,
+        end,
+        hasUnindexed: containsNumbersInRange(blocks, start!, end!),
+        blocks: numbersInRange(blocks, start!, end!),
+      }));
 
       return {
         blocks,
         latest,
+        ranges,
       };
     }),
   allTasks: protectedProcedure
@@ -93,12 +138,10 @@ export const indexerRouter = createTRPCRouter({
       try {
         const tasks = await fetchTasks(input.network);
 
-        // console.log("=> tasks", tasks);
-
         return tasks.reduce<IndexerTask[]>((acc, task) => {
           if (task.Data?.M) {
             const item = mapDynamoItem(task);
-            console.log("=> item", item);
+
             return acc.concat(item);
           }
           return acc;
