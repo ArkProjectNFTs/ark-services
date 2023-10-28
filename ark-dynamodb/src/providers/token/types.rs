@@ -245,9 +245,18 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             _ => String::from(""),
         };
 
+        let metadata_updated_at = match m.get("MetadataUpdatedAt") {
+            Some(AttributeValue::N(n)) => match n.parse::<i64>() {
+                Ok(n) => Some(n),
+                _ => None,
+            },
+            _ => None,
+        };
+
         let metadata = TokenMetadata {
             raw: raw_metadata.clone(),
             normalized: normalized_metadata,
+            metadata_updated_at,
         };
 
         Ok(TokenData {
@@ -409,6 +418,7 @@ mod tests {
                     youtube_url: Some(String::from("")),
                 },
                 raw: String::from("{ \"image\": \"image_url\" }"),
+                metadata_updated_at: None,
             }),
         };
 
@@ -448,9 +458,11 @@ mod tests {
                     trait_type: Some("trait".to_string()),
                     value: MetadataTraitValue::String("value".to_string()),
                 }]),
+
                 properties: None,
             },
             raw: "{ \"image\": \"image_url\" }".to_string(),
+            metadata_updated_at: None,
         };
 
         // Call the function

@@ -125,7 +125,7 @@ impl AWSDynamoStorage for DynamoStorage {
                     "Failed to update indexer task status for task_id {}: {:?}",
                     task_id, e
                 );
-                Err(StorageError::DatabaseError)
+                Err(StorageError::DatabaseError(e.to_string()))
             }
         }
     }
@@ -190,7 +190,7 @@ impl AWSDynamoStorage for DynamoStorage {
                     "Failed to update indexer progress for task_id {}: {:?}",
                     task_id, e
                 );
-                Err(StorageError::DatabaseError)
+                Err(StorageError::DatabaseError(e.to_string()))
             }
         }
     }
@@ -219,7 +219,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -236,7 +236,7 @@ impl Storage for DynamoStorage {
             .token
             .get_token(&self.ctx, &token.contract_address, &token.token_id_hex)
             .await
-            .map_err(|_| StorageError::DatabaseError)?
+            .map_err(|e| StorageError::DatabaseError(e.to_string()))?
             .into_inner()
             .is_some();
 
@@ -255,7 +255,7 @@ impl Storage for DynamoStorage {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     error!("{}", e.to_string());
-                    return Err(StorageError::DatabaseError);
+                    return Err(StorageError::DatabaseError(e.to_string()));
                 }
             }
         } else {
@@ -277,7 +277,7 @@ impl Storage for DynamoStorage {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     error!("{}", e.to_string());
-                    return Err(StorageError::DatabaseError);
+                    return Err(StorageError::DatabaseError(e.to_string()));
                 }
             }
         }
@@ -299,12 +299,14 @@ impl Storage for DynamoStorage {
             Ok(i) => i,
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         };
 
         if info.inner().is_some() {
-            return Err(StorageError::AlreadyExists);
+            return Err(StorageError::AlreadyExists(
+                "Event already exists".to_string(),
+            ));
         }
 
         match self
@@ -316,7 +318,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -339,12 +341,12 @@ impl Storage for DynamoStorage {
                     // the `ContractInfo` directly.
                     Ok(ContractType::from_str(&contract.contract_type).unwrap())
                 } else {
-                    return Err(StorageError::NotFound);
+                    return Err(StorageError::NotFound("Contract not found".to_string()));
                 }
             }
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -368,7 +370,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -390,7 +392,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
@@ -407,14 +409,14 @@ impl Storage for DynamoStorage {
             Ok(i) => i,
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         };
 
         if let Some(info) = info {
             Ok(info)
         } else {
-            Err(StorageError::NotFound)
+            Err(StorageError::NotFound("Block not found".to_string()))
         }
     }
 
@@ -438,7 +440,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError);
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
         }
     }
