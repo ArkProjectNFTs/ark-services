@@ -305,7 +305,8 @@ impl Storage for DynamoStorage {
 
         if info.inner().is_some() {
             return Err(StorageError::AlreadyExists(
-                "Event already exists".to_string()));
+                "Event already exists".to_string(),
+            ));
         }
 
         match self
@@ -340,9 +341,7 @@ impl Storage for DynamoStorage {
                     // the `ContractInfo` directly.
                     Ok(ContractType::from_str(&contract.contract_type).unwrap())
                 } else {
-                    return Err(StorageError::NotFound(
-                        "Contract not found".to_string(),
-                    ));
+                    return Err(StorageError::NotFound("Contract not found".to_string()));
                 }
             }
             Err(e) => {
