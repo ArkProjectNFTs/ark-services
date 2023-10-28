@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { NextPage } from "next";
 
 import BlocksOverview from "~/components/dashboard/BlockOverview";
+import BlocksOverviewSkeleton from "~/components/dashboard/BlockOverviewSkeleton";
 import CreateIndexerTaskForm from "~/components/dashboard/CreateIndexerTaskForm";
 import IndexerTasksList from "~/components/dashboard/IndexerTasksList";
 import { TaskFormProvider } from "~/components/dashboard/TaskFormProvider";
@@ -11,7 +12,7 @@ const DashboardPage: NextPage = () => {
     <TaskFormProvider>
       <div className="flex space-x-12">
         <div className="flex flex-1 flex-col space-y-6 p-6">
-          <Suspense fallback={null}>
+          <Suspense fallback={<BlocksOverviewSkeleton />}>
             <BlocksOverview />
           </Suspense>
           <Suspense fallback={null}>

@@ -45,7 +45,7 @@ const defaultValues: Partial<CreateIndexerTaskFormValues> = {
 export default function CreateIndexerTaskFrom() {
   const { network } = useNetwork();
   const { toast } = useToast();
-  const { state } = useTaskForm();
+  const { values } = useTaskForm();
   const { mutateAsync: spawnTasks, isLoading } =
     api.indexer.spawnTasks.useMutation({
       onSuccess: () => {
@@ -65,9 +65,10 @@ export default function CreateIndexerTaskFrom() {
 
   const form = useForm<CreateIndexerTaskFormValues>({
     resolver: zodResolver(createIndexerTaskFormSchema),
-    defaultValues: { ...state, forceMode: false },
+    defaultValues: { ...values, forceMode: false },
   });
 
+  const numberOfTasks = form.watch("numberOfTasks");
   const from = form.watch("from");
   const to = form.watch("to");
   const count = parseInt(to) - parseInt(from) || 0;
@@ -84,14 +85,20 @@ export default function CreateIndexerTaskFrom() {
   }
 
   useEffect(() => {
-    form.reset({ ...state });
-  }, [state, form]);
+    form.reset({ ...values });
+  }, [values, form]);
 
   return (
     <div className="">
-      <h3 className="text-2xl font-semibold tracking-tight">New Task</h3>
-      <div className="mb-4 text-sm text-muted-foreground">
-        Start indexing {count} blocks
+      <h3 className="mb-4 text-2xl font-semibold tracking-tight">New Task</h3>
+      <div className="mb-4">
+        <div className="text-sm">
+          Start indexing <span className="font-semibold">{count}</span> blocks
+          in <span className="font-semibold">{numberOfTasks || 1}</span> tasks.
+        </div>
+        <div className="text-sm text-muted-foreground">
+          ({Math.round(count / parseInt(numberOfTasks)) || 0} blocks per task)
+        </div>
       </div>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -134,7 +141,13 @@ export default function CreateIndexerTaskFrom() {
               <FormItem>
                 <FormLabel>Number of tasks</FormLabel>
                 <FormControl>
-                  <Input placeholder="3" {...field} type="number" />
+                  <Input
+                    placeholder="3"
+                    {...field}
+                    type="number"
+                    max={3}
+                    min={1}
+                  />
                 </FormControl>
                 <FormDescription>Tasks to deploy for indexing</FormDescription>
                 <FormMessage />

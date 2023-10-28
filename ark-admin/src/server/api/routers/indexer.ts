@@ -3,9 +3,26 @@ import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
 import { runTask } from "~/lib/awsTasksSpawner";
+import { fetchBlocks } from "~/lib/fetchBlocks";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
-import { splitIntoRanges } from "~/lib/splitIntoRanges";
+import {
+  containsNumbersInRange,
+  numbersInRange,
+  splitIntoRanges,
+} from "~/lib/range";
+import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+
+type IndexerTask = {
+  indexationProgress: number;
+  taskId: string;
+  status: string;
+  from: number;
+  to: number;
+  version: string | undefined;
+  updatedAt: string | undefined;
+  createdAt: string | undefined;
+};
 
 const ECS_CLUSTER = "arn:aws:ecs:us-east-1:223605539824:cluster/ark-indexers";
 const AWS_REGION = "us-east-1";
@@ -20,31 +37,11 @@ const client = new ECSClient({
 
 const dynamodb = new DynamoDB({ region: AWS_REGION });
 
-type Network = "testnet" | "mainnet";
-
-function getRandomNumber(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function getRandomNumbers(n: number, min: number, max: number) {
-  const numbers: number[] = [];
-
-  for (let i = 0; i < n; i++) {
-    numbers.push(getRandomNumber(min, max));
-  }
-
-  return numbers.sort((a, b) => a - b);
-}
-
-const getTableName = (network: Network): string => {
-  return network === "mainnet" ? "ark_project_mainnet" : "ark_project_testnet";
-};
-
 const fetchTasks = async (
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
-    TableName: getTableName(network),
+    TableName: `ark_project_${network}`,
     IndexName: "GSI1PK-GSI1SK-index",
     KeyConditionExpression: "#GSI1PK = :GSI1PK",
     ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
@@ -76,54 +73,17 @@ const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
   };
 };
 
-type IndexerTask = {
-  indexationProgress: number;
-  taskId: string;
-  status: string;
-  from: number;
-  to: number;
-  version?: string;
-  updatedAt?: string;
-  createdAt?: string;
-  forceMode?: boolean;
-};
-
-function containsNumbersInRange(arr: number[], start: number, end: number) {
-  const numSet = new Set(arr);
-
-  for (let i = start; i <= end; i++) {
-    if (numSet.has(i)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function numbersInRange(arr: number[], start: number, end: number) {
-  const numSet = new Set(arr);
-  const result: number[] = [];
-
-  for (let i = start; i <= end; i++) {
-    if (numSet.has(i)) {
-      result.push(i);
-    }
-  }
-
-  return result;
-}
-
 export const indexerRouter = createTRPCRouter({
   allBlocks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }) => {
       const latest = await fetchLastBlock(input.network);
-      const blocks = getRandomNumbers(500, 24, 100000);
+      const blocks = await fetchBlocks(input.network, latest);
       const ranges = splitIntoRanges(latest, 120).map(([start, end]) => ({
         start,
         end,
-        hasUnindexed: containsNumbersInRange(blocks, start!, end!),
-        blocks: numbersInRange(blocks, start!, end!),
+        hasUnindexed: containsNumbersInRange(blocks, start, end),
+        blocks: numbersInRange(blocks, start, end),
       }));
 
       return {
@@ -166,7 +126,7 @@ export const indexerRouter = createTRPCRouter({
             PK: { S: "INDEXER" },
             SK: { S: `TASK#${input.taskId}` },
           },
-          TableName: getTableName(input.network),
+          TableName: `ark_project_${input.network}`,
         });
       } catch (error) {
         console.error(error);
@@ -222,7 +182,7 @@ export const indexerRouter = createTRPCRouter({
               const creationDate = Math.floor(Date.now() / 1000);
 
               const putRequest = await dynamodb.putItem({
-                TableName: getTableName(input.network),
+                TableName: `ark_project_${input.network}`,
                 Item: {
                   PK: { S: "INDEXER" },
                   SK: { S: `TASK#${taskId}` },

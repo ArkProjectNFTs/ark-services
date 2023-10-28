@@ -14,29 +14,29 @@ export type TaskFormState = {
 };
 
 interface TaskFormContextType {
-  state: TaskFormState;
-  setState: React.Dispatch<React.SetStateAction<TaskFormState>>;
+  values: TaskFormState;
+  setValues: React.Dispatch<React.SetStateAction<TaskFormState>>;
 }
 
 const TaskFormContext = createContext<TaskFormContextType | undefined>(
   undefined,
 );
 
-interface NetworkProviderProps {
+interface TaskFormProviderProps {
   children: ReactNode;
 }
 
-export const TaskFormProvider: React.FC<NetworkProviderProps> = ({
+export const TaskFormProvider: React.FC<TaskFormProviderProps> = ({
   children,
 }) => {
-  const [state, setState] = useState<TaskFormState>({
+  const [values, setValues] = useState<TaskFormState>({
     from: "0",
     to: "1000",
     numberOfTasks: "3",
   });
 
   return (
-    <TaskFormContext.Provider value={{ state, setState }}>
+    <TaskFormContext.Provider value={{ values, setValues }}>
       {children}
     </TaskFormContext.Provider>
   );
@@ -46,7 +46,7 @@ export const useTaskForm = (): TaskFormContextType => {
   const context = useContext(TaskFormContext);
 
   if (!context) {
-    throw new Error("useNetwork must be used within a NetworkProvider");
+    throw new Error("useTaskForm must be used within a TaskFormProvider");
   }
 
   return context;
