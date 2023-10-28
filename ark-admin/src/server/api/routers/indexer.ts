@@ -124,6 +124,7 @@ export const indexerRouter = createTRPCRouter({
         numberOfTasks: z.number().min(1),
         network: z.enum(["testnet", "mainnet"]),
         forceMode: z.boolean().optional(),
+        logLevel: z.string().optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -152,6 +153,7 @@ export const indexerRouter = createTRPCRouter({
             to: subTo,
             subnetId,
             taskDefinition,
+            logLevel: input.logLevel ?? "info",
           };
           const commandOutput = await runTask(client, commandOptions);
 

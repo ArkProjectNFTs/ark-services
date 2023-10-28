@@ -26,6 +26,7 @@ const createIndexerTaskFormSchema = z.object({
   to: z.string(),
   numberOfTasks: z.string(),
   forceMode: z.boolean(),
+  logLevel: z.string(),
 });
 
 type CreateIndexerTaskFormValues = z.infer<typeof createIndexerTaskFormSchema>;
@@ -35,6 +36,7 @@ const defaultValues: Partial<CreateIndexerTaskFormValues> = {
   to: "1000",
   numberOfTasks: "3",
   forceMode: false,
+  logLevel: "info",
 };
 
 export default function CreateIndexerTaskFrom(
@@ -124,7 +126,24 @@ export default function CreateIndexerTaskFrom(
                 <FormLabel htmlFor={field.name}>Force Mode</FormLabel>
               </div>
               <FormDescription>
-                Initiate re-indexing regardless of blocks previously indexed
+                Initiate re-indexing regardless of blocks previously indexed.
+              </FormDescription>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="logLevel"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Log Level</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Choose log level" type="text" />
+              </FormControl>
+              <FormMessage />
+              <FormDescription>
+                Specify the desired logging level for the indexer task.
               </FormDescription>
             </FormItem>
           )}

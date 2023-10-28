@@ -4,6 +4,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import moment from "moment";
 
 import { Progress } from "~/components/ui/progress";
+import { Badge } from "../ui/badge";
 import { Checkbox } from "../ui/checkbox";
 import CopyPasteLabel from "./CopyPasteLabel";
 import DashboardRowActions from "./DashboardRowActions";
@@ -11,27 +12,6 @@ import { DataTableColumnHeader } from "./DataTableColumnHeader";
 import { type TaskData } from "./IndexerTasksList";
 
 export const TaskColumns: ColumnDef<TaskData>[] = [
-  // {
-  //   id: "select",
-  //   header: ({ table }) => (
-  //     <Checkbox
-  //       checked={table.getIsAllPageRowsSelected()}
-  //       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-  //       aria-label="Select all"
-  //       className="translate-y-[2px]"
-  //     />
-  //   ),
-  //   cell: ({ row }) => (
-  //     <Checkbox
-  //       checked={row.getIsSelected()}
-  //       onCheckedChange={(value) => row.toggleSelected(!!value)}
-  //       aria-label="Select row"
-  //       className="translate-y-[2px]"
-  //     />
-  //   ),
-  //   enableSorting: false,
-  //   enableHiding: false,
-  // },
   {
     accessorKey: "taskId",
     header: ({ column }) => (
@@ -44,8 +24,8 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
         </div>
       );
     },
-    enableSorting: false,
-    enableHiding: false,
+    enableSorting: true,
+    enableHiding: true,
   },
   {
     accessorKey: "status",
@@ -53,13 +33,7 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => {
-      return (
-        <div className="flex space-x-2">
-          <span className="max-w-[500px] truncate font-medium uppercase">
-            {row.getValue("status")}
-          </span>
-        </div>
-      );
+      return <Badge variant="outline">{row.getValue("status")}</Badge>;
     },
   },
   {
@@ -83,8 +57,10 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
     ),
     cell: ({ row }) => {
       return (
-        <div className="flex flex-row gap-4">
-          <span>{row.getValue("indexationProgress")}%</span>
+        <div className="flex min-w-[160px] flex-row items-center justify-center gap-4">
+          <span className="min-w-[40px]">
+            {row.getValue("indexationProgress")}%
+          </span>
           <Progress value={row.getValue("indexationProgress")} max={100} />
         </div>
       );
@@ -102,18 +78,6 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
       return <div className="flex items-center">{momentTimestamp}</div>;
     },
   },
-  // {
-  //   accessorKey: "updatedAt",
-  //   header: ({ column }) => (
-  //     <DataTableColumnHeader column={column} title="Last Update" />
-  //   ),
-  //   cell: ({ row }) => {
-  //     const momentTimestamp = moment.unix(row.getValue("updatedAt"));
-  //     return (
-  //       <div className="flex items-center">{momentTimestamp.fromNow()}</div>
-  //     );
-  //   },
-  // },
   {
     accessorKey: "version",
     header: ({ column }) => (
@@ -124,13 +88,13 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
     },
   },
   {
+    enableHiding: true,
     accessorKey: "forceMode",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Force Mode" />
     ),
     cell: ({ row }) => {
       const value: boolean = row.getValue("forceMode") ?? false;
-      console.log("value force mode: ", value);
       return (
         <div className="flex items-center space-x-2">
           <Checkbox checked={value} />

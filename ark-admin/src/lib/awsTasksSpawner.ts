@@ -11,6 +11,7 @@ interface SpawnTaskOptions {
   subnetId: string;
   from: number;
   to: number;
+  logLevel: string;
 }
 
 export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
@@ -50,6 +51,10 @@ export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
             {
               name: "TO_BLOCK",
               value: `${options.to}`,
+            },
+            {
+              name: "RUST_LOG",
+              value: options.logLevel,
             },
           ],
         },
