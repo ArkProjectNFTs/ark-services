@@ -44,7 +44,7 @@ export function DashboardRowActions<TData>({
           className="cursor-pointer"
           onClick={() => {
             const taskId = row.getValue<string>("taskId");
-            const url = `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Fecs$252Fark-indexer-mainnet/log-events/ecs$252Fark_indexer$252F${taskId}`;
+            const url = `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:log-groups/log-group/$252Fecs$252Fark-indexer-${network}/log-events/ecs$252Fark_indexer$252F${taskId}`;
             window.open(url, "_blank");
           }}
         >
@@ -54,7 +54,7 @@ export function DashboardRowActions<TData>({
           className="cursor-pointer"
           onClick={() => {
             const taskId = row.getValue<string>("taskId");
-            const url = `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:live-tail$3FlogGroupArns$3D~(~'arn*3aaws*3alogs*3aus-east-1*3a223605539824*3alog-group*3a*2fecs*2fark-indexer-mainnet*3a*2a)$26logStreamNames$3D~(~'ecs*2fark_indexer*2f${taskId})`;
+            const url = `https://us-east-1.console.aws.amazon.com/cloudwatch/home?region=us-east-1#logsV2:live-tail$3FlogGroupArns$3D~(~'arn*3aaws*3alogs*3aus-east-1*3a223605539824*3alog-group*3a*2fecs*2fark-indexer-${network}*3a*2a)$26logStreamNames$3D~(~'ecs*2fark_indexer*2f${taskId})`;
             window.open(url, "_blank");
           }}
         >
