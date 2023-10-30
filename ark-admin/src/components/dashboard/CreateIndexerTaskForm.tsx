@@ -65,7 +65,7 @@ export default function CreateIndexerTaskFrom() {
 
   const form = useForm<CreateIndexerTaskFormValues>({
     resolver: zodResolver(createIndexerTaskFormSchema),
-    defaultValues: { ...values, forceMode: false },
+    defaultValues: { ...defaultValues, ...values },
   });
 
   const numberOfTasks = form.watch("numberOfTasks");
