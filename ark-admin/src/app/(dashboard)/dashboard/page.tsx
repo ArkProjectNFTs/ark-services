@@ -1,15 +1,29 @@
 import { Suspense } from "react";
 import type { NextPage } from "next";
 
+import BlocksOverview from "~/components/dashboard/BlockOverview";
+import BlocksOverviewSkeleton from "~/components/dashboard/BlockOverviewSkeleton";
+import CreateIndexerTaskForm from "~/components/dashboard/CreateIndexerTaskForm";
 import IndexerTasksList from "~/components/dashboard/IndexerTasksList";
+import { TaskFormProvider } from "~/components/dashboard/TaskFormProvider";
 
 const DashboardPage: NextPage = () => {
   return (
-    <div className="hidden h-full flex-col px-6 md:flex">
-      <Suspense fallback={null}>
-        <IndexerTasksList />
-      </Suspense>
-    </div>
+    <TaskFormProvider>
+      <div className="flex space-x-12">
+        <div className="flex-1 p-6">
+          <Suspense fallback={<BlocksOverviewSkeleton />}>
+            <BlocksOverview />
+          </Suspense>
+          <Suspense fallback={null}>
+            <IndexerTasksList />
+          </Suspense>
+        </div>
+        <div className="sticky top-0 h-screen border-l p-6">
+          <CreateIndexerTaskForm />
+        </div>
+      </div>
+    </TaskFormProvider>
   );
 };
 

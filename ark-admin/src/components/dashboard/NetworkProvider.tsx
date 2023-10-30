@@ -1,11 +1,7 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import React, { createContext, useContext, type ReactNode } from "react";
+import { useLocalStorage } from "usehooks-ts";
 
 export type NetworkType = "mainnet" | "testnet";
 
@@ -23,7 +19,10 @@ interface NetworkProviderProps {
 export const NetworkProvider: React.FC<NetworkProviderProps> = ({
   children,
 }) => {
-  const [network, setNetwork] = useState<NetworkType>("mainnet");
+  const [network, setNetwork] = useLocalStorage<NetworkType>(
+    "ark-admin:network",
+    "mainnet",
+  );
 
   return (
     <NetworkContext.Provider value={{ network, setNetwork }}>
@@ -34,6 +33,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
 
 export const useNetwork = (): NetworkContextType => {
   const context = useContext(NetworkContext);
+
   if (!context) {
     throw new Error("useNetwork must be used within a NetworkProvider");
   }

@@ -3,7 +3,22 @@ import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
 import { runTask } from "~/lib/awsTasksSpawner";
+import { fetchBlocks } from "~/lib/fetchBlocks";
+import { fetchLastBlock } from "~/lib/fetchLastBlock";
+import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+
+type IndexerTask = {
+  indexationProgress: number;
+  taskId: string;
+  status: string;
+  from: number;
+  to: number;
+  forceMode: boolean;
+  version: string | undefined;
+  updatedAt: string | undefined;
+  createdAt: string | undefined;
+};
 
 const ECS_CLUSTER = "arn:aws:ecs:us-east-1:223605539824:cluster/ark-indexers";
 const AWS_REGION = "us-east-1";
@@ -18,17 +33,11 @@ const client = new ECSClient({
 
 const dynamodb = new DynamoDB({ region: AWS_REGION });
 
-type Network = "testnet" | "mainnet";
-
-const getTableName = (network: Network): string => {
-  return network === "mainnet" ? "ark_project_mainnet" : "ark_project_testnet";
-};
-
 const fetchTasks = async (
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
-    TableName: getTableName(network),
+    TableName: `ark_project_${network}`,
     IndexName: "GSI1PK-GSI1SK-index",
     KeyConditionExpression: "#GSI1PK = :GSI1PK",
     ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
@@ -56,35 +65,37 @@ const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
     version: item?.Data?.M?.Version?.S,
     updatedAt: item?.Data?.M?.LastUpdate?.N,
     createdAt: item?.Data?.M?.CreatedAt?.N,
-    forceMode: item?.Data?.M?.ForceMode?.BOOL,
+    forceMode: item?.Data?.M?.ForceMode?.BOOL ?? false,
   };
 };
 
-type IndexerTask = {
-  indexationProgress: number;
-  taskId: string;
-  status: string;
-  from: number;
-  to: number;
-  version?: string;
-  updatedAt?: string;
-  createdAt?: string;
-  forceMode?: boolean;
-};
-
 export const indexerRouter = createTRPCRouter({
+  allBlocks: protectedProcedure
+    .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
+    .query(async ({ input }) => {
+      const latest = await fetchLastBlock(input.network);
+      const { ranges, rangeSize, count } = await fetchBlocks(
+        input.network,
+        latest,
+      );
+
+      return {
+        latest,
+        ranges,
+        rangeSize,
+        count,
+      };
+    }),
   allTasks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }: { input: { network: Network } }) => {
       try {
         const tasks = await fetchTasks(input.network);
 
-        // console.log("=> tasks", tasks);
-
         return tasks.reduce<IndexerTask[]>((acc, task) => {
           if (task.Data?.M) {
             const item = mapDynamoItem(task);
-            console.log("=> item", item);
+
             return acc.concat(item);
           }
           return acc;
@@ -109,7 +120,7 @@ export const indexerRouter = createTRPCRouter({
             PK: { S: "INDEXER" },
             SK: { S: `TASK#${input.taskId}` },
           },
-          TableName: getTableName(input.network),
+          TableName: `ark_project_${input.network}`,
         });
       } catch (error) {
         console.error(error);
@@ -165,7 +176,7 @@ export const indexerRouter = createTRPCRouter({
               const creationDate = Math.floor(Date.now() / 1000);
 
               const putRequest = await dynamodb.putItem({
-                TableName: getTableName(input.network),
+                TableName: `ark_project_${input.network}`,
                 Item: {
                   PK: { S: "INDEXER" },
                   SK: { S: `TASK#${taskId}` },
