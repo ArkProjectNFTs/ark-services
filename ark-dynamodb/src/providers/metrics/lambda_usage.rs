@@ -16,13 +16,20 @@ impl LambdaUsageProvider {
         lambda_name: &str,
         capacity: f64,
         exec_time: u64,
+        response_status: u64,
     ) -> Result<(), ProviderError> {
         let mut items = HashMap::new();
 
+        let now = now().to_string();
+
         let pk = format!("REQ#{}", request_id);
+        // TODO: something better here for the SK?
         let sk = lambda_name.to_string();
+
         let gsi1pk = format!("APIKEY#{}", api_key);
-        let gsi1sk = now().to_string();
+        let gsi1sk = now.clone();
+
+        let lambda_name = lambda_name.to_string();
 
         items.insert("PK".to_string(), AttributeValue::S(pk));
         items.insert("SK".to_string(), AttributeValue::S(sk));
@@ -35,6 +42,12 @@ impl LambdaUsageProvider {
         items.insert(
             "ExecTime".to_string(),
             AttributeValue::N(exec_time.to_string()),
+        );
+        items.insert("LambdaName".to_string(), AttributeValue::S(lambda_name));
+        items.insert("Timestamp".to_string(), AttributeValue::N(now));
+        items.insert(
+            "ResponseStatus".to_string(),
+            AttributeValue::S(response_status.to_string()),
         );
 
         client
