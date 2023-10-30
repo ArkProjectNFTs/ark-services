@@ -62,7 +62,10 @@ impl DynamoDbBlockProvider {
             "Status".to_string(),
             AttributeValue::S(data.status.to_string()),
         );
-
+        map.insert(
+            "BlockNumber".to_string(),
+            AttributeValue::S(data.block_number.to_string()),
+        );
         map
     }
 }
