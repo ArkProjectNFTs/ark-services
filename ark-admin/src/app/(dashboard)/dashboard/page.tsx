@@ -11,7 +11,7 @@ const DashboardPage: NextPage = () => {
   return (
     <TaskFormProvider>
       <div className="flex space-x-12">
-        <div className="flex flex-1 flex-col space-y-6 p-6">
+        <div className="flex-1 p-6">
           <Suspense fallback={<BlocksOverviewSkeleton />}>
             <BlocksOverview />
           </Suspense>

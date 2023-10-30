@@ -1,29 +1,58 @@
-import { DynamoDB } from "@aws-sdk/client-dynamodb";
-
+import { db } from "~/server/dynamodb";
 import { type Network } from "~/types";
-import { numbersNotInRange } from "./range";
-
-const AWS_REGION = "us-east-1";
-
-const dynamodb = new DynamoDB({ region: AWS_REGION });
+import { type Range } from "./range";
 
 export async function fetchBlocks(network: Network, latest: number) {
-  const existingBlocks: number[] = [];
-  const dynamoResult = await dynamodb.query({
+  const dynamoResult = await db.query({
     TableName: `ark_project_${network}`,
     IndexName: "GSI1PK-GSI1SK-index",
     KeyConditionExpression: "#GSI1PK = :GSI1PK",
-    ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
-    ExpressionAttributeValues: { ":GSI1PK": { S: "BLOCK" } },
+    ExpressionAttributeNames: {
+      "#GSI1PK": "GSI1PK",
+      "#status": "Data.M.Status",
+    },
+    ExpressionAttributeValues: {
+      ":GSI1PK": { S: "BLOCK" },
+      ":noneValue": { S: "NONE" },
+    },
+    FilterExpression: "#status <> :noneValue",
+    ProjectionExpression: "PK",
   });
 
-  dynamoResult.Items?.forEach((item) => {
-    const blockString = item.PK?.S?.split("#")[1];
+  const count = latest - (dynamoResult.Items?.length ?? 0);
+  const rangeCount = 120;
+  const rangeSize = Math.ceil(latest / rangeCount);
+  const ranges: Range[] = [];
 
-    if (blockString && item.Type?.M?.Status?.S !== "None") {
-      existingBlocks.push(+blockString);
+  // Initialize the ranges with empty blocks arrays
+  for (let i = 0; i < rangeCount; i++) {
+    const start = i * rangeSize;
+    const end = i !== rangeCount - 1 ? (i + 1) * rangeSize - 1 : latest;
+    ranges.push({ start, end, blocks: [] });
+  }
+
+  let nextExpectedBlock = 0;
+
+  for (const item of dynamoResult.Items ?? []) {
+    const block = +(item.PK?.S?.split("#")[1] ?? 0);
+
+    // Fill in missing blocks until the current block
+    while (nextExpectedBlock < block) {
+      const rangeIndex = Math.floor(nextExpectedBlock / rangeSize);
+      ranges[rangeIndex]?.blocks.push(nextExpectedBlock);
+      nextExpectedBlock++;
     }
-  });
 
-  return numbersNotInRange(existingBlocks, 1, latest);
+    // Set the next expected block
+    nextExpectedBlock = block + 1;
+  }
+
+  // Fill in missing blocks for the remainder of the range
+  while (nextExpectedBlock <= latest) {
+    const rangeIndex = Math.floor(nextExpectedBlock / rangeSize);
+    ranges[rangeIndex]?.blocks.push(nextExpectedBlock);
+    nextExpectedBlock++;
+  }
+
+  return { ranges, rangeSize, count };
 }

@@ -1,3 +1,9 @@
+export type Range = {
+  start: number;
+  end: number;
+  blocks: number[];
+};
+
 export function containsNumbersInRange(
   arr: number[],
   start: number,

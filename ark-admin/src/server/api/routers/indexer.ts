@@ -5,11 +5,6 @@ import { z } from "zod";
 import { runTask } from "~/lib/awsTasksSpawner";
 import { fetchBlocks } from "~/lib/fetchBlocks";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
-import {
-  containsNumbersInRange,
-  numbersInRange,
-  splitIntoRanges,
-} from "~/lib/range";
 import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -79,18 +74,16 @@ export const indexerRouter = createTRPCRouter({
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }) => {
       const latest = await fetchLastBlock(input.network);
-      const blocks = await fetchBlocks(input.network, latest);
-      const ranges = splitIntoRanges(latest, 120).map(([start, end]) => ({
-        start,
-        end,
-        hasUnindexed: containsNumbersInRange(blocks, start, end),
-        blocks: numbersInRange(blocks, start, end),
-      }));
+      const { ranges, rangeSize, count } = await fetchBlocks(
+        input.network,
+        latest,
+      );
 
       return {
-        blocks,
         latest,
         ranges,
+        rangeSize,
+        count,
       };
     }),
   allTasks: protectedProcedure
