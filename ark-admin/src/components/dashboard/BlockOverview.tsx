@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Loader2, MoveRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { percentageString } from "~/lib/percentageString";
 import { api } from "~/trpc/react";
@@ -82,10 +82,6 @@ export default function BlocksOverview() {
         >
           {isFetching && <Loader2 size={14} className="animate-spin" />}
           <span>Refresh</span>
-        </Button>
-        <Button size="sm" variant="outline" className="flex space-x-2">
-          <span>View all blocks</span>
-          <MoveRight size={14} />
         </Button>
       </div>
       <div className="grid grid-cols-4 gap-1 md:grid-cols-10">
