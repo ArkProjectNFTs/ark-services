@@ -1,11 +1,13 @@
 //! Initializes the context for ArkStack.
 
+use ark_dynamodb::providers::LambdaUsageProvider;
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
 use lambda_http::{Request, RequestExt};
+use std::time::Instant;
 
 use crate::{params, HttpParamSource};
 
-use crate::LambdaHttpError;
+use crate::{LambdaHttpError, LambdaHttpResponse};
 
 /// A common context for every http lambda.
 #[derive(Debug)]
@@ -17,6 +19,7 @@ pub struct LambdaCtx {
     pub api_key: String,
     pub req_id: String,
     pub function_name: String,
+    creation_instant: Instant,
 }
 
 impl LambdaCtx {
@@ -35,6 +38,8 @@ impl LambdaCtx {
     ///    * `cursor` -> the cursor to be used (optional).
     #[allow(clippy::redundant_closure)]
     pub async fn from_event(event: &Request) -> Result<Self, LambdaHttpError> {
+        let creation_instant = Instant::now();
+
         let stage_vars = event.stage_variables();
         let table_name = &stage_vars
             .first("tableName")
@@ -81,6 +86,38 @@ impl LambdaCtx {
             api_key: String::from("TODO"),
             req_id,
             function_name,
+            creation_instant,
         })
+    }
+
+    pub async fn register_usage(
+        &self,
+        response_status: &str,
+        lambda_response: Option<&LambdaHttpResponse>,
+    ) -> Result<(), LambdaHttpError> {
+        let elapsed = self.creation_instant.elapsed().as_nanos();
+
+        // TODO: we can also use the status code of the rsp.
+
+        let capacity = if let Some(lr) = lambda_response {
+            lr.capacity
+        } else {
+            0.0
+        };
+
+        LambdaUsageProvider::register_usage(
+            &self.db.client,
+            &self.req_id,
+            &self.api_key,
+            &self.function_name,
+            capacity,
+            elapsed,
+            response_status.to_string(),
+        )
+        .await
+        .map_err(LambdaHttpError::Provider)?;
+
+        Ok(())
+        // Register all in the tabel.
     }
 }

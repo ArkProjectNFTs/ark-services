@@ -12,24 +12,46 @@
 use ark_dynamodb::providers::{ArkEventProvider, DynamoDbEventProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
-    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
+    let r = process_event(&ctx, event).await;
 
+    match r {
+        Ok(lambda_rsp) => {
+            ctx.register_usage("depends on rsp", Some(&lambda_rsp))
+                .await?;
+            Ok(lambda_rsp.inner)
+        }
+        Err(e) => {
+            ctx.register_usage("error", None).await?;
+            Err(e)
+        }
+    }
+}
+
+async fn process_event(ctx: &LambdaCtx, event: Request) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let address = get_params(&event)?;
 
-    let rsp = provider.get_contract_events(&ctx.db, &address).await?;
+    let dynamo_rsp = provider.get_contract_events(&ctx.db, &address).await?;
 
-    let items = rsp.inner();
-    let cursor = ctx.paginator.store_cursor(&rsp.lek)?;
+    let items = dynamo_rsp.inner();
+    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
 
-    common::ok_body_rsp(&ArkApiResponse {
+    let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
         result: items,
+    })?;
+
+    // TODO: perhaps we can add here an HashMap with params?
+    // And each lambda can then fill this up?
+    Ok(LambdaHttpResponse {
+        capacity: dynamo_rsp.capacity,
+        inner: rsp,
     })
 }
 

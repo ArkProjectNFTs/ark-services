@@ -15,8 +15,8 @@ impl LambdaUsageProvider {
         api_key: &str,
         lambda_name: &str,
         capacity: f64,
-        exec_time: u64,
-        response_status: u64,
+        exec_time: u128,
+        response_status: String,
     ) -> Result<(), ProviderError> {
         let mut items = HashMap::new();
 
@@ -40,14 +40,14 @@ impl LambdaUsageProvider {
             AttributeValue::N(capacity.to_string()),
         );
         items.insert(
-            "ExecTime".to_string(),
+            "ExecTimeNano".to_string(),
             AttributeValue::N(exec_time.to_string()),
         );
         items.insert("LambdaName".to_string(), AttributeValue::S(lambda_name));
         items.insert("Timestamp".to_string(), AttributeValue::N(now));
         items.insert(
             "ResponseStatus".to_string(),
-            AttributeValue::S(response_status.to_string()),
+            AttributeValue::S(response_status),
         );
 
         client
