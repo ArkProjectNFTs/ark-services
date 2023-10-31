@@ -5,7 +5,6 @@ import { z } from "zod";
 import { runTask } from "~/lib/awsTasksSpawner";
 import { fetchBlocks } from "~/lib/fetchBlocks";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
-import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 type IndexerTask = {
@@ -34,7 +33,7 @@ const client = new ECSClient({
 const dynamodb = new DynamoDB({ region: AWS_REGION });
 
 const fetchTasks = async (
-  network: Network,
+  network: "mainnet" | "testnet",
 ): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
     TableName: `ark_project_${network}`,
@@ -88,7 +87,7 @@ export const indexerRouter = createTRPCRouter({
     }),
   allTasks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
-    .query(async ({ input }: { input: { network: Network } }) => {
+    .query(async ({ input }: { input: { network: "mainnet" | "testnet" } }) => {
       try {
         const tasks = await fetchTasks(input.network);
 
@@ -165,6 +164,7 @@ export const indexerRouter = createTRPCRouter({
             subnetId,
             taskDefinition,
             logLevel: input.logLevel ?? "info",
+            forceMode: input.forceMode ?? false,
           };
           const commandOutput = await runTask(client, commandOptions);
 

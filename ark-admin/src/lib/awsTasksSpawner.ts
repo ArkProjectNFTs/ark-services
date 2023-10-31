@@ -12,6 +12,7 @@ interface SpawnTaskOptions {
   from: number;
   to: number;
   logLevel: string;
+  forceMode: boolean;
 }
 
 export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
@@ -55,6 +56,10 @@ export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
             {
               name: "RUST_LOG",
               value: options.logLevel,
+            },
+            {
+              name: "FORCE_MODE",
+              value: `${options.forceMode}`,
             },
           ],
         },
