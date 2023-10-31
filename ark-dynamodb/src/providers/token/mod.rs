@@ -77,5 +77,6 @@ pub trait ArkTokenProvider {
         &self,
         ctx: &DynamoDbCtx,
         owner_address: &str,
+        contract_address: Option<String>,
     ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
 }

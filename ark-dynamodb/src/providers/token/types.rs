@@ -231,32 +231,36 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             _ => None,
         };
 
-        let m = convert::attr_to_map(&data, "Metadata")?;
+        let metadata = if data.get("Metadata").is_some() {
+            let m = convert::attr_to_map(&data, "Metadata")?;
 
-        let normalized_metadata =
-            extract_normalized_metadata_from_hashmap(m.clone()).map_err(|_| {
-                ProviderError::DataValueError(String::from(
-                    "Extracting normalized metadata from hashmap failed",
-                ))
-            })?;
+            let normalized_metadata =
+                extract_normalized_metadata_from_hashmap(m.clone()).map_err(|_| {
+                    ProviderError::DataValueError(String::from(
+                        "Extracting normalized metadata from hashmap failed",
+                    ))
+                })?;
 
-        let raw_metadata = match m.get("RawMetadata") {
-            Some(AttributeValue::S(s)) => s.clone(),
-            _ => String::from(""),
-        };
+            let raw_metadata = match m.get("RawMetadata") {
+                Some(AttributeValue::S(s)) => s.clone(),
+                _ => String::from(""),
+            };
 
-        let metadata_updated_at = match m.get("MetadataUpdatedAt") {
-            Some(AttributeValue::N(n)) => match n.parse::<i64>() {
-                Ok(n) => Some(n),
+            let metadata_updated_at = match m.get("MetadataUpdatedAt") {
+                Some(AttributeValue::N(n)) => match n.parse::<i64>() {
+                    Ok(n) => Some(n),
+                    _ => None,
+                },
                 _ => None,
-            },
-            _ => None,
-        };
+            };
 
-        let metadata = TokenMetadata {
-            raw: raw_metadata.clone(),
-            normalized: normalized_metadata,
-            metadata_updated_at,
+            Some(TokenMetadata {
+                raw: raw_metadata.clone(),
+                normalized: normalized_metadata,
+                metadata_updated_at,
+            })
+        } else {
+            None
         };
 
         Ok(TokenData {
@@ -265,7 +269,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             token_id: convert::attr_to_str(&data, "TokenId")?,
             token_id_hex: convert::attr_to_str(&data, "TokenIdHex")?,
             mint_info,
-            metadata: Some(metadata),
+            metadata,
         })
     }
 }

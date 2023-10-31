@@ -455,16 +455,25 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         ctx: &DynamoDbCtx,
         owner_address: &str,
+        contract_address: Option<String>,
     ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":owner".to_string(),
             AttributeValue::S(format!("OWNER#{}", owner_address)),
         );
-        values.insert(
-            ":token".to_string(),
-            AttributeValue::S("TOKEN#".to_string()),
-        );
+
+        if let Some(contract_address) = contract_address {
+            values.insert(
+                ":token".to_string(),
+                AttributeValue::S(format!("TOKEN#{}", contract_address)),
+            );
+        } else {
+            values.insert(
+                ":token".to_string(),
+                AttributeValue::S("TOKEN#".to_string()),
+            );
+        }
 
         let r = ctx
             .client
