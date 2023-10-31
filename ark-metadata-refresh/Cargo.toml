@@ -9,7 +9,7 @@ aws-config = "0.56.1"
 aws-sdk-dynamodb = "0.33.0"
 aws-sdk-s3 = "0.33.0"
 dotenv = "0.15.0"
-starknet = "0.6.0"
+starknet.workspace = true
 regex = "1.9.6"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tracing = "0.1"
