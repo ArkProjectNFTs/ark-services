@@ -32,7 +32,7 @@ impl LambdaCtx {
     ///    * `maxItemsLimit` -> the maximum limit of items returned by dynamodb. The hard limit hard coded is 250.
     ///
     /// 2. Headers:
-    ///    * `Authorization` -> API key as Authorization bearer.
+    ///    * `Authorization` -> API key as Authorization bearer OR `x-api-key`?
     ///
     /// 3. Query String params:
     ///    * `cursor` -> the cursor to be used (optional).
@@ -55,7 +55,11 @@ impl LambdaCtx {
 
         let paginator = DynamoDbPaginator::new(pagination_db);
 
-        // TODO: api key from header.
+        let api_key = if let Some(apix_header) = event.headers().get("x-api-key") {
+            apix_header.to_str().unwrap().to_string()
+        } else {
+            "NO_APIKEY".to_string()
+        };
 
         let lctx = event.lambda_context();
         let req_id = lctx.request_id;
@@ -83,7 +87,7 @@ impl LambdaCtx {
             db,
             table_name: table_name.to_string(),
             max_items_limit,
-            api_key: String::from("TODO"),
+            api_key,
             req_id,
             function_name,
             creation_instant,
