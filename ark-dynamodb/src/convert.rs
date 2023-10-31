@@ -1,5 +1,6 @@
 use aws_sdk_dynamodb::types::AttributeValue;
 use std::collections::HashMap;
+use tracing::trace;
 
 use crate::ProviderError;
 
@@ -27,6 +28,8 @@ pub fn attr_to_u64(
     data: &HashMap<String, AttributeValue>,
     attr: &str,
 ) -> Result<u64, ProviderError> {
+    trace!("attr_to_u64: data: {:?}, attr: {}", data, attr);
+
     if let Some(a) = data.get(attr) {
         let n = a.as_n().map_err(|_e| {
             ProviderError::DataValueError(format!("Expecting N for attribute {}", attr))
