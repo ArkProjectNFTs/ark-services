@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use tokio::time::sleep;
 use tokio::time::Duration;
+use tracing::trace;
 
 use super::ArkBlockProvider;
 use crate::providers::DynamoDbCapacityProvider;
@@ -44,7 +45,7 @@ impl DynamoDbBlockProvider {
             )?,
             indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier")?,
             indexer_version: convert::attr_to_str(data, "IndexerVersion")?,
-            block_number: convert::attr_to_u64(data, "BlockNumber")?,
+            block_number: convert::attr_to_u64(data, "BlockNumber").unwrap_or(0),
         })
     }
 
@@ -64,7 +65,7 @@ impl DynamoDbBlockProvider {
         );
         map.insert(
             "BlockNumber".to_string(),
-            AttributeValue::S(data.block_number.to_string()),
+            AttributeValue::N(data.block_number.to_string()),
         );
         map
     }
@@ -118,6 +119,8 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         client: &Self::Client,
         block_number: u64,
     ) -> Result<Option<BlockInfo>, ProviderError> {
+        trace!("get_info: block_number: {}", block_number);
+
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),

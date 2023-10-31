@@ -28,7 +28,7 @@ resolver = "2"
 [workspace.dependencies]
 anyhow = "1.0"
 ark-dynamodb = { path = "ark-dynamodb" }
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.6.0" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.6.1" }
 # arkproject = { path = "../ark-project" }
 async-trait = "0.1.73"
 lambda-http-common = { path = "ark-lambdas/apigw/lambda-http-common" }
@@ -36,5 +36,5 @@ tokio = { version = "1", features = ["full"] }
 serde = "1.0.160"
 serde_json = "1.0.96"
 serde_with = "2.3.2"
-starknet = "0.6.0"
+starknet = { git = "https://github.com/ArkProjectNFTs/starknet-rs", branch = "fix/contract-error" }
 thiserror = "1.0.40"

@@ -81,6 +81,7 @@ export default function CreateIndexerTaskFrom() {
       numberOfTasks: parseInt(data.numberOfTasks),
       network,
       forceMode: data.forceMode,
+      logLevel: data.logLevel,
     });
   }
 

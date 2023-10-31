@@ -14,7 +14,7 @@ anyhow.workspace = true
 async-trait.workspace = true
 dotenv = "0.15.0"
 tokio.workspace = true
-starknet = "0.6.0"
+starknet.workspace = true
 regex = "1.9.6"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tracing = "0.1"
