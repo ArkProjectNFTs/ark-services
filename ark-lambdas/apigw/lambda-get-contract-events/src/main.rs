@@ -17,27 +17,35 @@ use lambda_http_common::{
 use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    // 1. Init the context.
     let ctx = LambdaCtx::from_event(&event).await?;
-    let r = process_event(&ctx, event).await;
+
+    // 2. Get params.
+    let address = get_params(&event)?;
+
+    // 3. Process the request.
+    let r = process_event(&ctx, &address).await;
+
+    // 4. Send the response.
+    let mut req_params = HashMap::new();
+    req_params.insert("address".to_string(), address.clone());
 
     match r {
         Ok(lambda_rsp) => {
-            ctx.register_usage(Some(&lambda_rsp)).await?;
+            ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
             Ok(lambda_rsp.inner)
         }
         Err(e) => {
-            ctx.register_usage(None).await?;
+            ctx.register_usage(req_params, None).await?;
             Err(e)
         }
     }
 }
 
-async fn process_event(ctx: &LambdaCtx, event: Request) -> Result<LambdaHttpResponse, Error> {
+async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    let address = get_params(&event)?;
-
-    let dynamo_rsp = provider.get_contract_events(&ctx.db, &address).await?;
+    let dynamo_rsp = provider.get_contract_events(&ctx.db, address).await?;
 
     let items = dynamo_rsp.inner();
     let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
@@ -47,15 +55,9 @@ async fn process_event(ctx: &LambdaCtx, event: Request) -> Result<LambdaHttpResp
         result: items,
     })?;
 
-    let mut req_params = HashMap::new();
-    req_params.insert("address".to_string(), address.clone());
-
-    // TODO: perhaps we can add here an HashMap with params?
-    // And each lambda can then fill this up?
     Ok(LambdaHttpResponse {
         capacity: dynamo_rsp.capacity,
         inner: rsp,
-        req_params,
     })
 }
 

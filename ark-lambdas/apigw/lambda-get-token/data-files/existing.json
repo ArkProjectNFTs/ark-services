@@ -5,7 +5,8 @@
         "token_id": "0x00000000000000000000000000000000000000000000000000000000000004e5"
     },
     "multiValueHeaders": {
-        "Accept": ["*/*"]
+        "Accept": ["*/*"],
+        "x-api-key": ["1234aaaa"]
     },
     "stageVariables": {
         "tableName": "ark_project_dev",

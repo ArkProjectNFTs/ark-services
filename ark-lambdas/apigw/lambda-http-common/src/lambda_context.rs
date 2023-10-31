@@ -97,14 +97,15 @@ impl LambdaCtx {
 
     pub async fn register_usage(
         &self,
+        params: HashMap<String, String>,
         lambda_response: Option<&LambdaHttpResponse>,
     ) -> Result<(), LambdaHttpError> {
-        let exec_time = self.creation_instant.elapsed().as_nanos();
+        let exec_time = self.creation_instant.elapsed().as_millis();
 
-        let (status, capacity, params) = if let Some(lr) = lambda_response {
-            (lr.inner.status(), lr.capacity, lr.req_params.clone())
+        let (status, capacity) = if let Some(lr) = lambda_response {
+            (lr.inner.status(), lr.capacity)
         } else {
-            (StatusCode::INTERNAL_SERVER_ERROR, 0.0, HashMap::new())
+            (StatusCode::INTERNAL_SERVER_ERROR, 0.0)
         };
 
         let response_status = status.as_u16() as i32;

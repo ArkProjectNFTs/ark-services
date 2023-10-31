@@ -8,7 +8,6 @@ pub use lambda_context::LambdaCtx;
 use ark_dynamodb::ProviderError;
 use lambda_http::{Body, Error, Response};
 use serde::Serialize;
-use std::collections::HashMap;
 
 /// Generic response returned from any http lambda.
 #[derive(Debug, Serialize)]
@@ -23,7 +22,6 @@ pub struct ArkApiResponse<T: Serialize> {
 pub struct LambdaHttpResponse {
     pub capacity: f64,
     pub inner: Response<Body>,
-    pub req_params: HashMap<String, String>,
 }
 
 /// Generic errors for http parsing.

@@ -4,7 +4,8 @@
         "contract_address": "0x05004ab1e4f512e43f46311580dc4a0a053f146310c622344dfddab8fed7d5b0"
     },
     "multiValueHeaders": {
-        "Accept": ["*/*"]
+        "Accept": ["*/*"],
+        "x-api-key": ["abcd1234"]
     },
     "stageVariables": {
         "tableName": "ark_project_dev",

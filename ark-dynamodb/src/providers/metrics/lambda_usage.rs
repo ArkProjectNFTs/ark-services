@@ -33,8 +33,11 @@ impl LambdaUsageProvider {
         // TODO: something better here for the SK?
         let sk = data.lambda_name.clone();
 
-        let gsi1pk = format!("APIKEY#{}", data.api_key);
+        let gsi1pk = format!("APIKEY#{}", data.api_key.clone());
         let gsi1sk = now.clone();
+
+        let gsi2pk = "REQ".to_string();
+        let gsi2sk = now.clone();
 
         let mut params: HashMap<String, AttributeValue> = HashMap::new();
         for (k, v) in &data.params {
@@ -45,12 +48,14 @@ impl LambdaUsageProvider {
         items.insert("SK".to_string(), AttributeValue::S(sk));
         items.insert("GSI1PK".to_string(), AttributeValue::S(gsi1pk));
         items.insert("GSI1SK".to_string(), AttributeValue::N(gsi1sk));
+        items.insert("GSI2PK".to_string(), AttributeValue::S(gsi2pk));
+        items.insert("GSI2SK".to_string(), AttributeValue::N(gsi2sk));
         items.insert(
             "Capacity".to_string(),
             AttributeValue::N(data.capacity.to_string()),
         );
         items.insert(
-            "ExecTimeNano".to_string(),
+            "ExecTimeMs".to_string(),
             AttributeValue::N(data.exec_time.to_string()),
         );
         items.insert(
@@ -63,6 +68,10 @@ impl LambdaUsageProvider {
             AttributeValue::N(data.response_status.to_string()),
         );
         items.insert("Params".to_string(), AttributeValue::M(params));
+        items.insert(
+            "ApiKey".to_string(),
+            AttributeValue::S(data.api_key.clone()),
+        );
 
         client
             .put_item()
