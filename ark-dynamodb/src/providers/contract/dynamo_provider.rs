@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
+use tracing::trace;
 
 use super::ArkContractProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
@@ -109,6 +110,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         ctx: &DynamoDbCtx,
         contract_address: &str,
     ) -> Result<DynamoDbOutput<Option<ContractInfo>>, ProviderError> {
+        trace!("get_contract: contract_address: {}", contract_address);
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
@@ -148,6 +150,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         &self,
         ctx: &DynamoDbCtx,
     ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError> {
+        trace!("get_contracts");
         let mut values = HashMap::new();
         values.insert(
             ":contract".to_string(),
