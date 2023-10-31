@@ -9,6 +9,7 @@ pub fn attr_to_map(
     data: &HashMap<String, AttributeValue>,
     attr: &str,
 ) -> Result<HashMap<String, AttributeValue>, ProviderError> {
+    trace!("attr_to_map: data: {:?}, attr: {}", data, attr);
     if let Some(a) = data.get(attr) {
         Ok(a.as_m()
             .map_err(|_e| {
@@ -29,7 +30,6 @@ pub fn attr_to_u64(
     attr: &str,
 ) -> Result<u64, ProviderError> {
     trace!("attr_to_u64: data: {:?}, attr: {}", data, attr);
-
     if let Some(a) = data.get(attr) {
         let n = a.as_n().map_err(|_e| {
             ProviderError::DataValueError(format!("Expecting N for attribute {}", attr))
@@ -51,6 +51,7 @@ pub fn attr_to_str(
     data: &HashMap<String, AttributeValue>,
     attr: &str,
 ) -> Result<String, ProviderError> {
+    trace!("attr_to_str: data: {:?}, attr: {}", data, attr);
     if let Some(a) = data.get(attr) {
         let s = a.as_s().map_err(|_e| {
             ProviderError::DataValueError(format!("Expecting S for attribute {}", attr))
