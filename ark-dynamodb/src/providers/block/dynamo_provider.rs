@@ -45,7 +45,7 @@ impl DynamoDbBlockProvider {
             )?,
             indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier")?,
             indexer_version: convert::attr_to_str(data, "IndexerVersion")?,
-            block_number: convert::attr_to_u64(data, "BlockNumber")?,
+            block_number: convert::attr_to_u64(data, "BlockNumber").unwrap_or(0),
         })
     }
 
