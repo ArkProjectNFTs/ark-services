@@ -9,7 +9,9 @@
 //! Examples:
 //! `https://.../owners/0x1234/contracts`
 //!
-use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
+use ark_dynamodb::providers::{
+    ArkContractProvider, ArkTokenProvider, DynamoDbContractProvider, DynamoDbTokenProvider,
+};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
@@ -44,9 +46,12 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
 async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
+    let contract_provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     // Fetch all the tokens and keep unique contracts addresses.
     let mut contract_addresses: HashSet<String> = HashSet::new();
+    let mut contracts = vec![];
+
     let mut capacity = 0.0;
 
     loop {
@@ -55,7 +60,18 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
             .await?;
 
         for data in dynamo_rsp.inner() {
-            contract_addresses.insert(data.contract_address.clone());
+            if contract_addresses.insert(data.contract_address.clone()) {
+                // Was inserted, fetch data of this contract.
+                let c_rsp = contract_provider
+                    .get_contract(&ctx.db, &data.contract_address)
+                    .await?;
+
+                capacity += c_rsp.capacity;
+
+                if let Some(contract) = c_rsp.inner().clone() {
+                    contracts.push(contract);
+                }
+            }
         }
 
         capacity += dynamo_rsp.capacity;
@@ -65,11 +81,9 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
         }
     }
 
-    let result: Vec<String> = contract_addresses.iter().cloned().collect();
-
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor: None,
-        result,
+        result: contracts,
     })?;
 
     Ok(LambdaHttpResponse {
