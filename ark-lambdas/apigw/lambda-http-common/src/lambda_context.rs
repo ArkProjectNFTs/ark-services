@@ -1,8 +1,9 @@
 //! Initializes the context for ArkStack.
 
-use ark_dynamodb::providers::LambdaUsageProvider;
+use ark_dynamodb::providers::{metrics::LambdaUsageData, LambdaUsageProvider};
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
-use lambda_http::{Request, RequestExt};
+use lambda_http::{http::StatusCode, Request, RequestExt};
+use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::{params, HttpParamSource};
@@ -96,32 +97,36 @@ impl LambdaCtx {
 
     pub async fn register_usage(
         &self,
-        response_status: &str,
         lambda_response: Option<&LambdaHttpResponse>,
     ) -> Result<(), LambdaHttpError> {
-        let elapsed = self.creation_instant.elapsed().as_nanos();
+        let exec_time = self.creation_instant.elapsed().as_nanos();
 
-        // TODO: we can also use the status code of the rsp.
-
-        let capacity = if let Some(lr) = lambda_response {
-            lr.capacity
+        let (status, capacity, params) = if let Some(lr) = lambda_response {
+            (lr.inner.status(), lr.capacity, lr.req_params.clone())
         } else {
-            0.0
+            (StatusCode::INTERNAL_SERVER_ERROR, 0.0, HashMap::new())
+        };
+
+        let response_status = status.as_u16() as i32;
+
+        let data = LambdaUsageData {
+            request_id: self.req_id.clone(),
+            api_key: self.api_key.clone(),
+            lambda_name: self.function_name.clone(),
+            capacity,
+            exec_time,
+            response_status,
+            params,
         };
 
         LambdaUsageProvider::register_usage(
             &self.db.client,
-            &self.req_id,
-            &self.api_key,
-            &self.function_name,
-            capacity,
-            elapsed,
-            response_status.to_string(),
+            &format!("{}_lambda_usage", self.table_name),
+            &data,
         )
         .await
         .map_err(LambdaHttpError::Provider)?;
 
         Ok(())
-        // Register all in the tabel.
     }
 }

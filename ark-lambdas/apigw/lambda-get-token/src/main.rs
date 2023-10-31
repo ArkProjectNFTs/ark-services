@@ -14,26 +14,51 @@
 use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
-    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
+    let r = process_event(&ctx, event).await;
 
+    match r {
+        Ok(lambda_rsp) => {
+            ctx.register_usage(Some(&lambda_rsp)).await?;
+            Ok(lambda_rsp.inner)
+        }
+        Err(e) => {
+            ctx.register_usage(None).await?;
+            Err(e)
+        }
+    }
+}
+
+async fn process_event(ctx: &LambdaCtx, event: Request) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, None);
 
     let (address, token_id_hex) = get_params(&event)?;
 
-    let rsp = provider.get_token(&ctx.db, &address, &token_id_hex).await?;
+    let dynamo_rsp = provider.get_token(&ctx.db, &address, &token_id_hex).await?;
 
-    if let Some(data) = rsp.inner() {
+    let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {
             cursor: None,
             result: data,
         })
     } else {
         common::not_found_rsp()
-    }
+    }?;
+
+    let mut req_params = HashMap::new();
+    req_params.insert("address".to_string(), address.clone());
+    req_params.insert("token_id_hex".to_string(), token_id_hex.clone());
+
+    Ok(LambdaHttpResponse {
+        capacity: dynamo_rsp.capacity,
+        inner: rsp,
+        req_params,
+    })
 }
 
 fn get_params(event: &Request) -> Result<(String, String), LambdaHttpError> {

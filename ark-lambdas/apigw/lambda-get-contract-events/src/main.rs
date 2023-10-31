@@ -14,6 +14,7 @@ use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
@@ -21,12 +22,11 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     match r {
         Ok(lambda_rsp) => {
-            ctx.register_usage("depends on rsp", Some(&lambda_rsp))
-                .await?;
+            ctx.register_usage(Some(&lambda_rsp)).await?;
             Ok(lambda_rsp.inner)
         }
         Err(e) => {
-            ctx.register_usage("error", None).await?;
+            ctx.register_usage(None).await?;
             Err(e)
         }
     }
@@ -47,11 +47,15 @@ async fn process_event(ctx: &LambdaCtx, event: Request) -> Result<LambdaHttpResp
         result: items,
     })?;
 
+    let mut req_params = HashMap::new();
+    req_params.insert("address".to_string(), address.clone());
+
     // TODO: perhaps we can add here an HashMap with params?
     // And each lambda can then fill this up?
     Ok(LambdaHttpResponse {
         capacity: dynamo_rsp.capacity,
         inner: rsp,
+        req_params,
     })
 }
 
