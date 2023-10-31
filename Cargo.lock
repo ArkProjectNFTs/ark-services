@@ -2256,6 +2256,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "lambda-get-owner-contracts"
+version = "0.1.0"
+dependencies = [
+ "ark-dynamodb",
+ "arkproject",
+ "lambda-http-common",
+ "lambda_http",
+ "lambda_runtime",
+ "mockall",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lambda-get-owner-tokens"
 version = "0.1.0"
 dependencies = [
