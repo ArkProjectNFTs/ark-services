@@ -142,13 +142,7 @@ export default function CreateIndexerTaskFrom() {
               <FormItem>
                 <FormLabel>Number of tasks</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="3"
-                    {...field}
-                    type="number"
-                    max={3}
-                    min={1}
-                  />
+                  <Input placeholder="1" {...field} type="number" min={1} />
                 </FormControl>
                 <FormDescription>Tasks to deploy for indexing</FormDescription>
                 <FormMessage />
