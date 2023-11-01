@@ -24,6 +24,9 @@ export function getOwnerTokensLambda(
     resourceArns.push(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}/index/${indexName}`
     );
+    resourceArns.push(
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}_lambda_usage`
+    );
   }
 
   getOwnerTokensLambda.addToRolePolicy(

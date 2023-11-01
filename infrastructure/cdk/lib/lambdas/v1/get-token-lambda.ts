@@ -20,6 +20,9 @@ export function getTokenLambda(scope: cdk.Stack, stages: string[]) {
     resourceArns.push(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
     );
+    resourceArns.push(
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}_lambda_usage`
+    );
   }
 
   getContractLambda.addToRolePolicy(

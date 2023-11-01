@@ -4,7 +4,13 @@
         "contract_address": "0x05004ab1e4f512e43f46311580dc4a0a053f146310c622344dfddab8fed7d5b0"
     },
     "multiValueHeaders": {
-        "Accept": ["*/*"]
+        "Accept": ["*/*"],
+        "x-api-key": ["1234"]
+    },
+    "stageVariables": {
+        "tableName": "ark_project_dev",
+        "paginationCache": "redis://127.0.0.1:6379",
+        "maxItemsLimit": "100"
     },
     "body": ""
 }

@@ -1,11 +1,14 @@
 //! Initializes the context for ArkStack.
 
+use ark_dynamodb::providers::{metrics::LambdaUsageData, LambdaUsageProvider};
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
-use lambda_http::{Request, RequestExt};
+use lambda_http::{http::StatusCode, Request, RequestExt};
+use std::collections::HashMap;
+use std::time::Instant;
 
 use crate::{params, HttpParamSource};
 
-use crate::LambdaHttpError;
+use crate::{LambdaHttpError, LambdaHttpResponse};
 
 /// A common context for every http lambda.
 #[derive(Debug)]
@@ -17,6 +20,7 @@ pub struct LambdaCtx {
     pub api_key: String,
     pub req_id: String,
     pub function_name: String,
+    creation_instant: Instant,
 }
 
 impl LambdaCtx {
@@ -29,12 +33,14 @@ impl LambdaCtx {
     ///    * `maxItemsLimit` -> the maximum limit of items returned by dynamodb. The hard limit hard coded is 250.
     ///
     /// 2. Headers:
-    ///    * `Authorization` -> API key as Authorization bearer.
+    ///    * `Authorization` -> API key as Authorization bearer OR `x-api-key`?
     ///
     /// 3. Query String params:
     ///    * `cursor` -> the cursor to be used (optional).
     #[allow(clippy::redundant_closure)]
     pub async fn from_event(event: &Request) -> Result<Self, LambdaHttpError> {
+        let creation_instant = Instant::now();
+
         let stage_vars = event.stage_variables();
         let table_name = &stage_vars
             .first("tableName")
@@ -50,7 +56,11 @@ impl LambdaCtx {
 
         let paginator = DynamoDbPaginator::new(pagination_db);
 
-        // TODO: api key from header.
+        let api_key = if let Some(apix_header) = event.headers().get("x-api-key") {
+            apix_header.to_str().unwrap().to_string()
+        } else {
+            "NO_APIKEY".to_string()
+        };
 
         let lctx = event.lambda_context();
         let req_id = lctx.request_id;
@@ -78,9 +88,46 @@ impl LambdaCtx {
             db,
             table_name: table_name.to_string(),
             max_items_limit,
-            api_key: String::from("TODO"),
+            api_key,
             req_id,
             function_name,
+            creation_instant,
         })
+    }
+
+    pub async fn register_usage(
+        &self,
+        params: HashMap<String, String>,
+        lambda_response: Option<&LambdaHttpResponse>,
+    ) -> Result<(), LambdaHttpError> {
+        let exec_time = self.creation_instant.elapsed().as_millis();
+
+        let (status, capacity) = if let Some(lr) = lambda_response {
+            (lr.inner.status(), lr.capacity)
+        } else {
+            (StatusCode::INTERNAL_SERVER_ERROR, 0.0)
+        };
+
+        let response_status = status.as_u16() as i32;
+
+        let data = LambdaUsageData {
+            request_id: self.req_id.clone(),
+            api_key: self.api_key.clone(),
+            lambda_name: self.function_name.clone(),
+            capacity,
+            exec_time,
+            response_status,
+            params,
+        };
+
+        LambdaUsageProvider::register_usage(
+            &self.db.client,
+            &format!("{}_lambda_usage", self.table_name),
+            &data,
+        )
+        .await
+        .map_err(LambdaHttpError::Provider)?;
+
+        Ok(())
     }
 }

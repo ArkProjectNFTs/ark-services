@@ -1,37 +1,36 @@
-//! A Lambda function to get all the tokens of a owner.
+//! A Lambda function to get all the contracts for which an owner has at least one token.
 //!
 //! To work, this lambda expects the following path:
-//!     `../owners/{owner_address}/tokens`
+//!     `../owners/{owner_address}/contracts`
 //!
 //! where:
 //!   * owner_address: Contract address of the account contract (owner), in hexadecimal.
 //!
 //! Examples:
-//! `https://.../owners/0x1234/tokens`
+//! `https://.../owners/0x1234/contracts`
 //!
-use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
-use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use ark_dynamodb::providers::{
+    ArkContractProvider, ArkTokenProvider, DynamoDbContractProvider, DynamoDbTokenProvider,
+};
+use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
     let ctx = LambdaCtx::from_event(&event).await?;
 
     // 2. Get params.
-    let (owner_address, contract_address) = get_params(&event)?;
+    let owner_address = get_params(&event)?;
 
     // 3. Process the request.
-    let r = process_event(&ctx, &owner_address, contract_address.clone()).await;
+    let r = process_event(&ctx, &owner_address).await;
 
     // 4. Send the response.
     let mut req_params = HashMap::new();
     req_params.insert("address".to_string(), owner_address.clone());
-    if let Some(caddr) = contract_address {
-        req_params.insert("contract_address".to_string(), caddr);
-    }
 
     match r {
         Ok(lambda_rsp) => {
@@ -45,45 +44,56 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     }
 }
 
-async fn process_event(
-    ctx: &LambdaCtx,
-    owner_address: &str,
-    contract_address: Option<String>,
-) -> Result<LambdaHttpResponse, Error> {
+async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
+    let contract_provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    let dynamo_rsp = provider
-        .get_owner_tokens(&ctx.db, owner_address, contract_address)
-        .await?;
+    // Fetch all the tokens and keep unique contracts addresses.
+    let mut contract_addresses: HashSet<String> = HashSet::new();
+    let mut contracts = vec![];
 
-    let items = dynamo_rsp.inner();
-    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+    let mut capacity = 0.0;
+
+    loop {
+        let dynamo_rsp = provider
+            .get_owner_tokens(&ctx.db, owner_address, None)
+            .await?;
+
+        for data in dynamo_rsp.inner() {
+            if contract_addresses.insert(data.contract_address.clone()) {
+                // Was inserted, fetch data of this contract.
+                let c_rsp = contract_provider
+                    .get_contract(&ctx.db, &data.contract_address)
+                    .await?;
+
+                capacity += c_rsp.capacity;
+
+                if let Some(contract) = c_rsp.inner().clone() {
+                    contracts.push(contract);
+                }
+            }
+        }
+
+        capacity += dynamo_rsp.capacity;
+
+        if dynamo_rsp.lek.is_none() {
+            break;
+        }
+    }
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
-        cursor,
-        result: items,
+        cursor: None,
+        result: contracts,
     })?;
 
     Ok(LambdaHttpResponse {
-        capacity: dynamo_rsp.capacity,
+        capacity,
         inner: rsp,
     })
 }
 
-fn get_params(event: &Request) -> Result<(String, Option<String>), LambdaHttpError> {
-    let owner_address = common::require_hex_param(event, "owner_address", HttpParamSource::Path)?;
-
-    let contract_address = if let Some(prs) = event.query_string_parameters_ref() {
-        if let Some(ca) = prs.first("contract_address") {
-            Some(common::format::hex_from_str(ca, "contract_address")?)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    Ok((owner_address, contract_address))
+fn get_params(event: &Request) -> Result<String, LambdaHttpError> {
+    common::require_hex_param(event, "owner_address", HttpParamSource::Path)
 }
 
 #[tokio::main]
@@ -118,59 +128,9 @@ mod tests {
 
         let req = Request::default().with_path_parameters(params.clone());
 
-        let (address, _) = get_params(&req).unwrap();
+        let address = get_params(&req).unwrap();
 
         assert_eq!(address, pad_hex(&owner_address));
-    }
-
-    #[tokio::test]
-    async fn params_ok_with_optional() {
-        let owner_address = "0x1234".to_string();
-        let contract_address = "0x11".to_string();
-
-        let mut params = HashMap::new();
-        params.insert("owner_address".to_string(), owner_address.clone());
-
-        let mut qparams = HashMap::new();
-        qparams.insert("contract_address".to_string(), contract_address.clone());
-
-        let req = Request::default()
-            .with_path_parameters(params.clone())
-            .with_query_string_parameters(qparams.clone());
-
-        let (address, contract) = get_params(&req).unwrap();
-
-        assert_eq!(address, pad_hex(&owner_address));
-        assert_eq!(contract, Some(pad_hex(&contract_address)));
-    }
-
-    #[tokio::test]
-    async fn params_bad_contract_address_optional() {
-        let owner_address = "0x1234".to_string();
-        let contract_address = "ahfieh".to_string();
-
-        let mut params = HashMap::new();
-        params.insert("owner_address".to_string(), owner_address.clone());
-
-        let mut qparams = HashMap::new();
-        qparams.insert("contract_address".to_string(), contract_address.clone());
-
-        let req = Request::default()
-            .with_path_parameters(params.clone())
-            .with_query_string_parameters(qparams.clone());
-
-        match get_params(&req) {
-            Ok(_) => panic!("expecting error"),
-            Err(e) => match e {
-                LambdaHttpError::ParamParsing(s) => {
-                    assert_eq!(
-                        s,
-                        "Param contract_address is expected to be hexadecimal string"
-                    )
-                }
-                _ => panic!("expected ParamParsing"),
-            },
-        }
     }
 
     #[tokio::test]
@@ -222,7 +182,7 @@ mod tests {
 
         let req = Request::default().with_path_parameters(params.clone());
 
-        let (address, _) = get_params(&req).unwrap();
+        let address = get_params(&req).unwrap();
         assert_eq!(
             address,
             "0x00a3244a4d2c7c69c70951a003eba5c32707cef3cdfb6b27ca63582f51aee078"

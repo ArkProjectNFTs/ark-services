@@ -12,24 +12,52 @@
 use ark_dynamodb::providers::{ArkEventProvider, DynamoDbEventProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
-    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    // 1. Init the context.
     let ctx = LambdaCtx::from_event(&event).await?;
 
-    let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
-
+    // 2. Get params.
     let address = get_params(&event)?;
 
-    let rsp = provider.get_contract_events(&ctx.db, &address).await?;
+    // 3. Process the request.
+    let r = process_event(&ctx, &address).await;
 
-    let items = rsp.inner();
-    let cursor = ctx.paginator.store_cursor(&rsp.lek)?;
+    // 4. Send the response.
+    let mut req_params = HashMap::new();
+    req_params.insert("address".to_string(), address.clone());
 
-    common::ok_body_rsp(&ArkApiResponse {
+    match r {
+        Ok(lambda_rsp) => {
+            ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
+            Ok(lambda_rsp.inner)
+        }
+        Err(e) => {
+            ctx.register_usage(req_params, None).await?;
+            Err(e)
+        }
+    }
+}
+
+async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpResponse, Error> {
+    let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
+
+    let dynamo_rsp = provider.get_contract_events(&ctx.db, address).await?;
+
+    let items = dynamo_rsp.inner();
+    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+
+    let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
         result: items,
+    })?;
+
+    Ok(LambdaHttpResponse {
+        capacity: dynamo_rsp.capacity,
+        inner: rsp,
     })
 }
 

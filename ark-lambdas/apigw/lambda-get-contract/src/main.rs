@@ -12,26 +12,54 @@
 use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
-    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    // 1. Init the context.
     let ctx = LambdaCtx::from_event(&event).await?;
 
-    let provider = DynamoDbContractProvider::new(&ctx.table_name, None);
-
+    // 2. Get params.
     let address = get_params(&event)?;
 
-    let rsp = provider.get_contract(&ctx.db, &address).await?;
+    // 3. Process the request.
+    let r = process_event(&ctx, &address).await;
 
-    if let Some(data) = rsp.inner() {
+    // 4. Send the response.
+    let mut req_params = HashMap::new();
+    req_params.insert("address".to_string(), address.clone());
+
+    match r {
+        Ok(lambda_rsp) => {
+            ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
+            Ok(lambda_rsp.inner)
+        }
+        Err(e) => {
+            ctx.register_usage(req_params, None).await?;
+            Err(e)
+        }
+    }
+}
+
+async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpResponse, Error> {
+    let provider = DynamoDbContractProvider::new(&ctx.table_name, None);
+
+    let dynamo_rsp = provider.get_contract(&ctx.db, address).await?;
+
+    let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {
             cursor: None,
             result: data,
-        })
+        })?
     } else {
-        common::not_found_rsp()
-    }
+        common::not_found_rsp()?
+    };
+
+    Ok(LambdaHttpResponse {
+        capacity: dynamo_rsp.capacity,
+        inner: rsp,
+    })
 }
 
 fn get_params(event: &Request) -> Result<String, LambdaHttpError> {

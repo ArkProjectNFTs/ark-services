@@ -14,26 +14,62 @@
 use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
-    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
+    self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    // use the request_context to have the stage name.
+    //println!("{:?}", event.request_context());
+
+    // 1. Init the context.
     let ctx = LambdaCtx::from_event(&event).await?;
 
-    let provider = DynamoDbTokenProvider::new(&ctx.table_name, None);
-
+    // 2. Get params.
     let (address, token_id_hex) = get_params(&event)?;
 
-    let rsp = provider.get_token(&ctx.db, &address, &token_id_hex).await?;
+    // 3. Process the request.
+    let r = process_event(&ctx, &address, &token_id_hex).await;
 
-    if let Some(data) = rsp.inner() {
+    // 4. Send the response.
+    let mut req_params = HashMap::new();
+    req_params.insert("address".to_string(), address.clone());
+    req_params.insert("token_id_hex".to_string(), token_id_hex.clone());
+
+    match r {
+        Ok(lambda_rsp) => {
+            ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
+            Ok(lambda_rsp.inner)
+        }
+        Err(e) => {
+            ctx.register_usage(req_params, None).await?;
+            Err(e)
+        }
+    }
+}
+
+async fn process_event(
+    ctx: &LambdaCtx,
+    address: &str,
+    token_id_hex: &str,
+) -> Result<LambdaHttpResponse, Error> {
+    let provider = DynamoDbTokenProvider::new(&ctx.table_name, None);
+
+    let dynamo_rsp = provider.get_token(&ctx.db, address, token_id_hex).await?;
+
+    let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {
             cursor: None,
             result: data,
         })
     } else {
         common::not_found_rsp()
-    }
+    }?;
+
+    Ok(LambdaHttpResponse {
+        capacity: dynamo_rsp.capacity,
+        inner: rsp,
+    })
 }
 
 fn get_params(event: &Request) -> Result<(String, String), LambdaHttpError> {

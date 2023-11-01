@@ -17,6 +17,13 @@ pub struct ArkApiResponse<T: Serialize> {
     // To be extended as needed.
 }
 
+/// Generic response from Lambdas.
+#[derive(Debug)]
+pub struct LambdaHttpResponse {
+    pub capacity: f64,
+    pub inner: Response<Body>,
+}
+
 /// Generic errors for http parsing.
 #[derive(Debug, thiserror::Error)]
 pub enum LambdaHttpError {
@@ -26,6 +33,12 @@ pub enum LambdaHttpError {
     ParamMissing(String),
     #[error(transparent)]
     Provider(ProviderError),
+}
+
+impl From<ProviderError> for LambdaHttpError {
+    fn from(e: ProviderError) -> Self {
+        LambdaHttpError::Provider(e)
+    }
 }
 
 impl TryFrom<LambdaHttpError> for Response<Body> {
