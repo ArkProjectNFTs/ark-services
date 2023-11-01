@@ -71,7 +71,7 @@ export default function CreateIndexerTaskFrom() {
   const numberOfTasks = form.watch("numberOfTasks");
   const from = form.watch("from");
   const to = form.watch("to");
-  const count = parseInt(to) - parseInt(from) || 0;
+  const count = parseInt(to) - parseInt(from) + 1 || 0;
   const isDisabled = count <= 0 || isLoading;
 
   async function onSubmit(data: CreateIndexerTaskFormValues) {
