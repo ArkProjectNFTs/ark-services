@@ -15,9 +15,10 @@ type IndexerTask = {
   from: number;
   to: number;
   forceMode: boolean;
-  version: string | undefined;
-  updatedAt: string | undefined;
-  createdAt: string | undefined;
+  version?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  currentBlockNumber?: string;
 };
 
 const ECS_CLUSTER = "arn:aws:ecs:us-east-1:223605539824:cluster/ark-indexers";
@@ -66,6 +67,7 @@ const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
     updatedAt: item?.Data?.M?.LastUpdate?.N,
     createdAt: item?.Data?.M?.CreatedAt?.N,
     forceMode: item?.Data?.M?.ForceMode?.BOOL ?? false,
+    currentBlockNumber: item?.Data?.M?.CurrentBlockNumber?.N,
   };
 };
 
