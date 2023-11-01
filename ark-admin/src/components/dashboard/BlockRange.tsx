@@ -35,7 +35,7 @@ export default function BlockRange({ start, end, blocks }: BlockRangeProps) {
         />
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2">
-        <div className="mb-4">
+        <div className="">
           <div className="mb-4 flex items-center text-xs">
             <div>#{start.toLocaleString()}</div>
             <MoveRight size={14} className="flex-grow" />
@@ -54,10 +54,10 @@ export default function BlockRange({ start, end, blocks }: BlockRangeProps) {
             </div>
           </div>
         </div>
-        {blocks.length && (
+        {blocks.length > 0 && (
           <Button
             size="sm"
-            className="w-full"
+            className="mt-4 w-full"
             onClick={() => handleAddtask(blocks)}
           >
             Add Task
