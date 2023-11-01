@@ -141,8 +141,8 @@ impl AWSDynamoStorage for DynamoStorage {
         let unix_timestamp = now.timestamp();
 
         info!(
-            "Updating indexer progress: task_id={}, value={}",
-            task_id, indexation_progress
+            "Updating indexer progress: task_id={}, value={}, current_block_number={}",
+            task_id, indexation_progress, current_block_number
         );
 
         let mut values = HashMap::new();
@@ -180,9 +180,7 @@ impl AWSDynamoStorage for DynamoStorage {
             .table_name(self.table_name.clone())
             .key("PK", AttributeValue::S("INDEXER".to_string()))
             .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
-            .update_expression(
-                "SET #Data.#IndexationProgress = :IndexationProgress, #Data.#LastUpdate = :LastUpdate, #Data.#CurrentBlockNumber",
-            )
+            .update_expression("SET #Data.#IndexationProgress = :IndexationProgress, #Data.#LastUpdate = :LastUpdate, #Data.#CurrentBlockNumber = :CurrentBlockNumber")
             .set_expression_attribute_names(Some(names))
             .set_expression_attribute_values(Some(values))
             .return_values(ReturnValue::AllNew)

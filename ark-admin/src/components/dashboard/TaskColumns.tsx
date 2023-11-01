@@ -67,6 +67,13 @@ export const TaskColumns: ColumnDef<TaskData>[] = [
     },
   },
   {
+    accessorKey: "currentBlockNumber",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Block" />
+    ),
+    cell: ({ row }) => <div>{row.getValue("currentBlockNumber") ?? "---"}</div>,
+  },
+  {
     accessorKey: "createdAt",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Creation Date" />
