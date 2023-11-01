@@ -1,4 +1,7 @@
-import type { AttributeValue } from "@aws-sdk/client-dynamodb";
+import type {
+  AttributeValue,
+  QueryCommandOutput,
+} from "@aws-sdk/client-dynamodb";
 
 import { db } from "~/server/dynamodb";
 import { type Network } from "~/types";
@@ -13,14 +16,14 @@ import { type Range } from "./range";
  * @returns {Object} - Returns ranges, rangeSize, and count.
  */
 export async function fetchBlocks(network: Network, latest: number) {
-  const allItems: Record<string, AttributeValue>[] =
+  const items: Record<string, AttributeValue>[] =
     await fetchAllDynamoItems(network);
-  const count = latest - allItems.length;
+  const count = latest - items.length;
   const rangeCount = 120;
   const rangeSize = Math.ceil(latest / rangeCount);
 
   const ranges: Range[] = createEmptyRanges(latest, rangeCount, rangeSize);
-  populateRangesWithBlocks(ranges, allItems, rangeSize, latest);
+  populateRangesWithBlocks(ranges, items, rangeSize, latest);
 
   return { ranges, rangeSize, count };
 }
@@ -36,10 +39,10 @@ async function fetchAllDynamoItems(
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> {
   let lastEvaluatedKey: Record<string, AttributeValue> | undefined = undefined;
-  const allItems: Record<string, AttributeValue>[] = [];
+  const items: Record<string, AttributeValue>[] = [];
 
-  while (true) {
-    const dynamoQueryResult = await db.query({
+  do {
+    const result: QueryCommandOutput = await db.query({
       TableName: `ark_project_${network}`,
       IndexName: "GSI1PK-GSI1SK-index",
       KeyConditionExpression: "#GSI1PK = :GSI1PK",
@@ -56,18 +59,11 @@ async function fetchAllDynamoItems(
       ExclusiveStartKey: lastEvaluatedKey,
     });
 
-    allItems.push(...(dynamoQueryResult.Items ?? []));
+    items.push(...(result.Items ?? []));
+    lastEvaluatedKey = result.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
 
-    if (dynamoQueryResult.LastEvaluatedKey) {
-      const tmp: Record<string, AttributeValue> =
-        dynamoQueryResult.LastEvaluatedKey;
-      lastEvaluatedKey = tmp;
-    } else {
-      break;
-    }
-  }
-
-  return allItems;
+  return items;
 }
 
 /**
@@ -101,13 +97,13 @@ function createEmptyRanges(
  */
 function populateRangesWithBlocks(
   ranges: Range[],
-  allItems: Record<string, AttributeValue>[],
+  items: Record<string, AttributeValue>[],
   rangeSize: number,
   latest: number,
 ) {
   let nextExpectedBlock = 0;
 
-  for (const item of allItems) {
+  for (const item of items) {
     const block = +(item.PK?.S?.split("#")[1] ?? 0);
 
     while (nextExpectedBlock < block) {
