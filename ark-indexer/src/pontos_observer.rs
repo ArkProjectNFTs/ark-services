@@ -67,7 +67,11 @@ where
         );
         let _ = self
             .storage
-            .update_indexer_progress(self.indexer_identifier.clone(), indexation_progress)
+            .update_indexer_progress(
+                self.indexer_identifier.clone(),
+                block_number,
+                indexation_progress,
+            )
             .await;
     }
 

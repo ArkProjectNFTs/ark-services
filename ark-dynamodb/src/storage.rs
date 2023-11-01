@@ -58,7 +58,8 @@ pub trait AWSDynamoStorage: Send + Sync {
     async fn update_indexer_progress(
         &self,
         task_id: String,
-        value: f64,
+        current_block_number: u64,
+        indexation_progress: f64,
     ) -> Result<(), StorageError>;
 }
 
@@ -133,24 +134,29 @@ impl AWSDynamoStorage for DynamoStorage {
     async fn update_indexer_progress(
         &self,
         task_id: String,
-        value: f64,
+        current_block_number: u64,
+        indexation_progress: f64,
     ) -> Result<(), StorageError> {
         let now = Utc::now();
         let unix_timestamp = now.timestamp();
 
         info!(
             "Updating indexer progress: task_id={}, value={}",
-            task_id, value
+            task_id, indexation_progress
         );
 
         let mut values = HashMap::new();
         values.insert(
             ":IndexationProgress".to_string(),
-            AttributeValue::N(value.to_string()),
+            AttributeValue::N(indexation_progress.to_string()),
         );
         values.insert(
             ":LastUpdate".to_string(),
             AttributeValue::S(unix_timestamp.to_string()),
+        );
+        values.insert(
+            ":CurrentBlockNumber".to_string(),
+            AttributeValue::N(current_block_number.to_string()),
         );
 
         let mut names = HashMap::new();
@@ -159,6 +165,12 @@ impl AWSDynamoStorage for DynamoStorage {
             "#IndexationProgress".to_string(),
             "IndexationProgress".to_string(),
         );
+
+        names.insert(
+            "#CurrentBlockNumber".to_string(),
+            "CurrentBlockNumber".to_string(),
+        );
+
         names.insert("#LastUpdate".to_string(), "LastUpdate".to_string());
 
         let response = self
@@ -169,7 +181,7 @@ impl AWSDynamoStorage for DynamoStorage {
             .key("PK", AttributeValue::S("INDEXER".to_string()))
             .key("SK", AttributeValue::S(format!("TASK#{}", task_id)))
             .update_expression(
-                "SET #Data.#IndexationProgress = :IndexationProgress, #Data.#LastUpdate = :LastUpdate",
+                "SET #Data.#IndexationProgress = :IndexationProgress, #Data.#LastUpdate = :LastUpdate, #Data.#CurrentBlockNumber",
             )
             .set_expression_attribute_names(Some(names))
             .set_expression_attribute_values(Some(values))
@@ -180,8 +192,8 @@ impl AWSDynamoStorage for DynamoStorage {
         match response {
             Ok(_) => {
                 info!(
-                    "Successfully updated indexer progress for task_id={}: indexation_progress={}",
-                    task_id, value
+                    "Successfully updated indexer progress for task_id={}, current_block_number={}, indexation_progress={}",
+                    task_id, current_block_number, indexation_progress
                 );
                 Ok(())
             }
