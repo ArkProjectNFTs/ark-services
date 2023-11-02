@@ -24,17 +24,17 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
                 "Successfully updated token metadata status for token {} of contract {}",
                 token_id_hex, address
             );
-            return common::ok_body_rsp(&ArkApiResponse {
+            common::ok_body_rsp(&ArkApiResponse {
                 cursor: None,
                 result: "We've queued this token to update its metadata! It will be updated soon.",
-            });
+            })
         }
         Err(e) => {
             error!(
                 "Failed to update token metadata status for token {} of contract {}: {}",
                 token_id_hex, address, e
             );
-            return common::internal_server_error_rsp("Failed to refresh token metadata");
+            common::internal_server_error_rsp("Failed to refresh token metadata")
         }
     }
 }
