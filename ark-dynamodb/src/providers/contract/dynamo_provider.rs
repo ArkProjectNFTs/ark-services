@@ -98,6 +98,14 @@ impl ArkContractProvider for DynamoDbContractProvider {
                 AttributeValue::S(block_timestamp.to_string()),
             )
             .item(
+                "GSI2PK".to_string(),
+                AttributeValue::S("CONTRACT".to_string()),
+            )
+            .item(
+                "GSI2SK".to_string(),
+                AttributeValue::S(info.contract_type.clone()),
+            )
+            .item(
                 "GSI4PK".to_string(),
                 AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
