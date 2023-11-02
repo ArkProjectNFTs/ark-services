@@ -1,9 +1,9 @@
-name: Deploy ECR Repository using CDK
+name: Deploy ECR Repository and Push Docker Image
 
 on:
   push:
     branches:
-      - main # or your default branch
+      - main
       - dev
       - feat/postman-export
 
@@ -35,6 +35,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
       - name: Output ECR Repository URL
         run: |
           cd infrastructure/cdk-ecr
@@ -46,3 +47,14 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        run: |
+          docker build -t $ECR_URL:latest -f docker/metadata/Dockerfile .
+          docker push $ECR_URL:latest
+        env:
+          ECR_URL: ${{ env.ECR_URL }}
