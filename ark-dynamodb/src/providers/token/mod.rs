@@ -46,6 +46,14 @@ pub trait ArkTokenProvider {
         metadata: &TokenMetadata,
     ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
+    async fn update_token_metadata_status(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_address: &str,
+        token_id_hex: &str,
+        metadata_status: &str,
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
+
     async fn get_token(
         &self,
         ctx: &DynamoDbCtx,

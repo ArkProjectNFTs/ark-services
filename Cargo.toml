@@ -29,7 +29,7 @@ resolver = "2"
 [workspace.dependencies]
 anyhow = "1.0"
 ark-dynamodb = { path = "ark-dynamodb" }
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.6.2" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.7.0" }
 # arkproject = { path = "../ark-project" }
 async-trait = "0.1.73"
 lambda-http-common = { path = "ark-lambdas/apigw/lambda-http-common" }

@@ -10,7 +10,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
-use tracing::trace;
+use tracing::{debug, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -110,6 +110,64 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
             &ctx.client,
             "update_mint_info",
+            &r.consumed_capacity,
+        )
+        .await;
+
+        Ok(().into())
+    }
+
+    async fn update_token_metadata_status(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_address: &str,
+        token_id_hex: &str,
+        metadata_status: &str,
+    ) -> Result<DynamoDbOutput<()>, ProviderError> {
+        trace!(
+            "Updating token metadata status for contract address: {}, token_id: {}",
+            contract_address,
+            token_id_hex
+        );
+
+        let pk = self.get_pk(contract_address, token_id_hex);
+        let sk = self.get_sk();
+
+        debug!(
+            "Generated primary key (PK): {} and sort key (SK): {} for updating metadata status.",
+            pk, sk
+        );
+
+        let r = ctx
+            .client
+            .update_item()
+            .table_name(self.table_name.clone())
+            .key("PK".to_string(), AttributeValue::S(pk.clone()))
+            .key("SK".to_string(), AttributeValue::S(sk.clone()))
+            .update_expression("SET GSI5PK = :meta_state")
+            .expression_attribute_values(
+                ":meta_state",
+                AttributeValue::S(format!("METADATA#{}", metadata_status)),
+            )
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| {
+                debug!(
+                    "Database error while updating token metadata status: {:?}",
+                    e
+                );
+                ProviderError::DatabaseError(format!("{:?}", e))
+            })?;
+
+        debug!(
+            "Database update operation for token metadata status was successful with result: {:?}",
+            r
+        );
+
+        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
+            &ctx.client,
+            "update_token_metadata_status",
             &r.consumed_capacity,
         )
         .await;

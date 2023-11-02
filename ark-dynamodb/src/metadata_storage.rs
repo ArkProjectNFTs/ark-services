@@ -36,6 +36,32 @@ impl MetadataStorage {
 
 #[async_trait]
 impl Storage for MetadataStorage {
+    async fn update_token_metadata_status(
+        &self,
+        contract_address: FieldElement,
+        token_id: CairoU256,
+        metadata_status: &str,
+    ) -> Result<(), StorageError> {
+        let token_id_hex = token_id.to_hex();
+        let contract_address_hex = format!("0x{:064x}", contract_address);
+
+        self.provider
+            .token
+            .update_token_metadata_status(
+                &self.ctx,
+                &contract_address_hex,
+                &token_id_hex,
+                metadata_status,
+            )
+            .await
+            .map_err(|e| {
+                error!("Failed to update token metadata status. Error: {}", e);
+                StorageError::DatabaseError(e.to_string())
+            })?;
+
+        Ok(())
+    }
+
     async fn register_token_metadata(
         &self,
         contract_address: &FieldElement,
