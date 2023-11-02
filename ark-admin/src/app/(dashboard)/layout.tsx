@@ -1,5 +1,4 @@
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
 
 import Header from "~/components/dashboard/Header";
 import { NetworkProvider } from "~/components/dashboard/NetworkProvider";
@@ -14,10 +13,6 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const user = await getCurrentUser();
-
-  if (!user) {
-    notFound();
-  }
 
   return (
     <html

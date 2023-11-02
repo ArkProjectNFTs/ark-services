@@ -22,7 +22,7 @@ import NetworkSelector from "./NetworkSelector";
 import ThemeSelect from "./ThemeSelect";
 
 interface DashboardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  user: Pick<User, "name" | "image" | "email">;
+  user: (User & { id: string }) | undefined
 }
 
 export default function DashboardHeader({ user }: DashboardHeaderProps) {

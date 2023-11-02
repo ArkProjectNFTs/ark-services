@@ -13,7 +13,7 @@ export default function DashboardNav({ className, ...props }: ProjectNavProps) {
   const items = [
     {
       title: "Dashboard",
-      href: `/dashboard`,
+      href: "/",
     },
   ];
 
