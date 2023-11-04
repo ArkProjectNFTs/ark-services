@@ -87,6 +87,14 @@ impl ArkContractProvider for DynamoDbContractProvider {
                 AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
+            .item(
+                "GSI5PK".to_string(),
+                AttributeValue::S("COMPLETE_CONTRACT_DATA#false".to_string()),
+            )
+            .item(
+                "GSI5SK".to_string(),
+                AttributeValue::S(format!("CONTRACT#{}", info.contract_address)),
+            )
             .item("Data", AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Contract.to_string()))
             .condition_expression("attribute_not_exists(PK)")
