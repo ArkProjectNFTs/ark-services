@@ -24,42 +24,25 @@ class ArkProjectCdkEcsEc2Stack extends cdk.Stack {
     );
 
     // Create a VPC with a specific configuration
-    const arkProjectVpc = new ec2.Vpc(this, "ArkProjectVpc", {
-      ipAddresses: ec2.IpAddresses.cidr("192.168.1.0/24"),
-      maxAzs: 3,
-      subnetConfiguration: [
-        {
-          cidrMask: 28,
-          name: "public-subnet",
-          subnetType: ec2.SubnetType.PUBLIC,
-        },
-        {
-          cidrMask: 28, // Adjusted the cidrMask to reflect a /28 subnet
-          name: "private-subnet",
-          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-        },
-        {
-          cidrMask: 28, // Adjusted the cidrMask to reflect a /28 subnet
-          name: "isolated-subnet",
-          subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
-        },
-      ],
-      enableDnsHostnames: true,
-      enableDnsSupport: true,
-      natGateways: 1,
-    });
+    const arkProjectVpc = new ec2.Vpc(this, 'ArkProjectVpc', {
+      natGateways: 1, //default value but better to make it explicit
+      maxAzs: 1,
+      cidr: '10.0.0.0/16',
+      subnetConfiguration: [{
+        subnetType: ec2.SubnetType.PUBLIC,
+        name: 'bastion',
+        cidrMask: 24,
+      }, {
+        subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
+        name: 'application',
+        cidrMask: 24
+      }, {
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS, 
+        name: 'appliance',
+        cidrMask: 24,
 
-    // Create a security group for the ECS tasks
-    const ecsSecurityGroup = new ec2.SecurityGroup(this, "EcsSecurityGroup", {
-      vpc: arkProjectVpc,
-      allowAllOutbound: true, // Tasks can initiate outbound traffic to any destination
+      }]
     });
-
-    ecsSecurityGroup.addIngressRule(
-      ec2.Peer.anyIpv4(),
-      ec2.Port.allTraffic(),
-      "Allow all traffic"
-    );
 
     // Create a CloudWatch Log Group for ECS task logs
     const logGroup = new logs.LogGroup(this, "ArkProjectMetadataLogGroup", {
@@ -80,14 +63,6 @@ class ArkProjectCdkEcsEc2Stack extends cdk.Stack {
     const ecsTaskRole = new iam.Role(this, "ArkProjectEcsTaskRole", {
       assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"), // Only ECS tasks can assume this role
     });
-
-    // Adding DynamoDB access to the ECS Task Role
-    const tableArn =
-      "arn:aws:dynamodb:us-east-1:123456789012:table/ark_project_mainnet"; // Replace with actual ARN
-    const gsiArns = [];
-    for (let i = 1; i <= 5; i++) {
-      gsiArns.push(`${tableArn}/index/GSI${i}PK-GSI${i}SK-index`);
-    }
 
     // Attach the AWS managed policy for DynamoDB Full Access (this is generally not recommended due to broad permissions)
     ecsTaskRole.addManagedPolicy(
@@ -115,9 +90,8 @@ class ArkProjectCdkEcsEc2Stack extends cdk.Stack {
       this,
       "ArkProjectMetadataTaskDef",
       {
-        networkMode: ecs.NetworkMode.AWS_VPC,
-        taskRole: ecsTaskRole, // IAM role for authorizing AWS service calls from your task
-        executionRole: ecsTaskExecutionRole, // IAM role that ECS uses to pull images and store logs
+        taskRole: ecsTaskRole,
+        executionRole: ecsTaskExecutionRole,
       }
     );
 
@@ -166,10 +140,6 @@ class ArkProjectCdkEcsEc2Stack extends cdk.Stack {
     new ecs.Ec2Service(this, "ArkProjectMetadataService", {
       cluster: arkProjectCluster, // Reference to the ECS cluster
       taskDefinition: arkProjectMetadataTaskDefinition, // Reference to the task definition
-      securityGroups: [ecsSecurityGroup], // Reference to the security group
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
-      },
     });
   }
 }
