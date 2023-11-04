@@ -76,6 +76,12 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         debug!("Registering contract with PK: {} and SK: {}", pk, sk);
 
+        let gsi2pk = match info.contract_type.as_str() {
+            "ERC721" => String::from("NFT"),
+            "ERC1155" => String::from("NFT"),
+            _ => String::from("OTHER"),
+        };
+
         let r = ctx
             .client
             .put_item()
@@ -86,13 +92,10 @@ impl ArkContractProvider for DynamoDbContractProvider {
             // is required. So we duplicate info in the GSI1. TODO: investiagte more.
             .item("GSI1PK".to_string(), AttributeValue::S(sk.clone()))
             .item("GSI1SK".to_string(), AttributeValue::S(pk.clone()))
-            .item(
-                "GSI2PK".to_string(),
-                AttributeValue::S("CONTRACT".to_string()),
-            )
+            .item("GSI2PK".to_string(), AttributeValue::S(gsi2pk))
             .item(
                 "GSI2SK".to_string(),
-                AttributeValue::S(info.contract_type.clone()),
+                AttributeValue::S(block_timestamp.to_string()),
             )
             .item(
                 "GSI4PK".to_string(),
