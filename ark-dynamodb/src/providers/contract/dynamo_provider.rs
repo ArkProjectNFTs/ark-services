@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
-use tracing::trace;
+use tracing::{debug, trace};
 
 use super::ArkContractProvider;
 use crate::providers::metrics::DynamoDbCapacityProvider;
@@ -67,10 +67,20 @@ impl ArkContractProvider for DynamoDbContractProvider {
         info: &ContractInfo,
         block_timestamp: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
+        trace!("register_contract called with info: {:?}", info);
+
         let pk = self.get_pk(&info.contract_address);
         let sk = self.get_sk();
 
         let data = Self::info_to_data(info);
+
+        debug!("Registering contract with PK: {} and SK: {}", pk, sk);
+
+        let gsi2pk = match info.contract_type.as_str() {
+            "ERC721" => String::from("NFT"),
+            "ERC1155" => String::from("NFT"),
+            _ => String::from("OTHER"),
+        };
 
         let r = ctx
             .client
@@ -82,6 +92,11 @@ impl ArkContractProvider for DynamoDbContractProvider {
             // is required. So we duplicate info in the GSI1. TODO: investiagte more.
             .item("GSI1PK".to_string(), AttributeValue::S(sk.clone()))
             .item("GSI1SK".to_string(), AttributeValue::S(pk.clone()))
+            .item("GSI2PK".to_string(), AttributeValue::S(gsi2pk))
+            .item(
+                "GSI2SK".to_string(),
+                AttributeValue::S(block_timestamp.to_string()),
+            )
             .item(
                 "GSI4PK".to_string(),
                 AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
@@ -101,7 +116,12 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
-            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+            .map_err(|e| {
+                debug!("Database error while registering contract: {:?}", e);
+                ProviderError::DatabaseError(format!("{:?}", e))
+            })?;
+
+        debug!("Database operation successful with result: {:?}", r);
 
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
             &ctx.client,
