@@ -31,7 +31,7 @@ pub trait ArkContractProvider {
         block_number: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
-    async fn get_contracts(
+    async fn get_nft_contracts(
         &self,
         ctx: &DynamoDbCtx,
     ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError>;

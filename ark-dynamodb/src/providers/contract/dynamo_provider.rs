@@ -98,6 +98,14 @@ impl ArkContractProvider for DynamoDbContractProvider {
                 AttributeValue::S(block_timestamp.to_string()),
             )
             .item(
+                "GSI2PK".to_string(),
+                AttributeValue::S("CONTRACT".to_string()),
+            )
+            .item(
+                "GSI2SK".to_string(),
+                AttributeValue::S(block_timestamp.to_string()),
+            )
+            .item(
                 "GSI4PK".to_string(),
                 AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
@@ -174,25 +182,21 @@ impl ArkContractProvider for DynamoDbContractProvider {
         }
     }
 
-    async fn get_contracts(
+    async fn get_nft_contracts(
         &self,
         ctx: &DynamoDbCtx,
     ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError> {
-        trace!("get_contracts");
+        trace!("get_nft_contracts");
+
         let mut values = HashMap::new();
-        values.insert(
-            ":contract".to_string(),
-            AttributeValue::S("CONTRACT".to_string()),
-        );
+        values.insert(":pk".to_string(), AttributeValue::S("NFT".to_string()));
 
         let r = ctx
             .client
             .query()
             .table_name(&self.table_name)
-            .index_name("GSI1PK-GSI1SK-index")
-            .set_key_condition_expression(Some(
-                "GSI1PK = :contract AND begins_with(GSI1SK, :contract)".to_string(),
-            ))
+            .index_name("GSI2PK-GSI2SK-index")
+            .set_key_condition_expression(Some("GSI1PK = :pk".to_string()))
             .set_expression_attribute_values(Some(values))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .set_limit(self.limit)
@@ -203,7 +207,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         let _ = DynamoDbCapacityProvider::register_consumed_capacity(
             &ctx.client,
-            "get_contracts",
+            "get_nft_contracts",
             &r.consumed_capacity,
         )
         .await;
