@@ -25,22 +25,22 @@ class ArkProjectCdkEcsEc2Stack extends cdk.Stack {
 
     // Create a VPC with a specific configuration
     const arkProjectVpc = new ec2.Vpc(this, "ArkProjectVpc", {
-      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/21"),
+      ipAddresses: ec2.IpAddresses.cidr("192.168.1.0/24"),
       maxAzs: 3,
       subnetConfiguration: [
         {
           cidrMask: 28,
-          name: "Ingress",
+          name: "public-subnet",
           subnetType: ec2.SubnetType.PUBLIC,
         },
         {
           cidrMask: 28, // Adjusted the cidrMask to reflect a /28 subnet
-          name: "Application",
+          name: "private-subnet",
           subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
         },
         {
           cidrMask: 28, // Adjusted the cidrMask to reflect a /28 subnet
-          name: "Database",
+          name: "isolated-subnet",
           subnetType: ec2.SubnetType.PRIVATE_ISOLATED,
         },
       ],
@@ -167,9 +167,8 @@ class ArkProjectCdkEcsEc2Stack extends cdk.Stack {
       cluster: arkProjectCluster, // Reference to the ECS cluster
       taskDefinition: arkProjectMetadataTaskDefinition, // Reference to the task definition
       securityGroups: [ecsSecurityGroup], // Reference to the security group
-      assignPublicIp: true,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
     });
   }
