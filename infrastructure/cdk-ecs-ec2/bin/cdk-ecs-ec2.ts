@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { ArkProjectCdkEcsEc2Stack } from "../lib/cdk-ecs-ec2-stack";
+import { ArkProjectCdkEcsFargateStack } from "../lib/cdk-ecs-ec2-stack";
 import { config } from "dotenv";
 
 config();
 
 const app = new cdk.App();
-new ArkProjectCdkEcsEc2Stack(app, "ArkProjectCdkEcsEc2Stack", {
+new ArkProjectCdkEcsFargateStack(app, "ArkProjectCdkEcsFargateStack", {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
