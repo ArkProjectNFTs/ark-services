@@ -23,7 +23,7 @@ impl AWSFileManager {
 
 #[async_trait]
 impl FileManager for AWSFileManager {
-    async fn save(&self, file: &FileInfo) -> Result<()> {
+    async fn save(&self, file: &FileInfo) -> Result<String> {
         info!("Uploading {} to AWS...", file.name);
 
         let config = aws_config::load_from_env().await;
@@ -46,7 +46,7 @@ impl FileManager for AWSFileManager {
         {
             Ok(_) => {
                 debug!("Uploaded {} to AWS", file.name);
-                Ok(())
+                Ok(String::from(""))
             }
             Err(e) => {
                 error!("Failed to upload {} to AWS: {}", file.name, e);

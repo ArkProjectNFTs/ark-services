@@ -5,36 +5,73 @@ use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError,
 };
-
+use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::{error, info};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
-
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, None);
-
     let (address, token_id_hex) = get_params(&event)?;
 
     match provider
-        .update_token_metadata_status(&ctx.db, address.as_str(), token_id_hex.as_str())
+        .get_last_refresh_token_metadata(&ctx.db, address.as_str(), token_id_hex.as_str())
         .await
     {
-        Ok(_) => {
-            info!(
-                "Successfully updated token metadata status for token {} of contract {}",
-                token_id_hex, address
-            );
-            common::ok_body_rsp(&ArkApiResponse {
-                cursor: None,
-                result: "We've queued this token to update its metadata! It will be updated soon.",
-            })
+        Ok(last_refresh_timestamp_option) => {
+            if let Some(last_refresh_timestamp) = last_refresh_timestamp_option {
+                // Calculate the current timestamp
+                let current_timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards")
+                    .as_secs() as i64;
+
+                // Check if last_refresh_timestamp is greater than 10 minutes ago
+                if current_timestamp - last_refresh_timestamp < 10 * 60 {
+                    error!(
+                        "Attempt to refresh token metadata for token {} of contract {} too soon.",
+                        token_id_hex, address
+                    );
+                    return common::bad_request_rsp(
+                        "Metadata refresh can only be performed every 10 minutes.",
+                    );
+                }
+            }
+
+            // If more than 10 minutes have passed, proceed to update the token metadata status
+            match provider
+                .update_token_metadata_status(
+                    &ctx.db,
+                    address.as_str(),
+                    token_id_hex.as_str(),
+                    "true",
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!(
+                        "Successfully updated token metadata status for token {} of contract {}",
+                        token_id_hex, address
+                    );
+                    common::ok_body_rsp(&ArkApiResponse {
+                        cursor: None,
+                        result: "We've queued this token to update its metadata! It will be updated soon.",
+                    })
+                }
+                Err(e) => {
+                    error!(
+                        "Failed to update token metadata status for token {} of contract {}: {}",
+                        token_id_hex, address, e
+                    );
+                    common::internal_server_error_rsp("Failed to refresh token metadata")
+                }
+            }
         }
         Err(e) => {
             error!(
-                "Failed to update token metadata status for token {} of contract {}: {}",
+                "Failed to get last refresh timestamp for token {} of contract {}: {}",
                 token_id_hex, address, e
             );
-            common::internal_server_error_rsp("Failed to refresh token metadata")
+            common::internal_server_error_rsp("Failed to get token metadata last refresh timestamp")
         }
     }
 }
