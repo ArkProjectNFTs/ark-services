@@ -218,7 +218,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.0#09786a0b454dda9f1ec982d7284a6bdb25bb7d99"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.1#943f71f6ede8113645d735bc89ef45d024c18226"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -251,6 +251,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "regex",
+ "sha256",
  "starknet",
  "tokio",
  "tracing",
@@ -272,7 +273,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.0#09786a0b454dda9f1ec982d7284a6bdb25bb7d99"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.1#943f71f6ede8113645d735bc89ef45d024c18226"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -298,7 +299,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.0#09786a0b454dda9f1ec982d7284a6bdb25bb7d99"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.1#943f71f6ede8113645d735bc89ef45d024c18226"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -1412,7 +1413,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.0#09786a0b454dda9f1ec982d7284a6bdb25bb7d99"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.1#943f71f6ede8113645d735bc89ef45d024c18226"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -2948,7 +2949,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.0#09786a0b454dda9f1ec982d7284a6bdb25bb7d99"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.1#943f71f6ede8113645d735bc89ef45d024c18226"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -3680,6 +3681,19 @@ dependencies = [
  "cfg-if",
  "cpufeatures",
  "digest",
+]
+
+[[package]]
+name = "sha256"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7895c8ae88588ccead14ff438b939b0c569cd619116f14b4d13fdff7b8333386"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "hex",
+ "sha2",
+ "tokio",
 ]
 
 [[package]]

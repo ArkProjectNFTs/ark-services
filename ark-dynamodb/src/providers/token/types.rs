@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::{convert, ProviderError};
 use anyhow::{anyhow, Result};
 use arkproject::metadata::types::{
@@ -8,6 +6,7 @@ use arkproject::metadata::types::{
 use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TokenData {
