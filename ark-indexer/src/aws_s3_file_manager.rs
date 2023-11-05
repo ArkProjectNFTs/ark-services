@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use arkproject::metadata::file_manager::{FileInfo, FileManager};
 use async_trait::async_trait;
 use aws_sdk_s3::primitives::ByteStream;
@@ -23,7 +23,7 @@ impl AWSFileManager {
 
 #[async_trait]
 impl FileManager for AWSFileManager {
-    async fn save(&self, file: &FileInfo) -> Result<()> {
+    async fn save(&self, file: &FileInfo) -> Result<String> {
         info!(
             "Starting upload of '{}' to AWS S3 bucket '{}'.",
             file.name, &self.bucket_name
@@ -32,6 +32,7 @@ impl FileManager for AWSFileManager {
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_s3::Client::new(&config);
         let body = ByteStream::from(file.content.clone());
+
         let key = match &file.dir_path {
             Some(dir_path) => {
                 debug!(
@@ -54,33 +55,33 @@ impl FileManager for AWSFileManager {
             &self.bucket_name, &key
         );
 
-        match client
+        client
             .put_object()
             .bucket(&self.bucket_name)
             .key(&key)
             .body(body)
             .send()
             .await
-        {
-            Ok(_) => {
-                info!(
-                    "Successfully uploaded '{}' to AWS S3 bucket '{}'.",
-                    file.name, &self.bucket_name
-                );
-                Ok(())
-            }
-            Err(e) => {
+            .map_err(|e| {
                 error!(
                     "Upload failure for '{}' to AWS S3 bucket '{}': {}",
                     file.name, &self.bucket_name, e
                 );
-                Err(anyhow::anyhow!(
+                anyhow!(
                     "Failed to upload '{}' to AWS S3 bucket '{}': {}",
                     file.name,
                     &self.bucket_name,
                     e
-                ))
-            }
-        }
+                )
+            })?;
+
+        info!(
+            "Successfully uploaded '{}' to AWS S3 bucket '{}'.",
+            file.name, &self.bucket_name
+        );
+
+        let url = format!("https://{}.s3.amazonaws.com/{}", &self.bucket_name, &key);
+
+        Ok(url)
     }
 }

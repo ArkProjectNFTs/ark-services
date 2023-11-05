@@ -19,3 +19,4 @@ arkproject.workspace = true
 async-trait.workspace = true
 tokio.workspace = true
 ark-dynamodb.workspace = true
+sha256 = "1.4.0"
