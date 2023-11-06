@@ -48,14 +48,6 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -72,7 +64,8 @@ jobs:
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          docker buildx build --push --cache-from=type=local,src=/tmp/.buildx-cache --cache-to=type=local,dest=/tmp/.buildx-cache -t $ECR_URL:latest -f docker/metadata/Dockerfile .
+          docker build -t $ECR_URL:latest -f docker/metadata/Dockerfile .
+          docker push $ECR_URL:latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           INDEXER_TABLE_NAME: ${{ secrets.INDEXER_TABLE_NAME }}
