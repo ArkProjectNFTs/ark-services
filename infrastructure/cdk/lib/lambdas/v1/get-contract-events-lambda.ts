@@ -32,7 +32,7 @@ export function getContractEventsLambda(scope: cdk.Stack, stages: string[]) {
 
   getContractLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query"],
+      actions: ["dynamodb:Query", "dynamodb:PutItem"],
       resources: resourceArns,
     })
   );
