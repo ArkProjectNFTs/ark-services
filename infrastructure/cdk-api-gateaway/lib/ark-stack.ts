@@ -135,8 +135,8 @@ export class ArkStack extends cdk.Stack {
     );
 
     // Basic Free Plan
-    const basicPlan = api.addUsagePlan("ArkBasicPlan", {
-      name: "ArkApiBasic",
+    const basicPlan = api.addUsagePlan(`ark-basic-plan-${apiSuffix}-${stageName}`, {
+      name: `ark-basic-plan-${apiSuffix}-${stageName}`,
       throttle: {
         rateLimit: 5, // 5 requests per second
         burstLimit: 2, // Allow a burst of 2 requests
@@ -153,8 +153,8 @@ export class ArkStack extends cdk.Stack {
     });
 
     // Pay As You Go Plan
-    const payAsYouGoPlan = api.addUsagePlan("ArkPayAsYouGoPlan", {
-      name: "ArkApiPayAsYouGo",
+    const payAsYouGoPlan = api.addUsagePlan(`ark-pay-as-you-go-plan-${apiSuffix}-${stageName}`, {
+      name: `ark-pay-as-you-go-plan-${apiSuffix}-${stageName}`,
       throttle: {
         rateLimit: 100, // 100 requests per second
         burstLimit: 50, // Allow a burst of 50 requests
@@ -167,8 +167,8 @@ export class ArkStack extends cdk.Stack {
     });
 
     // Admin Unlimited Plan
-    const adminPlan = api.addUsagePlan("ArkAdminPlan", {
-      name: "ArkApiAdmin",
+    const adminPlan = api.addUsagePlan(`ark-admin-plan-${apiSuffix}-${stageName}`, {
+      name: `ark-admin-plan-${apiSuffix}-${stageName}`,
       // No throttle means it's unlimited
     });
 
