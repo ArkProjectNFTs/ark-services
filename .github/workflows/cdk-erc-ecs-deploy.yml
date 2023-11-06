@@ -25,12 +25,12 @@ jobs:
           npm install -g pnpm
           npm install -g aws-cdk
 
-      - name: Install CDK
+      - name: Install CDK ECR
         run: |
-          cd infrastructure/ecr
+          cd infrastructure/cdk-ecr
           pnpm install
 
-      - name: Install CDK
+      - name: Install CDK ECS EC2
         run: |
           cd infrastructure/cdk-ecs-ec2
           pnpm install
