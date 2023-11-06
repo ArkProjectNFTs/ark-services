@@ -1,12 +1,8 @@
 name: Deploy ECR Repository, Push Docker Image and deploy stack
 
 on:
-  push:
-    release:
-      types: [created]
-    branches:
-      - main
-      - feat/postman-export
+  release:
+    types: [created]
 
 jobs:
   deploy:
