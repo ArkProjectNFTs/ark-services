@@ -26,6 +26,12 @@ declare module "next-auth" {
 
 const resend = new Resend(env.RESEND_API_KEY);
 
+export const pages = {
+  signIn: "/login",
+  error: "/login/error",
+  verifyRequest: "/login/verify",
+};
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(db),
   session: {
@@ -43,11 +49,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  pages: {
-    signIn: "/login",
-    error: "/login/error",
-    verifyRequest: "/login/verify",
-  },
+  pages,
   callbacks: {
     signIn({ user }) {
       const email = user.email ?? "";

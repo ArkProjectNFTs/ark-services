@@ -1,8 +1,8 @@
-interface DeleteTaskButtonProps {
-  taskId: string;
-}
+// interface DeleteTaskButtonProps {
+//   taskId: string;
+// }
 
-const DeleteTaskButton = ({ taskId }: DeleteTaskButtonProps) => {
+const DeleteTaskButton = () => {
   return null;
 };
 
