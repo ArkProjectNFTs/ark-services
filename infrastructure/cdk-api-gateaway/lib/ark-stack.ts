@@ -59,13 +59,18 @@ export class ArkStack extends cdk.Stack {
     //loop foreach stage in props.stages
     props.stages.forEach(async (stage: string) => {
       this.createStage(api, apiSuffix, stage, props.isPullRequest);
-      await exportToPostman(
-        apiSuffix,
-        stage,
-        postmanApiKey,
-        api.restApiId,
-        awsRegion
-      );
+      if (
+        !props.isPullRequest &&
+        (props.isRelease || props.branch === "main")
+      ) {
+        await exportToPostman(
+          apiSuffix,
+          stage,
+          postmanApiKey,
+          api.restApiId,
+          awsRegion
+        );
+      }
     });
   }
 
@@ -108,6 +113,7 @@ export class ArkStack extends cdk.Stack {
         cacheTtl: cdk.Duration.seconds(0),
         cacheDataEncrypted: true,
         cacheClusterSize: "0.5",
+        // activate cache for specific endpoints
         // methodOptions: {
         //   "/contracts/*": {
         //     cachingEnabled: true,
