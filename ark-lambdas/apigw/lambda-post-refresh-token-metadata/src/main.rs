@@ -1,5 +1,3 @@
-mod aws_s3_file_manager;
-
 use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
