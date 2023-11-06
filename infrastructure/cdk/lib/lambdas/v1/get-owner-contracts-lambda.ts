@@ -35,5 +35,5 @@ export function getOwnerContractsLambda(
       resources: resourceArns,
     })
   );
-  return getOwnerTokensLambda;
+  return getOwnerContractsLambda;
 }
