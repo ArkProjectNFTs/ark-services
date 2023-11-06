@@ -66,7 +66,7 @@ pub trait ArkTokenProvider {
         ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id_hex: &str,
-    ) -> Result<Option<i64>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Option<i64>>, ProviderError>;
 
     async fn get_token_without_metadata(
         &self,

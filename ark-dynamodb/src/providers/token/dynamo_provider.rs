@@ -210,7 +210,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         ctx: &DynamoDbCtx,
         contract_address: &str,
         token_id_hex: &str,
-    ) -> Result<Option<i64>, ProviderError> {
+    ) -> Result<DynamoDbOutput<Option<i64>>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
         info!("get_token: pk={}", pk);
         let mut key = HashMap::new();
@@ -240,14 +240,17 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                                 .parse::<i64>()
                                 .unwrap();
 
-                            return Ok(Some(metadata_updated_at));
+                            return Ok(DynamoDbOutput::new(
+                                Some(metadata_updated_at),
+                                &r.consumed_capacity,
+                            ));
                         }
                     }
                 }
             }
         }
 
-        Ok(None)
+        Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
     }
 
     async fn get_token(
