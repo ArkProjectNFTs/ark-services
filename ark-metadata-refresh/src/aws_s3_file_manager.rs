@@ -39,10 +39,8 @@ impl FileManager for AWSFileManager {
             .await
             .is_ok()
         {
-            // If the file exists, construct the URL and return it.
-            let url = format!("https://{}.s3.amazonaws.com/{}", &self.bucket_name, key);
-            info!("File '{}' already exists on AWS S3: {}", file.name, url);
-            return Ok(url);
+            info!("File '{}' already exists on AWS S3: {}", file.name, key);
+            return Ok(key);
         }
 
         // If the file does not exist, proceed to upload.
@@ -56,10 +54,8 @@ impl FileManager for AWSFileManager {
             .await
         {
             Ok(_) => {
-                // On successful upload, construct the file URL and return it.
-                let url = format!("https://{}.s3.amazonaws.com/{}", &self.bucket_name, key);
-                info!("Uploaded '{}' to AWS S3: {}", file.name, url);
-                Ok(url)
+                info!("Uploaded '{}' to AWS S3: {}", file.name, key);
+                Ok(key)
             }
             Err(e) => {
                 // On failure, log the error and return it.
