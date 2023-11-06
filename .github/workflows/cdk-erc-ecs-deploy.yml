@@ -79,13 +79,16 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      # - name: Deploy ArkProjectCdkEcsEc2Stack
-      #   run: |
-      #     cd infrastructure/cdk-ecs-ec2
-      #     ECR_REPOSITORY_URI=$ECR_URL:latest cdk deploy ArkProjectCdkEcsEc2Stack
-      #   env:
-      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-      #     AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-      #     AWS_REGION: ${{ secrets.AWS_REGION }}
-      #     ECR_URL: ${{ env.ECR_URL }}
+      - name: Deploy ArkProjectCdkEcsEc2Stack
+        run: |
+          cd infrastructure/cdk-ecs-ec2
+          ECR_REPOSITORY_URI=$ECR_URL:latest cdk deploy ArkProjectCdkEcsEc2Stack
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          METADATA_IPFS_TIMEOUT_IN_SEC: 5
+          METADATA_LOOP_DELAY_IN_SEC: 10
+          IPFS_GATEWAY_URI: https://ipfs.arkproject.dev/ipfs/
+          ECR_REPOSITORY_URI: ${{ env.ECR_URL }}
