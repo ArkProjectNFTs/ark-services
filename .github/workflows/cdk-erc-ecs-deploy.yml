@@ -21,18 +21,19 @@ jobs:
           node-version: "18"
 
       - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-api-gateaway
+          npm install -g pnpm
+          npm install -g aws-cdk
+
+      - name: Install CDK
+        run: |
+          cd infrastructure/ecr
           pnpm install
 
       - name: Install CDK
         run: |
-          cd infrastructure/cdk-ecr
-          npm install -g aws-cdk
-          npm install
+          cd infrastructure/cdk-ecs-ec2
+          pnpm install
 
       - name: Deploy CDK stack
         run: |
