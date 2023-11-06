@@ -42,6 +42,10 @@ impl TokenData {
         let mut normalized_metadata = HashMap::new();
 
         normalized_metadata.insert(
+            "ImageKey".to_string(),
+            AttributeValue::S(metadata.normalized.image_key.clone().unwrap_or_default()),
+        );
+        normalized_metadata.insert(
             "Image".to_string(),
             AttributeValue::S(metadata.normalized.image.clone().unwrap_or_default()),
         );
@@ -49,6 +53,48 @@ impl TokenData {
             "ImageData".to_string(),
             AttributeValue::S(metadata.normalized.image_data.clone().unwrap_or_default()),
         );
+        normalized_metadata.insert(
+            "ImageMimeType".to_string(),
+            AttributeValue::S(
+                metadata
+                    .normalized
+                    .image_mime_type
+                    .clone()
+                    .unwrap_or_default(),
+            ),
+        );
+
+        normalized_metadata.insert(
+            "AnimationKey".to_string(),
+            AttributeValue::S(
+                metadata
+                    .normalized
+                    .animation_key
+                    .clone()
+                    .unwrap_or_default(),
+            ),
+        );
+        normalized_metadata.insert(
+            "AnimationMimeType".to_string(),
+            AttributeValue::S(
+                metadata
+                    .normalized
+                    .animation_mime_type
+                    .clone()
+                    .unwrap_or_default(),
+            ),
+        );
+        normalized_metadata.insert(
+            "AnimationUrl".to_string(),
+            AttributeValue::S(
+                metadata
+                    .normalized
+                    .animation_url
+                    .clone()
+                    .unwrap_or_default(),
+            ),
+        );
+
         normalized_metadata.insert(
             "ExternalUrl".to_string(),
             AttributeValue::S(metadata.normalized.external_url.clone().unwrap_or_default()),
@@ -71,16 +117,7 @@ impl TokenData {
                     .unwrap_or_default(),
             ),
         );
-        normalized_metadata.insert(
-            "AnimationUrl".to_string(),
-            AttributeValue::S(
-                metadata
-                    .normalized
-                    .animation_url
-                    .clone()
-                    .unwrap_or_default(),
-            ),
-        );
+
         normalized_metadata.insert(
             "YoutubeUrl".to_string(),
             AttributeValue::S(metadata.normalized.youtube_url.clone().unwrap_or_default()),
@@ -125,7 +162,6 @@ impl TokenData {
         }
 
         let mut map: HashMap<String, AttributeValue> = HashMap::new();
-
         map.insert(
             String::from("RawMetadata"),
             AttributeValue::S(metadata.raw.clone()),
@@ -193,18 +229,31 @@ fn extract_normalized_metadata_from_hashmap(
                 };
 
             let normalized_metadata = NormalizedMetadata {
+                image_key: convert::attr_to_opt_str(normalized_metadata_hashmap, "ImageKey")?,
+                image_mime_type: convert::attr_to_opt_str(
+                    normalized_metadata_hashmap,
+                    "ImageMimeType",
+                )?,
                 image: convert::attr_to_opt_str(normalized_metadata_hashmap, "Image")?,
                 image_data: convert::attr_to_opt_str(normalized_metadata_hashmap, "ImageData")?,
+                animation_key: convert::attr_to_opt_str(
+                    normalized_metadata_hashmap,
+                    "AnimationKey",
+                )?,
+                animation_mime_type: convert::attr_to_opt_str(
+                    normalized_metadata_hashmap,
+                    "AnimationMimeType",
+                )?,
+                animation_url: convert::attr_to_opt_str(
+                    normalized_metadata_hashmap,
+                    "AnimationUrl",
+                )?,
                 external_url: convert::attr_to_opt_str(normalized_metadata_hashmap, "ExternalUrl")?,
                 description: convert::attr_to_opt_str(normalized_metadata_hashmap, "Description")?,
                 name: convert::attr_to_opt_str(normalized_metadata_hashmap, "Name")?,
                 background_color: convert::attr_to_opt_str(
                     normalized_metadata_hashmap,
                     "BackgroundColor",
-                )?,
-                animation_url: convert::attr_to_opt_str(
-                    normalized_metadata_hashmap,
-                    "AnimationUrl",
                 )?,
                 youtube_url: convert::attr_to_opt_str(normalized_metadata_hashmap, "YoutubeUrl")?,
                 attributes,
@@ -409,6 +458,10 @@ mod tests {
             }),
             metadata: Some(TokenMetadata {
                 normalized: NormalizedMetadata {
+                    animation_key: Some(String::from("animation_key")),
+                    animation_mime_type: Some(String::from("video/mp4")),
+                    image_key: Some(String::from("image_key")),
+                    image_mime_type: Some(String::from("image/png")),
                     image: Some(String::from("image_url")),
                     image_data: Some(String::from("")),
                     external_url: Some(String::from("")),
@@ -448,6 +501,10 @@ mod tests {
     fn test_metadata_to_map() {
         let mock_metadata = TokenMetadata {
             normalized: NormalizedMetadata {
+                animation_key: Some(String::from("animation_key")),
+                animation_mime_type: Some(String::from("video/mp4")),
+                image_key: Some(String::from("image_key")),
+                image_mime_type: Some(String::from("image/png")),
                 image: Some("image_url".to_string()),
                 image_data: Some("image_data".to_string()),
                 external_url: Some("external_url".to_string()),
@@ -524,6 +581,11 @@ mod tests {
         final_expected_map.insert(
             "RawMetadata".to_string(),
             AttributeValue::S("{ \"image\": \"image_url\" }".to_string()),
+        );
+
+        final_expected_map.insert(
+            "MetadataUpdatedAt".to_string(),
+            AttributeValue::N("1698346591".to_string()),
         );
 
         assert_eq!(result_map.get("Image"), final_expected_map.get("Image"));

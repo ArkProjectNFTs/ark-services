@@ -1,4 +1,3 @@
-mod aws_s3_file_manager;
 mod pontos_observer;
 
 use anyhow::Result;
