@@ -63,6 +63,11 @@ export class ArkProjectCdkEcsFargateStack extends Stack {
         resources: ["*"],
       }));
 
+      taskDefinition.addToTaskRolePolicy(new PolicyStatement({
+        actions: ["s3:*"],
+        resources: ["*"],
+      }));
+
       dynamoTable.grantFullAccess(taskDefinition.taskRole);
 
       new ecs.FargateService(this, `${network}ArkMetadataFargateService`, {
