@@ -104,7 +104,7 @@ jobs:
       - name: Deploy ArkProjectCdkEcsFargateStack
         run: |
           cd infrastructure/cdk-ecs-ec2
-          ECR_REPOSITORY_URI=$ECR_URL:latest cdk deploy ArkProjectCdkEcsFargateStack
+          ECR_REPOSITORY_URI=$ECR_URL:latest cdk deploy ArkProjectCdkEcsFargateStack --require-approval never 
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
