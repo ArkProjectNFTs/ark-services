@@ -14,7 +14,7 @@ export function getContractsLambda(scope: cdk.Stack, stages: string[]) {
       RUST_BACKTRACE: "1",
     },
     bundling: {
-      assetHashType: AssetHashType.SOURCE, // Set the assetHashType here
+      assetHashType: AssetHashType.OUTPUT, // Set the assetHashType here
       // ...other bundling options if needed
     },
     logRetention: RetentionDays.ONE_DAY,

@@ -14,7 +14,7 @@ export function getContractLambda(scope: cdk.Stack, stages: string[]) {
     },
     logRetention: RetentionDays.ONE_DAY,
     bundling: {
-      assetHashType: AssetHashType.SOURCE, // Set the assetHashType here
+      assetHashType: AssetHashType.OUTPUT, // Set the assetHashType here
       // ...other bundling options if needed
     },
     // Additional bundling options can be specified if necessary

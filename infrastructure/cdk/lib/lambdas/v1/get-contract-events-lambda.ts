@@ -13,7 +13,7 @@ export function getContractEventsLambda(scope: cdk.Stack, stages: string[]) {
     },
     logRetention: RetentionDays.ONE_DAY,
     bundling: {
-      assetHashType: AssetHashType.SOURCE,  // Set the assetHashType here
+      assetHashType: AssetHashType.OUTPUT,  // Set the assetHashType here
       // ...other bundling options if needed
     },
     // The bundling options are automatically handled by cargo-lambda-cdk.
