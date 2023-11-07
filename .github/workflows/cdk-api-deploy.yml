@@ -5,12 +5,14 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/cdk-api-deploy.yml"
       - "infrastructure/cdk/**"
       - "ark-lambdas/**"
       - "ark-dynamodb/**"
   pull_request:
     types: [opened, synchronize, closed]
     paths:
+      - ".github/workflows/cdk-api-deploy.yml"
       - "infrastructure/cdk/**"
       - "ark-lambdas/**"
       - "ark-dynamodb/**"
@@ -72,7 +74,7 @@ jobs:
       - name: CDK Bootstrap (if necessary)
         run: |
           cd infrastructure/cdk
-          pnpm cdk bootstrap -c branch=${{ github.ref_name }} -c isPullRequest=${{ github.event_name == 'pull_request' }} -c prNumber=${{ github.event.number || '' }} -c targetBranch=${{ github.event.pull_request.base.ref || '' }}
+          pnpm cdk bootstrap --force -c branch=${{ github.ref_name }} -c isPullRequest=${{ github.event_name == 'pull_request' }} -c prNumber=${{ github.event.number || '' }} -c targetBranch=${{ github.event.pull_request.base.ref || '' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -83,7 +85,7 @@ jobs:
         if: github.event_name == 'push'
         run: |
           cd infrastructure/cdk
-          pnpm cdk deploy --force --require-approval never -c branch=${{ github.ref_name }} -c isPullRequest=false
+          pnpm cdk deploy --require-approval never -c branch=${{ github.ref_name }} -c isPullRequest=false
           echo "GitHub Ref: ${{ github.ref }}"
           echo "GitHub Ref Name: ${{ github.ref_name }}"
         env:
@@ -96,7 +98,7 @@ jobs:
         if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize' && github.event.pull_request.base.ref != 'main')
         run: |
           cd infrastructure/cdk
-          pnpm cdk deploy --force --require-approval never -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }} -c targetBranch=${{ github.event.pull_request.base.ref }}
+          pnpm cdk deploy --require-approval never -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }} -c targetBranch=${{ github.event.pull_request.base.ref }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
