@@ -11,6 +11,9 @@ dependencies:
   aws-cdk-lib:
     specifier: 2.100.0
     version: 2.100.0(constructs@10.0.0)
+  cargo-lambda-cdk:
+    specifier: ^0.0.17
+    version: 0.0.17(aws-cdk-lib@2.100.0)(constructs@10.0.0)
   constructs:
     specifier: ^10.0.0
     version: 10.0.0
@@ -1107,6 +1110,18 @@ packages:
   /caniuse-lite@1.0.30001549:
     resolution: {integrity: sha512-qRp48dPYSCYaP+KurZLhDYdVE+yEyht/3NlmcJgVQ2VMGt6JL36ndQ/7rgspdZsJuxDPFIo/OzBT2+GmIJ53BA==}
     dev: true
+
+  /cargo-lambda-cdk@0.0.17(aws-cdk-lib@2.100.0)(constructs@10.0.0):
+    resolution: {integrity: sha512-KV95oV4GdczNioji8EvHbYumsArdGRusXsNhfRSBIoE94WN8jlxySaUzboNiH+HEKshyUQtnvdQd/WLBdk5NDA==}
+    peerDependencies:
+      aws-cdk-lib: ^2.1.0
+      constructs: ^10.0.5
+    dependencies:
+      aws-cdk-lib: 2.100.0(constructs@10.0.0)
+      constructs: 10.0.0
+    dev: false
+    bundledDependencies:
+      - js-toml
 
   /case@1.6.3:
     resolution: {integrity: sha512-mzDSXIPaFwVDvZAHqZ9VlbyF4yyXRuX6IvB06WvPYkqJVO24kX1PPhv9bfpKNFZyxYFmmgo03HUiD8iklmJYRQ==}

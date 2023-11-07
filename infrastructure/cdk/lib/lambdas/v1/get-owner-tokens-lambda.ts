@@ -1,17 +1,12 @@
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as cdk from "aws-cdk-lib";
-import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import * as cdk from 'aws-cdk-lib';
+import { RustFunction } from 'cargo-lambda-cdk';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
-export function getOwnerTokensLambda(
-  scope: cdk.Stack,
-  stages: string[]
-) {
+export function getOwnerTokensLambda(scope: cdk.Stack, stages: string[]) {
   const indexName = "GSI2PK-GSI2SK-index";
-  const getOwnerTokensLambda = new lambda.Function(scope, "get-owner-tokens", {
-    code: lambda.Code.fromAsset("../../target/lambda/lambda-get-owner-tokens"),
-    runtime: lambda.Runtime.PROVIDED_AL2,
-    handler: "not.required",
+  const getOwnerTokensLambda = new RustFunction(scope, "get-owner-tokens", {
+    manifestPath: '../../ark-lambdas/apigw/lambda-get-owner-tokens/Cargo.toml',
     environment: {
       RUST_BACKTRACE: "1",
     },

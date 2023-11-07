@@ -69,7 +69,6 @@ jobs:
       - name: Build Rust Lambda with Cargo
         run: |
           pip install cargo-lambda
-          cargo lambda build --release
 
       - name: CDK Bootstrap (if necessary)
         run: |
