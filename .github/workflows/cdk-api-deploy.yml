@@ -108,7 +108,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.action == 'closed'
         run: |
           cd infrastructure/cdk
-          pnpm cdk destroy --force -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }}
+          pnpm cdk destroy --force -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }} -c targetBranch=${{ github.event.pull_request.base.ref }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
