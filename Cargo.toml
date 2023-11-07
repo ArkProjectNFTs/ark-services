@@ -1,7 +1,7 @@
 [workspace.package]
 version = "0.1.0"
 authors = ["Screenshot Labs", "Starknet community"]
-license = "MIT OR Apache-2.0"
+license = "Apache-2.0"
 readme = "README.md"
 #documentation = "https://docs.rs/..."
 repository = "https://github.com/ArkProjectNFTs/ark-services"
