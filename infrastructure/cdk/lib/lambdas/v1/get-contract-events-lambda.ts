@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import { RustFunction } from 'cargo-lambda-cdk';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { AssetHashType } from 'aws-cdk-lib';
 
 export function getContractEventsLambda(scope: cdk.Stack, stages: string[]) {
   const getContractLambda = new RustFunction(scope, 'get-contract-events', {
@@ -11,6 +12,10 @@ export function getContractEventsLambda(scope: cdk.Stack, stages: string[]) {
       RUST_BACKTRACE: "1",
     },
     logRetention: RetentionDays.ONE_DAY,
+    bundling: {
+      assetHashType: AssetHashType.SOURCE,  // Set the assetHashType here
+      // ...other bundling options if needed
+    },
     // The bundling options are automatically handled by cargo-lambda-cdk.
     // If Cargo Lambda is installed locally, it will be used; otherwise, Docker will be used.
   });

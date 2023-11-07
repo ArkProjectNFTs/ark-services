@@ -1,13 +1,18 @@
-import * as cdk from 'aws-cdk-lib';
-import { RustFunction } from 'cargo-lambda-cdk';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import * as cdk from "aws-cdk-lib";
+import { RustFunction } from "cargo-lambda-cdk";
+import * as iam from "aws-cdk-lib/aws-iam";
+import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { AssetHashType } from "aws-cdk-lib";
 
 export function getTokenLambda(scope: cdk.Stack, stages: string[]) {
   const getTokenLambda = new RustFunction(scope, "get-token", {
-    manifestPath: '../../ark-lambdas/apigw/lambda-get-token/Cargo.toml',
+    manifestPath: "../../ark-lambdas/apigw/lambda-get-token/Cargo.toml",
     environment: {
       RUST_BACKTRACE: "1",
+    },
+    bundling: {
+      assetHashType: AssetHashType.SOURCE, // Set the assetHashType here
+      // ...other bundling options if needed
     },
     logRetention: RetentionDays.ONE_DAY,
   });
