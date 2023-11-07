@@ -47,9 +47,9 @@ impl LambdaUsageProvider {
         items.insert("PK".to_string(), AttributeValue::S(pk));
         items.insert("SK".to_string(), AttributeValue::S(sk));
         items.insert("GSI1PK".to_string(), AttributeValue::S(gsi1pk));
-        items.insert("GSI1SK".to_string(), AttributeValue::S(gsi1sk));
+        items.insert("GSI1SK".to_string(), AttributeValue::N(gsi1sk));
         items.insert("GSI2PK".to_string(), AttributeValue::S(gsi2pk));
-        items.insert("GSI2SK".to_string(), AttributeValue::S(gsi2sk));
+        items.insert("GSI2SK".to_string(), AttributeValue::N(gsi2sk));
         items.insert(
             "Capacity".to_string(),
             AttributeValue::N(data.capacity.to_string()),
