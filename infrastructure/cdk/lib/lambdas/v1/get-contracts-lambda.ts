@@ -5,7 +5,7 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
 export function getContractsLambda(scope: cdk.Stack, stages: string[]) {
-  const indexName = "GSI1PK-GSI1SK-index";
+  const indexName = "GSI2PK-GSI2SK-index";
   // Define a RustFunction using the cargo-lambda-cdk construct
   const getContractsLambda = new RustFunction(scope, "get-contracts", {
     // Specify the path to your Rust project's Cargo.toml file
