@@ -5,12 +5,14 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/cdk-api-deploy.yml"
       - "infrastructure/cdk/**"
       - "ark-lambdas/**"
       - "ark-dynamodb/**"
   pull_request:
     types: [opened, synchronize, closed]
     paths:
+      - ".github/workflows/cdk-api-deploy.yml"
       - "infrastructure/cdk/**"
       - "ark-lambdas/**"
       - "ark-dynamodb/**"
@@ -64,15 +66,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-target-
 
-      - name: Build Rust Lambda with Cargo
+      - name: Install Cargo Lambda
         run: |
           pip install cargo-lambda
-          cargo lambda build --release
 
       - name: CDK Bootstrap (if necessary)
         run: |
           cd infrastructure/cdk
-          pnpm cdk bootstrap -c branch=${{ github.ref_name }} -c isPullRequest=${{ github.event_name == 'pull_request' }} -c prNumber=${{ github.event.number || '' }} -c targetBranch=${{ github.event.pull_request.base.ref || '' }}
+          pnpm cdk bootstrap --force -c branch=${{ github.ref_name }} -c isPullRequest=${{ github.event_name == 'pull_request' }} -c prNumber=${{ github.event.number || '' }} -c targetBranch=${{ github.event.pull_request.base.ref || '' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -93,7 +94,7 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: CDK Deploy (on PR open/synchronize)
-        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize' && github.event.pull_request.base.ref != 'main')
+        if: github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')
         run: |
           cd infrastructure/cdk
           pnpm cdk deploy --require-approval never -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }} -c targetBranch=${{ github.event.pull_request.base.ref }}
@@ -107,7 +108,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.event.action == 'closed'
         run: |
           cd infrastructure/cdk
-          pnpm cdk destroy --force -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }}
+          pnpm cdk destroy --force -c branch=${{ github.head_ref }} -c isPullRequest=true -c prNumber=${{ github.event.number }} -c targetBranch=${{ github.event.pull_request.base.ref }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}

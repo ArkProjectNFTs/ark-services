@@ -126,7 +126,7 @@ impl AWSDynamoStorage for DynamoStorage {
                     "Failed to update indexer task status for task_id {}: {:?}",
                     task_id, e
                 );
-                Err(StorageError::DatabaseError(e.to_string()))
+                Err(StorageError::DatabaseError(format!("{:?}", e.to_string())))
             }
         }
     }
@@ -200,7 +200,7 @@ impl AWSDynamoStorage for DynamoStorage {
                     "Failed to update indexer progress for task_id {}: {:?}",
                     task_id, e
                 );
-                Err(StorageError::DatabaseError(e.to_string()))
+                Err(StorageError::DatabaseError(format!("{:?}", e.to_string())))
             }
         }
     }
@@ -229,7 +229,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }
@@ -246,7 +246,7 @@ impl Storage for DynamoStorage {
             .token
             .get_token(&self.ctx, &token.contract_address, &token.token_id_hex)
             .await
-            .map_err(|e| StorageError::DatabaseError(e.to_string()))?
+            .map_err(|e| StorageError::DatabaseError(format!("{:?}", e.to_string())))?
             .into_inner()
             .is_some();
 
@@ -265,7 +265,7 @@ impl Storage for DynamoStorage {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     error!("{}", e.to_string());
-                    return Err(StorageError::DatabaseError(e.to_string()));
+                    return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
                 }
             }
         } else {
@@ -287,7 +287,7 @@ impl Storage for DynamoStorage {
                 Ok(_) => Ok(()),
                 Err(e) => {
                     error!("{}", e.to_string());
-                    return Err(StorageError::DatabaseError(e.to_string()));
+                    return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
                 }
             }
         }
@@ -309,7 +309,7 @@ impl Storage for DynamoStorage {
             Ok(i) => i,
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         };
 
@@ -328,7 +328,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }
@@ -356,7 +356,7 @@ impl Storage for DynamoStorage {
             }
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }
@@ -380,7 +380,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }
@@ -402,7 +402,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }
@@ -419,7 +419,7 @@ impl Storage for DynamoStorage {
             Ok(i) => i,
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         };
 
@@ -450,7 +450,7 @@ impl Storage for DynamoStorage {
             Ok(_) => Ok(()),
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }

@@ -4,16 +4,16 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getContractTokensLambda(scope: cdk.Stack, stages: string[]) {
-  const indexName = "GSI1PK-GSI1SK-index";
+export function getOwnerContractsLambda(scope: cdk.Stack, stages: string[]) {
+  const indexName = "GSI2PK-GSI2SK-index";
   // Define a RustFunction using the cargo-lambda-cdk construct
-  const getContractTokensLambda = new RustFunction(
+  const getOwnerContractsLambda = new RustFunction(
     scope,
-    "get-contract-tokens",
+    "get-owner-contracts",
     {
-      // Specify the path to your Rust project's Cargo.toml file
+      // The path to the Rust project is relative to the CDK code
       manifestPath:
-        "../../ark-lambdas/apigw/lambda-get-contract-tokens/Cargo.toml",
+        "../../ark-lambdas/apigw/lambda-get-owner-contracts/Cargo.toml",
       environment: {
         RUST_BACKTRACE: "1",
       },
@@ -30,22 +30,23 @@ export function getContractTokensLambda(scope: cdk.Stack, stages: string[]) {
 
   // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
-    resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}/index/${indexName}`
-    );
-    resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}_lambda_usage`
-    );
+    const baseTableArn = `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`;
+    // ARN for index - used with dynamodb:Query
+    resourceArns.push(`${baseTableArn}/index/${indexName}`);
+    // ARN for table - used with dynamodb:GetItem and dynamodb:PutItem
+    resourceArns.push(baseTableArn);
+    // ARN for the Lambda usage table
+    resourceArns.push(`${baseTableArn}_lambda_usage`);
   }
 
   // Add permissions to the Lambda's role to interact with DynamoDB
-  getContractTokensLambda.addToRolePolicy(
+  getOwnerContractsLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query", "dynamodb:PutItem"],
+      actions: ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem"],
       resources: resourceArns,
     })
   );
 
   // Return the RustFunction construct
-  return getContractTokensLambda;
+  return getOwnerContractsLambda;
 }

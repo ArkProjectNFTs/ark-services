@@ -79,7 +79,7 @@ impl LambdaUsageProvider {
             .set_item(Some(items))
             .send()
             .await
-            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
         Ok(())
     }
 }

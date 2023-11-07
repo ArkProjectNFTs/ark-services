@@ -196,7 +196,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .query()
             .table_name(&self.table_name)
             .index_name("GSI2PK-GSI2SK-index")
-            .set_key_condition_expression(Some("GSI1PK = :pk".to_string()))
+            .set_key_condition_expression(Some("GSI2PK = :pk".to_string()))
             .set_expression_attribute_values(Some(values))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .set_limit(self.limit)

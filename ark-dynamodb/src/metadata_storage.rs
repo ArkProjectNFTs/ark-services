@@ -56,7 +56,7 @@ impl Storage for MetadataStorage {
             .await
             .map_err(|e| {
                 error!("Failed to update token metadata status. Error: {}", e);
-                StorageError::DatabaseError(e.to_string())
+                StorageError::DatabaseError(format!("{:?}", e.to_string()))
             })?;
 
         Ok(())
@@ -88,7 +88,7 @@ impl Storage for MetadataStorage {
             }
             Err(e) => {
                 error!("{}", e.to_string());
-                return Err(StorageError::DatabaseError(e.to_string()));
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
             }
         }
     }
@@ -114,7 +114,7 @@ impl Storage for MetadataStorage {
             Ok(tokens) => {
                 return Ok(tokens);
             }
-            Err(e) => Err(StorageError::DatabaseError(e.to_string())),
+            Err(e) => Err(StorageError::DatabaseError(format!("{:?}", e.to_string()))),
         }
     }
 }

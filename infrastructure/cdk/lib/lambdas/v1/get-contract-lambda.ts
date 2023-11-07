@@ -1,21 +1,28 @@
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as iam from "aws-cdk-lib/aws-iam";
 import * as cdk from "aws-cdk-lib";
+import { RustFunction } from "cargo-lambda-cdk";
+import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import { AssetHashType } from "aws-cdk-lib";
 
 export function getContractLambda(scope: cdk.Stack, stages: string[]) {
-  const getContractLambda = new lambda.Function(scope, "get-contract", {
-    code: lambda.Code.fromAsset("../../target/lambda/lambda-get-contract"),
-    runtime: lambda.Runtime.PROVIDED_AL2,
-    handler: "not.required",
+  // Define a RustFunction using the cargo-lambda-cdk construct
+  const getContractLambda = new RustFunction(scope, "get-contract", {
+    // Specify the path to your Rust project's Cargo.toml file
+    manifestPath: "../../ark-lambdas/apigw/lambda-get-contract/Cargo.toml",
     environment: {
       RUST_BACKTRACE: "1",
     },
     logRetention: RetentionDays.ONE_DAY,
+    bundling: {
+      assetHashType: AssetHashType.OUTPUT, // Set the assetHashType here
+      // ...other bundling options if needed
+    },
+    // Additional bundling options can be specified if necessary
   });
 
   let resourceArns: string[] = [];
 
+  // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
     resourceArns.push(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
@@ -25,11 +32,14 @@ export function getContractLambda(scope: cdk.Stack, stages: string[]) {
     );
   }
 
+  // Add permissions to the Lambda's role to interact with DynamoDB
   getContractLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem"],
+      actions: ["dynamodb:GetItem", "dynamodb:PutItem"],
       resources: resourceArns,
     })
   );
+
+  // Return the RustFunction construct
   return getContractLambda;
 }
