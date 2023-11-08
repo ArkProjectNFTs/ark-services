@@ -15,13 +15,23 @@ export function contractsApi(
   // Get all contracts
   contracts.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractsLambda(scope, stages), { proxy: true })
+    new apigateway.LambdaIntegration(getContractsLambda(scope, stages), {
+      proxy: true,
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   // Get a specific contract
   contractsContractAddressRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractLambda(scope, stages), { proxy: true })
+    new apigateway.LambdaIntegration(getContractLambda(scope, stages), {
+      proxy: true,
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
   return versionedRoot;
 }

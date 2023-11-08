@@ -17,12 +17,12 @@ export function eventsApi(
   // Get all events for a contract
   eventContractAddressResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(
-      getContractEventsLambda(scope, stages),
-      {
-        proxy: true,
-      }
-    )
+    new apigateway.LambdaIntegration(getContractEventsLambda(scope, stages), {
+      proxy: true,
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   // Get all events for a token
@@ -30,7 +30,10 @@ export function eventsApi(
     "GET",
     new apigateway.LambdaIntegration(getTokenEventsLambda(scope, stages), {
       proxy: true,
-    })
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   return versionedRoot;
