@@ -93,14 +93,17 @@ export class ArkStack extends cdk.Stack {
       ) {
         // Add basic plan to API
         basicPlan.addApiStage({
+          api: api,
           stage: stage,
         });
         // Add pay as you go plan to API
         payAsYouGoPlan.addApiStage({
+          api: api,
           stage: stage,
         });
         // Add admin plan to API
         adminPlan.addApiStage({
+          api: api,
           stage: stage,
         });
         await exportToPostman(
