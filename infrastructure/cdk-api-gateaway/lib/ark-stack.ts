@@ -96,12 +96,13 @@ export class ArkStack extends cdk.Stack {
         stage,
         props.isPullRequest
       );
+      createdStages.push(createdStage);
       if (
         !props.isPullRequest &&
         (props.isRelease || props.branch === "main")
       ) {
         // Add the created stage to the array
-        createdStages.push(createdStage);
+
         await exportToPostman(
           apiSuffix,
           stage,
@@ -112,22 +113,14 @@ export class ArkStack extends cdk.Stack {
       }
     });
 
-    // Add the common usage plan to all created stages
+    // Add the common usage plan to all created stages after the loop
     createdStages.forEach((stage) => {
       // Add basic plan to API
-      basicPlan.addApiStage({
-        stage: stage,
-      });
-
+      basicPlan.addApiStage({ stage: stage });
       // Add pay as you go plan to API
-      payAsYouGoPlan.addApiStage({
-        stage: stage,
-      });
-
+      payAsYouGoPlan.addApiStage({ stage: stage });
       // Add admin plan to API
-      adminPlan.addApiStage({
-        stage: stage,
-      });
+      adminPlan.addApiStage({ stage: stage });
     });
   }
 
