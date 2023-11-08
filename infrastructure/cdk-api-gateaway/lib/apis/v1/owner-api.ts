@@ -16,13 +16,23 @@ export function ownerApi(
   // Get all tokens for an owner
   ownerTokensRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getOwnerTokensLambda(scope, stages), { proxy: true })
+    new apigateway.LambdaIntegration(getOwnerTokensLambda(scope, stages), {
+      proxy: true,
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   // Get all contracts for an owner
   ownerContractsRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getOwnerContractsLambda(scope, stages), { proxy: true })
+    new apigateway.LambdaIntegration(getOwnerContractsLambda(scope, stages), {
+      proxy: true,
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   return versionedRoot;

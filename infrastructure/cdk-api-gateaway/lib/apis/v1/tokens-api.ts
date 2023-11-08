@@ -20,7 +20,10 @@ export function tokensApi(
     "GET",
     new apigateway.LambdaIntegration(getContractTokensLambda(scope, stages), {
       proxy: true,
-    })
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   // Get a specific token for a contract
@@ -28,7 +31,10 @@ export function tokensApi(
     "GET",
     new apigateway.LambdaIntegration(getTokenLambda(scope, stages), {
       proxy: true,
-    })
+    }),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   const metadataRessource =
@@ -43,7 +49,10 @@ export function tokensApi(
       {
         proxy: true,
       }
-    )
+    ),
+    {
+      apiKeyRequired: true, // API key is now required for this method
+    }
   );
 
   return versionedRoot;
