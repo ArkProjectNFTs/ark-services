@@ -40,6 +40,34 @@ export class ArkStack extends cdk.Stack {
       }
     );
 
+    const basicPlan = api.addUsagePlan(`ark-basic-plan-${apiSuffix}`, {
+      name: `ark-basic-plan-${apiSuffix}`,
+      throttle: {
+        rateLimit: 5, // 5 requests per second
+        burstLimit: 2, // Allow a burst of 2 requests
+      },
+      quota: {
+        limit: 100000, // 100000 requests per month
+        period: apigateway.Period.MONTH,
+      },
+    });
+
+    const payAsYouGoPlan = api.addUsagePlan(
+      `ark-pay-as-you-go-plan-${apiSuffix}`,
+      {
+        name: `ark-pay-as-you-go-plan-${apiSuffix}`,
+        throttle: {
+          rateLimit: 100, // 100 requests per second
+          burstLimit: 50, // Allow a burst of 50 requests
+        },
+      }
+    );
+
+    const adminPlan = api.addUsagePlan(`ark-admin-plan-${apiSuffix}`, {
+      name: `ark-admin-plan-${apiSuffix}`,
+      // No throttle means it's unlimited
+    });
+
     // V1 API
     const versionedRoot = api.root.addResource("v1");
 
@@ -56,9 +84,21 @@ export class ArkStack extends cdk.Stack {
 
     const postmanApiKey = process.env.POSTMAN_API_KEY || "";
     const awsRegion = process.env.AWS_REGION || "";
+
     //loop foreach stage in props.stages
     props.stages.forEach(async (stage: string) => {
-      this.createStage(api, apiSuffix, stage, props.isPullRequest);
+      const createdStage = this.createStage(
+        api,
+        apiSuffix,
+        stage,
+        props.isPullRequest
+      );
+      // Add basic plan to API
+      basicPlan.addApiStage({ stage: createdStage });
+      // Add pay as you go plan to API
+      payAsYouGoPlan.addApiStage({ stage: createdStage });
+      // Add admin plan to API
+      adminPlan.addApiStage({ stage: createdStage });
       if (
         !props.isPullRequest &&
         (props.isRelease || props.branch === "main")
@@ -134,49 +174,6 @@ export class ArkStack extends cdk.Stack {
       }
     );
 
-    // Basic Free Plan
-    const basicPlan = api.addUsagePlan(`ark-basic-plan-${apiSuffix}-${stageName}`, {
-      name: `ark-basic-plan-${apiSuffix}-${stageName}`,
-      throttle: {
-        rateLimit: 5, // 5 requests per second
-        burstLimit: 2, // Allow a burst of 2 requests
-      },
-      quota: {
-        limit: 100000, // 100000 requests per month
-        period: apigateway.Period.MONTH,
-      },
-    });
-
-    // Add basic plan to API
-    basicPlan.addApiStage({
-      stage: stage,
-    });
-
-    // Pay As You Go Plan
-    const payAsYouGoPlan = api.addUsagePlan(`ark-pay-as-you-go-plan-${apiSuffix}-${stageName}`, {
-      name: `ark-pay-as-you-go-plan-${apiSuffix}-${stageName}`,
-      throttle: {
-        rateLimit: 100, // 100 requests per second
-        burstLimit: 50, // Allow a burst of 50 requests
-      },
-    });
-
-    // Add pay as you go plan to API
-    payAsYouGoPlan.addApiStage({
-      stage: stage,
-    });
-
-    // Admin Unlimited Plan
-    const adminPlan = api.addUsagePlan(`ark-admin-plan-${apiSuffix}-${stageName}`, {
-      name: `ark-admin-plan-${apiSuffix}-${stageName}`,
-      // No throttle means it's unlimited
-    });
-
-    // Add admin plan to API
-    adminPlan.addApiStage({
-      stage: stage,
-    });
-
     // If this is a pull request, don't create a custom domain
     if (!isPullRequest) {
       const domainName = "arkproject.dev";
@@ -236,5 +233,6 @@ export class ArkStack extends cdk.Stack {
         }
       );
     }
+    return stage;
   }
 }
