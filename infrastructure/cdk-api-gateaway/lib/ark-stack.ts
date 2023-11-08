@@ -85,9 +85,6 @@ export class ArkStack extends cdk.Stack {
     const postmanApiKey = process.env.POSTMAN_API_KEY || "";
     const awsRegion = process.env.AWS_REGION || "";
 
-    // Create an empty array to store stages
-    const createdStages: apigateway.Stage[] = [];
-
     //loop foreach stage in props.stages
     props.stages.forEach(async (stage: string) => {
       const createdStage = this.createStage(
@@ -96,13 +93,16 @@ export class ArkStack extends cdk.Stack {
         stage,
         props.isPullRequest
       );
-      createdStages.push(createdStage);
+      // Add basic plan to API
+      basicPlan.addApiStage({ stage: createdStage });
+      // Add pay as you go plan to API
+      payAsYouGoPlan.addApiStage({ stage: createdStage });
+      // Add admin plan to API
+      adminPlan.addApiStage({ stage: createdStage });
       if (
         !props.isPullRequest &&
         (props.isRelease || props.branch === "main")
       ) {
-        // Add the created stage to the array
-
         await exportToPostman(
           apiSuffix,
           stage,
@@ -111,16 +111,6 @@ export class ArkStack extends cdk.Stack {
           awsRegion
         );
       }
-    });
-
-    // Add the common usage plan to all created stages after the loop
-    createdStages.forEach((stage) => {
-      // Add basic plan to API
-      basicPlan.addApiStage({ stage: stage });
-      // Add pay as you go plan to API
-      payAsYouGoPlan.addApiStage({ stage: stage });
-      // Add admin plan to API
-      adminPlan.addApiStage({ stage: stage });
     });
   }
 
