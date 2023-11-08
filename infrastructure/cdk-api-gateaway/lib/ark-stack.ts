@@ -39,7 +39,7 @@ export class ArkStack extends cdk.Stack {
         deploy: false, // Important: Disable automatic deployment
       }
     );
-    // Create plans outside the loop
+
     const basicPlan = api.addUsagePlan(`ark-basic-plan-${apiSuffix}`, {
       name: `ark-basic-plan-${apiSuffix}`,
       throttle: {
@@ -84,36 +84,50 @@ export class ArkStack extends cdk.Stack {
 
     const postmanApiKey = process.env.POSTMAN_API_KEY || "";
     const awsRegion = process.env.AWS_REGION || "";
+
+    // Create an empty array to store stages
+    const createdStages: apigateway.Stage[] = [];
+
     //loop foreach stage in props.stages
-    props.stages.forEach(async (stageName: string) => {
-      const stage = this.createStage(api, apiSuffix, stageName, props.isPullRequest);
+    props.stages.forEach(async (stage: string) => {
+      const createdStage = this.createStage(
+        api,
+        apiSuffix,
+        stage,
+        props.isPullRequest
+      );
       if (
         !props.isPullRequest &&
         (props.isRelease || props.branch === "main")
       ) {
-        // Add basic plan to API
-        basicPlan.addApiStage({
-          api: api,
-          stage: stage,
-        });
-        // Add pay as you go plan to API
-        payAsYouGoPlan.addApiStage({
-          api: api,
-          stage: stage,
-        });
-        // Add admin plan to API
-        adminPlan.addApiStage({
-          api: api,
-          stage: stage,
-        });
+        // Add the created stage to the array
+        createdStages.push(createdStage);
         await exportToPostman(
           apiSuffix,
-          stageName,
+          stage,
           postmanApiKey,
           api.restApiId,
           awsRegion
         );
       }
+    });
+
+    // Add the common usage plan to all created stages
+    createdStages.forEach((stage) => {
+      // Add basic plan to API
+      basicPlan.addApiStage({
+        stage: stage,
+      });
+
+      // Add pay as you go plan to API
+      payAsYouGoPlan.addApiStage({
+        stage: stage,
+      });
+
+      // Add admin plan to API
+      adminPlan.addApiStage({
+        stage: stage,
+      });
     });
   }
 
