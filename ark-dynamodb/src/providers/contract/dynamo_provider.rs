@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use tracing::{debug, trace};
 
 use super::ArkContractProvider;
-use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 
 /// DynamoDB provider for contracts.
@@ -131,13 +130,6 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         debug!("Database operation successful with result: {:?}", r);
 
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "register_contract",
-            &r.consumed_capacity,
-        )
-        .await;
-
         Ok(().into())
     }
 
@@ -163,13 +155,6 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_contract",
-            &r.consumed_capacity,
-        )
-        .await;
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
@@ -204,13 +189,6 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_nft_contracts",
-            &r.consumed_capacity,
-        )
-        .await;
 
         let mut res = vec![];
         if let Some(items) = r.items {

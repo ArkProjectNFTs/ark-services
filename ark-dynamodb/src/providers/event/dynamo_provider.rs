@@ -6,7 +6,6 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use super::ArkEventProvider;
-use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 
 /// DynamoDB provider for events.
@@ -109,7 +108,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let data = Self::event_to_data(event);
 
-        let r = ctx
+        let _r = ctx
             .client
             .put_item()
             .table_name(self.table_name.clone())
@@ -153,13 +152,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "register_event",
-            &r.consumed_capacity,
-        )
-        .await;
-
         Ok(().into())
     }
 
@@ -185,13 +177,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_event",
-            &r.consumed_capacity,
-        )
-        .await;
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
@@ -232,13 +217,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_token_events",
-            &r.consumed_capacity,
-        )
-        .await;
 
         let mut res = vec![];
         if let Some(items) = r.items {
@@ -281,13 +259,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_contract_events",
-            &r.consumed_capacity,
-        )
-        .await;
 
         let mut res = vec![];
         if let Some(items) = r.items {

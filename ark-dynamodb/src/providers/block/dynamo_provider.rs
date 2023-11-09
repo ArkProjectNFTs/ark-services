@@ -11,7 +11,6 @@ use tokio::time::Duration;
 use tracing::trace;
 
 use super::ArkBlockProvider;
-use crate::providers::DynamoDbCapacityProvider;
 use crate::{convert, EntityType, ProviderError};
 
 /// DynamoDB provider for blocks.
@@ -84,7 +83,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
     ) -> Result<(), ProviderError> {
         let data = DynamoDbBlockProvider::info_to_data(info);
 
-        let r = client
+        let _r = client
             .put_item()
             .table_name(self.table_name.clone())
             .item("PK", AttributeValue::S(self.get_pk(block_number)))
@@ -103,13 +102,6 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            client,
-            "block_set_info",
-            &r.consumed_capacity,
-        )
-        .await;
 
         Ok(())
     }
@@ -137,13 +129,6 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            client,
-            "block_get_info",
-            &r.consumed_capacity,
-        )
-        .await;
-
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
             Ok(Some(DynamoDbBlockProvider::data_to_info(&data)?))
@@ -160,7 +145,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
     ) -> Result<(), ProviderError> {
         let gsi_pk = format!("BLOCK#{}", block_timestamp);
 
-        let mut capacity: f64 = 0.0;
+        // let mut capacity: f64 = 0.0;
 
         // Query for all items associated with the block number
         let query_output = client
@@ -175,9 +160,9 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("query error {:?}", e)))?;
 
-        if let Some(cc) = query_output.consumed_capacity {
-            capacity += cc.capacity_units.unwrap_or(0.0);
-        }
+        // if let Some(cc) = query_output.consumed_capacity {
+        //     capacity += cc.capacity_units.unwrap_or(0.0);
+        // }
 
         // Prepare the items for batch deletion
         let mut write_requests: Vec<WriteRequest> = Vec::new();
@@ -206,11 +191,11 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
                 .await
                 .map_err(|e| ProviderError::DatabaseError(format!("batch write error {:?}", e)))?;
 
-            if let Some(ccs) = batch_write_output.consumed_capacity {
-                for cc in ccs {
-                    capacity += cc.capacity_units.unwrap_or(0.0);
-                }
-            }
+            // if let Some(ccs) = batch_write_output.consumed_capacity {
+            //     for cc in ccs {
+            //         capacity += cc.capacity_units.unwrap_or(0.0);
+            //     }
+            // }
 
             // Handle unprocessed items if any
             if let Some(unprocessed_items) = batch_write_output.unprocessed_items {
@@ -218,7 +203,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
                     // Implement retry logic as per your use case
                     // Here, we'll simply wait for a second and try again
                     sleep(Duration::from_secs(1)).await;
-                    let o = client
+                    let _o = client
                         .batch_write_item()
                         .request_items(&self.table_name, retry_items.clone())
                         .return_consumed_capacity(ReturnConsumedCapacity::Total)
@@ -228,11 +213,11 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
                             ProviderError::DatabaseError(format!("retry batch write error {:?}", e))
                         })?;
 
-                    if let Some(ccs) = o.consumed_capacity {
-                        for cc in ccs {
-                            capacity += cc.capacity_units.unwrap_or(0.0);
-                        }
-                    }
+                    // if let Some(ccs) = o.consumed_capacity {
+                    //     for cc in ccs {
+                    //         capacity += cc.capacity_units.unwrap_or(0.0);
+                    //     }
+                    // }
                 }
             }
         }
@@ -243,7 +228,7 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
         if let Some(block_number) = block_number {
             let pk_block = format!("BLOCK#{}", block_number);
             let sk_block = "BLOCK".to_string();
-            let o = client
+            let _o = client
                 .delete_item()
                 .table_name(&self.table_name)
                 .key("PK", AttributeValue::S(pk_block))
@@ -255,12 +240,10 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
                     ProviderError::DatabaseError(format!("delete block entry error {:?}", e))
                 })?;
 
-            if let Some(cc) = o.consumed_capacity {
-                capacity += cc.capacity_units.unwrap_or(0.0);
-            }
+            // if let Some(cc) = o.consumed_capacity {
+            //     capacity += cc.capacity_units.unwrap_or(0.0);
+            // }
         }
-
-        let _ = DynamoDbCapacityProvider::register_raw(client, "block_clean", capacity).await;
 
         Ok(())
     }
