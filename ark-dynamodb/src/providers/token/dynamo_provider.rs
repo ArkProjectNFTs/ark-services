@@ -1,4 +1,3 @@
-use crate::providers::metrics::DynamoDbCapacityProvider;
 use crate::providers::token::types::TokenData;
 use crate::providers::ArkTokenProvider;
 use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
@@ -55,7 +54,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         let sk = self.get_sk();
 
-        let r = ctx
+        let _r = ctx
             .client
             .update_item()
             .table_name(self.table_name.clone())
@@ -69,13 +68,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "update_owner",
-            &r.consumed_capacity,
-        )
-        .await;
 
         Ok(().into())
     }
@@ -95,7 +87,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         names.insert("#data".to_string(), "Data".to_string());
         names.insert("#mint_info".to_string(), "MintInfo".to_string());
 
-        let r = ctx
+        let _r = ctx
             .client
             .update_item()
             .table_name(self.table_name.clone())
@@ -108,13 +100,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "update_mint_info",
-            &r.consumed_capacity,
-        )
-        .await;
 
         Ok(().into())
     }
@@ -167,13 +152,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             r
         );
 
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "update_token_metadata_status",
-            &r.consumed_capacity,
-        )
-        .await;
-
         Ok(().into())
     }
 
@@ -201,7 +179,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         names.insert("#data".to_string(), "Data".to_string());
         names.insert("#metadata".to_string(), "Metadata".to_string());
 
-        let r = ctx
+        let _r = ctx
             .client
             .update_item()
             .table_name(self.table_name.clone())
@@ -218,13 +196,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "update_metadata",
-            &r.consumed_capacity,
-        )
-        .await;
 
         Ok(().into())
     }
@@ -250,13 +221,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_last_refresh_token_metadata",
-            &r.consumed_capacity,
-        )
-        .await;
 
         if let Some(item) = &r.item {
             if let Some(data) = item.get("Data") {
@@ -302,13 +266,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_token",
-            &r.consumed_capacity,
-        )
-        .await;
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
@@ -431,7 +388,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
         trace!("Puting item in dynamo db: {}", pk);
 
-        let r = ctx
+        let _r = ctx
             .client
             .put_item()
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
@@ -479,13 +436,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "register_token",
-            &r.consumed_capacity,
-        )
-        .await;
 
         Ok(().into())
     }
@@ -546,13 +496,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_contract_tokens",
-            &r.consumed_capacity,
-        )
-        .await;
-
         let mut res = vec![];
         if let Some(items) = r.items {
             for i in items {
@@ -606,13 +549,6 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
-        let _ = DynamoDbCapacityProvider::register_consumed_capacity(
-            &ctx.client,
-            "get_owner_tokens",
-            &r.consumed_capacity,
-        )
-        .await;
 
         let mut res = vec![];
         if let Some(items) = r.items {
