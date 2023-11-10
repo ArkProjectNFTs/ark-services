@@ -42,14 +42,15 @@ impl LambdaUsageProvider {
     ) -> Result<(), ProviderError> {
         trace!("Registering usage {:?}", data);
 
-        let q = format!("INSERT INTO `{usage_table_name}` (request_id, api_key, timestamp, capacity, execution_time_in_ms, response_status_code, request_method, request_path, request_params, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        let q = format!("INSERT INTO {usage_table_name} (request_id, api_key, timestamp, capacity, execution_time_in_ms, response_status_code, request_method, request_path, request_params, ip) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);");
+
         let _r = sqlx::query(&q)
             .bind(data.request_id.clone())
             .bind(data.api_key.clone())
-            .bind(now().to_string())
-            .bind(data.capacity.to_string())
-            .bind(data.exec_time.to_string())
-            .bind(data.response_status.to_string())
+            .bind(now() as i64)
+            .bind(data.capacity)
+            .bind(data.exec_time as i64)
+            .bind(data.response_status)
             .bind(data.http_method.clone())
             .bind(data.http_path.clone())
             .bind(data.params_to_string())
