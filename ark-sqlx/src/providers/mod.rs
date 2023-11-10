@@ -10,6 +10,8 @@ pub struct SqlxCtx {
 
 impl SqlxCtx {
     pub async fn new(db_url: &str) -> Result<Self, ProviderError> {
+        sqlx::any::install_default_drivers();
+
         Ok(Self {
             pool: AnyPoolOptions::new().connect(db_url).await?,
         })

@@ -10,8 +10,6 @@ use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() {
-    sqlx::any::install_default_drivers();
-
     let sqlx = SqlxCtx::new("postgresql://postgres:1234@localhost:9999/arksqlx")
         .await
         .expect("Can't connect to psql");
