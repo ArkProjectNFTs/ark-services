@@ -144,6 +144,7 @@ export class ArkStack extends cdk.Stack {
           tableName: `ark_project_${stageName}`,
           paginationCache: "redis://ipfs.arkproject.dev:6379",
           maxItemsLimit: "100",
+          sqlxUrl: "postgres://postgres:W2sJcY-t@34.65.137.143:5432/ark_project",
         },
         accessLogDestination: new apigateway.LogGroupLogDestination(
           stageLogGroup
