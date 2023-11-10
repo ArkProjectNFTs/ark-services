@@ -271,6 +271,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ark-sqlx"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arkproject",
+ "async-trait",
+ "chrono",
+ "mockall",
+ "serde",
+ "serde_json",
+ "serde_with 2.3.3",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid 0.8.2",
+]
+
+[[package]]
 name = "ark-starknet"
 version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.7.2#72da3bc61b4ca7c33eebf6474cf18343e5a002a9"
@@ -2321,6 +2340,7 @@ name = "lambda-http-common"
 version = "0.1.0"
 dependencies = [
  "ark-dynamodb",
+ "ark-sqlx",
  "lambda_http",
  "num-bigint",
  "num-traits",

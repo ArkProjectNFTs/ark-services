@@ -1,0 +1,27 @@
+[package]
+name = "ark-sqlx"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+arkproject.workspace = true
+async-trait.workspace = true
+chrono = "0.4.19"
+tracing = "0.1"
+mockall = { version = "0.11.2", optional = true }
+serde.workspace = true
+serde_json.workspace = true
+serde_with.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+uuid = "0.8"
+sqlx = "0.7"
+
+[dev-dependencies]
+mockall = "0.11.2"
+
+[features]
+mock = ["dep:mockall"]
