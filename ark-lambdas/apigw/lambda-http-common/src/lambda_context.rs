@@ -96,7 +96,7 @@ impl LambdaCtx {
             exclusive_start_key: last_evaluated_key,
         };
 
-        let sqlx = SqlxCtx::new(&sqlx_url).await?;
+        let sqlx = SqlxCtx::new(sqlx_url).await?;
 
         let (http_method, http_path, source_ip) = http_info_from_context(&event.request_context());
 
