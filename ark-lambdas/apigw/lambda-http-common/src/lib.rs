@@ -6,7 +6,7 @@ pub mod lambda_context;
 pub use lambda_context::LambdaCtx;
 
 use ark_dynamodb::ProviderError;
-use ark_sqlx::providers::{ProviderError as SqlxProviderError};
+use ark_sqlx::providers::ProviderError as SqlxProviderError;
 use lambda_http::{Body, Error, Response};
 use serde::Serialize;
 

@@ -3,11 +3,7 @@
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
 use ark_sqlx::providers::metrics::{LambdaUsageData, LambdaUsageProvider};
 use ark_sqlx::providers::SqlxCtx;
-use lambda_http::{
-    http::StatusCode,
-    request::RequestContext,
-    Request, RequestExt,
-};
+use lambda_http::{http::StatusCode, request::RequestContext, Request, RequestExt};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -174,7 +170,7 @@ fn http_info_from_context(context: &RequestContext) -> (String, String, String) 
             };
 
             (method, path, source_ip)
-        },
-        _ => (String::new(), String::new(), String::new())
+        }
+        _ => (String::new(), String::new(), String::new()),
     }
 }

@@ -53,7 +53,7 @@ async fn process_event(
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let dynamo_rsp = provider
-        .get_owner_tokens(&ctx.db, owner_address, contract_address)
+        .get_owner_tokens(&ctx.dynamodb, owner_address, contract_address)
         .await?;
 
     let items = dynamo_rsp.inner();
