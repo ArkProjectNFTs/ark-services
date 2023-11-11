@@ -154,7 +154,22 @@ impl LambdaCtx {
 
 fn http_info_from_context(context: &RequestContext) -> (String, String, String) {
     match context {
-        // Supposed that only v2 is required for now.
+        RequestContext::ApiGatewayV1(c) => {
+            let method = c.http_method.as_str().to_string();
+            let source_ip = if let Some(ip) = &c.identity.source_ip {
+                ip.to_string()
+            } else {
+                String::new()
+            };
+
+            let path = if let Some(p) = &c.path {
+                p.to_string()
+            } else {
+                String::new()
+            };
+
+            (method, path, source_ip)
+        }
         RequestContext::ApiGatewayV2(c) => {
             let method = c.http.method.as_str().to_string();
             let source_ip = if let Some(ip) = &c.http.source_ip {
