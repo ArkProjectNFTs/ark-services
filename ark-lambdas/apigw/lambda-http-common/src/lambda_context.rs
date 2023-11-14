@@ -148,7 +148,7 @@ impl LambdaCtx {
 
         LambdaUsageProvider::register_usage(
             &self.sqlx,
-            &format!("{}_lambda_usage", self.table_name),
+            &self.table_name,
             &data,
         )
         .await
