@@ -60,10 +60,15 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .table_name(self.table_name.clone())
             .key("PK".to_string(), AttributeValue::S(pk))
             .key("SK".to_string(), AttributeValue::S(sk))
-            .update_expression("SET #data.#owner = :owner")
+            .update_expression("SET #data.#owner = :owner, #GSI2PK = :GSI2PK")
             .expression_attribute_names("#data", "Data")
+            .expression_attribute_names("#GSI2PK", "GSI2PK")
             .expression_attribute_names("#owner", "Owner")
             .expression_attribute_values(":owner".to_string(), AttributeValue::S(owner.to_string()))
+            .expression_attribute_values(
+                ":GSI2PK".to_string(),
+                AttributeValue::S(format!("OWNER#{}", owner)),
+            )
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
