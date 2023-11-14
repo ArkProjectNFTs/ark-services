@@ -108,6 +108,7 @@ async fn main() -> Result<()> {
                                 ImageCacheOption::Save,
                                 config.ipfs_gateway_uri.as_str(),
                                 config.ipfs_timeout_duration,
+                                "https://arkproject.dev",
                             )
                             .await
                         {
