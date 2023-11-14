@@ -27,15 +27,12 @@ export function getContractLambda(scope: cdk.Stack, stages: string[]) {
     resourceArns.push(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
     );
-    resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}_lambda_usage`
-    );
   }
 
   // Add permissions to the Lambda's role to interact with DynamoDB
   getContractLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem", "dynamodb:PutItem"],
+      actions: ["dynamodb:GetItem"],
       resources: resourceArns,
     })
   );

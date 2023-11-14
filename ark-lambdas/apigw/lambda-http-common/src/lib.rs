@@ -6,6 +6,7 @@ pub mod lambda_context;
 pub use lambda_context::LambdaCtx;
 
 use ark_dynamodb::ProviderError;
+use ark_sqlx::providers::ProviderError as SqlxProviderError;
 use lambda_http::{Body, Error, Response};
 use serde::Serialize;
 
@@ -32,13 +33,22 @@ pub enum LambdaHttpError {
     ParamParsing(String),
     #[error("Missing param")]
     ParamMissing(String),
+    // TODO: to be merged in a ark-common crate.
     #[error(transparent)]
     Provider(ProviderError),
+    #[error(transparent)]
+    SqlxProvider(SqlxProviderError),
 }
 
 impl From<ProviderError> for LambdaHttpError {
     fn from(e: ProviderError) -> Self {
         LambdaHttpError::Provider(e)
+    }
+}
+
+impl From<SqlxProviderError> for LambdaHttpError {
+    fn from(e: SqlxProviderError) -> Self {
+        LambdaHttpError::SqlxProvider(e)
     }
 }
 
@@ -53,6 +63,7 @@ impl TryFrom<LambdaHttpError> for Response<Body> {
                 LambdaHttpError::ParamParsing(s) => s.into(),
                 LambdaHttpError::ParamMissing(s) => s.into(),
                 LambdaHttpError::Provider(s) => s.to_string().into(),
+                LambdaHttpError::SqlxProvider(s) => s.to_string().into(),
             })
             .map_err(Box::new)?)
     }

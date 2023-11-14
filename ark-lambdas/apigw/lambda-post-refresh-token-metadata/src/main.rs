@@ -12,7 +12,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let (address, token_id_hex) = get_params(&event)?;
 
     match provider
-        .get_last_refresh_token_metadata(&ctx.db, address.as_str(), token_id_hex.as_str())
+        .get_last_refresh_token_metadata(&ctx.dynamodb, address.as_str(), token_id_hex.as_str())
         .await
     {
         Ok(last_refresh_timestamp_option) => {
@@ -38,7 +38,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             // If more than 10 minutes have passed, proceed to update the token metadata status
             match provider
                 .update_token_metadata_status(
-                    &ctx.db,
+                    &ctx.dynamodb,
                     address.as_str(),
                     token_id_hex.as_str(),
                     "true",

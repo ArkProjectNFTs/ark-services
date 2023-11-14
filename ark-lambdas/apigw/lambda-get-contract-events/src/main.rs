@@ -45,7 +45,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    let dynamo_rsp = provider.get_contract_events(&ctx.db, address).await?;
+    let dynamo_rsp = provider.get_contract_events(&ctx.dynamodb, address).await?;
 
     let items = dynamo_rsp.inner();
     let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;

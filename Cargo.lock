@@ -271,6 +271,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "ark-sqlx"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arkproject",
+ "async-trait",
+ "chrono",
+ "mockall",
+ "serde",
+ "serde_json",
+ "serde_with 2.3.3",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid 0.8.2",
+]
+
+[[package]]
 name = "ark-starknet"
 version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.12.1#188441df7054e96cf5dda63318f4602f1371a8d4"
@@ -2206,6 +2225,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2221,6 +2241,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2236,6 +2257,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2251,6 +2273,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2266,6 +2289,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2281,6 +2305,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2296,6 +2321,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2311,6 +2337,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2321,6 +2348,7 @@ name = "lambda-http-common"
 version = "0.1.0"
 dependencies = [
  "ark-dynamodb",
+ "ark-sqlx",
  "lambda_http",
  "num-bigint",
  "num-traits",
@@ -2360,6 +2388,7 @@ dependencies = [
  "lambda_http",
  "lambda_runtime",
  "mockall",
+ "sqlx",
  "starknet 0.6.0",
  "tokio",
  "tracing",
@@ -3901,6 +3930,7 @@ dependencies = [
  "sha2",
  "sqlx-core",
  "sqlx-mysql",
+ "sqlx-postgres",
  "sqlx-sqlite",
  "syn 1.0.109",
  "tempfile",

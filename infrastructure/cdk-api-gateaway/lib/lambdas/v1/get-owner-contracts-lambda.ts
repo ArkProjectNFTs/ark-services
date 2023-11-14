@@ -35,14 +35,12 @@ export function getOwnerContractsLambda(scope: cdk.Stack, stages: string[]) {
     resourceArns.push(`${baseTableArn}/index/${indexName}`);
     // ARN for table - used with dynamodb:GetItem and dynamodb:PutItem
     resourceArns.push(baseTableArn);
-    // ARN for the Lambda usage table
-    resourceArns.push(`${baseTableArn}_lambda_usage`);
   }
 
   // Add permissions to the Lambda's role to interact with DynamoDB
   getOwnerContractsLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:GetItem"],
+      actions: ["dynamodb:Query", "dynamodb:GetItem"],
       resources: resourceArns,
     })
   );

@@ -11,4 +11,4 @@ pub mod contract;
 pub use contract::{ArkContractProvider, DynamoDbContractProvider};
 
 pub mod metrics;
-pub use metrics::{DynamoDbCapacityProvider, LambdaUsageProvider};
+pub use metrics::DynamoDbCapacityProvider;

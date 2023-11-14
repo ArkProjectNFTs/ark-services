@@ -45,7 +45,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbContractProvider::new(&ctx.table_name, None);
 
-    let dynamo_rsp = provider.get_contract(&ctx.db, address).await?;
+    let dynamo_rsp = provider.get_contract(&ctx.dynamodb, address).await?;
 
     let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {

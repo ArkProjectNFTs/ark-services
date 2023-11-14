@@ -1,8 +1,9 @@
 //! Initializes the context for ArkStack.
 
-use ark_dynamodb::providers::{metrics::LambdaUsageData, LambdaUsageProvider};
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
-use lambda_http::{http::StatusCode, Request, RequestExt};
+use ark_sqlx::providers::metrics::{LambdaUsageData, LambdaUsageProvider};
+use ark_sqlx::providers::SqlxCtx;
+use lambda_http::{http::StatusCode, request::RequestContext, Request, RequestExt};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -14,12 +15,19 @@ use crate::{LambdaHttpError, LambdaHttpResponse};
 #[derive(Debug)]
 pub struct LambdaCtx {
     pub table_name: String,
+    pub usage_table_name: String,
     pub max_items_limit: Option<i32>,
     pub paginator: DynamoDbPaginator,
-    pub db: DynamoDbCtx,
+    pub dynamodb: DynamoDbCtx,
+    pub sqlx: SqlxCtx,
     pub api_key: String,
     pub req_id: String,
     pub function_name: String,
+    pub stage_name: String,
+    // TODO: maybe almost everything can be private.
+    http_method: String,
+    http_path: String,
+    source_ip: String,
     creation_instant: Instant,
 }
 
@@ -42,9 +50,23 @@ impl LambdaCtx {
         let creation_instant = Instant::now();
 
         let stage_vars = event.stage_variables();
+
         let table_name = &stage_vars
             .first("tableName")
             .expect("tableName must be set in stage variables");
+
+        let usage_table_name = &stage_vars
+            .first("lambdaUsageTable")
+            .expect("lambdaUsageTable must be set in stage variables");
+
+        let stage_name = &stage_vars
+            .first("stageName")
+            .expect("stageName must be set in stage variables");
+
+        let sqlx_url = &stage_vars
+            .first("sqlxUrl")
+            .expect("sqlxUrl must be set in stage variables");
+
         let pagination_db = &stage_vars
             .first("paginationCache")
             .expect("paginationCache must be set in stage variables");
@@ -78,20 +100,30 @@ impl LambdaCtx {
 
         let client = init_aws_dynamo_client().await;
 
-        let db = DynamoDbCtx {
+        let dynamodb = DynamoDbCtx {
             client,
             exclusive_start_key: last_evaluated_key,
         };
 
+        let sqlx = SqlxCtx::new(sqlx_url).await?;
+
+        let (http_method, http_path, source_ip) = http_info_from_context(&event.request_context());
+
         Ok(Self {
             paginator,
-            db,
+            dynamodb,
+            sqlx,
             table_name: table_name.to_string(),
+            usage_table_name: usage_table_name.to_string(),
             max_items_limit,
             api_key,
             req_id,
             function_name,
             creation_instant,
+            http_method,
+            http_path,
+            source_ip,
+            stage_name: stage_name.to_string(),
         })
     }
 
@@ -114,20 +146,58 @@ impl LambdaCtx {
             request_id: self.req_id.clone(),
             api_key: self.api_key.clone(),
             lambda_name: self.function_name.clone(),
+            http_method: self.http_method.clone(),
+            http_path: self.http_path.clone(),
+            source_ip: self.source_ip.clone(),
+            stage_name: self.stage_name.clone(),
             capacity,
             exec_time,
             response_status,
             params,
         };
 
-        LambdaUsageProvider::register_usage(
-            &self.db.client,
-            &format!("{}_lambda_usage", self.table_name),
-            &data,
-        )
-        .await
-        .map_err(LambdaHttpError::Provider)?;
+        LambdaUsageProvider::register_usage(&self.sqlx, &self.usage_table_name, &data)
+            .await
+            .map_err(LambdaHttpError::SqlxProvider)?;
 
         Ok(())
+    }
+}
+
+fn http_info_from_context(context: &RequestContext) -> (String, String, String) {
+    match context {
+        RequestContext::ApiGatewayV1(c) => {
+            let method = c.http_method.as_str().to_string();
+            let source_ip = if let Some(ip) = &c.identity.source_ip {
+                ip.to_string()
+            } else {
+                String::new()
+            };
+
+            let path = if let Some(p) = &c.path {
+                p.to_string()
+            } else {
+                String::new()
+            };
+
+            (method, path, source_ip)
+        }
+        RequestContext::ApiGatewayV2(c) => {
+            let method = c.http.method.as_str().to_string();
+            let source_ip = if let Some(ip) = &c.http.source_ip {
+                ip.to_string()
+            } else {
+                String::new()
+            };
+
+            let path = if let Some(p) = &c.http.path {
+                p.to_string()
+            } else {
+                String::new()
+            };
+
+            (method, path, source_ip)
+        }
+        _ => (String::new(), String::new(), String::new()),
     }
 }

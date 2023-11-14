@@ -55,7 +55,9 @@ async fn process_event(
 ) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, None);
 
-    let dynamo_rsp = provider.get_token(&ctx.db, address, token_id_hex).await?;
+    let dynamo_rsp = provider
+        .get_token(&ctx.dynamodb, address, token_id_hex)
+        .await?;
 
     let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {

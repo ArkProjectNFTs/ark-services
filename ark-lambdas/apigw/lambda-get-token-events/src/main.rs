@@ -53,7 +53,7 @@ async fn process_event(
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let dynamo_rsp = provider
-        .get_token_events(&ctx.db, address, token_id_hex)
+        .get_token_events(&ctx.dynamodb, address, token_id_hex)
         .await?;
 
     let items = dynamo_rsp.inner();

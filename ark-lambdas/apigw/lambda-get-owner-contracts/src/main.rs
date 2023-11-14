@@ -56,14 +56,14 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
 
     loop {
         let dynamo_rsp = provider
-            .get_owner_tokens(&ctx.db, owner_address, None)
+            .get_owner_tokens(&ctx.dynamodb, owner_address, None)
             .await?;
 
         for data in dynamo_rsp.inner() {
             if contract_addresses.insert(data.contract_address.clone()) {
                 // Was inserted, fetch data of this contract.
                 let c_rsp = contract_provider
-                    .get_contract(&ctx.db, &data.contract_address)
+                    .get_contract(&ctx.dynamodb, &data.contract_address)
                     .await?;
 
                 capacity += c_rsp.capacity;
