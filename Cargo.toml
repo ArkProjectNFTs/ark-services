@@ -31,6 +31,7 @@ resolver = "2"
 [workspace.dependencies]
 anyhow = "1.0"
 ark-dynamodb = { path = "ark-dynamodb" }
+ark-sqlx = { path = "ark-sqlx" }
 arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.12.2" }
 # arkproject = { path = "../ark-project" }
 async-trait = "0.1.73"
