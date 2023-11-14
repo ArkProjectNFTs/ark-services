@@ -114,6 +114,7 @@ impl LambdaCtx {
             dynamodb,
             sqlx,
             table_name: table_name.to_string(),
+            usage_table_name: usage_table_name.to_string(),
             max_items_limit,
             api_key,
             req_id,
