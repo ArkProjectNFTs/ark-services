@@ -25,6 +25,7 @@ async fn main() {
         exec_time: 123,
         response_status: 200,
         params: HashMap::new(),
+        stage_name: "local".to_string(),
     };
 
     match LambdaUsageProvider::register_usage(&sqlx, "lambda_usage", &data).await {

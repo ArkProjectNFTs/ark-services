@@ -8,6 +8,7 @@ use crate::providers::{ProviderError, SqlxCtx};
 pub struct LambdaUsageData {
     pub request_id: String,
     pub api_key: String,
+    pub stage_name: String,
     pub lambda_name: String,
     pub capacity: f64,
     pub exec_time: u128,
@@ -42,7 +43,7 @@ impl LambdaUsageProvider {
     ) -> Result<(), ProviderError> {
         trace!("Registering usage {:?}", data);
 
-        let q = format!("INSERT INTO {usage_table_name} (request_id, api_key, timestamp, capacity, execution_time_in_ms, response_status_code, request_method, request_path, request_params, ip) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);");
+        let q = format!("INSERT INTO {usage_table_name} (request_id, api_key, timestamp, capacity, execution_time_in_ms, response_status_code, request_method, request_path, request_params, ip, stage_name) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);");
 
         let _r = sqlx::query(&q)
             .bind(data.request_id.clone())
@@ -55,6 +56,7 @@ impl LambdaUsageProvider {
             .bind(data.http_path.clone())
             .bind(data.params_to_string())
             .bind(data.source_ip.clone())
+            .bind(data.stage_name.clone())
             .execute(&client.pool)
             .await?;
 

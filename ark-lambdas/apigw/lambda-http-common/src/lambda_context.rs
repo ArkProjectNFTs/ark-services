@@ -22,6 +22,7 @@ pub struct LambdaCtx {
     pub api_key: String,
     pub req_id: String,
     pub function_name: String,
+    pub stage_name: String,
     // TODO: maybe almost everything can be private.
     http_method: String,
     http_path: String,
@@ -49,8 +50,11 @@ impl LambdaCtx {
 
         let stage_vars = event.stage_variables();
         let table_name = &stage_vars
-            .first("tableName")
-            .expect("tableName must be set in stage variables");
+            .first("lambdaUsageTable")
+            .expect("lambdaUsageTable must be set in stage variables");
+        let stage_name = &stage_vars
+            .first("stageName")
+            .expect("stageName must be set in stage variables");
         let sqlx_url = &stage_vars
             .first("sqlxUrl")
             .expect("sqlxUrl must be set in stage variables");
@@ -109,6 +113,7 @@ impl LambdaCtx {
             http_method,
             http_path,
             source_ip,
+            stage_name: stage_name.to_string(),
         })
     }
 
@@ -134,6 +139,7 @@ impl LambdaCtx {
             http_method: self.http_method.clone(),
             http_path: self.http_path.clone(),
             source_ip: self.source_ip.clone(),
+            stage_name: self.stage_name.clone(),
             capacity,
             exec_time,
             response_status,
