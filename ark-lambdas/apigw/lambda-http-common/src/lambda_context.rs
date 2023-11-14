@@ -15,6 +15,7 @@ use crate::{LambdaHttpError, LambdaHttpResponse};
 #[derive(Debug)]
 pub struct LambdaCtx {
     pub table_name: String,
+    pub usage_table_name: String,
     pub max_items_limit: Option<i32>,
     pub paginator: DynamoDbPaginator,
     pub dynamodb: DynamoDbCtx,
@@ -49,15 +50,23 @@ impl LambdaCtx {
         let creation_instant = Instant::now();
 
         let stage_vars = event.stage_variables();
+
         let table_name = &stage_vars
+            .first("tableName")
+            .expect("tableName must be set in stage variables");
+
+        let usage_table_name = &stage_vars
             .first("lambdaUsageTable")
             .expect("lambdaUsageTable must be set in stage variables");
+
         let stage_name = &stage_vars
             .first("stageName")
             .expect("stageName must be set in stage variables");
+
         let sqlx_url = &stage_vars
             .first("sqlxUrl")
             .expect("sqlxUrl must be set in stage variables");
+
         let pagination_db = &stage_vars
             .first("paginationCache")
             .expect("paginationCache must be set in stage variables");
@@ -146,7 +155,7 @@ impl LambdaCtx {
             params,
         };
 
-        LambdaUsageProvider::register_usage(&self.sqlx, &self.table_name, &data)
+        LambdaUsageProvider::register_usage(&self.sqlx, &self.usage_table_name, &data)
             .await
             .map_err(LambdaHttpError::SqlxProvider)?;
 
