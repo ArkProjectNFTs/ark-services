@@ -146,13 +146,9 @@ impl LambdaCtx {
             params,
         };
 
-        LambdaUsageProvider::register_usage(
-            &self.sqlx,
-            &self.table_name,
-            &data,
-        )
-        .await
-        .map_err(LambdaHttpError::SqlxProvider)?;
+        LambdaUsageProvider::register_usage(&self.sqlx, &self.table_name, &data)
+            .await
+            .map_err(LambdaHttpError::SqlxProvider)?;
 
         Ok(())
     }
