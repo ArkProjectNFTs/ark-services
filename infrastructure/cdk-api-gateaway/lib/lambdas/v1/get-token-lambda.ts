@@ -23,14 +23,11 @@ export function getTokenLambda(scope: cdk.Stack, stages: string[]) {
     resourceArns.push(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
     );
-    resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}_lambda_usage`
-    );
   }
 
   getTokenLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem", "dynamodb:PutItem"],
+      actions: ["dynamodb:GetItem"],
       resources: resourceArns,
     })
   );

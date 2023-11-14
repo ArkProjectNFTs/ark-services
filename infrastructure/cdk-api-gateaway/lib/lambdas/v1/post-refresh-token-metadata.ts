@@ -38,7 +38,7 @@ export function postRefreshTokenMetadataLambda(
 
   postRefreshTokenMetadataLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem", "dynamodb:PutItem"],
+      actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"],
       resources: resourceArns,
     })
   );
