@@ -20,17 +20,13 @@ export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
     let apiSuffix: string = "default";
-    let lambdaUsageTable: string = "default";
 
     if (props.isPullRequest) {
       apiSuffix = `pr_${props.prNumber}`;
-      lambdaUsageTable = "ark_lambda_usage_prs";
     } else if (props.isRelease) {
       apiSuffix = "production";
-      lambdaUsageTable = "ark_lambda_usage";
     } else if (props.branch === "main") {
       apiSuffix = "staging";
-      lambdaUsageTable = "ark_lambda_usage_staging";
     }
 
     const apiName = `ark-project-api-${apiSuffix}`;
@@ -136,6 +132,16 @@ export class ArkStack extends cdk.Stack {
       this,
       `ark-project-log-${stageName}`
     );
+
+    let lambdaUsageTable: string = "default";
+
+    if (apiSuffix === 'production') {
+      lambdaUsageTable = 'ark_lambda_usage';
+    } else if (apiSuffix === 'staging') {
+      lambdaUsageTable = 'ark_lambda_usage_staging';
+    } else {
+      lambdaUsageTable = 'ark_lambda_usage_prs';
+    }
 
     // Create stage and point it to the latest deployment
     const stage = new apigateway.Stage(
