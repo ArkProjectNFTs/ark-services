@@ -20,13 +20,17 @@ export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
     let apiSuffix: string = "default";
+    let lambdaUsageTable: string = "default";
 
     if (props.isPullRequest) {
       apiSuffix = `pr_${props.prNumber}`;
+      lambdaUsageTable = "ark_lambda_usage_prs";
     } else if (props.isRelease) {
       apiSuffix = "production";
+      lambdaUsageTable = "ark_lambda_usage";
     } else if (props.branch === "main") {
       apiSuffix = "staging";
+      lambdaUsageTable = "ark_lambda_usage_staging";
     }
 
     const apiName = `ark-project-api-${apiSuffix}`;
@@ -144,7 +148,7 @@ export class ArkStack extends cdk.Stack {
           tableName: `ark_project_${stageName}`,
           paginationCache: "redis://ipfs.arkproject.dev:6379",
           maxItemsLimit: "100",
-          lambdaUsageTable: "ark_lambda_usage",
+          lambdaUsageTable: lambdaUsageTable,
           stageName: stageName,
           sqlxUrl: "postgres://postgres:W2sJcY-t@34.65.137.143:5432/ark_project",
         },
