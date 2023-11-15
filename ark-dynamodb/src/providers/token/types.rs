@@ -151,6 +151,17 @@ impl TokenData {
                         attribute_map
                             .insert("Value".to_string(), AttributeValue::N(value.to_string()));
                     }
+                    MetadataTraitValue::Array(value) => {
+                        attribute_map.insert(
+                            "Value".to_string(),
+                            AttributeValue::L(
+                                value.iter().map(|s| AttributeValue::S(s.clone())).collect(),
+                            ),
+                        );
+                    }
+                    MetadataTraitValue::Boolean(value) => {
+                        attribute_map.insert("Value".to_string(), AttributeValue::Bool(*value));
+                    }
                 };
                 attribute_values.push(AttributeValue::M(attribute_map));
             }
