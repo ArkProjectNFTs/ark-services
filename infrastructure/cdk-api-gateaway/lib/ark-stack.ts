@@ -133,6 +133,16 @@ export class ArkStack extends cdk.Stack {
       `ark-project-log-${stageName}`
     );
 
+    let lambdaUsageTable: string = "default";
+
+    if (apiSuffix === 'production') {
+      lambdaUsageTable = 'ark_lambda_usage';
+    } else if (apiSuffix === 'staging') {
+      lambdaUsageTable = 'ark_lambda_usage_staging';
+    } else {
+      lambdaUsageTable = 'ark_lambda_usage_prs';
+    }
+
     // Create stage and point it to the latest deployment
     const stage = new apigateway.Stage(
       this,
@@ -144,7 +154,7 @@ export class ArkStack extends cdk.Stack {
           tableName: `ark_project_${stageName}`,
           paginationCache: "redis://ipfs.arkproject.dev:6379",
           maxItemsLimit: "100",
-          lambdaUsageTable: "ark_lambda_usage",
+          lambdaUsageTable: lambdaUsageTable,
           stageName: stageName,
           sqlxUrl: "postgres://postgres:W2sJcY-t@34.65.137.143:5432/ark_project",
         },
