@@ -142,7 +142,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet",
  "thiserror",
  "tokio",
  "tracing",
@@ -208,7 +208,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "regex",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet",
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
@@ -218,7 +218,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.12.3#07a2d9e9980a3301d7095973c2d437a071588b4f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.17.0#7e6feee5ab302733033e212d2feb1fa7346bbe69"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -230,7 +230,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet",
  "thiserror",
  "tokio",
  "tracing",
@@ -252,7 +252,7 @@ dependencies = [
  "dotenv",
  "regex",
  "sha256",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet",
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
@@ -292,7 +292,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.12.3#07a2d9e9980a3301d7095973c2d437a071588b4f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.17.0#7e6feee5ab302733033e212d2feb1fa7346bbe69"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -300,7 +300,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "regex",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet",
  "thiserror",
  "url",
 ]
@@ -318,7 +318,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.12.3#07a2d9e9980a3301d7095973c2d437a071588b4f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.17.0#7e6feee5ab302733033e212d2feb1fa7346bbe69"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -329,7 +329,7 @@ dependencies = [
  "log",
  "pontos",
  "sqlx",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet",
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
@@ -1438,7 +1438,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.12.3#07a2d9e9980a3301d7095973c2d437a071588b4f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.17.0#7e6feee5ab302733033e212d2feb1fa7346bbe69"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -1452,7 +1452,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet",
  "thiserror",
  "tokio",
  "url",
@@ -2395,7 +2395,7 @@ dependencies = [
  "lambda_runtime",
  "mockall",
  "sqlx",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3008,7 +3008,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.12.3#07a2d9e9980a3301d7095973c2d437a071588b4f"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.17.0#7e6feee5ab302733033e212d2feb1fa7346bbe69"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -3021,7 +3021,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet",
  "thiserror",
  "tokio",
  "tracing",
@@ -4055,29 +4055,14 @@ name = "starknet"
 version = "0.7.0"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-accounts 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-contract 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-macros 0.1.4 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-signers 0.5.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
-]
-
-[[package]]
-name = "starknet"
-version = "0.7.0"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "starknet-accounts 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-contract 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-macros 0.1.4 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-signers 0.5.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-accounts",
+ "starknet-contract",
+ "starknet-core",
+ "starknet-crypto",
+ "starknet-ff",
+ "starknet-macros",
+ "starknet-providers",
+ "starknet-signers",
 ]
 
 [[package]]
@@ -4087,22 +4072,9 @@ source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f
 dependencies = [
  "async-trait",
  "auto_impl",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-signers 0.5.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-accounts"
-version = "0.6.0"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "async-trait",
- "auto_impl",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-signers 0.5.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-core",
+ "starknet-providers",
+ "starknet-signers",
  "thiserror",
 ]
 
@@ -4114,23 +4086,9 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet-accounts 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-contract"
-version = "0.6.0"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "serde",
- "serde_json",
- "serde_with 2.3.3",
- "starknet-accounts 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-accounts",
+ "starknet-core",
+ "starknet-providers",
  "thiserror",
 ]
 
@@ -4147,25 +4105,8 @@ dependencies = [
  "serde_json_pythonic",
  "serde_with 2.3.3",
  "sha3",
- "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
-]
-
-[[package]]
-name = "starknet-core"
-version = "0.7.2"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "base64 0.21.5",
- "flate2",
- "hex",
- "serde",
- "serde_json",
- "serde_json_pythonic",
- "serde_with 2.3.3",
- "sha3",
- "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-crypto",
+ "starknet-ff",
 ]
 
 [[package]]
@@ -4181,28 +4122,9 @@ dependencies = [
  "num-traits",
  "rfc6979",
  "sha2",
- "starknet-crypto-codegen 0.3.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-curve 0.4.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "zeroize",
-]
-
-[[package]]
-name = "starknet-crypto"
-version = "0.6.1"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "crypto-bigint",
- "hex",
- "hmac",
- "num-bigint",
- "num-integer",
- "num-traits",
- "rfc6979",
- "sha2",
- "starknet-crypto-codegen 0.3.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-curve 0.4.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-crypto-codegen",
+ "starknet-curve",
+ "starknet-ff",
  "zeroize",
 ]
 
@@ -4211,18 +4133,8 @@ name = "starknet-crypto-codegen"
 version = "0.3.2"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-curve 0.4.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "syn 2.0.39",
-]
-
-[[package]]
-name = "starknet-crypto-codegen"
-version = "0.3.2"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "starknet-curve 0.4.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-curve",
+ "starknet-ff",
  "syn 2.0.39",
 ]
 
@@ -4231,15 +4143,7 @@ name = "starknet-curve"
 version = "0.4.0"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
-]
-
-[[package]]
-name = "starknet-curve"
-version = "0.4.0"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-ff",
 ]
 
 [[package]]
@@ -4257,34 +4161,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "starknet-ff"
-version = "0.3.5"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "ark-ff",
- "bigdecimal",
- "crypto-bigint",
- "getrandom",
- "hex",
- "num-bigint",
- "serde",
-]
-
-[[package]]
 name = "starknet-macros"
 version = "0.1.4"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "syn 2.0.39",
-]
-
-[[package]]
-name = "starknet-macros"
-version = "0.1.4"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-core",
  "syn 2.0.39",
 ]
 
@@ -4302,26 +4183,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "starknet-providers"
-version = "0.7.0"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "async-trait",
- "auto_impl",
- "ethereum-types",
- "flate2",
- "log",
- "reqwest",
- "serde",
- "serde_json",
- "serde_with 2.3.3",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-core",
  "thiserror",
  "url",
 ]
@@ -4336,23 +4198,8 @@ dependencies = [
  "crypto-bigint",
  "eth-keystore",
  "rand",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
- "thiserror",
-]
-
-[[package]]
-name = "starknet-signers"
-version = "0.5.0"
-source = "git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error#f5c128d5f43711525c54958bb0663b5df94e77b2"
-dependencies = [
- "async-trait",
- "auto_impl",
- "crypto-bigint",
- "eth-keystore",
- "rand",
- "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
- "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?branch=fix/contract-error)",
+ "starknet-core",
+ "starknet-crypto",
  "thiserror",
 ]
 

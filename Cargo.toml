@@ -32,8 +32,7 @@ resolver = "2"
 anyhow = "1.0"
 ark-dynamodb = { path = "ark-dynamodb" }
 ark-sqlx = { path = "ark-sqlx" }
-# TODO: change after bump of pontos.
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.12.3" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.17.0" }
 #arkproject = { path = "../ark-project" }
 async-trait = "0.1.73"
 lambda-http-common = { path = "ark-lambdas/apigw/lambda-http-common" }
