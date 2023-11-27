@@ -24,7 +24,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let owner_address = get_params(&event)?;
 
     // 3. Process the request.
-    let r = process_event(&ctx, &address).await;
+    let r = process_event(&ctx, &owner_address).await;
 
     // 4. Send the response.
     let mut req_params = HashMap::new();
@@ -49,22 +49,25 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
 
     let dynamo_rsp_to = provider.get_owner_to_events(&ctx.dynamodb, owner_address).await?;
 
-    let items = dynamo_rsp.inner();
-    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+    // Combine items from both responses
+    let mut items = dynamo_rsp_from.inner().clone();
+    items.extend(dynamo_rsp_to.inner().clone());
+
+    // let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
-        cursor,
+        cursor: None,
         result: items,
     })?;
 
     Ok(LambdaHttpResponse {
-        capacity: dynamo_rsp.capacity,
+        capacity: dynamo_rsp_to.capacity,
         inner: rsp,
     })
 }
 
 fn get_params(event: &Request) -> Result<String, LambdaHttpError> {
-    common::require_hex_param(event, "contract_address", HttpParamSource::Path)
+    common::require_hex_param(event, "owner_address", HttpParamSource::Path)
 }
 
 #[tokio::main]

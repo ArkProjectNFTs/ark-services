@@ -3,6 +3,7 @@ import { getOwnerTokensLambda } from "../../lambdas/v1/get-owner-tokens-lambda";
 import { getOwnerContractsLambda } from "../../lambdas/v1/get-owner-contracts-lambda";
 import * as cdk from "aws-cdk-lib";
 import { getOwnerEventsLambda } from "../../lambdas/v1/get-owner-events-lambda";
+
 export function ownerApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
