@@ -138,6 +138,14 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 AttributeValue::S(format!("EVENT#{}", event.event_id)),
             )
             .item(
+                "GSI3PK".to_string(),
+                AttributeValue::S(format!("EVENT_FROM#{}", event.from_address)),
+            )
+            .item(
+                "GSI3SK".to_string(),
+                AttributeValue::S(format!("TIMESTAMP#{}", block_timestamp)),
+            )
+            .item(
                 "GSI4PK".to_string(),
                 AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
             )
@@ -145,13 +153,20 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI4SK".to_string(),
                 AttributeValue::S(self.get_pk(&event.contract_address, &event.event_id)),
             )
+            .item(
+                "GSI5PK".to_string(),
+                AttributeValue::S(format!("EVENT_TO#{}", event.to_address)),
+            )
+            .item(
+                "GSI5SK".to_string(),
+                AttributeValue::S(format!("TIMESTAMP#{}", block_timestamp)),
+            )
             .item("Data".to_string(), AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Event.to_string()))
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
         Ok(().into())
     }
 
@@ -209,6 +224,88 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .index_name("GSI2PK-GSI2SK-index")
             .set_key_condition_expression(Some(
                 "GSI2PK = :token AND begins_with(GSI2SK, :event)".to_string(),
+            ))
+            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .set_expression_attribute_values(Some(values))
+            .set_limit(self.limit)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = r.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_event(&data)?);
+            }
+        }
+
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
+    }
+
+    async fn get_owner_from_events(&self, ctx: &DynamoDbCtx, owner_address: &str) ->
+        Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>
+ {
+        let mut values = HashMap::new();
+        values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
+        values.insert(
+            ":owner".to_string(),
+            AttributeValue::S(format!("EVENT_FROM#{}", owner_address)),
+        );
+
+        let r = ctx
+            .client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI3PK-GSI3SK-index")
+            .set_key_condition_expression(Some(
+                "GSI3PK = :owner AND begins_with(GSI3SK, :event)".to_string(),
+            ))
+            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .set_expression_attribute_values(Some(values))
+            .set_limit(self.limit)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+        if let Some(items) = r.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_event(&data)?);
+            }
+        }
+
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
+    }
+
+    async fn get_owner_to_events(&self, ctx: &DynamoDbCtx, owner_address: &str) ->
+        Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>
+    {
+        let mut values = HashMap::new();
+        values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
+        values.insert(
+            ":owner".to_string(),
+            AttributeValue::S(format!("EVENT_TO#{}", owner_address)),
+        );
+
+        let r = ctx
+            .client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI5PK-GSI5SK-index")
+            .set_key_condition_expression(Some(
+                "GSI5PK = :owner AND begins_with(GSI5SK, :event)".to_string(),
             ))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .set_expression_attribute_values(Some(values))
