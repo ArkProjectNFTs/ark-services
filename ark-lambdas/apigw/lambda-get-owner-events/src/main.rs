@@ -45,9 +45,13 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    let dynamo_rsp_from = provider.get_owner_from_events(&ctx.dynamodb, owner_address).await?;
+    let dynamo_rsp_from = provider
+        .get_owner_from_events(&ctx.dynamodb, owner_address)
+        .await?;
 
-    let dynamo_rsp_to = provider.get_owner_to_events(&ctx.dynamodb, owner_address).await?;
+    let dynamo_rsp_to = provider
+        .get_owner_to_events(&ctx.dynamodb, owner_address)
+        .await?;
 
     // Combine items from both responses
     let mut items = dynamo_rsp_from.inner().clone();
