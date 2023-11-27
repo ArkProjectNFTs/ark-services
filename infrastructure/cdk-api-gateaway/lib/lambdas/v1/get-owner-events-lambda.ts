@@ -5,7 +5,7 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
 export function getOwnerEventsLambda(scope: cdk.Stack, stages: string[]) {
-  const getOwnerEventsLambda = new RustFunction(scope, "get-contract-events", {
+  const getOwnerEventsLambda = new RustFunction(scope, "get-owner-events", {
     // Update the path to where your Rust project's Cargo.toml file is located
     manifestPath:
       "../../ark-lambdas/apigw/lambda-get-owner-events/Cargo.toml",
