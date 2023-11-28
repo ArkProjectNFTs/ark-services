@@ -129,7 +129,7 @@ impl DynamoDbPaginator {
             let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
 
             for (lek_name, lek) in last_evaluated_keys {
-                if let Some(lek_key) = self.store_cursor(&lek)? {
+                if let Some(lek_key) = self.store_cursor(lek)? {
                     conn.hset(hash_key.clone(), lek_name, lek_key)
                         .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
                 }
