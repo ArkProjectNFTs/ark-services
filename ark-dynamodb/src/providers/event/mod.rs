@@ -43,4 +43,18 @@ pub trait ArkEventProvider {
         ctx: &DynamoDbCtx,
         contract_address: &str,
     ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
+
+    async fn get_owner_to_events(
+        &self,
+        ctx: &DynamoDbCtx,
+        owner_address: &str,
+        cursor_name: &str,
+    ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
+
+    async fn get_owner_from_events(
+        &self,
+        ctx: &DynamoDbCtx,
+        owner_address: &str,
+        cursor_name: &str,
+    ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
 }
