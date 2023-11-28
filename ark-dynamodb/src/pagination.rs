@@ -22,6 +22,8 @@ pub struct DynamoDbPaginator {
     client: RedisClient,
 }
 
+pub type Lek = HashMap<String, AttributeValue>;
+
 impl DynamoDbPaginator {
     /// Instanciates a new paginator with underlying
     /// cache client.
@@ -34,17 +36,14 @@ impl DynamoDbPaginator {
 
     /// Get the cursor (`last_evaluated_key`) for the given
     /// `hash_key`. The `hash_key` is obtained from `store_cursor` function.
-    pub fn get_cursor(
-        &self,
-        hash_key: &str,
-    ) -> Result<Option<HashMap<String, AttributeValue>>, ProviderError> {
+    pub fn get_cursor(&self, hash_key: &str) -> Result<Option<Lek>, ProviderError> {
         if let Ok(mut conn) = self.client.get_connection() {
             let data: Option<HashMap<String, String>> = conn
                 .hgetall(hash_key)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
 
             if let Some(d) = data {
-                let mut map: HashMap<String, AttributeValue> = HashMap::new();
+                let mut map: Lek = Lek::new();
                 for (k, v) in d {
                     map.insert(k.clone(), AttributeValue::S(v.clone()));
                 }
@@ -58,12 +57,41 @@ impl DynamoDbPaginator {
         }
     }
 
+    /// Get the cursors (`last_evaluated_key`) for the given
+    /// `hash_key`. In some situations, several queries are paginated,
+    /// and we want to keep a pagination state with all of them synchronized.
+    /// In that situation, one `hash_key` will contains a list of `hash_keys`, which
+    /// must then be retrieved to have all the cursors synchronized.
+    ///
+    /// The cursors are stored in a `HashMap`, named given by the user.
+    pub fn get_cursor_multiple(
+        &self,
+        hash_key: &str,
+    ) -> Result<HashMap<String, Option<Lek>>, ProviderError> {
+        let mut cursors: HashMap<String, Option<Lek>> = HashMap::new();
+
+        if let Ok(mut conn) = self.client.get_connection() {
+            // Get all the keys for the multiple cursors.
+            let keys: Option<HashMap<String, String>> = conn
+                .hgetall(hash_key)
+                .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
+
+            if let Some(keys) = keys {
+                for (cursor_name, cursor_hash_key) in keys {
+                    cursors.insert(cursor_name, self.get_cursor(&cursor_hash_key)?);
+                }
+            }
+        }
+
+        Ok(cursors)
+    }
+
     /// Stores the given `last_evaluated_key` content in cache.
     /// A `hash_key` is associated with the given value for it's
     /// retrieval. Returns `None` if the cursor is not existing.
     pub fn store_cursor(
         &self,
-        last_evaluated_key: &Option<HashMap<String, AttributeValue>>,
+        last_evaluated_key: &Option<Lek>,
     ) -> Result<Option<String>, ProviderError> {
         if let Some(lek) = last_evaluated_key {
             if let Ok(mut conn) = self.client.get_connection() {
@@ -85,6 +113,33 @@ impl DynamoDbPaginator {
             } else {
                 Ok(None)
             }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Stores the given `last_evaluated_keys` content in cache.
+    /// A `hash_key` is associated with a `HashMap` that contains
+    /// all the cursors `hash_key`s.
+    pub fn store_cursor_multiple(
+        &self,
+        last_evaluated_keys: &HashMap<String, Option<Lek>>,
+    ) -> Result<Option<String>, ProviderError> {
+        if let Ok(mut conn) = self.client.get_connection() {
+            let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
+
+            for (lek_name, lek) in last_evaluated_keys {
+                if let Some(lek_key) = self.store_cursor(&lek)? {
+                    conn.hset(hash_key.clone(), lek_name, lek_key)
+                        .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
+                }
+            }
+
+            let ttl = get_hash_ttl() as usize;
+            conn.expire(hash_key.clone(), ttl)
+                .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
+
+            Ok(Some(hash_key))
         } else {
             Ok(None)
         }

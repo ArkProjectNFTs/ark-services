@@ -11,6 +11,7 @@ use async_trait::async_trait;
 use aws_config::load_from_env;
 use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
+use std::collections::HashMap;
 use tracing::error;
 
 pub struct MetadataStorage {
@@ -25,6 +26,7 @@ impl MetadataStorage {
         let ctx = DynamoDbCtx {
             client,
             exclusive_start_key: None,
+            multiple_exclusive_start_keys: HashMap::new(),
         };
 
         // Internally, we want more items to be loaded until reaching 1MB.

@@ -34,6 +34,7 @@ impl DynamoStorage {
         let ctx = DynamoDbCtx {
             client,
             exclusive_start_key: None,
+            multiple_exclusive_start_keys: HashMap::new(),
         };
 
         // Internally, we want more items to be loaded until reaching 1MB.

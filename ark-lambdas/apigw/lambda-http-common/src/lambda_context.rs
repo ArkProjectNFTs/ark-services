@@ -90,19 +90,30 @@ impl LambdaCtx {
 
         let maybe_cursor = params::string_param(event, "cursor", HttpParamSource::QueryString);
 
-        let last_evaluated_key = if let Some(c) = maybe_cursor {
-            paginator
-                .get_cursor(&c)
-                .map_err(|e| LambdaHttpError::Provider(e))?
+        let (lek_single, lek_multiple) = if let Some(c) = &maybe_cursor {
+            let lek = paginator
+                .get_cursor(c)
+                .map_err(|e| LambdaHttpError::Provider(e))?;
+
+            let leks = if lek.is_none() {
+                paginator
+                    .get_cursor_multiple(c)
+                    .map_err(|e| LambdaHttpError::Provider(e))?
+            } else {
+                HashMap::new()
+            };
+
+            (lek, leks)
         } else {
-            None
+            (None, HashMap::new())
         };
 
         let client = init_aws_dynamo_client().await;
 
         let dynamodb = DynamoDbCtx {
             client,
-            exclusive_start_key: last_evaluated_key,
+            exclusive_start_key: lek_single,
+            multiple_exclusive_start_keys: lek_multiple,
         };
 
         let sqlx = SqlxCtx::new(sqlx_url).await?;

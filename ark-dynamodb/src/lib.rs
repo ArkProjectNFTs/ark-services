@@ -11,6 +11,7 @@ pub(crate) mod convert;
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_dynamodb::types::{AttributeValue, ConsumedCapacity};
 pub use aws_sdk_dynamodb::Client;
+use pagination::Lek;
 use providers::{
     DynamoDbBlockProvider, DynamoDbContractProvider, DynamoDbEventProvider, DynamoDbTokenProvider,
 };
@@ -21,7 +22,8 @@ use std::fmt;
 #[derive(Debug)]
 pub struct DynamoDbCtx {
     pub client: Client,
-    pub exclusive_start_key: Option<HashMap<String, AttributeValue>>,
+    pub exclusive_start_key: Option<Lek>,
+    pub multiple_exclusive_start_keys: HashMap<String, Option<Lek>>,
 }
 
 /// A response from dynamodb operation.

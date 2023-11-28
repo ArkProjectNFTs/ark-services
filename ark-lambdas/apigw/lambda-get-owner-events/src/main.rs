@@ -9,6 +9,7 @@
 //! Examples:
 //! `https://.../owner/events/0x1234`
 //!
+use ark_dynamodb::pagination::Lek;
 use ark_dynamodb::providers::{ArkEventProvider, DynamoDbEventProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
@@ -45,20 +46,28 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
 
+    let mut leks: HashMap<String, Option<Lek>> = HashMap::new();
+
     let dynamo_rsp_from = provider
-        .get_owner_from_events(&ctx.dynamodb, owner_address)
+        .get_owner_from_events(&ctx.dynamodb, owner_address, "from")
         .await?;
 
+    leks.insert("from".to_string(), dynamo_rsp_from.lek.clone());
+
     let dynamo_rsp_to = provider
-        .get_owner_to_events(&ctx.dynamodb, owner_address)
+        .get_owner_to_events(&ctx.dynamodb, owner_address, "to")
         .await?;
+
+    leks.insert("to".to_string(), dynamo_rsp_to.lek.clone());
+
+    let cursor = ctx.paginator.store_cursor_multiple(&leks)?;
 
     // Combine items from both responses
     let mut items = dynamo_rsp_from.inner().clone();
     items.extend(dynamo_rsp_to.inner().clone());
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
-        cursor: None,
+        cursor,
         result: items,
     })?;
 

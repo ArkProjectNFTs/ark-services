@@ -252,6 +252,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
         &self,
         ctx: &DynamoDbCtx,
         owner_address: &str,
+        cursor_name: &str,
     ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
@@ -259,6 +260,11 @@ impl ArkEventProvider for DynamoDbEventProvider {
             ":owner".to_string(),
             AttributeValue::S(format!("EVENT_FROM#{}", owner_address)),
         );
+
+        let lek = ctx
+            .multiple_exclusive_start_keys
+            .get(cursor_name)
+            .unwrap_or(&None);
 
         let r = ctx
             .client
@@ -269,6 +275,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI3PK = :owner AND begins_with(GSI3SK, :event)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .set_exclusive_start_key(lek.clone())
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -293,6 +300,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
         &self,
         ctx: &DynamoDbCtx,
         owner_address: &str,
+        cursor_name: &str,
     ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
@@ -300,6 +308,11 @@ impl ArkEventProvider for DynamoDbEventProvider {
             ":owner".to_string(),
             AttributeValue::S(format!("EVENT_TO#{}", owner_address)),
         );
+
+        let lek = ctx
+            .multiple_exclusive_start_keys
+            .get(cursor_name)
+            .unwrap_or(&None);
 
         let r = ctx
             .client
@@ -310,6 +323,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI5PK = :owner AND begins_with(GSI5SK, :event)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .set_exclusive_start_key(lek.clone())
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -351,6 +365,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI1PK = :contract AND begins_with(GSI1SK, :event)".to_string(),
             ))
             .set_expression_attribute_values(Some(values))
+            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .set_limit(self.limit)
             .send()
