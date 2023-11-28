@@ -268,9 +268,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .set_key_condition_expression(Some(
                 "GSI3PK = :owner AND begins_with(GSI3SK, :event)".to_string(),
             ))
-            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .set_expression_attribute_values(Some(values))
-            .set_limit(self.limit)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -311,9 +309,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .set_key_condition_expression(Some(
                 "GSI5PK = :owner AND begins_with(GSI5SK, :event)".to_string(),
             ))
-            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .set_expression_attribute_values(Some(values))
-            .set_limit(self.limit)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await

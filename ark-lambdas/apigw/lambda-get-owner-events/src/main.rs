@@ -57,8 +57,6 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
     let mut items = dynamo_rsp_from.inner().clone();
     items.extend(dynamo_rsp_to.inner().clone());
 
-    // let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
-
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor: None,
         result: items,
