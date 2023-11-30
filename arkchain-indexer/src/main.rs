@@ -19,6 +19,7 @@ use url::Url;
 #[tokio::main]
 async fn main() -> Result<()> {
     init_logging();
+    trace!("Starting...");
 
     let rpc_url = Url::parse("http://127.0.0.1:7777").unwrap();
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(

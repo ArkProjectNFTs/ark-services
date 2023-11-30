@@ -65,7 +65,12 @@ impl SqlxArkchainProvider {
 
 #[async_trait]
 impl Storage for SqlxArkchainProvider {
-    async fn add_new_order(&self, block_id: u64, order: &NewOrderData) -> StorageResult<()> {
-        Ok(OrderProvider::add_new_order(&self.client, block_id, order).await?)
+    async fn add_new_order(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        order: &NewOrderData,
+    ) -> StorageResult<()> {
+        Ok(OrderProvider::add_new_order(&self.client, block_id, block_timestamp, order).await?)
     }
 }
