@@ -142,7 +142,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
  "tokio",
  "tracing",
@@ -208,7 +208,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "regex",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
@@ -218,7 +218,6 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.20.1#ad9b859dbed4951c434ce4755f6c595b2b26b217"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -230,7 +229,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
  "tokio",
  "tracing",
@@ -252,7 +251,7 @@ dependencies = [
  "dotenv",
  "regex",
  "sha256",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
@@ -292,7 +291,6 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.20.1#ad9b859dbed4951c434ce4755f6c595b2b26b217"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -300,7 +298,7 @@ dependencies = [
  "num-bigint",
  "num-traits",
  "regex",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
  "url",
 ]
@@ -316,9 +314,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "arkchain-indexer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ark-sqlx",
+ "arkproject",
+ "async-trait",
+ "chrono",
+ "dotenv",
+ "sqlx",
+ "starknet 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio",
+ "tracing",
+ "tracing-log 0.1.4",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.20.1#ad9b859dbed4951c434ce4755f6c595b2b26b217"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -329,7 +345,6 @@ dependencies = [
  "log",
  "pontos",
  "sqlx",
- "starknet",
  "tokio",
  "tracing",
  "tracing-log 0.1.4",
@@ -1438,10 +1453,8 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.20.1#ad9b859dbed4951c434ce4755f6c595b2b26b217"
 dependencies = [
  "anyhow",
- "ark-starknet",
  "async-trait",
  "clap",
  "dotenv",
@@ -1449,12 +1462,17 @@ dependencies = [
  "futures",
  "log",
  "mongodb",
+ "num-bigint",
+ "num-traits",
  "regex",
  "serde",
  "serde_json",
- "starknet",
+ "starknet 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-abigen-macros",
+ "starknet-abigen-parser",
  "thiserror",
  "tokio",
+ "tracing",
  "url",
 ]
 
@@ -2411,7 +2429,7 @@ dependencies = [
  "lambda_runtime",
  "mockall",
  "sqlx",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3024,7 +3042,6 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.20.1#ad9b859dbed4951c434ce4755f6c595b2b26b217"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -3037,7 +3054,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
- "starknet",
+ "starknet 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
  "tokio",
  "tracing",
@@ -4069,16 +4086,55 @@ dependencies = [
 [[package]]
 name = "starknet"
 version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "351ffff1bcf6a1dc569a1b330dfd85779e16506e7d4a87baa8be3744cb5415a6"
+dependencies = [
+ "starknet-accounts 0.6.1",
+ "starknet-contract 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-ff 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-macros 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-providers 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-signers 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "starknet"
+version = "0.7.0"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-accounts",
- "starknet-contract",
- "starknet-core",
- "starknet-crypto",
- "starknet-ff",
- "starknet-macros",
- "starknet-providers",
- "starknet-signers",
+ "starknet-accounts 0.6.0",
+ "starknet-contract 0.6.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-macros 0.1.4 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-signers 0.5.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+]
+
+[[package]]
+name = "starknet-abigen-macros"
+version = "0.1.0"
+source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta5#d293f0b49fcb171a0312b20d4639426852b043b9"
+dependencies = [
+ "anyhow",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "starknet 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-abigen-parser",
+ "syn 2.0.39",
+]
+
+[[package]]
+name = "starknet-abigen-parser"
+version = "0.1.0"
+source = "git+https://github.com/glihm/starknet-abigen-rs?tag=v0.1.4-beta5#d293f0b49fcb171a0312b20d4639426852b043b9"
+dependencies = [
+ "starknet 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
 ]
 
 [[package]]
@@ -4088,9 +4144,38 @@ source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f
 dependencies = [
  "async-trait",
  "auto_impl",
- "starknet-core",
- "starknet-providers",
- "starknet-signers",
+ "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-signers 0.5.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-accounts"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7062b020f65d9da7f9dd9f1d97bfb644e881cda8ddb999799a799e6f2e408dd"
+dependencies = [
+ "async-trait",
+ "auto_impl",
+ "starknet-core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-providers 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-signers 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
+]
+
+[[package]]
+name = "starknet-contract"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d858efc93d85de95065a5732cb3e94d0c746674964c0859aab442ffbb9de76b4"
+dependencies = [
+ "serde",
+ "serde_json",
+ "serde_with 2.3.3",
+ "starknet-accounts 0.6.1",
+ "starknet-core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-providers 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror",
 ]
 
@@ -4102,10 +4187,28 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet-accounts",
- "starknet-core",
- "starknet-providers",
+ "starknet-accounts 0.6.0",
+ "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-providers 0.7.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
+]
+
+[[package]]
+name = "starknet-core"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f1683ca7c63f0642310eddedb7d35056d8306084dff323d440711065c63ed87"
+dependencies = [
+ "base64 0.21.5",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "serde_json_pythonic",
+ "serde_with 2.3.3",
+ "sha3",
+ "starknet-crypto 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-ff 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4121,8 +4224,28 @@ dependencies = [
  "serde_json_pythonic",
  "serde_with 2.3.3",
  "sha3",
- "starknet-crypto",
- "starknet-ff",
+ "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+]
+
+[[package]]
+name = "starknet-crypto"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33c03f5ac70f9b067f48db7d2d70bdf18ee0f731e8192b6cfa679136becfcdb0"
+dependencies = [
+ "crypto-bigint",
+ "hex",
+ "hmac",
+ "num-bigint",
+ "num-integer",
+ "num-traits",
+ "rfc6979",
+ "sha2",
+ "starknet-crypto-codegen 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-curve 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-ff 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeroize",
 ]
 
 [[package]]
@@ -4138,10 +4261,21 @@ dependencies = [
  "num-traits",
  "rfc6979",
  "sha2",
- "starknet-crypto-codegen",
- "starknet-curve",
- "starknet-ff",
+ "starknet-crypto-codegen 0.3.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-curve 0.4.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "zeroize",
+]
+
+[[package]]
+name = "starknet-crypto-codegen"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af6527b845423542c8a16e060ea1bc43f67229848e7cd4c4d80be994a84220ce"
+dependencies = [
+ "starknet-curve 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-ff 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 2.0.39",
 ]
 
 [[package]]
@@ -4149,9 +4283,18 @@ name = "starknet-crypto-codegen"
 version = "0.3.2"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-curve",
- "starknet-ff",
+ "starknet-curve 0.4.0 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "syn 2.0.39",
+]
+
+[[package]]
+name = "starknet-curve"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a68a0d87ae56572abf83ddbfd44259a7c90dbeeee1629a1ffe223e7f9a8f3052"
+dependencies = [
+ "starknet-ff 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4159,7 +4302,22 @@ name = "starknet-curve"
 version = "0.4.0"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-ff",
+ "starknet-ff 0.3.5 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+]
+
+[[package]]
+name = "starknet-ff"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7584bc732e4d2a8ccebdd1dda8236f7940a79a339e30ebf338d45c329659e36c"
+dependencies = [
+ "ark-ff",
+ "bigdecimal",
+ "crypto-bigint",
+ "getrandom",
+ "hex",
+ "num-bigint",
+ "serde",
 ]
 
 [[package]]
@@ -4179,10 +4337,40 @@ dependencies = [
 [[package]]
 name = "starknet-macros"
 version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f66fe05edab7ee6752a0aff3e14508001191083f3c6d0b6fa14f7008a96839b0"
+dependencies = [
+ "starknet-core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 2.0.39",
+]
+
+[[package]]
+name = "starknet-macros"
+version = "0.1.4"
 source = "git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2#f5c128d5f43711525c54958bb0663b5df94e77b2"
 dependencies = [
- "starknet-core",
+ "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "syn 2.0.39",
+]
+
+[[package]]
+name = "starknet-providers"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52072c2d258bf692affeccd602613d5f6c61a6ffc84da8f191ab4a1b0a5e24d1"
+dependencies = [
+ "async-trait",
+ "auto_impl",
+ "ethereum-types",
+ "flate2",
+ "log",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_with 2.3.3",
+ "starknet-core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
+ "url",
 ]
 
 [[package]]
@@ -4199,9 +4387,25 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 2.3.3",
- "starknet-core",
+ "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
  "url",
+]
+
+[[package]]
+name = "starknet-signers"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "347b1bfc09846aafe16d2b3a5bc2d8a2f845e2958602442182d265fbd6011c2e"
+dependencies = [
+ "async-trait",
+ "auto_impl",
+ "crypto-bigint",
+ "eth-keystore",
+ "rand",
+ "starknet-core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "starknet-crypto 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "thiserror",
 ]
 
 [[package]]
@@ -4214,8 +4418,8 @@ dependencies = [
  "crypto-bigint",
  "eth-keystore",
  "rand",
- "starknet-core",
- "starknet-crypto",
+ "starknet-core 0.7.2 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
+ "starknet-crypto 0.6.1 (git+https://github.com/ArkProjectNFTs/starknet-rs?tag=v0.7.2)",
  "thiserror",
 ]
 
