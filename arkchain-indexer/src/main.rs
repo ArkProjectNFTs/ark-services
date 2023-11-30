@@ -11,7 +11,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
 use std::sync::Arc;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -97,9 +97,11 @@ async fn main() -> Result<()> {
             }
             Err(e) => {
                 error!("Blocks indexing error: {}", e);
-                // TODO: can increment the from by one to skip the block,
-                // or retry, or other error handler policy.
-                // But for now, it will fail, and retry after the sleep.
+
+                // TODO: for now, any failure on the block range, we skip it.
+                // Can be changed as needed.
+                warn!("Skipping blocks range: {} - {}", start, end);
+                from = end + 1;
             }
         };
 
