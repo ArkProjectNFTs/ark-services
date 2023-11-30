@@ -1,4 +1,4 @@
-use arkproject::diri::storage::types::NewOrderData;
+use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledData, PlacedData};
 use arkproject::diri::storage::{Storage, StorageError, StorageResult};
 use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
@@ -65,12 +65,45 @@ impl SqlxArkchainProvider {
 
 #[async_trait]
 impl Storage for SqlxArkchainProvider {
-    async fn add_new_order(
+    async fn register_placed(
         &self,
         block_id: u64,
         block_timestamp: u64,
-        order: &NewOrderData,
+        data: &PlacedData,
     ) -> StorageResult<()> {
-        Ok(OrderProvider::add_new_order(&self.client, block_id, block_timestamp, order).await?)
+        Ok(OrderProvider::register_placed(&self.client, block_id, block_timestamp, data).await?)
+    }
+
+    async fn register_cancelled(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &CancelledData,
+    ) -> StorageResult<()> {
+        Ok(
+            OrderProvider::register_cancelled(&self.client, block_id, block_timestamp, data)
+                .await?,
+        )
+    }
+
+    async fn register_fulfilled(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &FulfilledData,
+    ) -> StorageResult<()> {
+        Ok(
+            OrderProvider::register_fulfilled(&self.client, block_id, block_timestamp, data)
+                .await?,
+        )
+    }
+
+    async fn register_executed(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &ExecutedData,
+    ) -> StorageResult<()> {
+        Ok(OrderProvider::register_executed(&self.client, block_id, block_timestamp, data).await?)
     }
 }
