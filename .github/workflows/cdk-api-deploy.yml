@@ -9,13 +9,13 @@ on:
       - "infrastructure/cdk-api-gateaway/**"
       - "ark-lambdas/**"
       - "ark-dynamodb/**"
-  pull_request:
-    types: [opened, synchronize, closed]
-    paths:
-      - ".github/workflows/cdk-api-deploy.yml"
-      - "infrastructure/cdk-api-gateaway/**"
-      - "ark-lambdas/**"
-      - "ark-dynamodb/**"
+  # pull_request:
+  #   types: [opened, synchronize, closed]
+  #   paths:
+  #     - ".github/workflows/cdk-api-deploy.yml"
+  #     - "infrastructure/cdk-api-gateaway/**"
+  #     - "ark-lambdas/**"
+  #     - "ark-dynamodb/**"
 
 jobs:
   deploy:
