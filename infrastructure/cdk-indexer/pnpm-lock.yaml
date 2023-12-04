@@ -8,17 +8,20 @@ dependencies:
   aws-cdk-lib:
     specifier: 2.100.0
     version: 2.100.0(constructs@10.3.0)
+  cargo-lambda-cdk:
+    specifier: ^0.0.17
+    version: 0.0.17(aws-cdk-lib@2.100.0)(constructs@10.3.0)
   constructs:
     specifier: ^10.0.0
     version: 10.3.0
-  dotenv:
-    specifier: ^16.3.1
-    version: 16.3.1
   source-map-support:
     specifier: ^0.5.21
     version: 0.5.21
 
 devDependencies:
+  '@types/dotenv':
+    specifier: ^8.2.0
+    version: 8.2.0
   '@types/jest':
     specifier: ^29.5.5
     version: 29.5.7
@@ -28,6 +31,9 @@ devDependencies:
   aws-cdk:
     specifier: 2.100.0
     version: 2.100.0
+  dotenv:
+    specifier: ^16.3.1
+    version: 16.3.1
   jest:
     specifier: ^29.7.0
     version: 29.7.0(@types/node@20.7.1)(ts-node@10.9.1)
@@ -731,6 +737,13 @@ packages:
       '@babel/types': 7.23.0
     dev: true
 
+  /@types/dotenv@8.2.0:
+    resolution: {integrity: sha512-ylSC9GhfRH7m1EUXBXofhgx4lUWmFeQDINW5oLuS+gxWdfUeW4zJdeVTYVkexEW+e2VUvlZR2kGnGGipAWR7kw==}
+    deprecated: This is a stub types definition. dotenv provides its own type definitions, so you do not need this installed.
+    dependencies:
+      dotenv: 16.3.1
+    dev: true
+
   /@types/graceful-fs@4.1.8:
     resolution: {integrity: sha512-NhRH7YzWq8WiNKVavKPBmtLYZHxNY19Hh+az28O/phfp68CF45pMFud+ZzJ8ewnxnC5smIdF3dqFeiSUQ5I+pw==}
     dependencies:
@@ -1025,6 +1038,18 @@ packages:
     resolution: {integrity: sha512-cPiMKZgqgkg5LY3/ntGeLFUpi6tzddBNS58A4tnTgQw1zON7u2sZMU7SzOeVH4tj20++9ggL+V6FDOFMTaFFYA==}
     dev: true
 
+  /cargo-lambda-cdk@0.0.17(aws-cdk-lib@2.100.0)(constructs@10.3.0):
+    resolution: {integrity: sha512-KV95oV4GdczNioji8EvHbYumsArdGRusXsNhfRSBIoE94WN8jlxySaUzboNiH+HEKshyUQtnvdQd/WLBdk5NDA==}
+    peerDependencies:
+      aws-cdk-lib: ^2.1.0
+      constructs: ^10.0.5
+    dependencies:
+      aws-cdk-lib: 2.100.0(constructs@10.3.0)
+      constructs: 10.3.0
+    dev: false
+    bundledDependencies:
+      - js-toml
+
   /case@1.6.3:
     resolution: {integrity: sha512-mzDSXIPaFwVDvZAHqZ9VlbyF4yyXRuX6IvB06WvPYkqJVO24kX1PPhv9bfpKNFZyxYFmmgo03HUiD8iklmJYRQ==}
     engines: {node: '>= 0.8.0'}
@@ -1186,7 +1211,7 @@ packages:
   /dotenv@16.3.1:
     resolution: {integrity: sha512-IPzF4w4/Rd94bA9imS68tZBaYyBWSCE47V1RGuMrB94iyTOIEwRmVL2x/4An+6mETpLrKJ5hQkB8W4kFAadeIQ==}
     engines: {node: '>=12'}
-    dev: false
+    dev: true
 
   /electron-to-chromium@1.4.574:
     resolution: {integrity: sha512-bg1m8L0n02xRzx4LsTTMbBPiUd9yIR+74iPtS/Ao65CuXvhVZHP0ym1kSdDG3yHFDXqHQQBKujlN1AQ8qZnyFg==}
