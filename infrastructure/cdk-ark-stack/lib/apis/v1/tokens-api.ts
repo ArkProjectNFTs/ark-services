@@ -19,9 +19,12 @@ export function tokensApi(
   // Get all tokens for a contract
   tokenContractAddressResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractTokensLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getContractTokensLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }

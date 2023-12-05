@@ -4,7 +4,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getContractTokensLambda(scope: cdk.Stack, stages: string[]) {
+export function getContractTokensLambda(
+  scope: cdk.Stack,
+  stages: string[],
+  tableNamePrefix: string
+) {
   const indexName = "GSI1PK-GSI1SK-index";
   // Define a RustFunction using the cargo-lambda-cdk construct
   const getContractTokensLambda = new RustFunction(
@@ -31,7 +35,7 @@ export function getContractTokensLambda(scope: cdk.Stack, stages: string[]) {
   // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}/index/${indexName}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/${indexName}`
     );
   }
 
