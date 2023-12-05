@@ -1,3 +1,4 @@
+use crate::common::format::pad_hex;
 use ark_dynamodb::providers::{ArkTokenProvider, DynamoDbTokenProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
@@ -13,7 +14,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
     let (contract_address, token_id) = get_params(&event)?;
 
-    let token_id_hex = common::pad_hex(&token_id);
+    let token_id_hex = pad_hex(&token_id);
 
     let r = process_event(&ctx, contract_address.as_str(), token_id_hex.as_str()).await;
 
