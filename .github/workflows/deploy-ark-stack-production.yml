@@ -1,4 +1,4 @@
-name: Release, Notify, and Deploy Workflow
+name: Deploy Production environment to AWS
 
 on:
   release:

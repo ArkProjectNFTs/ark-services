@@ -1,4 +1,4 @@
-name: CDK API Stack Deploy on Main & PR
+name: Deploy Staging environment to AWS (ArkStack)
 
 on:
   push:
