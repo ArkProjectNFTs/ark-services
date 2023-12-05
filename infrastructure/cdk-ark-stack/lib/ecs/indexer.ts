@@ -33,8 +33,8 @@ export async function deployIndexer(
 
   ["mainnet", "testnet"].forEach((network) => {
     const tableName = isRelease
-      ? "ark_project_staging_${network}"
-      : `ark_project_${network}`;
+      ? `ark_project_${network}`
+      : `ark_project_staging_${network}`;
 
     const dynamoTable = Table.fromTableName(
       scope,
