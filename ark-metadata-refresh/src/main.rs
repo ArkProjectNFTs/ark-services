@@ -8,7 +8,10 @@ use arkproject::{
         metadata_manager::{ImageCacheOption, MetadataError, MetadataManager},
         storage::Storage,
     },
-    starknet::client::{StarknetClient, StarknetClientHttp},
+    starknet::{
+        client::{StarknetClient, StarknetClientHttp},
+        CairoU256,
+    },
 };
 use dotenv::dotenv;
 use starknet::core::types::FieldElement;
@@ -25,6 +28,7 @@ struct Config {
     loop_delay_duration: Duration,
     ipfs_gateway_uri: String,
     contract_address_filter: Option<FieldElement>,
+    token_id_filter: Option<CairoU256>,
 }
 
 fn get_env_variables() -> Config {
@@ -55,6 +59,10 @@ fn get_env_variables() -> Config {
         .ok()
         .map(|value| FieldElement::from_hex_be(&value).expect("Invalid METADATA_CONTRACT_FILTER"));
 
+    let token_id_filter = env::var("METADATA_TOKEN_ID_FILTER")
+        .ok()
+        .map(|value| CairoU256::from_hex_be(&value).expect("Invalid METADATA_TOKEN_ID_FILTER"));
+
     Config {
         table_name,
         bucket_name,
@@ -63,6 +71,7 @@ fn get_env_variables() -> Config {
         loop_delay_duration,
         ipfs_gateway_uri,
         contract_address_filter,
+        token_id_filter,
     }
 }
 
@@ -81,72 +90,96 @@ async fn main() -> Result<()> {
 
     debug!("Starting main loop to check and refresh token metadata");
 
-    loop {
-        match metadata_storage
-            .find_token_ids_without_metadata(config.contract_address_filter)
-            .await
-        {
-            Ok(tokens) => {
-                if tokens.is_empty() {
-                    info!("No tokens found that require metadata refresh");
-                    sleep(config.loop_delay_duration).await;
-                    continue;
-                } else {
-                    for token in tokens {
-                        let (contract_address, token_id) = token;
+    if config.contract_address_filter.is_some() && config.token_id_filter.is_some() {
+        let contract_address = config.contract_address_filter.unwrap();
+        let token_id = config.token_id_filter.unwrap();
 
-                        info!(
+        info!(
+            "🔄 Refreshing metadata. Contract address: 0x{:064x} - Token ID: {}",
+            contract_address,
+            token_id.to_decimal(false)
+        );
+
+        metadata_manager
+            .refresh_token_metadata(
+                contract_address,
+                token_id.clone(),
+                ImageCacheOption::Save,
+                config.ipfs_gateway_uri.as_str(),
+                config.ipfs_timeout_duration,
+                "https://arkproject.dev",
+            )
+            .await?;
+
+        Ok(())
+    } else {
+        loop {
+            match metadata_storage
+                .find_token_ids_without_metadata(config.contract_address_filter)
+                .await
+            {
+                Ok(tokens) => {
+                    if tokens.is_empty() {
+                        info!("No tokens found that require metadata refresh");
+                        sleep(config.loop_delay_duration).await;
+                        continue;
+                    } else {
+                        for token in tokens {
+                            let (contract_address, token_id) = token;
+
+                            info!(
                             "🔄 Refreshing metadata. Contract address: 0x{:064x} - Token ID: {}",
                             contract_address,
                             token_id.to_decimal(false)
                         );
 
-                        match metadata_manager
-                            .refresh_token_metadata(
-                                contract_address,
-                                token_id.clone(),
-                                ImageCacheOption::Save,
-                                config.ipfs_gateway_uri.as_str(),
-                                config.ipfs_timeout_duration,
-                                "https://arkproject.dev",
-                            )
-                            .await
-                        {
-                            Ok(_) => {
-                                info!(
-                                    "✅ Metadata for Token ID: {} refreshed successfully",
-                                    token_id.to_decimal(false)
-                                );
-                            }
-                            Err(metadata_error) => {
-                                match metadata_error {
-                                    MetadataError::ParsingError(error) => {
-                                        warn!("❌ Parsing error: {:?}", error);
-                                    }
-                                    e => {
-                                        error!("❌ Error: {:?}", e);
-                                    }
+                            match metadata_manager
+                                .refresh_token_metadata(
+                                    contract_address,
+                                    token_id.clone(),
+                                    ImageCacheOption::Save,
+                                    config.ipfs_gateway_uri.as_str(),
+                                    config.ipfs_timeout_duration,
+                                    "https://arkproject.dev",
+                                )
+                                .await
+                            {
+                                Ok(_) => {
+                                    info!(
+                                        "✅ Metadata for Token ID: {} refreshed successfully",
+                                        token_id.to_decimal(false)
+                                    );
                                 }
+                                Err(metadata_error) => {
+                                    match metadata_error {
+                                        MetadataError::ParsingError(error) => {
+                                            warn!("❌ Parsing error: {:?}", error);
+                                        }
+                                        e => {
+                                            error!("❌ Error: {:?}", e);
+                                        }
+                                    }
 
-                                let _ = metadata_storage
-                                    .update_token_metadata_status(
-                                        contract_address,
-                                        token_id.clone(),
-                                        "ERROR",
-                                    )
-                                    .await;
+                                    let _ = metadata_storage
+                                        .update_token_metadata_status(
+                                            contract_address,
+                                            token_id.clone(),
+                                            "ERROR",
+                                        )
+                                        .await;
+                                }
                             }
                         }
+                        continue;
                     }
+                }
+                Err(e) => {
+                    error!("Error: {:?}", e);
+                    sleep(config.loop_delay_duration).await;
                     continue;
                 }
-            }
-            Err(e) => {
-                error!("Error: {:?}", e);
-                sleep(config.loop_delay_duration).await;
-                continue;
-            }
-        };
+            };
+        }
     }
 }
 
