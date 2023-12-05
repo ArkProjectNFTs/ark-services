@@ -196,7 +196,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-api-gateaway
+          cd infrastructure/cdk-ark-stack
           pnpm install
 
       - name: Cache Cargo registry
