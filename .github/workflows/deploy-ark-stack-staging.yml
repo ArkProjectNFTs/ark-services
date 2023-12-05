@@ -1,6 +1,7 @@
 name: Deploy Staging environment to AWS (ArkStack)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
