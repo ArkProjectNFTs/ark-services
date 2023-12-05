@@ -138,7 +138,7 @@ where
                     }
                     None => {
                         let output = Command::new("cargo")
-                            .args(&[
+                            .args([
                                 "lambda",
                                 "invoke",
                                 "--data-ascii",
