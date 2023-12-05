@@ -11,7 +11,10 @@ use tracing::{info, warn};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
-    let (contract_address, token_id_hex) = get_params(&event)?;
+    let (contract_address, token_id) = get_params(&event)?;
+
+    let token_id_hex = common::pad_hex(&token_id);
+
     let r = process_event(&ctx, contract_address.as_str(), token_id_hex.as_str()).await;
 
     let mut req_params = HashMap::new();
@@ -91,9 +94,9 @@ async fn process_event(
 
 fn get_params(event: &Request) -> Result<(String, String), LambdaHttpError> {
     let address = common::require_hex_param(event, "contract_address", HttpParamSource::Path)?;
-    let token_id_hex = common::require_hex_or_dec_param(event, "token_id", HttpParamSource::Path)?;
+    let token_id = common::require_hex_or_dec_param(event, "token_id", HttpParamSource::Path)?;
 
-    Ok((address, token_id_hex))
+    Ok((address, token_id))
 }
 
 #[tokio::main]
