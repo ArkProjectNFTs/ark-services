@@ -79,7 +79,16 @@ export class ArkStack extends cdk.Stack {
 
     //loop foreach stage in props.stages
     props.stages.forEach(async (stage: string) => {
-      const createdStage = this.createStage(api, environement, stage);
+      const tableName = props.isRelease
+        ? `ark_project_${stage}`
+        : `ark_project_staging_${stage}`;
+
+      const createdStage = this.createStage(
+        api,
+        environement,
+        stage,
+        tableName
+      );
       // Add basic plan to API
       basicPlan.addApiStage({ stage: createdStage });
       // Add pay as you go plan to API
@@ -103,7 +112,8 @@ export class ArkStack extends cdk.Stack {
   private createStage(
     api: apigateway.RestApi,
     apiSuffix: string,
-    stageName: string
+    stageName: string,
+    tableName: string
   ) {
     // Create deployment
     const deployment = new apigateway.Deployment(
@@ -136,7 +146,7 @@ export class ArkStack extends cdk.Stack {
         deployment,
         stageName,
         variables: {
-          tableName: `ark_project_${stageName}`,
+          tableName,
           paginationCache: "redis://ipfs.arkproject.dev:6379",
           maxItemsLimit: "100",
           lambdaUsageTable: lambdaUsageTable,
