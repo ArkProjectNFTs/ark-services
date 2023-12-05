@@ -4,7 +4,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getContractLambda(scope: cdk.Stack, stages: string[]) {
+export function getContractLambda(
+  scope: cdk.Stack,
+  stages: string[],
+  tableNamePrefix: string
+) {
   // Define a RustFunction using the cargo-lambda-cdk construct
   const getContractLambda = new RustFunction(scope, "get-contract", {
     // Specify the path to your Rust project's Cargo.toml file
@@ -25,7 +29,7 @@ export function getContractLambda(scope: cdk.Stack, stages: string[]) {
   // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
   }
 
