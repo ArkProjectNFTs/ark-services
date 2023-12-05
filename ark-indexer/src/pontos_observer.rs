@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::{primitives::Blob, Client};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tracing::{error, info};
+use std::{process::Command, sync::Arc};
+use tracing::{debug, error, info};
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
@@ -104,41 +104,62 @@ where
     }
 
     async fn on_new_latest_block(&self, block_number: u64) {
-        if let Some(fn_name) = &self.block_indexer_function_name {
-            let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-            let client = Client::new(&config);
+        let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+        let client = Client::new(&config);
 
-            let payload = BlockRange {
-                from_block: block_number,
-                to_block: block_number,
-            };
+        let payload = BlockRange {
+            from_block: block_number,
+            to_block: block_number,
+        };
 
-            match serde_json::to_vec(&payload) {
-                Ok(payload_vec) => {
-                    info!(
-                        "New latest block: {} - payload_vec: {:?}",
-                        block_number, payload_vec
-                    );
+        match serde_json::to_vec(&payload) {
+            Ok(payload_vec) => {
+                info!(
+                    "New latest block: {} - payload_vec: {:?}",
+                    block_number, payload_vec
+                );
 
-                    let response = client
-                        .invoke()
-                        .function_name(fn_name)
-                        .payload(Blob::new(payload_vec))
-                        .send()
-                        .await;
+                match self.block_indexer_function_name.clone() {
+                    Some(fn_name) => {
+                        let response = client
+                            .invoke()
+                            .function_name(fn_name)
+                            .payload(Blob::new(payload_vec))
+                            .send()
+                            .await;
 
-                    match response {
-                        Ok(resp) => info!(
-                            "Indexer Lambda launched: payload={:?}, response={:?}",
-                            payload, resp
-                        ),
-                        Err(err) => error!("Invoke error: {:?}", err),
+                        match response {
+                            Ok(resp) => info!(
+                                "Indexer Lambda launched: payload={:?}, response={:?}",
+                                payload, resp
+                            ),
+                            Err(err) => error!("Invoke error: {:?}", err),
+                        }
+                    }
+                    None => {
+                        let output = Command::new("cargo")
+                            .args(&[
+                                "lambda",
+                                "invoke",
+                                "--data-ascii",
+                                format!(
+                                    "{{\"from_block\": {}, \"to_block\": {}}}",
+                                    block_number, block_number
+                                )
+                                .as_str(),
+                            ])
+                            .output()
+                            .expect("Failed to execute command");
+
+                        debug!("Status: {}", output.status);
+                        debug!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
+                        if !output.stderr.is_empty() {
+                            debug!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
+                        }
                     }
                 }
-                Err(err) => error!("Payload serialization error: {:?}", err),
             }
-        } else {
-            info!("No block indexer function name provided");
+            Err(err) => error!("Payload serialization error: {:?}", err),
         }
 
         info!("on_new_latest_block (end)");
