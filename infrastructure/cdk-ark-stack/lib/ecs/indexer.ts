@@ -15,7 +15,7 @@ export async function deployIndexer(
     maxAzs: 3,
   });
 
-  const cluster = new Cluster(scope, "ArkCluster", {
+  const cluster = new Cluster(scope, "Indexers", {
     vpc: vpc,
   });
 
