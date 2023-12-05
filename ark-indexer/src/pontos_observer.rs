@@ -4,21 +4,37 @@ use arkproject::pontos::{
     storage::types::{IndexerStatus, TokenEvent, TokenInfo},
 };
 use async_trait::async_trait;
-use std::sync::Arc;
-use tracing::{error, info};
+use aws_config::BehaviorVersion;
+use aws_sdk_lambda::{primitives::Blob, Client};
+use serde::{Deserialize, Serialize};
+use std::{process::Command, sync::Arc};
+use tracing::{debug, error, info};
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
     pub indexer_version: String,
     pub indexer_identifier: String,
+    pub block_indexer_function_name: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+struct BlockRange {
+    from_block: u64,
+    to_block: u64,
 }
 
 impl<S: AWSDynamoStorage> PontosObserver<S> {
-    pub fn new(storage: Arc<S>, indexer_version: String, indexer_identifier: String) -> Self {
+    pub fn new(
+        storage: Arc<S>,
+        indexer_version: String,
+        indexer_identifier: String,
+        block_indexer_function_name: Option<String>,
+    ) -> Self {
         Self {
             storage,
             indexer_identifier,
             indexer_version,
+            block_indexer_function_name,
         }
     }
 }
@@ -85,5 +101,67 @@ where
                 IndexerStatus::Stopped,
             )
             .await;
+    }
+
+    async fn on_new_latest_block(&self, block_number: u64) {
+        let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+        let client = Client::new(&config);
+
+        let payload = BlockRange {
+            from_block: block_number,
+            to_block: block_number,
+        };
+
+        match serde_json::to_vec(&payload) {
+            Ok(payload_vec) => {
+                info!(
+                    "New latest block: {} - payload_vec: {:?}",
+                    block_number, payload_vec
+                );
+
+                match self.block_indexer_function_name.clone() {
+                    Some(fn_name) => {
+                        let response = client
+                            .invoke()
+                            .function_name(fn_name)
+                            .payload(Blob::new(payload_vec))
+                            .send()
+                            .await;
+
+                        match response {
+                            Ok(resp) => info!(
+                                "Indexer Lambda launched: payload={:?}, response={:?}",
+                                payload, resp
+                            ),
+                            Err(err) => error!("Invoke error: {:?}", err),
+                        }
+                    }
+                    None => {
+                        let output = Command::new("cargo")
+                            .args([
+                                "lambda",
+                                "invoke",
+                                "--data-ascii",
+                                format!(
+                                    "{{\"from_block\": {}, \"to_block\": {}}}",
+                                    block_number, block_number
+                                )
+                                .as_str(),
+                            ])
+                            .output()
+                            .expect("Failed to execute command");
+
+                        debug!("Status: {}", output.status);
+                        debug!("Stdout: {}", String::from_utf8_lossy(&output.stdout));
+                        if !output.stderr.is_empty() {
+                            debug!("Stderr: {}", String::from_utf8_lossy(&output.stderr));
+                        }
+                    }
+                }
+            }
+            Err(err) => error!("Payload serialization error: {:?}", err),
+        }
+
+        info!("on_new_latest_block (end)");
     }
 }

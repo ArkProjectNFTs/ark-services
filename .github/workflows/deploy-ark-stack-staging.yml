@@ -1,0 +1,244 @@
+name: Deploy Staging environment to AWS (ArkStack)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/cdk-api-deploy.yml"
+      - "infrastructure/cdk-ecr/**"
+      - "infrastructure/cdk-ark-stack/**"
+      - "ark-indexer/**"
+      - "ark-lambdas/**"
+      - "ark-dynamodb/**"
+      - "ark-metadata-refresh/**"
+
+jobs:
+  push-indexer-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Install pnpm
+        run: |
+          npm install -g pnpm
+          npm install -g aws-cdk
+
+      - name: Deploy ECR Repository
+        run: |
+          cd infrastructure/cdk-ecr
+          pnpm install
+          cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Output ECR Repository URL
+        id: set_ecr_url
+        run: |
+          cd infrastructure/cdk-ecr
+          ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
+          echo "ECR Repository URL: $ECR_URL"
+          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Build indexer, tag, and push image to Amazon ECR
+        run: |
+          docker buildx create --use --name ecr-deploy-builder-indexer
+          docker buildx build --tag $ECR_URL:indexer-latest --file docker/indexer/Dockerfile . --load
+          docker push $ECR_URL:indexer-latest
+        env:
+          ECR_URL: ${{ env.ECR_URL }}
+          INDEXER_TABLE_NAME: ${{ secrets.INDEXER_TABLE_NAME }}
+          AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
+          RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
+          METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
+          METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
+          IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+  push-metadata-indexer-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Install pnpm
+        run: |
+          npm install -g pnpm
+          npm install -g aws-cdk
+
+      - name: Deploy ECR Repository
+        run: |
+          cd infrastructure/cdk-ecr
+          pnpm install
+          cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Output ECR Repository URL
+        id: set_ecr_url
+        run: |
+          cd infrastructure/cdk-ecr
+          ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
+          echo "ECR Repository URL: $ECR_URL"
+          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          mask-password: true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Build metadata, tag, and push image to Amazon ECR
+        run: |
+          docker buildx create --use --name ecr-deploy-builder-metadata
+          docker buildx build --tag $ECR_URL:metadata-latest --file docker/metadata/Dockerfile . --load
+        env:
+          ECR_URL: ${{ env.ECR_URL }}
+          INDEXER_TABLE_NAME: ${{ secrets.INDEXER_TABLE_NAME }}
+          AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
+          RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
+          METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
+          METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
+          IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Install Dependencies
+        run: |
+          cd infrastructure/cdk-api-gateaway
+          pnpm install
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Cache Cargo Dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache Cargo target dir
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-target-
+
+      - name: Install Cargo Lambda
+        run: |
+          pip install cargo-lambda
+
+      - name: Bootstrap CDK API Gateway
+        run: |
+          cd infrastructure/cdk-ark-stack
+          pnpm cdk bootstrap
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy CDK API Gateway
+        run: |
+          cd infrastructure/cdk-ark-stack
+          pnpm cdk deploy --require-approval never
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
