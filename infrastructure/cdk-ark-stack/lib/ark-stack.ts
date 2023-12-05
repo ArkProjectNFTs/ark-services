@@ -69,19 +69,21 @@ export class ArkStack extends cdk.Stack {
       // you can also add other headers, allowCredentials, etc.
     });
 
-    contractsApi(this, versionedRoot, props.stages);
-    eventsApi(this, versionedRoot, props.stages);
-    tokensApi(this, versionedRoot, props.stages);
-    ownerApi(this, versionedRoot, props.stages);
+    const tableNamePrefix = props.isRelease
+      ? "ark_project"
+      : "ark_project_staging";
+
+    contractsApi(this, versionedRoot, props.stages, tableNamePrefix);
+    eventsApi(this, versionedRoot, props.stages, tableNamePrefix);
+    tokensApi(this, versionedRoot, props.stages, tableNamePrefix);
+    ownerApi(this, versionedRoot, props.stages, tableNamePrefix);
 
     const postmanApiKey = process.env.POSTMAN_API_KEY || "";
     const awsRegion = process.env.AWS_REGION || "";
 
     //loop foreach stage in props.stages
     props.stages.forEach(async (stage: string) => {
-      const tableName = props.isRelease
-        ? `ark_project_${stage}`
-        : `ark_project_staging_${stage}`;
+      const tableName = `${tableNamePrefix}_${stage}`;
 
       const createdStage = this.createStage(
         api,

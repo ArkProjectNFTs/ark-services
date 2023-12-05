@@ -7,7 +7,8 @@ import { getOwnerEventsLambda } from "../../lambdas/v1/get-owner-events-lambda";
 export function ownerApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
-  stages: string[]
+  stages: string[],
+  tableNamePrefix: string
 ) {
   const ownerResource = versionedRoot.addResource("owners");
   const ownerAddressResource = ownerResource.addResource("{owner_address}");
@@ -18,9 +19,12 @@ export function ownerApi(
   // Get all tokens for an owner
   ownerTokensRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getOwnerTokensLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getOwnerTokensLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }
@@ -29,9 +33,12 @@ export function ownerApi(
   // Get all contracts for an owner
   ownerContractsRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getOwnerContractsLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getOwnerContractsLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }
@@ -40,9 +47,12 @@ export function ownerApi(
   // Get all event for an owner
   ownerEventsRessource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getOwnerEventsLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getOwnerEventsLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }

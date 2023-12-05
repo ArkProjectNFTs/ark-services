@@ -6,7 +6,8 @@ import { AssetHashType } from "aws-cdk-lib";
 
 export function postRefreshTokenMetadataLambda(
   scope: cdk.Stack,
-  stages: string[]
+  stages: string[],
+  tableNamePrefix: string
 ) {
   const postRefreshTokenMetadataLambda = new RustFunction(
     scope,
@@ -29,10 +30,10 @@ export function postRefreshTokenMetadataLambda(
 
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}_lambda_usage`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}_lambda_usage`
     );
   }
 

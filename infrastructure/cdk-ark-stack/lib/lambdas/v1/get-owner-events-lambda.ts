@@ -4,11 +4,14 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getOwnerEventsLambda(scope: cdk.Stack, stages: string[]) {
+export function getOwnerEventsLambda(
+  scope: cdk.Stack,
+  stages: string[],
+  tableNamePrefix: string
+) {
   const getOwnerEventsLambda = new RustFunction(scope, "get-owner-events", {
     // Update the path to where your Rust project's Cargo.toml file is located
-    manifestPath:
-      "../../ark-lambdas/apigw/lambda-get-owner-events/Cargo.toml",
+    manifestPath: "../../ark-lambdas/apigw/lambda-get-owner-events/Cargo.toml",
     environment: {
       RUST_BACKTRACE: "1",
     },
@@ -25,11 +28,11 @@ export function getOwnerEventsLambda(scope: cdk.Stack, stages: string[]) {
 
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}/index/GSI3PK-GSI3SK-index`,
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}/index/GSI5PK-GSI5SK-index`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/GSI3PK-GSI3SK-index`,
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/GSI5PK-GSI5SK-index`
     );
   }
 
