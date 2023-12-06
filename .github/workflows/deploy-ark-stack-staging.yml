@@ -1,6 +1,7 @@
 name: Deploy Staging environment to AWS (ArkStack)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
@@ -173,7 +174,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-
+    needs: [push-indexer-image, push-metadata-indexer-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -195,7 +196,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-api-gateaway
+          cd infrastructure/cdk-ark-stack
           pnpm install
 
       - name: Cache Cargo registry

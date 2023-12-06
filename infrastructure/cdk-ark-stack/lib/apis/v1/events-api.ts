@@ -6,7 +6,8 @@ import * as cdk from "aws-cdk-lib";
 export function eventsApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
-  stages: string[]
+  stages: string[],
+  tableNamePrefix: string
 ) {
   const eventsResource = versionedRoot.addResource("events");
   const eventContractAddressResource =
@@ -17,9 +18,12 @@ export function eventsApi(
   // Get all events for a contract
   eventContractAddressResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractEventsLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getContractEventsLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }
@@ -28,9 +32,12 @@ export function eventsApi(
   // Get all events for a token
   eventTokenIdResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getTokenEventsLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getTokenEventsLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }
