@@ -1,4 +1,4 @@
-name: Deploy Production environment to AWS
+name: Deploy Production environment to AWS (ArkStack)
 
 on:
   release:
@@ -84,7 +84,7 @@ jobs:
       - name: Deploy Ark Stack
         run: |
           cd infrastructure/cdk-ark-stack
-          pnpm cdk deploy --require-approval never -c branch=${{ github.ref_name }} -c isRelease=true
+          pnpm cdk deploy --require-approval never -c isRelease=true
           echo "GitHub Ref: ${{ github.ref }}"
           echo "GitHub Ref Name: ${{ github.ref_name }}"
         env:
@@ -97,7 +97,7 @@ jobs:
         run: |
           cd infrastructure/cdk-indexer 
           pnpm install
-          pnpm cdk bootstrap -c branch=${{ github.ref_name }} -c targetBranch=${{ github.event.pull_request.base.ref || '' }}
+          pnpm cdk bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -107,7 +107,7 @@ jobs:
       - name: Deploy CDK Indexer
         run: |
           cd infrastructure/cdk-indexer
-          pnpm cdk deploy --require-approval never -c branch=${{ github.ref_name }} -c isPullRequest=false
+          pnpm cdk deploy --require-approval never -c isPullRequest=false
           echo "GitHub Ref: ${{ github.ref }}"
           echo "GitHub Ref Name: ${{ github.ref_name }}"
         env:

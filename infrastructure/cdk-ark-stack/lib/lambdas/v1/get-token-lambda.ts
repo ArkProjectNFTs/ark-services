@@ -4,7 +4,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getTokenLambda(scope: cdk.Stack, stages: string[]) {
+export function getTokenLambda(
+  scope: cdk.Stack,
+  stages: string[],
+  tableNamePrefix: string
+) {
   const getTokenLambda = new RustFunction(scope, "get-token", {
     manifestPath: "../../ark-lambdas/apigw/lambda-get-token/Cargo.toml",
     environment: {
@@ -21,7 +25,7 @@ export function getTokenLambda(scope: cdk.Stack, stages: string[]) {
 
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
   }
 

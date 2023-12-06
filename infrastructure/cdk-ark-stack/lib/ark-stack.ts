@@ -69,17 +69,28 @@ export class ArkStack extends cdk.Stack {
       // you can also add other headers, allowCredentials, etc.
     });
 
-    contractsApi(this, versionedRoot, props.stages);
-    eventsApi(this, versionedRoot, props.stages);
-    tokensApi(this, versionedRoot, props.stages);
-    ownerApi(this, versionedRoot, props.stages);
+    const tableNamePrefix = props.isRelease
+      ? "ark_project"
+      : "ark_project_staging";
+
+    contractsApi(this, versionedRoot, props.stages, tableNamePrefix);
+    eventsApi(this, versionedRoot, props.stages, tableNamePrefix);
+    tokensApi(this, versionedRoot, props.stages, tableNamePrefix);
+    ownerApi(this, versionedRoot, props.stages, tableNamePrefix);
 
     const postmanApiKey = process.env.POSTMAN_API_KEY || "";
     const awsRegion = process.env.AWS_REGION || "";
 
     //loop foreach stage in props.stages
     props.stages.forEach(async (stage: string) => {
-      const createdStage = this.createStage(api, environement, stage);
+      const tableName = `${tableNamePrefix}_${stage}`;
+
+      const createdStage = this.createStage(
+        api,
+        environement,
+        stage,
+        tableName
+      );
       // Add basic plan to API
       basicPlan.addApiStage({ stage: createdStage });
       // Add pay as you go plan to API
@@ -103,7 +114,8 @@ export class ArkStack extends cdk.Stack {
   private createStage(
     api: apigateway.RestApi,
     apiSuffix: string,
-    stageName: string
+    stageName: string,
+    tableName: string
   ) {
     // Create deployment
     const deployment = new apigateway.Deployment(
@@ -136,7 +148,7 @@ export class ArkStack extends cdk.Stack {
         deployment,
         stageName,
         variables: {
-          tableName: `ark_project_${stageName}`,
+          tableName,
           paginationCache: "redis://ipfs.arkproject.dev:6379",
           maxItemsLimit: "100",
           lambdaUsageTable: lambdaUsageTable,

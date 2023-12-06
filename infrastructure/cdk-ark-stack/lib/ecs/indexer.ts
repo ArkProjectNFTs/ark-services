@@ -15,7 +15,7 @@ export async function deployIndexer(
     maxAzs: 3,
   });
 
-  const cluster = new Cluster(scope, "ArkCluster", {
+  const cluster = new Cluster(scope, "Indexers", {
     vpc: vpc,
   });
 
@@ -33,8 +33,8 @@ export async function deployIndexer(
 
   ["mainnet", "testnet"].forEach((network) => {
     const tableName = isRelease
-      ? "ark_project_staging_${network}"
-      : `ark_project_${network}`;
+      ? `ark_project_${network}`
+      : `ark_project_staging_${network}`;
 
     const dynamoTable = Table.fromTableName(
       scope,

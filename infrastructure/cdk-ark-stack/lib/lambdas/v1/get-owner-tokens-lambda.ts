@@ -4,7 +4,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getOwnerTokensLambda(scope: cdk.Stack, stages: string[]) {
+export function getOwnerTokensLambda(
+  scope: cdk.Stack,
+  stages: string[],
+  tableNamePrefix: string
+) {
   const indexName = "GSI2PK-GSI2SK-index";
   const getOwnerTokensLambda = new RustFunction(scope, "get-owner-tokens", {
     manifestPath: "../../ark-lambdas/apigw/lambda-get-owner-tokens/Cargo.toml",
@@ -22,7 +26,7 @@ export function getOwnerTokensLambda(scope: cdk.Stack, stages: string[]) {
 
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}/index/${indexName}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/${indexName}`
     );
   }
 

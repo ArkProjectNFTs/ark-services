@@ -4,7 +4,11 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 
-export function getOwnerContractsLambda(scope: cdk.Stack, stages: string[]) {
+export function getOwnerContractsLambda(
+  scope: cdk.Stack,
+  stages: string[],
+  tableNamePrefix: string
+) {
   const indexName = "GSI2PK-GSI2SK-index";
   // Define a RustFunction using the cargo-lambda-cdk construct
   const getOwnerContractsLambda = new RustFunction(
@@ -30,7 +34,7 @@ export function getOwnerContractsLambda(scope: cdk.Stack, stages: string[]) {
 
   // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
-    const baseTableArn = `arn:aws:dynamodb:${scope.region}:${scope.account}:table/ark_project_${stage}`;
+    const baseTableArn = `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`;
     // ARN for index - used with dynamodb:Query
     resourceArns.push(`${baseTableArn}/index/${indexName}`);
     // ARN for table - used with dynamodb:GetItem and dynamodb:PutItem

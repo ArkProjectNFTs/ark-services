@@ -7,7 +7,8 @@ import * as cdk from "aws-cdk-lib";
 export function tokensApi(
   scope: cdk.Stack,
   versionedRoot: apigateway.IResource,
-  stages: string[]
+  stages: string[],
+  tableNamePrefix: string
 ) {
   const tokensResource = versionedRoot.addResource("tokens");
   const tokenContractAddressResource =
@@ -18,9 +19,12 @@ export function tokensApi(
   // Get all tokens for a contract
   tokenContractAddressResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getContractTokensLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getContractTokensLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }
@@ -29,9 +33,12 @@ export function tokensApi(
   // Get a specific token for a contract
   tokensTokenIdResource.addMethod(
     "GET",
-    new apigateway.LambdaIntegration(getTokenLambda(scope, stages), {
-      proxy: true,
-    }),
+    new apigateway.LambdaIntegration(
+      getTokenLambda(scope, stages, tableNamePrefix),
+      {
+        proxy: true,
+      }
+    ),
     {
       apiKeyRequired: true, // API key is now required for this method
     }
@@ -45,7 +52,7 @@ export function tokensApi(
   refreshMetadataRessource.addMethod(
     "POST",
     new apigateway.LambdaIntegration(
-      postRefreshTokenMetadataLambda(scope, stages),
+      postRefreshTokenMetadataLambda(scope, stages, tableNamePrefix),
       {
         proxy: true,
       }
