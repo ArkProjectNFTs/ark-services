@@ -35,7 +35,7 @@ resolver = "2"
 anyhow = "1.0"
 ark-dynamodb = { path = "ark-dynamodb" }
 ark-sqlx = { path = "ark-sqlx" }
-arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.24.0" }
+arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.26.0" }
 async-trait = "0.1.73"
 lambda-http-common = { path = "ark-lambdas/apigw/lambda-http-common" }
 tokio = { version = "1", features = ["full"] }
@@ -43,6 +43,5 @@ sqlx = { version = "0.7", features = ["postgres", "runtime-tokio"] }
 serde = "1.0.160"
 serde_json = "1.0.96"
 serde_with = "2.3.2"
-starknet = { git = "https://github.com/ArkProjectNFTs/starknet-rs", tag = "v0.7.2" }
-#starknet = { path = "../starknet-rs" }
+starknet = "0.8.0"
 thiserror = "1.0.40"
