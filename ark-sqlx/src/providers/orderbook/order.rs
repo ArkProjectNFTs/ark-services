@@ -1,11 +1,57 @@
 use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledData, PlacedData};
+use std::fmt;
 use tracing::trace;
 
 use crate::providers::{ProviderError, SqlxCtx};
 
+#[derive(Debug, Copy, Clone)]
+pub enum OrderStatus {
+    Placed,
+    Fulfilled,
+    Cancelled,
+    Executed,
+}
+
+impl fmt::Display for OrderStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                OrderStatus::Placed => "PLACED",
+                OrderStatus::Fulfilled => "FULFILLED",
+                OrderStatus::Cancelled => "CANCELLED",
+                OrderStatus::Executed => "EXECUTED",
+            }
+        )
+    }
+}
+
 pub struct OrderProvider {}
 
 impl OrderProvider {
+    pub async fn update_order_status(
+        client: &SqlxCtx,
+        block_id: u64,
+        block_timestamp: u64,
+        order_hash: &str,
+        status: OrderStatus,
+    ) -> Result<(), ProviderError> {
+        trace!("Updating order status {} {}", order_hash, status);
+
+        let q = "INSERT INTO orderbook_order_status (block_id, block_timestamp, order_hash, status) VALUES ($1, $2, $3, $4) ON CONFLICT (order_hash) DO UPDATE SET block_id = $1, block_timestamp = $2, status = $4";
+
+        let _r = sqlx::query(q)
+            .bind(block_id as i64)
+            .bind(block_timestamp as i64)
+            .bind(order_hash.to_string())
+            .bind(status.to_string())
+            .execute(&client.pool)
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn register_placed(
         client: &SqlxCtx,
         block_id: u64,
@@ -40,6 +86,15 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
+        Self::update_order_status(
+            client,
+            block_id,
+            block_timestamp,
+            &data.order_hash,
+            OrderStatus::Placed,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -60,6 +115,15 @@ impl OrderProvider {
             .bind(data.reason.clone())
             .execute(&client.pool)
             .await?;
+
+        Self::update_order_status(
+            client,
+            block_id,
+            block_timestamp,
+            &data.order_hash,
+            OrderStatus::Cancelled,
+        )
+        .await?;
 
         Ok(())
     }
@@ -83,6 +147,15 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
+        Self::update_order_status(
+            client,
+            block_id,
+            block_timestamp,
+            &data.order_hash,
+            OrderStatus::Fulfilled,
+        )
+        .await?;
+
         Ok(())
     }
 
@@ -102,6 +175,15 @@ impl OrderProvider {
             .bind(data.order_hash.clone())
             .execute(&client.pool)
             .await?;
+
+        Self::update_order_status(
+            client,
+            block_id,
+            block_timestamp,
+            &data.order_hash,
+            OrderStatus::Executed,
+        )
+        .await?;
 
         Ok(())
     }

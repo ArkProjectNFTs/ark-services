@@ -1,5 +1,17 @@
 -- SQL migration for arkchain orderbook.
 --
+CREATE TABLE orderbook_order_status (
+       -- Block id and timestamp of the last event registerd
+       -- for this order (that triggers the status to change).
+       block_id BIGINT NOT NULL,
+       block_timestamp BIGINT NOT NULL,
+
+       order_hash TEXT NOT NULL,
+       status TEXT NOT NULL,
+
+       PRIMARY KEY (order_hash)
+);
+
 CREATE TABLE orderbook_order_placed (
        block_id BIGINT NOT NULL,
        block_timestamp BIGINT NOT NULL,
