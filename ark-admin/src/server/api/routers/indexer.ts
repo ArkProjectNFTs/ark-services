@@ -5,6 +5,7 @@ import { z } from "zod";
 import { runTask } from "~/lib/awsTasksSpawner";
 import { fetchBlocks } from "~/lib/fetchBlocks";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
+import { fetchLatestBlocks } from "~/lib/fetchLastestBlocks";
 import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -21,7 +22,8 @@ type IndexerTask = {
   currentBlockNumber?: string;
 };
 
-const ECS_CLUSTER = "arn:aws:ecs:us-east-1:223605539824:cluster/ark-indexers";
+const ECS_CLUSTER =
+  "arn:aws:ecs:us-east-1:223605539824:cluster/ArkStack-staging-Indexers1FAD4BAF-XuWWuGXgYkqe";
 const AWS_REGION = "us-east-1";
 
 const client = new ECSClient({
@@ -38,7 +40,7 @@ const fetchTasks = async (
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
-    TableName: `ark_project_${network}`,
+    TableName: `${process.env.TABLE_NAME_PREFIX}${network}`,
     IndexName: "GSI1PK-GSI1SK-index",
     KeyConditionExpression: "#GSI1PK = :GSI1PK",
     ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
@@ -72,6 +74,21 @@ const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
 };
 
 export const indexerRouter = createTRPCRouter({
+  latestBlocks: protectedProcedure
+    .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
+    .query(async ({ input }) => {
+      const results = await fetchLatestBlocks(input.network);
+      return results.map((r) => {
+        const sk = r.GSI1SK?.S ?? "";
+        const ts = sk.split("#")[1];
+
+        return {
+          blockId: r.Data?.M?.BlockNumber?.N ?? "",
+          timestamp: ts ? parseInt(ts, 10) : 0,
+        };
+      });
+    }),
+
   allBlocks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }) => {
@@ -143,6 +160,8 @@ export const indexerRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       console.log("spawnTasks() input:", input);
 
+      // ArkStack-staging-Indexers1FAD4BAF-XuWWuGXgYkqe
+
       const rangeSize = Math.floor(
         (input.to - input.from + 1) / input.numberOfTasks,
       );
@@ -150,10 +169,11 @@ export const indexerRouter = createTRPCRouter({
         input.network === "mainnet"
           ? "subnet-0c28889f016ad63f5"
           : "subnet-05ebee80f9f4299a5";
+
       const taskDefinition =
         input.network === "mainnet"
-          ? "ark-indexer-task-mainnet"
-          : "ark-indexer-task-testnet";
+          ? "ArkStackstagingIndexerMainnetTaskDefinition701D90CD"
+          : "ArkStackstagingIndexerTestnetTaskDefinitionD104DD87";
       try {
         for (let i = 0; i < input.numberOfTasks; i++) {
           const subFrom = input.from + rangeSize * i;
