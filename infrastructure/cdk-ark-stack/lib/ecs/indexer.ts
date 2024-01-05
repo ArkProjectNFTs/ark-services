@@ -11,8 +11,8 @@ export async function deployIndexer(
   isRelease: boolean,
   indexerVersion: string
 ) {
-  const vpc = new Vpc(scope, "ArkVpc", {
-    maxAzs: 3,
+  const vpc = Vpc.fromLookup(scope, "ArkVPC", {
+    vpcId: "vpc-050257a2b877850af",
   });
 
   const cluster = new Cluster(scope, "Indexers", {
