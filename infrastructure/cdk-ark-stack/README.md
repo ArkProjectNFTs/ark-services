@@ -15,7 +15,7 @@ When integrating with GitHub Actions, these context parameters and environment v
    - `baseBranch`: The branch from which the action was triggered.
    - `targetBranch`: The branch targeted by a Pull Request.
 3. **Flags**:
-   - `isRelease`: Determines if this is a release deployment.
+   - `stage`: production or staging
    - `isPullRequest`: Determines if the deployment is due to a PR event.
    - `prNumber`: Pull request number, useful for stack naming.
 
@@ -49,14 +49,14 @@ With the script expecting certain context parameters and environment variables, 
    - These environment variables can be derived from the `github` context available in GitHub Actions.
 
 2. **Passing Context to CDK**:
-   - When invoking `cdk deploy` or similar CDK CLI commands in the GitHub Actions workflow, use the `--context` flag to pass in required context like `isRelease`, `isPullRequest`, `prNumber`, etc.
+   - When invoking `cdk deploy` or similar CDK CLI commands in the GitHub Actions workflow, use the `--context` flag to pass in required context like `stage`, etc.
 
 ### Example GitHub Action Step
 
 ```yaml
 - name: Deploy CDK Stack
   run: |
-    cdk deploy --context isRelease=$IS_RELEASE --context isPullRequest=$IS_PULL_REQUEST --context prNumber=$PR_NUMBER
+    cdk deploy --context stage=staging --context
   env:
     AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
     AWS_REGION: us-west-2

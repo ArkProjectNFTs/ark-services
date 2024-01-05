@@ -8,7 +8,7 @@ import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 
 export async function deployIndexer(
   scope: cdk.Stack,
-  isRelease: boolean,
+  isProductionEnvironment: boolean,
   indexerVersion: string
 ) {
   const vpc = Vpc.fromLookup(scope, "ArkVPC", {
@@ -32,7 +32,7 @@ export async function deployIndexer(
   );
 
   ["mainnet", "testnet"].forEach((network) => {
-    const tableName = isRelease
+    const tableName = isProductionEnvironment
       ? `ark_project_${network}`
       : `ark_project_staging_${network}`;
 
@@ -59,6 +59,7 @@ export async function deployIndexer(
     );
 
     deployIndexerServices(
+      isProductionEnvironment,
       scope,
       cluster,
       ecrRepository,
@@ -77,6 +78,7 @@ export async function deployIndexer(
 }
 
 function deployIndexerServices(
+  isProductionEnvironment: boolean,
   scope: cdk.Stack,
   cluster: cdk.aws_ecs.ICluster,
   ecrRepository: cdk.aws_ecr.IRepository,
@@ -108,7 +110,9 @@ function deployIndexerServices(
   taskDefinition.addContainer("ark_indexer", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
-      "indexer-latest"
+      isProductionEnvironment
+        ? "indexer-production-latest"
+        : "indexer-staging-latest"
     ),
     logging: cdk.aws_ecs.LogDrivers.awsLogs({
       streamPrefix: "ecs",

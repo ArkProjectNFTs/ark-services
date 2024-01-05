@@ -20,7 +20,9 @@ import { deployIndexer } from "./ecs/indexer";
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
-    let environement = props.isRelease ? "production" : "staging";
+    const environement = props.isProductionEnvironment
+      ? "production"
+      : "staging";
     const apiName = `ark-project-api-${environement}`;
 
     const api = new apigateway.RestApi(
@@ -69,7 +71,7 @@ export class ArkStack extends cdk.Stack {
       // you can also add other headers, allowCredentials, etc.
     });
 
-    const tableNamePrefix = props.isRelease
+    const tableNamePrefix = props.isProductionEnvironment
       ? "ark_project"
       : "ark_project_staging";
 
@@ -97,7 +99,7 @@ export class ArkStack extends cdk.Stack {
       payAsYouGoPlan.addApiStage({ stage: createdStage });
       // Add admin plan to API
       adminPlan.addApiStage({ stage: createdStage });
-      if (props.isRelease) {
+      if (props.isProductionEnvironment) {
         await exportToPostman(
           environement,
           stage,
@@ -108,7 +110,7 @@ export class ArkStack extends cdk.Stack {
       }
     });
 
-    deployIndexer(this, props.isRelease, props.indexerVersion);
+    deployIndexer(this, props.isProductionEnvironment, props.indexerVersion);
   }
 
   private createStage(

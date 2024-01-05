@@ -83,8 +83,8 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-latest --file docker/indexer/Dockerfile . --load
-          docker push $ECR_URL:indexer-latest
+          docker buildx build --tag $ECR_URL:indexer-production-latest --file docker/indexer/Dockerfile . --load
+          docker push $ECR_URL:indexer-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           INDEXER_TABLE_NAME: ${{ secrets.INDEXER_TABLE_NAME }}
@@ -231,7 +231,7 @@ jobs:
       - name: Bootstrap CDK API Gateway
         run: |
           cd infrastructure/cdk-ark-stack
-          pnpm cdk bootstrap -c isRelease=true
+          pnpm cdk bootstrap -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -241,7 +241,7 @@ jobs:
       - name: Deploy CDK API Gateway
         run: |
           cd infrastructure/cdk-ark-stack
-          pnpm cdk deploy --require-approval never -c isRelease=true
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
