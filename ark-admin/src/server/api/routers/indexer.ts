@@ -105,6 +105,7 @@ export const indexerRouter = createTRPCRouter({
         count,
       };
     }),
+
   allTasks: protectedProcedure
     .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
     .query(async ({ input }: { input: { network: Network } }) => {
@@ -134,12 +135,14 @@ export const indexerRouter = createTRPCRouter({
     )
     .mutation(async ({ input }) => {
       try {
+        const tableName = `${process.env.TABLE_NAME_PREFIX}${input.network}`;
+
         await dynamodb.deleteItem({
           Key: {
             PK: { S: "INDEXER" },
             SK: { S: `TASK#${input.taskId}` },
           },
-          TableName: `ark_project_${input.network}`,
+          TableName: tableName,
         });
       } catch (error) {
         console.error(error);
@@ -160,7 +163,7 @@ export const indexerRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       console.log("spawnTasks() input:", input);
 
-      // ArkStack-staging-Indexers1FAD4BAF-XuWWuGXgYkqe
+      const tableName = `${process.env.TABLE_NAME_PREFIX}${input.network}`;
 
       const rangeSize = Math.floor(
         (input.to - input.from + 1) / input.numberOfTasks,
@@ -199,7 +202,7 @@ export const indexerRouter = createTRPCRouter({
               const creationDate = Math.floor(Date.now() / 1000);
 
               const putRequest = await dynamodb.putItem({
-                TableName: `ark_project_${input.network}`,
+                TableName: tableName,
                 Item: {
                   PK: { S: "INDEXER" },
                   SK: { S: `TASK#${taskId}` },

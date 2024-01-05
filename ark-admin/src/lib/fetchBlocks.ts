@@ -41,9 +41,12 @@ async function fetchAllDynamoItems(
   let lastEvaluatedKey: Record<string, AttributeValue> | undefined = undefined;
   const items: Record<string, AttributeValue>[] = [];
 
+  const tableName = `${process.env.TABLE_NAME_PREFIX}${network}`;
+  console.log("tableName", tableName);
+
   do {
     const result: QueryCommandOutput = await db.query({
-      TableName: `ark_project_${network}`,
+      TableName: tableName,
       IndexName: "GSI1PK-GSI1SK-index",
       KeyConditionExpression: "#GSI1PK = :GSI1PK",
       ExpressionAttributeNames: {
