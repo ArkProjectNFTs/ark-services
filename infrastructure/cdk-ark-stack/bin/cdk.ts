@@ -8,14 +8,14 @@ config();
 const app = new cdk.App();
 
 // Explicit boolean type checking and conversion
-const isRelease: boolean =
-  app.node.tryGetContext("isRelease") === "true" ||
-  process.env.IS_RELEASE === "true";
+const isProductionEnvironment: boolean =
+  app.node.tryGetContext("isProductionEnvironment") === "true" ||
+  process.env.DEPLOYMENT_ENV === "production";
 
 const stages: string[] = ["mainnet", "testnet"];
 
 let stackNameSuffix;
-if (isRelease) {
+if (isProductionEnvironment) {
   stackNameSuffix = "production";
   console.log(`Deploying Production stack for release.`);
 } else {
@@ -33,7 +33,7 @@ new ArkStack(app, stackName, {
     region: process.env.AWS_REGION, // or whatever region you want to deploy to
   },
   stages: stages,
-  isRelease: isRelease,
+  isProductionEnvironment,
   indexerVersion,
   description:
     "This stack provisions the infrastructure for the Ark Project, which includes API endpoints for contract management and token events. It integrates with DynamoDB for data storage and provides Lambda functions for specific API operations. The stack is designed to be environment-agnostic and can be deployed to any AWS region.",
