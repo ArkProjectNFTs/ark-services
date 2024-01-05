@@ -15,6 +15,19 @@ on:
       - "ark-metadata-refresh/**"
 
 jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    name: Discord Notification
+    steps:
+      - name: Send notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "🧪 Redeploying NFT API infrastructure to staging..."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
   push-indexer-image:
     runs-on: ubuntu-latest
     steps:
