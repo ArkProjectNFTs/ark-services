@@ -40,7 +40,7 @@ const fetchTasks = async (
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
-    TableName: `ark_project_${network}`,
+    TableName: `${process.env.TABLE_NAME_PREFIX}${network}`,
     IndexName: "GSI1PK-GSI1SK-index",
     KeyConditionExpression: "#GSI1PK = :GSI1PK",
     ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
