@@ -35,9 +35,13 @@ impl DynamoDbContractProvider {
     pub fn data_to_info(
         data: &HashMap<String, AttributeValue>,
     ) -> Result<ContractInfo, ProviderError> {
+        let contract_name = convert::attr_to_str(data, "Name")?;
+        let contract_symbol = convert::attr_to_str(data, "Symbol")?;
         Ok(ContractInfo {
             contract_type: convert::attr_to_str(data, "ContractType")?,
             contract_address: convert::attr_to_str(data, "ContractAddress")?,
+            name: Some(contract_name),
+            symbol: Some(contract_symbol),
         })
     }
 
