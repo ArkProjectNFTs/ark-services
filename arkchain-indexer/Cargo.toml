@@ -1,0 +1,26 @@
+[package]
+name = "arkchain-indexer"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme.workspace = true
+repository.workspace = true
+homepage.workspace = true
+edition.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+chrono = "0.4.19"
+ark-sqlx.workspace = true
+arkproject.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+dotenv = "0.15.0"
+tokio.workspace = true
+starknet.workspace = true
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing = "0.1"
+tracing-log = "0.1"
+sqlx.workspace = true
+url = "2.3.1"
