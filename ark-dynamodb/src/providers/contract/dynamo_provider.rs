@@ -35,13 +35,14 @@ impl DynamoDbContractProvider {
     pub fn data_to_info(
         data: &HashMap<String, AttributeValue>,
     ) -> Result<ContractInfo, ProviderError> {
-        let contract_name = convert::attr_to_str(data, "Name")?;
-        let contract_symbol = convert::attr_to_str(data, "Symbol")?;
+        let get_attr_or_default =
+            |key: &str| -> String { convert::attr_to_str(data, key).unwrap_or_default() };
+
         Ok(ContractInfo {
             contract_type: convert::attr_to_str(data, "ContractType")?,
             contract_address: convert::attr_to_str(data, "ContractAddress")?,
-            name: Some(contract_name),
-            symbol: Some(contract_symbol),
+            name: Some(get_attr_or_default("Name")),
+            symbol: Some(get_attr_or_default("Symbol")),
         })
     }
 
@@ -134,7 +135,6 @@ impl ArkContractProvider for DynamoDbContractProvider {
         ctx: &DynamoDbCtx,
         contract_address: &str,
     ) -> Result<DynamoDbOutput<Option<ContractInfo>>, ProviderError> {
-        trace!("get_contract: contract_address: {}", contract_address);
         let mut key = HashMap::new();
         key.insert(
             "PK".to_string(),
