@@ -141,7 +141,7 @@ dependencies = [
  "redis",
  "serde",
  "serde_json",
- "serde_with 2.3.3",
+ "serde_with 3.4.0",
  "starknet",
  "thiserror",
  "tokio",
@@ -219,7 +219,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.26.0#09532ad2053d16c988dd3faaa93a385b869463e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.32.0#7a1d0a3b458cb7570c9dd5b732cb15be57d095b1"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -282,7 +282,7 @@ dependencies = [
  "mockall",
  "serde",
  "serde_json",
- "serde_with 2.3.3",
+ "serde_with 3.4.0",
  "sqlx",
  "thiserror",
  "tokio",
@@ -293,7 +293,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.26.0#09532ad2053d16c988dd3faaa93a385b869463e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.32.0#7a1d0a3b458cb7570c9dd5b732cb15be57d095b1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -338,7 +338,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.26.0#09532ad2053d16c988dd3faaa93a385b869463e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.32.0#7a1d0a3b458cb7570c9dd5b732cb15be57d095b1"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -1425,7 +1425,7 @@ dependencies = [
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.5#d389a38da2c5c47768c0ad1831c303943f6d8722"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "cainome-cairo-serde",
  "cainome-parser",
@@ -1435,7 +1435,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.5#d389a38da2c5c47768c0ad1831c303943f6d8722"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "starknet",
  "thiserror",
@@ -1444,7 +1444,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.5#d389a38da2c5c47768c0ad1831c303943f6d8722"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "quote",
  "serde_json",
@@ -1456,7 +1456,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.5#d389a38da2c5c47768c0ad1831c303943f6d8722"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -1832,7 +1832,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.26.0#09532ad2053d16c988dd3faaa93a385b869463e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.32.0#7a1d0a3b458cb7570c9dd5b732cb15be57d095b1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2536,6 +2536,7 @@ checksum = "d530e1a18b1cb4c484e6e34556a0d948706958449fca0cab753d649f2bce3d1f"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
+ "serde",
 ]
 
 [[package]]
@@ -2793,7 +2794,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_json",
- "serde_with 2.3.3",
+ "serde_with 3.4.0",
  "thiserror",
 ]
 
@@ -3452,7 +3453,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.26.0#09532ad2053d16c988dd3faaa93a385b869463e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.32.0#7a1d0a3b458cb7570c9dd5b732cb15be57d095b1"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -4115,6 +4116,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_with"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64cd236ccc1b7a29e7e2739f27c0b2dd199804abc4290e32f59f3b68d6405c23"
+dependencies = [
+ "base64 0.21.5",
+ "chrono",
+ "hex",
+ "indexmap 1.9.3",
+ "indexmap 2.1.0",
+ "serde",
+ "serde_json",
+ "serde_with_macros 3.4.0",
+ "time",
+]
+
+[[package]]
 name = "serde_with_macros"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4131,6 +4149,18 @@ name = "serde_with_macros"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
+dependencies = [
+ "darling 0.20.3",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.39",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93634eb5f75a2323b16de4748022ac4297f9e76b6dced2be287a099f41b5e788"
 dependencies = [
  "darling 0.20.3",
  "proc-macro2",
@@ -4543,9 +4573,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-core"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff50e281d4fdb97988a3d5c7b7cae22b9d67bb2ef9be2cfafc17a1e35542cb53"
+checksum = "1da8287d38c2c1253c95c915c8d28d4ef4722f8c200e264133e1ba60bdadef7c"
 dependencies = [
  "base64 0.21.5",
  "flate2",
@@ -4601,9 +4631,9 @@ dependencies = [
 
 [[package]]
 name = "starknet-ff"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7584bc732e4d2a8ccebdd1dda8236f7940a79a339e30ebf338d45c329659e36c"
+checksum = "067419451efdea1ee968df8438369960c167e0e905c05b84afd074f50e1d6f3d"
 dependencies = [
  "ark-ff",
  "bigdecimal",
