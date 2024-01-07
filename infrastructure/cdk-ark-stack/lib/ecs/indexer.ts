@@ -12,7 +12,7 @@ export async function deployIndexer(
   indexerVersion: string
 ) {
   const vpc = Vpc.fromLookup(scope, "ArkVPC", {
-    vpcId: "vpc-050257a2b877850af",
+    vpcId: "vpc-0d11f7ec183208e08",
   });
 
   const cluster = new Cluster(scope, "Indexers", {
