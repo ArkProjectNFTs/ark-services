@@ -161,22 +161,17 @@ export const indexerRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      console.log("spawnTasks() input:", input);
-
       const tableName = `${process.env.TABLE_NAME_PREFIX}${input.network}`;
 
       const rangeSize = Math.floor(
         (input.to - input.from + 1) / input.numberOfTasks,
       );
-      const subnetId =
-        input.network === "mainnet"
-          ? "subnet-0c28889f016ad63f5"
-          : "subnet-05ebee80f9f4299a5";
 
       const taskDefinition =
         input.network === "mainnet"
-          ? "ArkStackstagingIndexerMainnetTaskDefinition701D90CD"
-          : "ArkStackstagingIndexerTestnetTaskDefinitionD104DD87";
+          ? "ArkStackproductionIndexerMainnetTaskDefinition619BD5D5"
+          : "ArkStackproductionIndexerTestnetTaskDefinition772EFD01";
+
       try {
         for (let i = 0; i < input.numberOfTasks; i++) {
           const subFrom = input.from + rangeSize * i;
@@ -187,14 +182,20 @@ export const indexerRouter = createTRPCRouter({
             network: input.network,
             from: subFrom,
             to: subTo,
-            subnetId,
+            subnets: [
+              "subnet-04e9a5e885cd717cd",
+              "subnet-04b569b5db185284b",
+              "subnet-05ebee80f9f4299a5",
+              "subnet-0390873cf444d4800",
+              "subnet-084e02ad63c58b3ab",
+              "subnet-0c28889f016ad63f5",
+            ],
             taskDefinition,
             logLevel: input.logLevel ?? "info",
             forceMode: input.forceMode ?? false,
+            securityGroups: ["sg-0c1b5d08ea088eb53"],
           };
           const commandOutput = await runTask(client, commandOptions);
-
-          console.log("=> commandOutput", commandOutput);
 
           for (const task of commandOutput.tasks ?? []) {
             if (task.taskArn) {

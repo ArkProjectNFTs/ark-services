@@ -8,25 +8,23 @@ interface SpawnTaskOptions {
   cluster: string;
   network: string;
   taskDefinition: string;
-  subnetId: string;
+  subnets: string[];
   from: number;
   to: number;
   logLevel: string;
   forceMode: boolean;
+  securityGroups: string[];
 }
 
 export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
   const input: RunTaskCommandInput = {
     cluster: options.cluster,
-    taskDefinition:
-      options.network === "mainnet"
-        ? "ark-indexer-task-mainnet"
-        : "ark-indexer-task-testnet",
+    taskDefinition: options.taskDefinition,
     launchType: "FARGATE",
     networkConfiguration: {
       awsvpcConfiguration: {
-        subnets: [options.subnetId],
-        securityGroups: ["sg-0c1b5d08ea088eb53"],
+        subnets: options.subnets,
+        securityGroups: options.securityGroups,
         assignPublicIp: "ENABLED",
       },
     },
