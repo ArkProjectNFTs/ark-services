@@ -6,6 +6,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/deploy-ark-vpc.yml"
       - "infrastructure/cdk-ark-vpc/**"
 
 jobs:
