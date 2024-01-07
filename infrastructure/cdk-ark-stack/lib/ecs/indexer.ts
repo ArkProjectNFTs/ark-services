@@ -25,12 +25,6 @@ export async function deployIndexer(
     "ark-project-repo"
   );
 
-  const ecsTaskRole = cdk.aws_iam.Role.fromRoleArn(
-    scope,
-    "ecsTaskExecutionRole",
-    "arn:aws:iam::223605539824:role/ecsTaskExecutionRole"
-  );
-
   ["mainnet", "testnet"].forEach((network) => {
     const tableName = isProductionEnvironment
       ? `ark_project_${network}`
@@ -49,14 +43,7 @@ export async function deployIndexer(
       tableName
     );
 
-    deployMetadataServices(
-      scope,
-      cluster,
-      ecrRepository,
-      network,
-      dynamoTable,
-      ecsTaskRole
-    );
+    deployMetadataServices(scope, cluster, ecrRepository, network, dynamoTable);
 
     deployIndexerServices(
       isProductionEnvironment,
@@ -66,7 +53,6 @@ export async function deployIndexer(
       network,
       indexerVersion,
       dynamoTable,
-      ecsTaskRole,
       lambdaFunction.functionName,
       lambdaFunction.functionArn
     );
@@ -85,7 +71,6 @@ function deployIndexerServices(
   network: string,
   indexerVersion: string,
   dynamoTable: cdk.aws_dynamodb.ITable,
-  ecsTaskRole: cdk.aws_iam.IRole,
   functionName: string,
   functionArn: string
 ) {
@@ -103,7 +88,6 @@ function deployIndexerServices(
     {
       memoryLimitMiB: 2048,
       cpu: 512,
-      taskRole: ecsTaskRole,
     }
   );
 
@@ -145,6 +129,13 @@ function deployIndexerServices(
 
   taskDefinition.addToTaskRolePolicy(
     new PolicyStatement({
+      actions: ["logs:CreateLogStream", "logs:PutLogEvents"],
+      resources: ["*"],
+    })
+  );
+
+  taskDefinition.addToTaskRolePolicy(
+    new PolicyStatement({
       actions: [
         "lambda:InvokeAsync",
         "lambda:InvokeFunction",
@@ -168,8 +159,7 @@ function deployMetadataServices(
   cluster: cdk.aws_ecs.ICluster,
   ecrRepository: cdk.aws_ecr.IRepository,
   network: string,
-  dynamoTable: cdk.aws_dynamodb.ITable,
-  ecsTaskRole: cdk.aws_iam.IRole
+  dynamoTable: cdk.aws_dynamodb.ITable
 ) {
   const capitalizedNetwork =
     network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
@@ -185,7 +175,6 @@ function deployMetadataServices(
     {
       memoryLimitMiB: 2048,
       cpu: 512,
-      taskRole: ecsTaskRole,
     }
   );
 

@@ -87,7 +87,6 @@ jobs:
           docker push $ECR_URL:indexer-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
-          INDEXER_TABLE_NAME: ${{ secrets.INDEXER_TABLE_NAME }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
           RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
           METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
@@ -165,7 +164,6 @@ jobs:
           docker buildx build --tag $ECR_URL:metadata-latest --file docker/metadata/Dockerfile . --load
         env:
           ECR_URL: ${{ env.ECR_URL }}
-          INDEXER_TABLE_NAME: ${{ secrets.INDEXER_TABLE_NAME }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
           RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
           METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
