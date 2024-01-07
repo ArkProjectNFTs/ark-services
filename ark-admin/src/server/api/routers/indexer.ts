@@ -22,8 +22,6 @@ type IndexerTask = {
   currentBlockNumber?: string;
 };
 
-const ECS_CLUSTER =
-  "arn:aws:ecs:us-east-1:223605539824:cluster/ArkStack-staging-Indexers1FAD4BAF-XuWWuGXgYkqe";
 const AWS_REGION = "us-east-1";
 
 const client = new ECSClient({
@@ -166,6 +164,11 @@ export const indexerRouter = createTRPCRouter({
       const rangeSize = Math.floor(
         (input.to - input.from + 1) / input.numberOfTasks,
       );
+
+      const ECS_CLUSTER =
+        input.network === "mainnet"
+          ? "arn:aws:ecs:us-east-1:223605539824:cluster/ArkStack-production-Indexers1FAD4BAF-e4xDV736tPlj"
+          : "arn:aws:ecs:us-east-1:223605539824:cluster/ArkStack-staging-Indexers1FAD4BAF-xqq2K8qQYWlQ";
 
       const taskDefinition =
         input.network === "mainnet"
