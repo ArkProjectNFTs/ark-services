@@ -7,6 +7,7 @@ use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{self as common, ArkApiResponse, LambdaCtx, LambdaHttpResponse};
 use std::collections::HashMap;
+use tracing::info;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -36,10 +37,12 @@ async fn process_event(ctx: &LambdaCtx) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let dynamo_rsp = provider.get_nft_contracts(&ctx.dynamodb).await?;
-
     let items = dynamo_rsp.inner();
-    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+    let last_evaluated_key = &dynamo_rsp.lek;
 
+    info!("Last evaluated key: {:?}", last_evaluated_key);
+
+    let cursor = ctx.paginator.store_cursor(last_evaluated_key)?;
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
         result: items,
