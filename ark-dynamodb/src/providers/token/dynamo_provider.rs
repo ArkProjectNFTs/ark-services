@@ -300,6 +300,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 AttributeValue::S(String::from("METADATA#false")),
             )
             .expression_attribute_values(":gsi_sk", AttributeValue::S(sort_key))
+            .scan_index_forward(false)
             .send()
             .await;
 

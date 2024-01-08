@@ -105,7 +105,7 @@ async fn main() -> Result<()> {
                             .refresh_token_metadata(
                                 contract_address,
                                 token_id.clone(),
-                                ImageCacheOption::Save,
+                                ImageCacheOption::DoNotSave,
                                 config.ipfs_gateway_uri.as_str(),
                                 config.ipfs_timeout_duration,
                                 "https://arkproject.dev",
