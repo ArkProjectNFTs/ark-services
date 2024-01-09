@@ -43,10 +43,15 @@ async fn process_event(ctx: &LambdaCtx) -> Result<LambdaHttpResponse, Error> {
     info!("Last evaluated key: {:?}", last_evaluated_key);
 
     let cursor = ctx.paginator.store_cursor(last_evaluated_key)?;
+
+    info!("Cursor: {:?}", cursor);
+
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
         result: items,
     })?;
+
+    info!("Response: {:?}", rsp);
 
     Ok(LambdaHttpResponse {
         capacity: dynamo_rsp.capacity,
