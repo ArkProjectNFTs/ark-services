@@ -1,11 +1,11 @@
+use super::ProviderError;
 use aws_sdk_dynamodb::types::AttributeValue;
 use redis::Client as RedisClient;
 use redis::Commands;
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tracing::error;
 use uuid::Uuid;
-
-use super::ProviderError;
 
 /// A paginator for DynamoDB operations.
 /// The pagination is made using the `last_evaluated_key`
@@ -111,9 +111,11 @@ impl DynamoDbPaginator {
 
                 Ok(Some(hash_key))
             } else {
+                error!("Failed to establish a connection with the paginator client.");
                 Ok(None)
             }
         } else {
+            error!("'last_evaluated_key' is required but was not provided.");
             Ok(None)
         }
     }
