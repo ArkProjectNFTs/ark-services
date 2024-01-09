@@ -256,7 +256,7 @@ dependencies = [
  "starknet",
  "tokio",
  "tracing",
- "tracing-log 0.2.0",
+ "tracing-log 0.1.4",
  "tracing-subscriber",
 ]
 
