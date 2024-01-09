@@ -105,7 +105,7 @@ impl DynamoDbPaginator {
                         .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
                 }
 
-                let ttl = get_hash_ttl() as usize;
+                let ttl = get_hash_ttl();
                 conn.expire(hash_key.clone(), ttl)
                     .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
 
@@ -137,7 +137,7 @@ impl DynamoDbPaginator {
                 }
             }
 
-            let ttl = get_hash_ttl() as usize;
+            let ttl = get_hash_ttl();
             conn.expire(hash_key.clone(), ttl)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
 
@@ -148,11 +148,11 @@ impl DynamoDbPaginator {
     }
 }
 
-fn get_hash_ttl() -> u64 {
+fn get_hash_ttl() -> i64 {
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("Error getting time");
 
     // 1h ttl, check if this is enough.
-    (now + Duration::from_secs(60 * 60)).as_secs()
+    (now + Duration::from_secs(60 * 60)).as_secs() as i64
 }
