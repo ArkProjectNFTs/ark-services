@@ -1,7 +1,7 @@
 import * as cdk from "aws-cdk-lib";
-import { Construct } from "constructs";
 import { Peer, Port, SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { CfnCacheCluster, CfnSubnetGroup } from "aws-cdk-lib/aws-elasticache";
+import { Construct } from "constructs";
 
 export class ArkRedisStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
