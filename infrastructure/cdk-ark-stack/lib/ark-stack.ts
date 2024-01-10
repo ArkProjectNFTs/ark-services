@@ -22,7 +22,7 @@ export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
 
-    const vpc = Vpc.fromLookup(scope, "ArkVPC", {
+    const vpc = Vpc.fromLookup(this, "ArkVPC", {
       vpcId: "vpc-0d11f7ec183208e08",
     });
 
