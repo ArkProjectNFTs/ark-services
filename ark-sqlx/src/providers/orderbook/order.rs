@@ -12,6 +12,26 @@ pub enum OrderStatus {
     Executed,
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum EventType {
+    Listing,
+    Auction,
+    Offer,
+    CollectionOffer,
+}
+
+impl EventType {
+    pub fn from_str(s: &str) -> Result<Self, &'static str> {
+        match s {
+            "Listing" => Ok(EventType::Listing),
+            "Auction" => Ok(EventType::Auction),
+            "Offer" => Ok(EventType::Offer),
+            "CollectionOffer" => Ok(EventType::CollectionOffer),
+            _ => Err("Unknown event type"),
+        }
+    }
+}
+
 impl fmt::Display for OrderStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -28,6 +48,15 @@ impl fmt::Display for OrderStatus {
 }
 
 pub struct OrderProvider {}
+
+struct EventHistoryData {
+    token_id: Option<String>,
+    event_type: EventType,
+    event_timestamp: i64,
+    previous_owner: Option<String>,
+    new_owner: Option<String>,
+    amount: Option<String>,
+}
 
 impl OrderProvider {
     pub async fn update_order_status(
@@ -46,6 +75,27 @@ impl OrderProvider {
             .bind(block_timestamp as i64)
             .bind(order_hash.to_string())
             .bind(status.to_string())
+            .execute(&client.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn insert_event_history(
+        client: &SqlxCtx,
+        event_data: &EventHistoryData,
+    ) -> Result<(), ProviderError> {
+        trace!("Updating order status {} {}", order_hash, status);
+
+        let q = "INSERT INTO orderbook_order_status (block_id, block_timestamp, order_hash, status) VALUES ($1, $2, $3, $4) ON CONFLICT (order_hash) DO UPDATE SET block_id = $1, block_timestamp = $2, status = $4";
+
+        let _r = sqlx::query(q)
+            .bind(&event_data.token_id)
+            .bind(event_data.event_type.to_string())
+            .bind(event_data.event_timestamp)
+            .bind(&event_data.previous_owner)
+            .bind(&event_data.new_owner)
+            .bind(&event_data.amount)
             .execute(&client.pool)
             .await?;
 
@@ -95,6 +145,49 @@ impl OrderProvider {
         )
         .await?;
 
+        // Upsert token
+        let upsert_query = "
+        INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, status, current_owner, current_amount, quantity, start_amount, end_amount, start_date, end_date, broker_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (token_id)
+        DO UPDATE SET
+            updated_timestamp = EXCLUDED.updated_timestamp,
+            status = EXCLUDED.status,
+            current_owner = EXCLUDED.current_owner,
+            current_amount = EXCLUDED.current_amount,
+            quantity = EXCLUDED.quantity,
+            start_amount = EXCLUDED.start_amount,
+            end_amount = EXCLUDED.end_amount,
+            start_date = EXCLUDED.start_date,
+            end_date = EXCLUDED.end_date,
+            broker_id = EXCLUDED.broker_id;
+    ";
+
+        sqlx::query(upsert_query)
+            .bind(data.token_chain_id.clone())
+            .bind(data.token_address.clone())
+            .bind(data.token_id.clone())
+            .bind(block_timestamp as i64)
+            .bind(block_timestamp as i64)
+            .bind(OrderStatus::Placed.to_string())
+            .bind(data.offerer.clone())
+            .bind(data.start_amount.clone())
+            .execute(&client.pool)
+            .await?;
+
+        let event_type = EventType::from_str(&data.event_type).map_err(ProviderError::from)?;
+
+        Self::insert_event_history(
+            client,
+            &EventHistoryData {
+                token_id: data.token_id.clone(),
+                event_type,
+                event_timestamp: block_timestamp as i64,
+                previous_owner: None,
+                new_owner: Some(data.offerer.clone()),
+                amount: Some(data.start_amount.clone()),
+            }
+        ).await?;
         Ok(())
     }
 

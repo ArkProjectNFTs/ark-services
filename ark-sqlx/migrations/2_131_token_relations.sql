@@ -31,7 +31,7 @@ CREATE TABLE orderbook_token_history (
        FOREIGN KEY (token_id) REFERENCES orderbook_token(token_id)
 );
 
-CREATE TABLE orderbook_offers (
+CREATE TABLE orderbook_token_offers (
       offer_id SERIAL PRIMARY KEY,
       token_id TEXT NOT NULL,
       offer_maker TEXT NOT NULL,
