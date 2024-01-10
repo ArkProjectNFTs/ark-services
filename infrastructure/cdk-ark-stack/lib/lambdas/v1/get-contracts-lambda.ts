@@ -3,17 +3,14 @@ import { RustFunction } from "cargo-lambda-cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
-import { Vpc, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { IVpc, SubnetType } from "aws-cdk-lib/aws-ec2";
 
 export function getContractsLambda(
   scope: cdk.Stack,
+  vpc: IVpc,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const vpc = Vpc.fromLookup(scope, "ArkVPC", {
-    vpcId: "vpc-0d11f7ec183208e08",
-  });
-
   const lambdaSubnets = {
     subnetType: SubnetType.PRIVATE_WITH_EGRESS,
   };
