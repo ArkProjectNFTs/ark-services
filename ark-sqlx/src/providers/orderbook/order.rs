@@ -186,8 +186,9 @@ impl OrderProvider {
                 previous_owner: None,
                 new_owner: Some(data.offerer.clone()),
                 amount: Some(data.start_amount.clone()),
-            }
-        ).await?;
+            },
+        )
+        .await?;
         Ok(())
     }
 
