@@ -43,5 +43,12 @@ export function getContractEventsLambda(
     })
   );
 
+  getContractLambda.addToRolePolicy(
+    new iam.PolicyStatement({
+      actions: ["elasticache:*"],
+      resources: ["*"],
+    })
+  );
+
   return getContractLambda;
 }
