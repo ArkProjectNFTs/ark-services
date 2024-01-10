@@ -5,6 +5,7 @@ import * as cdk from "aws-cdk-lib";
 
 export function contractsApi(
   scope: cdk.Stack,
+  vpc: cdk.aws_ec2.IVpc,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string
@@ -17,7 +18,7 @@ export function contractsApi(
   contracts.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getContractsLambda(scope, stages, tableNamePrefix),
+      getContractsLambda(scope, vpc, stages, tableNamePrefix),
       {
         proxy: true,
       }

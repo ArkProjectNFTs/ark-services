@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { Vpc } from "aws-cdk-lib/aws-ec2";
+import { IVpc } from "aws-cdk-lib/aws-ec2";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { deployBlockIndexerLambda } from "../lambdas/block-indexer";
@@ -8,13 +8,10 @@ import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 
 export async function deployIndexer(
   scope: cdk.Stack,
+  vpc: IVpc,
   isProductionEnvironment: boolean,
   indexerVersion: string
 ) {
-  const vpc = Vpc.fromLookup(scope, "ArkVPC", {
-    vpcId: "vpc-0d11f7ec183208e08",
-  });
-
   const cluster = new Cluster(scope, "Indexers", {
     vpc: vpc,
   });

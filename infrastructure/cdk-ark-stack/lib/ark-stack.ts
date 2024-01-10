@@ -11,6 +11,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { exportToPostman } from "./postman";
 import { deployIndexer } from "./ecs/indexer";
+import { Vpc } from "aws-cdk-lib/aws-ec2";
 
 // const cacheSettings = {
 //   cacheTtl: cdk.Duration.minutes(5),
@@ -20,6 +21,11 @@ import { deployIndexer } from "./ecs/indexer";
 export class ArkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkStackProps) {
     super(scope, id, props);
+
+    const vpc = Vpc.fromLookup(scope, "ArkVPC", {
+      vpcId: "vpc-0d11f7ec183208e08",
+    });
+
     const environement = props.isProductionEnvironment
       ? "production"
       : "staging";
@@ -75,7 +81,7 @@ export class ArkStack extends cdk.Stack {
       ? "ark_project"
       : "ark_project_staging";
 
-    contractsApi(this, versionedRoot, props.stages, tableNamePrefix);
+    contractsApi(this, vpc, versionedRoot, props.stages, tableNamePrefix);
     eventsApi(this, versionedRoot, props.stages, tableNamePrefix);
     tokensApi(this, versionedRoot, props.stages, tableNamePrefix);
     ownerApi(this, versionedRoot, props.stages, tableNamePrefix);
@@ -110,7 +116,12 @@ export class ArkStack extends cdk.Stack {
       }
     });
 
-    deployIndexer(this, props.isProductionEnvironment, props.indexerVersion);
+    deployIndexer(
+      this,
+      vpc,
+      props.isProductionEnvironment,
+      props.indexerVersion
+    );
   }
 
   private createStage(
