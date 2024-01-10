@@ -3,12 +3,21 @@ import { RustFunction } from "cargo-lambda-cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
+import { Vpc, SubnetType } from "aws-cdk-lib/aws-ec2";
 
 export function getContractsLambda(
   scope: cdk.Stack,
   stages: string[],
   tableNamePrefix: string
 ) {
+  const vpc = Vpc.fromLookup(scope, "ArkVPC", {
+    vpcId: "vpc-0d11f7ec183208e08",
+  });
+
+  const lambdaSubnets = {
+    subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+  };
+
   const indexName = "GSI2PK-GSI2SK-index";
   // Define a RustFunction using the cargo-lambda-cdk construct
   const getContractsLambda = new RustFunction(scope, "get-contracts", {
@@ -23,6 +32,8 @@ export function getContractsLambda(
     },
     logRetention: RetentionDays.ONE_DAY,
     // Additional bundling options can be specified if necessary
+    vpc: vpc, // Set the VPC
+    vpcSubnets: lambdaSubnets, // Set the subnets
   });
 
   let resourceArns: string[] = [];
@@ -39,6 +50,15 @@ export function getContractsLambda(
     new iam.PolicyStatement({
       actions: ["dynamodb:Query"],
       resources: resourceArns,
+    })
+  );
+
+  getContractsLambda.addToRolePolicy(
+    new iam.PolicyStatement({
+      actions: ["elasticache:*"],
+      resources: [
+        "arn:aws:elasticache:us-east-1:223605539824:serverlesscache:arkprojectredis",
+      ],
     })
   );
 
