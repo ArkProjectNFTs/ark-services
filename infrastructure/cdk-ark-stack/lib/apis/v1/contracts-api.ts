@@ -2,10 +2,12 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { getContractsLambda } from "../../lambdas/v1/get-contracts-lambda";
 import { getContractLambda } from "../../lambdas/v1/get-contract-lambda";
 import * as cdk from "aws-cdk-lib";
+import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
 
 export function contractsApi(
   scope: cdk.Stack,
-  vpc: cdk.aws_ec2.IVpc,
+  vpc: IVpc,
+  lambdaSecurityGroup: SecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string
@@ -18,7 +20,13 @@ export function contractsApi(
   contracts.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getContractsLambda(scope, vpc, stages, tableNamePrefix),
+      getContractsLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
