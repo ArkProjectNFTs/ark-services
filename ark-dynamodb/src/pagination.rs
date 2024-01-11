@@ -37,7 +37,10 @@ impl DynamoDbPaginator {
     /// Get the cursor (`last_evaluated_key`) for the given
     /// `hash_key`. The `hash_key` is obtained from `store_cursor` function.
     pub fn get_cursor(&self, hash_key: &str) -> Result<Option<Lek>, ProviderError> {
-        if let Ok(mut conn) = self.client.get_connection() {
+        if let Ok(mut conn) = self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(2))
+        {
             let data: Option<HashMap<String, String>> = conn
                 .hgetall(hash_key)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
