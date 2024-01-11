@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { IVpc } from "aws-cdk-lib/aws-ec2";
+import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { deployBlockIndexerLambda } from "../lambdas/block-indexer";
@@ -9,6 +9,7 @@ import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 export async function deployIndexer(
   scope: cdk.Stack,
   vpc: IVpc,
+  lambdaSecurityGroup: SecurityGroup,
   isProductionEnvironment: boolean,
   indexerVersion: string
 ) {
@@ -35,6 +36,8 @@ export async function deployIndexer(
 
     let lambdaFunction = deployBlockIndexerLambda(
       scope,
+      vpc,
+      lambdaSecurityGroup,
       `BlockIndexerLambda${network.charAt(0).toUpperCase() + network.slice(1)}`,
       network,
       tableName

@@ -2,9 +2,12 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { getContractEventsLambda } from "../../lambdas/v1/get-contract-events-lambda";
 import { getTokenEventsLambda } from "../../lambdas/v1/get-token-events-lambda";
 import * as cdk from "aws-cdk-lib";
+import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
 
 export function eventsApi(
   scope: cdk.Stack,
+  vpc: IVpc,
+  lambdaSecurityGroup: SecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string
@@ -19,7 +22,13 @@ export function eventsApi(
   eventContractAddressResource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getContractEventsLambda(scope, stages, tableNamePrefix),
+      getContractEventsLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
@@ -33,7 +42,13 @@ export function eventsApi(
   eventTokenIdResource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getTokenEventsLambda(scope, stages, tableNamePrefix),
+      getTokenEventsLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }

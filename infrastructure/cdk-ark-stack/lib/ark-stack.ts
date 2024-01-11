@@ -95,9 +95,30 @@ export class ArkStack extends cdk.Stack {
       props.stages,
       tableNamePrefix
     );
-    eventsApi(this, versionedRoot, props.stages, tableNamePrefix);
-    tokensApi(this, versionedRoot, props.stages, tableNamePrefix);
-    ownerApi(this, versionedRoot, props.stages, tableNamePrefix);
+    eventsApi(
+      this,
+      vpc,
+      lambdaSecurityGroup,
+      versionedRoot,
+      props.stages,
+      tableNamePrefix
+    );
+    tokensApi(
+      this,
+      vpc,
+      lambdaSecurityGroup,
+      versionedRoot,
+      props.stages,
+      tableNamePrefix
+    );
+    ownerApi(
+      this,
+      vpc,
+      lambdaSecurityGroup,
+      versionedRoot,
+      props.stages,
+      tableNamePrefix
+    );
 
     const postmanApiKey = process.env.POSTMAN_API_KEY || "";
     const awsRegion = process.env.AWS_REGION || "";
@@ -132,6 +153,7 @@ export class ArkStack extends cdk.Stack {
     deployIndexer(
       this,
       vpc,
+      lambdaSecurityGroup,
       props.isProductionEnvironment,
       props.indexerVersion
     );
