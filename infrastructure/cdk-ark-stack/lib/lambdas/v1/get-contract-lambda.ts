@@ -3,25 +3,29 @@ import { RustFunction } from "cargo-lambda-cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
+import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
 
 export function getContractLambda(
   scope: cdk.Stack,
+  vpc: IVpc,
+  lambdaSecurityGroup: SecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  // Define a RustFunction using the cargo-lambda-cdk construct
   const getContractLambda = new RustFunction(scope, "get-contract", {
-    // Specify the path to your Rust project's Cargo.toml file
     manifestPath: "../../ark-lambdas/apigw/lambda-get-contract/Cargo.toml",
     environment: {
       RUST_BACKTRACE: "1",
     },
     logRetention: RetentionDays.ONE_DAY,
-    bundling: {
-      assetHashType: AssetHashType.OUTPUT, // Set the assetHashType here
-      // ...other bundling options if needed
+    vpc: vpc,
+    vpcSubnets: {
+      subnetType: SubnetType.PRIVATE_WITH_EGRESS,
     },
-    // Additional bundling options can be specified if necessary
+    securityGroups: [lambdaSecurityGroup],
+    bundling: {
+      assetHashType: AssetHashType.OUTPUT,
+    },
   });
 
   let resourceArns: string[] = [];
