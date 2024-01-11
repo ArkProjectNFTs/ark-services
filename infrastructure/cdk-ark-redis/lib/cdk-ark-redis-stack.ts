@@ -22,11 +22,11 @@ export class ArkRedisStack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    // redisSecurityGroup.addIngressRule(
-    //   Peer.securityGroupId("sgr-0b290e175cbebce5d"), // reference to the Lambda security group ID
-    //   Port.tcp(6379),
-    //   "Allow inbound Redis traffic from Lambda security group"
-    // );
+    redisSecurityGroup.addIngressRule(
+      Peer.securityGroupId("sg-005278ae734be746c"),
+      Port.tcp(6379),
+      "Allow inbound Redis traffic from Lambda security group"
+    );
 
     new CfnCacheCluster(this, "ProdRedisCluster", {
       clusterName: "ProdRedisCluster",
