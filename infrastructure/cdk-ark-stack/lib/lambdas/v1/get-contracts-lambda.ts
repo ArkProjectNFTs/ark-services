@@ -54,7 +54,7 @@ export function getContractsLambda(
     new iam.PolicyStatement({
       actions: ["elasticache:*"],
       resources: [
-        "arn:aws:elasticache:us-east-1:223605539824:serverlesscache:arkprojectredis",
+        "arn:aws:elasticache:us-east-1:223605539824:cluster:prodrediscluster",
       ],
     })
   );
