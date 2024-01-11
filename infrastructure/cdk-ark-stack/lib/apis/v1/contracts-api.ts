@@ -40,7 +40,13 @@ export function contractsApi(
   contractsContractAddressRessource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getContractLambda(scope, stages, tableNamePrefix),
+      getContractLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }

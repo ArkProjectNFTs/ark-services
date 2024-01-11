@@ -3,9 +3,12 @@ import { getContractTokensLambda } from "../../lambdas/v1/get-contract-tokens-la
 import { getTokenLambda } from "../../lambdas/v1/get-token-lambda";
 import { postRefreshTokenMetadataLambda } from "../../lambdas/v1/post-refresh-token-metadata";
 import * as cdk from "aws-cdk-lib";
+import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
 
 export function tokensApi(
   scope: cdk.Stack,
+  vpc: IVpc,
+  lambdaSecurityGroup: SecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string
@@ -20,7 +23,13 @@ export function tokensApi(
   tokenContractAddressResource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getContractTokensLambda(scope, stages, tableNamePrefix),
+      getContractTokensLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
@@ -34,7 +43,7 @@ export function tokensApi(
   tokensTokenIdResource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getTokenLambda(scope, stages, tableNamePrefix),
+      getTokenLambda(scope, vpc, lambdaSecurityGroup, stages, tableNamePrefix),
       {
         proxy: true,
       }
@@ -52,7 +61,13 @@ export function tokensApi(
   refreshMetadataRessource.addMethod(
     "POST",
     new apigateway.LambdaIntegration(
-      postRefreshTokenMetadataLambda(scope, stages, tableNamePrefix),
+      postRefreshTokenMetadataLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
