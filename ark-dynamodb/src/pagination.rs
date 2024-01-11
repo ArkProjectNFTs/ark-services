@@ -37,7 +37,10 @@ impl DynamoDbPaginator {
     /// Get the cursor (`last_evaluated_key`) for the given
     /// `hash_key`. The `hash_key` is obtained from `store_cursor` function.
     pub fn get_cursor(&self, hash_key: &str) -> Result<Option<Lek>, ProviderError> {
-        if let Ok(mut conn) = self.client.get_connection() {
+        if let Ok(mut conn) = self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(2))
+        {
             let data: Option<HashMap<String, String>> = conn
                 .hgetall(hash_key)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
@@ -70,7 +73,10 @@ impl DynamoDbPaginator {
     ) -> Result<HashMap<String, Option<Lek>>, ProviderError> {
         let mut cursors: HashMap<String, Option<Lek>> = HashMap::new();
 
-        if let Ok(mut conn) = self.client.get_connection() {
+        if let Ok(mut conn) = self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(2))
+        {
             // Get all the keys for the multiple cursors.
             let keys: Option<HashMap<String, String>> = conn
                 .hgetall(hash_key)
@@ -94,7 +100,10 @@ impl DynamoDbPaginator {
         last_evaluated_key: &Option<Lek>,
     ) -> Result<Option<String>, ProviderError> {
         if let Some(lek) = last_evaluated_key {
-            if let Ok(mut conn) = self.client.get_connection() {
+            if let Ok(mut conn) = self
+                .client
+                .get_connection_with_timeout(Duration::from_secs(2))
+            {
                 let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
 
                 for (key, value) in lek {
@@ -127,7 +136,10 @@ impl DynamoDbPaginator {
         &self,
         last_evaluated_keys: &HashMap<String, Option<Lek>>,
     ) -> Result<Option<String>, ProviderError> {
-        if let Ok(mut conn) = self.client.get_connection() {
+        if let Ok(mut conn) = self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(2))
+        {
             let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
 
             for (lek_name, lek) in last_evaluated_keys {
