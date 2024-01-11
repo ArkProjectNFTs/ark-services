@@ -11,7 +11,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as logs from "aws-cdk-lib/aws-logs";
 import { exportToPostman } from "./postman";
 import { deployIndexer } from "./ecs/indexer";
-import { Vpc } from "aws-cdk-lib/aws-ec2";
+import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 
 // const cacheSettings = {
 //   cacheTtl: cdk.Duration.minutes(5),
@@ -81,7 +81,20 @@ export class ArkStack extends cdk.Stack {
       ? "ark_project"
       : "ark_project_staging";
 
-    contractsApi(this, vpc, versionedRoot, props.stages, tableNamePrefix);
+    const lambdaSecurityGroup = new SecurityGroup(this, "LambdaSecurityGroup", {
+      vpc,
+      description: "Security group for Lambdas",
+      allowAllOutbound: true,
+    });
+
+    contractsApi(
+      this,
+      vpc,
+      lambdaSecurityGroup,
+      versionedRoot,
+      props.stages,
+      tableNamePrefix
+    );
     eventsApi(this, versionedRoot, props.stages, tableNamePrefix);
     tokensApi(this, versionedRoot, props.stages, tableNamePrefix);
     ownerApi(this, versionedRoot, props.stages, tableNamePrefix);
