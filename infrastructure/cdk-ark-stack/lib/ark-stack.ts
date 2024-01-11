@@ -162,7 +162,8 @@ export class ArkStack extends cdk.Stack {
         stageName,
         variables: {
           tableName,
-          paginationCache: "redis://ipfs.arkproject.dev:6379",
+          paginationCache:
+            "redis://arkprojectredis-adsnrq.serverless.use1.cache.amazonaws.com:6379",
           maxItemsLimit: "100",
           lambdaUsageTable: lambdaUsageTable,
           stageName: stageName,
