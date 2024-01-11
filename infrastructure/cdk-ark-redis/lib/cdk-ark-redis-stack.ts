@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
+import { Peer, Port, SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { CfnCacheCluster, CfnSubnetGroup } from "aws-cdk-lib/aws-elasticache";
 import { Construct } from "constructs";
 
@@ -21,6 +21,12 @@ export class ArkRedisStack extends cdk.Stack {
       description: "Security group for Redis Cluster",
       allowAllOutbound: true,
     });
+
+    // redisSecurityGroup.addIngressRule(
+    //   Peer.securityGroupId("sgr-0b290e175cbebce5d"), // reference to the Lambda security group ID
+    //   Port.tcp(6379),
+    //   "Allow inbound Redis traffic from Lambda security group"
+    // );
 
     new CfnCacheCluster(this, "ProdRedisCluster", {
       clusterName: "ProdRedisCluster",
