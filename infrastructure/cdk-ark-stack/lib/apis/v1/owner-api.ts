@@ -3,9 +3,12 @@ import { getOwnerTokensLambda } from "../../lambdas/v1/get-owner-tokens-lambda";
 import { getOwnerContractsLambda } from "../../lambdas/v1/get-owner-contracts-lambda";
 import * as cdk from "aws-cdk-lib";
 import { getOwnerEventsLambda } from "../../lambdas/v1/get-owner-events-lambda";
+import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
 
 export function ownerApi(
   scope: cdk.Stack,
+  vpc: IVpc,
+  lambdaSecurityGroup: SecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string
@@ -20,7 +23,13 @@ export function ownerApi(
   ownerTokensRessource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getOwnerTokensLambda(scope, stages, tableNamePrefix),
+      getOwnerTokensLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
@@ -34,7 +43,13 @@ export function ownerApi(
   ownerContractsRessource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getOwnerContractsLambda(scope, stages, tableNamePrefix),
+      getOwnerContractsLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
@@ -48,7 +63,13 @@ export function ownerApi(
   ownerEventsRessource.addMethod(
     "GET",
     new apigateway.LambdaIntegration(
-      getOwnerEventsLambda(scope, stages, tableNamePrefix),
+      getOwnerEventsLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
       {
         proxy: true,
       }
