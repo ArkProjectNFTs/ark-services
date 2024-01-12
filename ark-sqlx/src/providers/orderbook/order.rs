@@ -32,6 +32,21 @@ impl EventType {
     }
 }
 
+impl fmt::Display for EventType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                EventType::Listing => "Listing",
+                EventType::Auction => "Auction",
+                EventType::Offer => "Offer",
+                EventType::CollectionOffer => "CollectionOffer",
+            }
+        )
+    }
+}
+
 impl fmt::Display for OrderStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -51,6 +66,7 @@ pub struct OrderProvider {}
 
 struct EventHistoryData {
     token_id: Option<String>,
+    token_address: Option<String>,
     event_type: EventType,
     event_timestamp: i64,
     previous_owner: Option<String>,
@@ -81,16 +97,20 @@ impl OrderProvider {
         Ok(())
     }
 
-    pub async fn insert_event_history(
+    async fn insert_event_history(
         client: &SqlxCtx,
         event_data: &EventHistoryData,
     ) -> Result<(), ProviderError> {
-        trace!("Updating order status {} {}", order_hash, status);
+        trace!("Insert event history");
 
-        let q = "INSERT INTO orderbook_order_status (block_id, block_timestamp, order_hash, status) VALUES ($1, $2, $3, $4) ON CONFLICT (order_hash) DO UPDATE SET block_id = $1, block_timestamp = $2, status = $4";
+        let q = "
+            INSERT INTO orderbook_token_history (token_id, token_address, event_type, event_timestamp, previous_owner, new_owner, amount, additional_info)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+        ";
 
         let _r = sqlx::query(q)
             .bind(&event_data.token_id)
+            .bind(&event_data.token_address)
             .bind(event_data.event_type.to_string())
             .bind(event_data.event_timestamp)
             .bind(&event_data.previous_owner)
@@ -175,12 +195,13 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
-        let event_type = EventType::from_str(&data.event_type).map_err(ProviderError::from)?;
+        let event_type = EventType::from_str(&data.order_type).map_err(ProviderError::from)?;
 
         Self::insert_event_history(
             client,
             &EventHistoryData {
                 token_id: data.token_id.clone(),
+                token_address: Some(data.token_address.clone()),
                 event_type,
                 event_timestamp: block_timestamp as i64,
                 previous_owner: None,

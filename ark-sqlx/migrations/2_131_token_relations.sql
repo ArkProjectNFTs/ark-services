@@ -8,39 +8,41 @@ CREATE TABLE orderbook_token (
        updated_timestamp BIGINT NOT NULL,
        status TEXT NOT NULL,
        current_owner TEXT NOT NULL,
-       current_amount TEXT NOT NULL,
+       current_price TEXT NOT NULL,
 
-       quantity TEXT NOT NULL,
-       start_amount TEXT NOT NULL,
-       end_amount TEXT NOT NULL,
-       start_date BIGINT NOT NULL,
-       end_date BIGINT NOT NULL,
-       broker_id TEXT NOT NULL,
+       quantity TEXT NULL,
+       start_amount TEXT NULL,
+       end_amount TEXT NULL,
+       start_date BIGINT NULL,
+       end_date BIGINT NULL,
+       broker_id TEXT NULL,
 
-       PRIMARY KEY (token_id)
+       PRIMARY KEY (token_id, token_address)
 );
 
 CREATE TABLE orderbook_token_history (
        history_id SERIAL PRIMARY KEY,
        token_id TEXT NOT NULL,
+       token_address TEXT NOT NULL,
        event_type TEXT NOT NULL,
        event_timestamp BIGINT NOT NULL,
        previous_owner TEXT,       -- NULL if new listing
        new_owner TEXT,            -- NULL if not transfert
        amount TEXT,
-       FOREIGN KEY (token_id) REFERENCES orderbook_token(token_id)
+       FOREIGN KEY (token_id, token_address) REFERENCES orderbook_token(token_id, token_address)
 );
 
 CREATE TABLE orderbook_token_offers (
       offer_id SERIAL PRIMARY KEY,
       token_id TEXT NOT NULL,
+      token_address TEXT NOT NULL,
       offer_maker TEXT NOT NULL,
       offer_amount TEXT NOT NULL,
       offer_quantity TEXT NOT NULL,
       offer_timestamp BIGINT NOT NULL,
       offer_status TEXT NOT NULL,
       offer_expiry BIGINT,
-      FOREIGN KEY (token_id) REFERENCES orderbook_token(token_id)
+      FOREIGN KEY (token_id, token_address) REFERENCES orderbook_token(token_id, token_address)
 );
 
 CREATE TABLE orderbook_order_cancelled (
