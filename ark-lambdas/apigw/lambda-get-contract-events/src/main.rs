@@ -15,6 +15,7 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
+use tracing::info;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -48,12 +49,20 @@ async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpRespo
     let dynamo_rsp = provider.get_contract_events(&ctx.dynamodb, address).await?;
 
     let items = dynamo_rsp.inner();
+    let last_evaluated_key = &dynamo_rsp.lek;
+
+    info!("Last evaluated key: {:?}", last_evaluated_key);
+
     let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+
+    info!("Cursor: {:?}", cursor);
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
         result: items,
     })?;
+
+    info!("Response: {:?}", rsp);
 
     Ok(LambdaHttpResponse {
         capacity: dynamo_rsp.capacity,
