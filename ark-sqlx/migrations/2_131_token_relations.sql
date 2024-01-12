@@ -26,9 +26,11 @@ CREATE TABLE orderbook_token_history (
        token_address TEXT NOT NULL,
        event_type TEXT NOT NULL,
        event_timestamp BIGINT NOT NULL,
-       previous_owner TEXT,       -- NULL if new listing
-       new_owner TEXT,            -- NULL if not transfert
-       amount TEXT,
+       order_status TEXT NOT NULL,
+       previous_owner TEXT NULL,       -- NULL if new listing
+       new_owner TEXT NULL,            -- NULL if not transfert
+       amount TEXT NULL,
+       canceled_reason TEXT NULL, -- NULL if not cancelled
        FOREIGN KEY (token_id, token_address) REFERENCES orderbook_token(token_id, token_address)
 );
 

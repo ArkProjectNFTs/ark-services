@@ -65,16 +65,43 @@ impl fmt::Display for OrderStatus {
 pub struct OrderProvider {}
 
 struct EventHistoryData {
-    token_id: Option<String>,
-    token_address: Option<String>,
+    token_id: String,
+    token_address: String,
     event_type: EventType,
+    order_status: OrderStatus,
     event_timestamp: i64,
     previous_owner: Option<String>,
     new_owner: Option<String>,
     amount: Option<String>,
+    canceled_reason: Option<String>,
+}
+
+struct TokenData {
+    token_id: String,
+    token_address: String,
+    order_type: EventType,
 }
 
 impl OrderProvider {
+
+    pub async fn get_token_data_by_order_hash(
+        client: &SqlxCtx,
+        order_hash: &str,
+    ) -> Result<TokenData, ProviderError> {
+        let query = "
+        SELECT token_id, token_address, order_type
+        FROM orderbook_order_placed
+        WHERE order_hash = $1;
+    ";
+
+        let token_data = sqlx::query_as::<_, TokenData>(query)
+            .bind(order_hash)
+            .fetch_one(&client.pool)
+            .await?;
+
+        Ok(token_data)
+    }
+
     pub async fn update_order_status(
         client: &SqlxCtx,
         block_id: u64,
@@ -189,7 +216,7 @@ impl OrderProvider {
             .bind(data.token_id.clone())
             .bind(block_timestamp as i64)
             .bind(block_timestamp as i64)
-            .bind(OrderStatus::Placed.to_string())
+                .bind(OrderStatus::Placed.to_string())
             .bind(data.offerer.clone())
             .bind(data.start_amount.clone())
             .execute(&client.pool)
@@ -200,13 +227,15 @@ impl OrderProvider {
         Self::insert_event_history(
             client,
             &EventHistoryData {
-                token_id: data.token_id.clone(),
-                token_address: Some(data.token_address.clone()),
+                token_id: data.token_id.clone().expect("Missing token id"),
+                token_address: data.token_address.clone(),
                 event_type,
                 event_timestamp: block_timestamp as i64,
+                order_status: OrderStatus::Placed,
                 previous_owner: None,
                 new_owner: Some(data.offerer.clone()),
                 amount: Some(data.start_amount.clone()),
+                canceled_reason: None,
             },
         )
         .await?;
@@ -240,6 +269,22 @@ impl OrderProvider {
         )
         .await?;
 
+        let token_data = Self::get_token_data_by_order_hash(client, &data.order_hash).await?;
+        Self::insert_event_history(
+            client,
+            &EventHistoryData {
+                token_id: token_data.token_id,
+                token_address: token_data.token_address,
+                event_type: token_data.order_type.into(),
+                event_timestamp: block_timestamp as i64,
+                order_status: OrderStatus::Cancelled,
+                canceled_reason: Some(data.reason.clone()),
+                new_owner: None,
+                amount: None,
+                previous_owner: None,
+            }
+        ).await?;
+
         Ok(())
     }
 
@@ -271,6 +316,22 @@ impl OrderProvider {
         )
         .await?;
 
+        let token_data = Self::get_token_data_by_order_hash(client, &data.order_hash).await?;
+        Self::insert_event_history(
+            client,
+            &EventHistoryData {
+                token_id: token_data.token_id,
+                token_address: token_data.token_address,
+                event_type: token_data.order_type.into(),
+                order_status: OrderStatus::Fulfilled,
+                event_timestamp: block_timestamp as i64,
+                canceled_reason: Some(data.reason.clone()),
+                new_owner: None,
+                amount: None,
+                previous_owner: None,
+            }
+        ).await?;
+
         Ok(())
     }
 
@@ -299,6 +360,22 @@ impl OrderProvider {
             OrderStatus::Executed,
         )
         .await?;
+
+        let token_data = Self::get_token_data_by_order_hash(client, &data.order_hash).await?;
+        Self::insert_event_history(
+            client,
+            &EventHistoryData {
+                token_id: token_data.token_id,
+                token_address: token_data.token_address,
+                event_type: token_data.order_type.into(),
+                order_status: OrderStatus::Executed,
+                event_timestamp: block_timestamp as i64,
+                canceled_reason: Some(data.reason.clone()),
+                new_owner: None,
+                amount: None,
+                previous_owner: None,
+            }
+        ).await?;
 
         Ok(())
     }
