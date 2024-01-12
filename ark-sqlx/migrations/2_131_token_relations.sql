@@ -76,3 +76,7 @@ CREATE TABLE orderbook_order_executed (
 
        PRIMARY KEY (order_hash)
 );
+
+-- rename orderbook_order_placed to orderbook_order_created
+ALTER TABLE orderbook_order_placed
+    RENAME TO orderbook_order_created;

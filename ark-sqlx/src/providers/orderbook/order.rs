@@ -90,7 +90,7 @@ impl OrderProvider {
     ) -> Result<TokenData, ProviderError> {
         let query = "
         SELECT token_id, token_address, order_type
-        FROM orderbook_order_placed
+        FROM orderbook_order_created
         WHERE order_hash = $1;
     ";
 
@@ -157,7 +157,7 @@ impl OrderProvider {
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
 
-        let q = "INSERT INTO orderbook_order_placed (block_id, block_timestamp, order_hash, order_version, order_type, cancelled_order_hash, route, currency_address, currency_chain_id, salt, offerer, token_chain_id, token_address, token_id, quantity, start_amount, end_amount, start_date, end_date, broker_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20);";
+        let q = "INSERT INTO orderbook_order_created (block_id, block_timestamp, order_hash, order_version, order_type, cancelled_order_hash, route, currency_address, currency_chain_id, salt, offerer, token_chain_id, token_address, token_id, quantity, start_amount, end_amount, start_date, end_date, broker_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20);";
 
         let _r = sqlx::query(q)
             .bind(block_id as i64)
