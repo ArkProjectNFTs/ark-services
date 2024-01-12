@@ -31,7 +31,7 @@ export class ArkRedisStack extends cdk.Stack {
     new CfnCacheCluster(this, "ProdRedisCluster", {
       clusterName: "ProdRedisCluster",
       engine: "redis",
-      cacheNodeType: "cache.t2.micro",
+      cacheNodeType: "cache.t2.small",
       numCacheNodes: 1,
       cacheSubnetGroupName: subnetGroup.ref,
       vpcSecurityGroupIds: [redisSecurityGroup.securityGroupId],

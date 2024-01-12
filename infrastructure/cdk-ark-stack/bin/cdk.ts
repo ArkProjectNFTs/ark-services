@@ -29,8 +29,8 @@ const indexerVersion: string = process.env.INDEXER_VERSION ?? "UNDEFINED";
 
 new ArkStack(app, stackName, {
   env: {
-    account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION, // or whatever region you want to deploy to
+    account: "223605539824",
+    region: "us-east-1",
   },
   stages: stages,
   isProductionEnvironment,
