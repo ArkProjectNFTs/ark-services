@@ -32,6 +32,7 @@ export function getOwnerContractsLambda(
         subnetType: SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [lambdaSecurityGroup],
+      timeout: cdk.Duration.seconds(10),
     }
   );
 

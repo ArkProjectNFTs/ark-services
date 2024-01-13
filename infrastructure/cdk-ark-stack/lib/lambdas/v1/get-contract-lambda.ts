@@ -26,6 +26,7 @@ export function getContractLambda(
     bundling: {
       assetHashType: AssetHashType.OUTPUT,
     },
+    timeout: cdk.Duration.seconds(10),
   });
 
   let resourceArns: string[] = [];

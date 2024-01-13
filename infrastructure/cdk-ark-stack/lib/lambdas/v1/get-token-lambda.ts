@@ -26,6 +26,7 @@ export function getTokenLambda(
       subnetType: SubnetType.PRIVATE_WITH_EGRESS,
     },
     securityGroups: [lambdaSecurityGroup],
+    timeout: cdk.Duration.seconds(10),
   });
 
   let resourceArns: string[] = [];

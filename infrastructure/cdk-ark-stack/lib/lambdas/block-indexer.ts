@@ -31,6 +31,7 @@ export function deployBlockIndexerLambda(
       subnetType: SubnetType.PRIVATE_WITH_EGRESS,
     },
     securityGroups: [lambdaSecurityGroup],
+    timeout: cdk.Duration.minutes(3),
   });
 
   let resourceArns: string[] = [];
