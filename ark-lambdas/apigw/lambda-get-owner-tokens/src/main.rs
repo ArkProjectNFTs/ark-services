@@ -15,14 +15,19 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
-use tracing::info;
+use tracing::{error, info};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
+    info!("Get owner tokens: {:?}", event);
+
     // 1. Init the context.
     let ctx = LambdaCtx::from_event(&event).await?;
 
     // 2. Get params.
     let (owner_address, contract_address) = get_params(&event)?;
+
+    info!("Owner address: {:?}", owner_address);
+    info!("Contract address: {:?}", contract_address);
 
     // 3. Process the request.
     let r = process_event(&ctx, &owner_address, contract_address.clone()).await;
@@ -40,6 +45,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             Ok(lambda_rsp.inner)
         }
         Err(e) => {
+            error!("Error: {:?}", e);
             ctx.register_usage(req_params, None).await?;
             Err(e)
         }
@@ -51,6 +57,8 @@ async fn process_event(
     owner_address: &str,
     contract_address: Option<String>,
 ) -> Result<LambdaHttpResponse, Error> {
+    info!("Processing event...");
+
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let dynamo_rsp = provider
