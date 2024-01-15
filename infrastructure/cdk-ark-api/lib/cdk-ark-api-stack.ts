@@ -19,17 +19,17 @@ export class ArkApiStack extends cdk.Stack {
 
     const awsRegion = process.env.AWS_REGION || "";
 
-    const environement = this.getEnvironment(props);
+    const environment = this.getEnvironment(props);
 
-    const environementName =
-      environement.charAt(0).toUpperCase() + environement.slice(1);
+    const environmentName =
+      environment.charAt(0).toUpperCase() + environment.slice(1);
 
     const vpc = this.getVpc();
-    const api = this.createApi(environement);
+    const api = this.createApi(environment);
 
     const { adminPlan, basicPlan, payAsYouGoPlan } = setupApiPlans(
       api,
-      environement
+      environment
     );
 
     // V1 API
@@ -53,12 +53,12 @@ export class ArkApiStack extends cdk.Stack {
 
     const securityGroupId = ssm.StringParameter.valueForStringParameter(
       this,
-      `/ark/${environement}/redisSecurityGroupId`
+      `/ark/${environment}/redisSecurityGroupId`
     );
 
     const redisSecurityGroup = SecurityGroup.fromSecurityGroupId(
       this,
-      `Ark${environementName}RedisSecurityGroup`,
+      `Ark${environmentName}RedisSecurityGroup`,
       securityGroupId
     );
 
@@ -111,7 +111,7 @@ export class ArkApiStack extends cdk.Stack {
         }`,
         network,
         `${tableNamePrefix}_${network}`,
-        environement
+        environment
       );
     });
 
@@ -120,7 +120,7 @@ export class ArkApiStack extends cdk.Stack {
       const createdStage = createApiStage(
         this,
         api,
-        environement,
+        environment,
         stage,
         `${tableNamePrefix}_${stage}`
       );
@@ -134,7 +134,7 @@ export class ArkApiStack extends cdk.Stack {
       // if (props.isProductionEnvironment) {
       //   const postmanApiKey = process.env.POSTMAN_API_KEY || "";
       //   await exportToPostman(
-      //     environement,
+      //     environment,
       //     stage,
       //     postmanApiKey,
       //     api.restApiId,

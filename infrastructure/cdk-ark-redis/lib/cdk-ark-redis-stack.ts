@@ -16,37 +16,37 @@ export class ArkRedisStack extends cdk.Stack {
       vpcId: "vpc-0d11f7ec183208e08",
     });
 
-    const environement = props.isProductionEnvironment
+    const environment = props.isProductionEnvironment
       ? "production"
       : "staging";
-    const environementName =
-      environement.charAt(0).toUpperCase() + environement.slice(1);
+    const environmentName =
+      environment.charAt(0).toUpperCase() + environment.slice(1);
 
     const subnetGroup = new CfnSubnetGroup(
       this,
-      `Ark${environementName}RedisSubnetGroup`,
+      `Ark${environmentName}RedisSubnetGroup`,
       {
-        description: `Subnet Group for Redis Cluster (${environementName})`,
+        description: `Subnet Group for Redis Cluster (${environmentName})`,
         subnetIds: vpc.privateSubnets.map((subnet) => subnet.subnetId),
       }
     );
 
     const redisSecurityGroup = new SecurityGroup(
       this,
-      `Ark${environementName}RedisSecurityGroup`,
+      `Ark${environmentName}RedisSecurityGroup`,
       {
         vpc,
-        description: `Security group for Redis Cluster (${environementName})`,
+        description: `Security group for Redis Cluster (${environmentName})`,
         allowAllOutbound: true,
-        securityGroupName: `Ark${environementName}RedisSecurityGroup`,
+        securityGroupName: `Ark${environmentName}RedisSecurityGroup`,
       }
     );
 
     const cluster = new CfnCacheCluster(
       this,
-      `Ark${environementName}RedisCluster`,
+      `Ark${environmentName}RedisCluster`,
       {
-        clusterName: `Ark${environementName}RedisCluster`,
+        clusterName: `Ark${environmentName}RedisCluster`,
         engine: "redis",
         cacheNodeType: props.isProductionEnvironment
           ? "cache.t3.small"
@@ -59,18 +59,18 @@ export class ArkRedisStack extends cdk.Stack {
 
     new ssm.StringParameter(
       this,
-      `ArkProject-${environementName}-RedisEndpointAddress`,
+      `ArkProject-${environmentName}-RedisEndpointAddress`,
       {
-        parameterName: `/ark/${environement}/redisConnectionString`,
+        parameterName: `/ark/${environment}/redisConnectionString`,
         stringValue: cluster.attrRedisEndpointAddress,
       }
     );
 
     new ssm.StringParameter(
       this,
-      `ArkProject-${environementName}-RedisSecurityGroupId`,
+      `ArkProject-${environmentName}-RedisSecurityGroupId`,
       {
-        parameterName: `/ark/${environement}/redisSecurityGroupId`,
+        parameterName: `/ark/${environment}/redisSecurityGroupId`,
         stringValue: redisSecurityGroup.securityGroupId,
       }
     );

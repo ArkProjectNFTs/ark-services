@@ -1,9 +1,18 @@
-name: Deploy Production environment to AWS (ArkStack)
+name: Deploy Indexers to AWS (Staging)
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-ark-indexers-staging.yml"
+      - "infrastructure/cdk-ecr/**"
+      - "infrastructure/cdk-ark-indexers/**"
+      - "ark-indexer/**"
+      - "ark-lambdas/**"
+      - "ark-dynamodb/**"
+      - "ark-metadata-refresh/**"
 
 jobs:
   discord-notification:
@@ -15,7 +24,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🚢 Redeploying NFT API infrastructure to production..."
+                  "content": "🧪 Deploying Indexers on Staging environment..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -24,11 +33,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -83,8 +87,8 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-production-latest --file docker/indexer/Dockerfile . --load
-          docker push $ECR_URL:indexer-production-latest
+          docker buildx build --tag $ECR_URL:indexer-staging-latest --file docker/indexer/Dockerfile . --load
+          docker push $ECR_URL:indexer-staging-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
@@ -198,7 +202,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-stack
+          cd infrastructure/cdk-ark-indexers
           pnpm install
 
       - name: Cache Cargo registry
@@ -226,20 +230,20 @@ jobs:
         run: |
           pip install cargo-lambda
 
-      - name: Bootstrap CDK API Gateway
+      - name: Bootstrap Indexers
         run: |
-          cd infrastructure/cdk-ark-stack
-          pnpm cdk bootstrap -c isProductionEnvironment=true
+          cd infrastructure/cdk-ark-indexers
+          pnpm cdk bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy CDK API Gateway
+      - name: Deploy Indexers
         run: |
-          cd infrastructure/cdk-ark-stack
-          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
+          cd infrastructure/cdk-ark-indexers
+          pnpm cdk deploy --require-approval never
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}

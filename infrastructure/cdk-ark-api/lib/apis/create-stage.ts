@@ -8,14 +8,14 @@ import * as ssm from "aws-cdk-lib/aws-ssm";
 function createApiStage(
   scope: cdk.Stack,
   api: apigateway.RestApi,
-  environement: string,
+  environment: string,
   stageName: string,
   tableName: string
 ) {
   // Create deployment
   const deployment = new apigateway.Deployment(
     scope,
-    `ark-project-deployment-${environement}-${stageName}`,
+    `ark-project-deployment-${environment}-${stageName}`,
     { api }
   );
 
@@ -27,9 +27,9 @@ function createApiStage(
 
   let lambdaUsageTable: string = "default";
 
-  if (environement === "production") {
+  if (environment === "production") {
     lambdaUsageTable = "ark_lambda_usage";
-  } else if (environement === "staging") {
+  } else if (environment === "staging") {
     lambdaUsageTable = "ark_lambda_usage_staging";
   } else {
     lambdaUsageTable = "ark_lambda_usage_prs";
@@ -37,7 +37,7 @@ function createApiStage(
 
   const redisConnectionString = ssm.StringParameter.valueForStringParameter(
     scope,
-    `/ark/${environement}/redisConnectionString`
+    `/ark/${environment}/redisConnectionString`
   );
 
   console.log("=> redisConnectionString", redisConnectionString);
@@ -45,7 +45,7 @@ function createApiStage(
   // Create stage and point it to the latest deployment
   const stage = new apigateway.Stage(
     scope,
-    `ark-project-stage-${environement}-${stageName}`,
+    `ark-project-stage-${environment}-${stageName}`,
     {
       deployment,
       stageName,
@@ -87,14 +87,14 @@ function createApiStage(
   );
 
   const domainName = "arkproject.dev";
-  const subdomainEnvName = environement === "production" ? "" : "staging.";
+  const subdomainEnvName = environment === "production" ? "" : "staging.";
   const subdomainStageName = stageName === "mainnet" ? "" : "testnet-";
   const apiURL = `${subdomainEnvName}${subdomainStageName}api.${domainName}`;
 
   // Fetch the hosted zone and create a CNAME record
   const hostedZone = route53.HostedZone.fromLookup(
     scope,
-    `ark-project-hosted-zone-${environement}-${stageName}`,
+    `ark-project-hosted-zone-${environment}-${stageName}`,
     {
       domainName: domainName,
     }
@@ -103,7 +103,7 @@ function createApiStage(
   // Create an ACM certificate
   const certificate = new acm.Certificate(
     scope,
-    `ark-project-certificate-${environement}-${stageName}`,
+    `ark-project-certificate-${environment}-${stageName}`,
     {
       domainName: apiURL,
       validation: acm.CertificateValidation.fromDns(hostedZone), // Use DNS validation
@@ -113,7 +113,7 @@ function createApiStage(
   // Create a custom domain name
   const customDomain = new apigateway.DomainName(
     scope,
-    `ark-project-custom-domain-${environement}-${stageName}`,
+    `ark-project-custom-domain-${environment}-${stageName}`,
     {
       domainName: apiURL,
       certificate: certificate,
@@ -124,7 +124,7 @@ function createApiStage(
   // Associate the custom domain with the stage
   new apigateway.BasePathMapping(
     scope,
-    `ark-project-basepath-mapping-${environement}-${stageName}`,
+    `ark-project-basepath-mapping-${environment}-${stageName}`,
     {
       domainName: customDomain,
       restApi: api,
@@ -135,7 +135,7 @@ function createApiStage(
   // Create a CNAME record for the custom domain
   new route53.CnameRecord(
     scope,
-    `ark-project-cname-record-${environement}-${stageName}`,
+    `ark-project-cname-record-${environment}-${stageName}`,
     {
       recordName: apiURL,
       zone: hostedZone,

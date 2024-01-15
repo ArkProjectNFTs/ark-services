@@ -27,7 +27,7 @@ export function deployBlockIndexerLambda(
   functionName: string,
   network: string,
   tableName: string,
-  environement: string
+  environment: string
 ): RustFunction {
   const blockIndexerLambda = new RustFunction(scope, functionName, {
     manifestPath,
@@ -65,14 +65,14 @@ export function deployBlockIndexerLambda(
     })
   );
 
-  const environementName =
-    environement.charAt(0).toUpperCase() + environement.slice(1);
+  const environmentName =
+    environment.charAt(0).toUpperCase() + environment.slice(1);
 
   new ssm.StringParameter(
     scope,
-    `ArkProject-${environementName}-${network}-BlockIndexerFunctionName`,
+    `ArkProject-${environmentName}-${network}-BlockIndexerFunctionName`,
     {
-      parameterName: `/ark/${environement}/${network}/blockIndexerFunctionName`,
+      parameterName: `/ark/${environment}/${network}/blockIndexerFunctionName`,
       stringValue: blockIndexerLambda.functionName,
     }
   );

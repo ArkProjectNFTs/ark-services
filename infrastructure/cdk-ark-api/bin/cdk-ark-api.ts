@@ -15,8 +15,8 @@ const stackNameSuffix = isProductionEnvironment ? "production" : "staging";
 
 new ArkApiStack(app, `ArkApiStack-${stackNameSuffix}`, {
   env: {
-    account: "223605539824",
-    region: "us-east-1",
+    account: process.env.AWS_ACCOUNT_ID,
+    region: process.env.AWS_REGION,
   },
   stages: stages,
   isProductionEnvironment,
