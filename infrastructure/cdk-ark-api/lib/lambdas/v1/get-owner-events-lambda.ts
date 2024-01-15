@@ -4,17 +4,32 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
 
-export function getContractEventsLambda(
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "apigw",
+  "lambda-get-owner-events",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
+
+export function getOwnerEventsLambda(
   scope: cdk.Stack,
   vpc: IVpc,
   lambdaSecurityGroup: SecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const getContractLambda = new RustFunction(scope, "get-contract-events", {
-    manifestPath:
-      "../../ark-lambdas/apigw/lambda-get-contract-events/Cargo.toml",
+  const getOwnerEventsLambda = new RustFunction(scope, "get-owner-events", {
+    manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
     },
@@ -37,23 +52,17 @@ export function getContractEventsLambda(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/GSI1PK-GSI1SK-index`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/GSI3PK-GSI3SK-index`,
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/GSI5PK-GSI5SK-index`
     );
   }
 
-  getContractLambda.addToRolePolicy(
+  getOwnerEventsLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );
 
-  getContractLambda.addToRolePolicy(
-    new iam.PolicyStatement({
-      actions: ["elasticache:*"],
-      resources: ["*"],
-    })
-  );
-
-  return getContractLambda;
+  return getOwnerEventsLambda;
 }

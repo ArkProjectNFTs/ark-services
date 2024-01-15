@@ -4,6 +4,22 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
+
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "apigw",
+  "lambda-get-contracts",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
 
 export function getContractsLambda(
   scope: cdk.Stack,
@@ -15,7 +31,7 @@ export function getContractsLambda(
   const indexName = "GSI2PK-GSI2SK-index";
 
   const getContractsLambda = new RustFunction(scope, "get-contracts", {
-    manifestPath: "../../ark-lambdas/apigw/lambda-get-contracts/Cargo.toml",
+    manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
     },
@@ -40,7 +56,7 @@ export function getContractsLambda(
 
   getContractsLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );

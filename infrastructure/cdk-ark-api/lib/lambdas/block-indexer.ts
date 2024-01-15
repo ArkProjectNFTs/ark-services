@@ -4,6 +4,21 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
+import * as ssm from "aws-cdk-lib/aws-ssm";
+
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "lambda-block-indexer",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
 
 export function deployBlockIndexerLambda(
   scope: cdk.Stack,
@@ -11,10 +26,11 @@ export function deployBlockIndexerLambda(
   lambdaSecurityGroup: SecurityGroup,
   functionName: string,
   network: string,
-  tableName: string
+  tableName: string,
+  environement: string
 ): RustFunction {
   const blockIndexerLambda = new RustFunction(scope, functionName, {
-    manifestPath: "../../ark-lambdas/lambda-block-indexer/Cargo.toml",
+    manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
       RUST_LOG: "info",
@@ -47,6 +63,18 @@ export function deployBlockIndexerLambda(
       actions: ["dynamodb:*"],
       resources: resourceArns,
     })
+  );
+
+  const environementName =
+    environement.charAt(0).toUpperCase() + environement.slice(1);
+
+  new ssm.StringParameter(
+    scope,
+    `ArkProject-${environementName}-${network}-BlockIndexerFunctionName`,
+    {
+      parameterName: `/ark/${environement}/${network}/blockIndexerFunctionName`,
+      stringValue: blockIndexerLambda.functionName,
+    }
   );
 
   // Return the RustFunction construct

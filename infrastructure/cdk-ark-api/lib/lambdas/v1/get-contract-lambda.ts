@@ -4,21 +4,34 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
 
-export function getTokenLambda(
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "apigw",
+  "lambda-get-contract",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
+
+export function getContractLambda(
   scope: cdk.Stack,
   vpc: IVpc,
   lambdaSecurityGroup: SecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const getTokenLambda = new RustFunction(scope, "get-token", {
-    manifestPath: "../../ark-lambdas/apigw/lambda-get-token/Cargo.toml",
+  const getContractLambda = new RustFunction(scope, "get-contract", {
+    manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
-    },
-    bundling: {
-      assetHashType: AssetHashType.OUTPUT,
     },
     logRetention: RetentionDays.ONE_DAY,
     vpc: vpc,
@@ -26,23 +39,29 @@ export function getTokenLambda(
       subnetType: SubnetType.PRIVATE_WITH_EGRESS,
     },
     securityGroups: [lambdaSecurityGroup],
+    bundling: {
+      assetHashType: AssetHashType.OUTPUT,
+    },
     timeout: cdk.Duration.seconds(10),
   });
 
   let resourceArns: string[] = [];
 
+  // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
     resourceArns.push(
       `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
   }
 
-  getTokenLambda.addToRolePolicy(
+  // Add permissions to the Lambda's role to interact with DynamoDB
+  getContractLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );
 
-  return getTokenLambda;
+  // Return the RustFunction construct
+  return getContractLambda;
 }

@@ -2,14 +2,14 @@ import * as cdk from "aws-cdk-lib";
 import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { Table } from "aws-cdk-lib/aws-dynamodb";
-import { deployBlockIndexerLambda } from "../lambdas/block-indexer";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as ssm from "aws-cdk-lib/aws-ssm";
 
 export async function deployIndexer(
   scope: cdk.Stack,
   vpc: IVpc,
-  lambdaSecurityGroup: SecurityGroup,
   isProductionEnvironment: boolean,
   indexerVersion: string
 ) {
@@ -34,15 +34,6 @@ export async function deployIndexer(
       tableName
     );
 
-    let lambdaFunction = deployBlockIndexerLambda(
-      scope,
-      vpc,
-      lambdaSecurityGroup,
-      `BlockIndexerLambda${network.charAt(0).toUpperCase() + network.slice(1)}`,
-      network,
-      tableName
-    );
-
     deployMetadataServices(scope, cluster, ecrRepository, network, dynamoTable);
 
     deployIndexerServices(
@@ -52,9 +43,7 @@ export async function deployIndexer(
       ecrRepository,
       network,
       indexerVersion,
-      dynamoTable,
-      lambdaFunction.functionName,
-      lambdaFunction.functionArn
+      dynamoTable
     );
 
     new cdk.CfnOutput(scope, `${network}TableOutput`, {
@@ -70,9 +59,7 @@ function deployIndexerServices(
   ecrRepository: cdk.aws_ecr.IRepository,
   network: string,
   indexerVersion: string,
-  dynamoTable: cdk.aws_dynamodb.ITable,
-  functionName: string,
-  functionArn: string
+  dynamoTable: cdk.aws_dynamodb.ITable
 ) {
   const capitalizedNetwork =
     network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
@@ -89,6 +76,21 @@ function deployIndexerServices(
       memoryLimitMiB: 2048,
       cpu: 512,
     }
+  );
+
+  const blockIndexerLambdaName = ssm.StringParameter.valueForStringParameter(
+    scope,
+    `/ark/${
+      isProductionEnvironment ? "production" : "staging"
+    }/${network}/blockIndexerFunctionName`
+  );
+
+  const blockIndexerLambda = lambda.Function.fromFunctionName(
+    scope,
+    `${capitalizedNetwork}BlockIndexer-${
+      isProductionEnvironment ? "production" : "staging"
+    }"}`,
+    blockIndexerLambdaName
   );
 
   taskDefinition.addContainer("ark_indexer", {
@@ -109,7 +111,7 @@ function deployIndexerServices(
       IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev",
       RPC_PROVIDER: `https://juno.${network}.arkproject.dev`,
       RUST_LOG: "INFO",
-      BLOCK_INDEXER_FUNCTION_NAME: functionName,
+      BLOCK_INDEXER_FUNCTION_NAME: blockIndexerLambda.functionName,
     },
   });
 
@@ -141,7 +143,7 @@ function deployIndexerServices(
         "lambda:InvokeFunction",
         "lambda:InvokeFunctionUrl",
       ],
-      resources: [functionArn],
+      resources: [blockIndexerLambda.functionArn],
     })
   );
 

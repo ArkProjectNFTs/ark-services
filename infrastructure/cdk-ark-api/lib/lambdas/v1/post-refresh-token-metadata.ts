@@ -4,22 +4,21 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
 
-export function getOwnerContractsLambda(
+export function postRefreshTokenMetadataLambda(
   scope: cdk.Stack,
   vpc: IVpc,
   lambdaSecurityGroup: SecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const indexName = "GSI2PK-GSI2SK-index";
-
-  const getOwnerContractsLambda = new RustFunction(
+  const postRefreshTokenMetadataLambda = new RustFunction(
     scope,
-    "get-owner-contracts",
+    "post-refresh-token-metadata",
     {
       manifestPath:
-        "../../ark-lambdas/apigw/lambda-get-owner-contracts/Cargo.toml",
+        "../../ark-lambdas/apigw/lambda-post-refresh-token-metadata/Cargo.toml",
       environment: {
         RUST_BACKTRACE: "1",
       },
@@ -38,23 +37,21 @@ export function getOwnerContractsLambda(
 
   let resourceArns: string[] = [];
 
-  // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
-    const baseTableArn = `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`;
-    // ARN for index - used with dynamodb:Query
-    resourceArns.push(`${baseTableArn}/index/${indexName}`);
-    // ARN for table - used with dynamodb:GetItem and dynamodb:PutItem
-    resourceArns.push(baseTableArn);
+    resourceArns.push(
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
+    );
+    resourceArns.push(
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}_lambda_usage`
+    );
   }
 
-  // Add permissions to the Lambda's role to interact with DynamoDB
-  getOwnerContractsLambda.addToRolePolicy(
+  postRefreshTokenMetadataLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query", "dynamodb:GetItem"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );
 
-  // Return the RustFunction construct
-  return getOwnerContractsLambda;
+  return postRefreshTokenMetadataLambda;
 }

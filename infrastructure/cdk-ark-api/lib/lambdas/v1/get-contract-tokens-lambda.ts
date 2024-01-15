@@ -4,20 +4,37 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
 
-export function postRefreshTokenMetadataLambda(
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "apigw",
+  "lambda-get-contract-tokens",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
+
+export function getContractTokensLambda(
   scope: cdk.Stack,
   vpc: IVpc,
   lambdaSecurityGroup: SecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const postRefreshTokenMetadataLambda = new RustFunction(
+  const indexName = "GSI1PK-GSI1SK-index";
+
+  const getContractTokensLambda = new RustFunction(
     scope,
-    "post-refresh-token-metadata",
+    "get-contract-tokens",
     {
-      manifestPath:
-        "../../ark-lambdas/apigw/lambda-post-refresh-token-metadata/Cargo.toml",
+      manifestPath,
       environment: {
         RUST_BACKTRACE: "1",
       },
@@ -36,21 +53,21 @@ export function postRefreshTokenMetadataLambda(
 
   let resourceArns: string[] = [];
 
+  // Construct the necessary resource ARNs from the provided stages
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
-    );
-    resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}_lambda_usage`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/${indexName}`
     );
   }
 
-  postRefreshTokenMetadataLambda.addToRolePolicy(
+  // Add permissions to the Lambda's role to interact with DynamoDB
+  getContractTokensLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );
 
-  return postRefreshTokenMetadataLambda;
+  // Return the RustFunction construct
+  return getContractTokensLambda;
 }

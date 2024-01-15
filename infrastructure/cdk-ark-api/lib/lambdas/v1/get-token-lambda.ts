@@ -4,17 +4,32 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
 
-export function getOwnerTokensLambda(
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "apigw",
+  "lambda-get-token",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
+
+export function getTokenLambda(
   scope: cdk.Stack,
   vpc: IVpc,
   lambdaSecurityGroup: SecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const indexName = "GSI2PK-GSI2SK-index";
-  const getOwnerTokensLambda = new RustFunction(scope, "get-owner-tokens", {
-    manifestPath: "../../ark-lambdas/apigw/lambda-get-owner-tokens/Cargo.toml",
+  const getTokenLambda = new RustFunction(scope, "get-token", {
+    manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
     },
@@ -34,15 +49,16 @@ export function getOwnerTokensLambda(
 
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/index/${indexName}`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
     );
   }
 
-  getOwnerTokensLambda.addToRolePolicy(
+  getTokenLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );
-  return getOwnerTokensLambda;
+
+  return getTokenLambda;
 }

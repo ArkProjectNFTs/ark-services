@@ -4,6 +4,22 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
+import { join } from "path";
+
+const manifestPath = join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "ark-lambdas",
+  "apigw",
+  "lambda-get-token-events",
+  "Cargo.toml"
+);
+
+console.log("=> manifestPath", manifestPath);
 
 export function getTokenEventsLambda(
   scope: cdk.Stack,
@@ -14,7 +30,7 @@ export function getTokenEventsLambda(
 ) {
   const indexName = "GSI2PK-GSI2SK-index";
   const getTokenEventsLambda = new RustFunction(scope, "get-token-events", {
-    manifestPath: "../../ark-lambdas/apigw/lambda-get-token-events/Cargo.toml",
+    manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
     },
@@ -39,7 +55,7 @@ export function getTokenEventsLambda(
 
   getTokenEventsLambda.addToRolePolicy(
     new iam.PolicyStatement({
-      actions: ["dynamodb:Query"],
+      actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );

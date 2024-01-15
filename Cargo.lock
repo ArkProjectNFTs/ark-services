@@ -2796,6 +2796,8 @@ dependencies = [
  "serde_json",
  "serde_with 3.4.0",
  "thiserror",
+ "tracing",
+ "tracing-log 0.1.4",
 ]
 
 [[package]]
