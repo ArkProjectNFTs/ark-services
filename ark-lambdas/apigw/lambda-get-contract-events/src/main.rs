@@ -49,7 +49,10 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 }
 
 async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpResponse, Error> {
-    info!("Processing event...");
+    info!(
+        "Processing event... table_name={}, max_items_limit={:?}",
+        ctx.table_name, ctx.max_items_limit
+    );
 
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
     let dynamo_rsp = provider.get_contract_events(&ctx.dynamodb, address).await?;

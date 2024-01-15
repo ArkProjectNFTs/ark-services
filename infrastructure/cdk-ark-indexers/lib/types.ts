@@ -1,7 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 
-export interface ArkStackProps extends cdk.StackProps {
-  stages: string[];
+export interface ArkIndexersStackProps extends cdk.StackProps {
+  networks: string[];
   isProductionEnvironment: boolean;
   indexerVersion: string;
 }

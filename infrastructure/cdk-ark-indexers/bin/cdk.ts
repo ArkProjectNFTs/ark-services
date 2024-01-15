@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { ArkStack } from "../lib/ark-stack";
+import { ArkIndexersStack } from "../lib/ark-stack";
 import { config } from "dotenv";
 
 config();
@@ -12,7 +12,9 @@ const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
 
-const stages: string[] = ["mainnet", "testnet"];
+const networks: string[] = isProductionEnvironment
+  ? ["mainnet", "testnet"]
+  : ["mainnet"];
 
 let stackNameSuffix;
 if (isProductionEnvironment) {
@@ -24,15 +26,15 @@ if (isProductionEnvironment) {
 }
 
 console.log(`Determined stack name suffix: ${stackNameSuffix}`);
-const stackName = `ArkStack-${stackNameSuffix}`;
+const stackName = `ArkIndexersStack-${stackNameSuffix}`;
 const indexerVersion: string = process.env.INDEXER_VERSION ?? "UNDEFINED";
 
-new ArkStack(app, stackName, {
+new ArkIndexersStack(app, stackName, {
   env: {
     account: "223605539824",
     region: "us-east-1",
   },
-  stages: stages,
+  networks,
   isProductionEnvironment,
   indexerVersion,
   description:

@@ -4,6 +4,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
+use tracing::info;
 
 use super::ArkEventProvider;
 use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
@@ -349,14 +350,14 @@ impl ArkEventProvider for DynamoDbEventProvider {
         ctx: &DynamoDbCtx,
         contract_address: &str,
     ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError> {
+        let gsi1pk_value = format!("CONTRACT#{}", contract_address);
+        info!("GSI1PK value: {}", gsi1pk_value);
+
         let mut values = HashMap::new();
         values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
-        values.insert(
-            ":contract".to_string(),
-            AttributeValue::S(format!("CONTRACT#{}", contract_address)),
-        );
+        values.insert(":contract".to_string(), AttributeValue::S(gsi1pk_value));
 
-        let r = ctx
+        let r: aws_sdk_dynamodb::operation::query::QueryOutput = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -374,6 +375,9 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
+
+        info!("Query result items: {:?}", r.items);
+
         if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;

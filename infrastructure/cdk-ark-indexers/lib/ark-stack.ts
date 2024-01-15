@@ -1,12 +1,12 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 
-import { ArkStackProps } from "./types";
+import { ArkIndexersStackProps } from "./types";
 import { deployIndexer } from "./ecs/indexer";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 
-export class ArkStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: ArkStackProps) {
+export class ArkIndexersStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props: ArkIndexersStackProps) {
     super(scope, id, props);
 
     const vpc = Vpc.fromLookup(this, "ArkVPC", {
@@ -15,6 +15,7 @@ export class ArkStack extends cdk.Stack {
 
     deployIndexer(
       this,
+      props.networks,
       vpc,
       props.isProductionEnvironment,
       props.indexerVersion

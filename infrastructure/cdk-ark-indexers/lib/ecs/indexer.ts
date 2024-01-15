@@ -9,6 +9,7 @@ import * as ssm from "aws-cdk-lib/aws-ssm";
 
 export async function deployIndexer(
   scope: cdk.Stack,
+  networks: string[],
   vpc: IVpc,
   isProductionEnvironment: boolean,
   indexerVersion: string
@@ -23,7 +24,7 @@ export async function deployIndexer(
     "ark-project-repo"
   );
 
-  ["mainnet", "testnet"].forEach((network) => {
+  networks.forEach((network) => {
     const tableName = isProductionEnvironment
       ? `ark_project_${network}`
       : `ark_project_staging_${network}`;
