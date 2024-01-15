@@ -192,23 +192,13 @@ impl OrderProvider {
         )
         .await?;
 
-        // Upsert token
+        // insert token only for the first listing
         let upsert_query = "
-        INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, status, current_owner, current_amount, quantity, start_amount, end_amount, start_date, end_date, broker_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-        ON CONFLICT (token_id)
-        DO UPDATE SET
-            updated_timestamp = EXCLUDED.updated_timestamp,
-            status = EXCLUDED.status,
-            current_owner = EXCLUDED.current_owner,
-            current_amount = EXCLUDED.current_amount,
-            quantity = EXCLUDED.quantity,
-            start_amount = EXCLUDED.start_amount,
-            end_amount = EXCLUDED.end_amount,
-            start_date = EXCLUDED.start_date,
-            end_date = EXCLUDED.end_date,
-            broker_id = EXCLUDED.broker_id;
-    ";
+            INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, status, current_owner, current_amount, quantity, start_amount, end_amount, start_date, end_date, broker_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            ON CONFLICT (token_id, token_address)
+            DO NOTHING;
+        ";
 
         sqlx::query(upsert_query)
             .bind(data.token_chain_id.clone())
