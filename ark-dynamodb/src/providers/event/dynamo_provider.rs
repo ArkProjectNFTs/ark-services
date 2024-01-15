@@ -369,7 +369,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .set_limit(self.limit)
-            .scan_index_forward(true)
+            .scan_index_forward(false)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
