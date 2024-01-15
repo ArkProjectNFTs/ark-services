@@ -70,7 +70,7 @@ async fn process_event(
 
     info!("Last evaluated key: {:?}", last_evaluated_key);
 
-    let cursor = ctx.paginator.store_cursor(&last_evaluated_key)?;
+    let cursor = ctx.paginator.store_cursor(last_evaluated_key)?;
 
     info!("Cursor: {:?}", cursor);
 
