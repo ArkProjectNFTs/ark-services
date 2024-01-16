@@ -34,6 +34,13 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
       - name: Install pnpm
         run: |
           npm install -g pnpm
@@ -43,6 +50,20 @@ jobs:
         run: |
           cd infrastructure/cdk-ark-api
           pnpm install
+
+      - name: Install Cargo Lambda
+        run: |
+          pip install cargo-lambda
+
+      - name: Bootstrap NFT APIs
+        run: |
+          cd infrastructure/cdk-ark-api
+          pnpm cdk bootstrap
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Deploy NFT APIs
         run: |
