@@ -10,14 +10,14 @@ const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
 
-const stackName = `ArkRedisStack-${
+const stackName = `ark-redis-${
   isProductionEnvironment ? "production" : "staging"
 }`;
 
 new ArkRedisStack(app, stackName, {
   env: {
-    account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION,
+    account: "223605539824",
+    region: "us-east-1",
   },
   isProductionEnvironment,
   stackName,

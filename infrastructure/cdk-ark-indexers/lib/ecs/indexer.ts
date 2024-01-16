@@ -1,5 +1,5 @@
 import * as cdk from "aws-cdk-lib";
-import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { IVpc } from "aws-cdk-lib/aws-ec2";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
@@ -14,7 +14,7 @@ export async function deployIndexer(
   isProductionEnvironment: boolean,
   indexerVersion: string
 ) {
-  const cluster = new Cluster(scope, "Indexers", {
+  const cluster = new Cluster(scope, "indexers", {
     vpc: vpc,
   });
 
@@ -35,7 +35,14 @@ export async function deployIndexer(
       tableName
     );
 
-    deployMetadataServices(scope, cluster, ecrRepository, network, dynamoTable);
+    deployMetadataServices(
+      scope,
+      cluster,
+      ecrRepository,
+      network,
+      dynamoTable,
+      isProductionEnvironment
+    );
 
     deployIndexerServices(
       isProductionEnvironment,
@@ -47,7 +54,7 @@ export async function deployIndexer(
       dynamoTable
     );
 
-    new cdk.CfnOutput(scope, `${network}TableOutput`, {
+    new cdk.CfnOutput(scope, `table-output-${network}`, {
       value: dynamoTable.tableName,
     });
   });
@@ -62,9 +69,6 @@ function deployIndexerServices(
   indexerVersion: string,
   dynamoTable: cdk.aws_dynamodb.ITable
 ) {
-  const capitalizedNetwork =
-    network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
-
   const logGroup = new LogGroup(scope, `/ecs/ark-indexer-${network}`, {
     removalPolicy: cdk.RemovalPolicy.DESTROY,
     retention: 7,
@@ -72,7 +76,7 @@ function deployIndexerServices(
 
   const taskDefinition = new cdk.aws_ecs.FargateTaskDefinition(
     scope,
-    `Indexer${capitalizedNetwork}TaskDefinition`,
+    `indexer-${network}-task-definition`,
     {
       memoryLimitMiB: 2048,
       cpu: 512,
@@ -88,9 +92,9 @@ function deployIndexerServices(
 
   const blockIndexerLambda = lambda.Function.fromFunctionName(
     scope,
-    `${capitalizedNetwork}BlockIndexer-${
+    `block-indexer-${network}-${
       isProductionEnvironment ? "production" : "staging"
-    }"}`,
+    }`,
     blockIndexerLambdaName
   );
 
@@ -150,10 +154,10 @@ function deployIndexerServices(
 
   dynamoTable.grantFullAccess(taskDefinition.taskRole);
 
-  new cdk.aws_ecs.FargateService(scope, `HeadOfChain${capitalizedNetwork}`, {
+  new cdk.aws_ecs.FargateService(scope, `head-of-chain-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: 1,
+    desiredCount: isProductionEnvironment ? 1 : 0,
   });
 }
 
@@ -162,7 +166,8 @@ function deployMetadataServices(
   cluster: cdk.aws_ecs.ICluster,
   ecrRepository: cdk.aws_ecr.IRepository,
   network: string,
-  dynamoTable: cdk.aws_dynamodb.ITable
+  dynamoTable: cdk.aws_dynamodb.ITable,
+  isProductionEnvironment: boolean
 ) {
   const capitalizedNetwork =
     network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
@@ -174,7 +179,7 @@ function deployMetadataServices(
 
   const taskDefinition = new cdk.aws_ecs.FargateTaskDefinition(
     scope,
-    `Metadata${capitalizedNetwork}TaskDefinition`,
+    `metadata-${network}-task-definition`,
     {
       memoryLimitMiB: 2048,
       cpu: 512,
@@ -220,9 +225,9 @@ function deployMetadataServices(
 
   dynamoTable.grantFullAccess(taskDefinition.taskRole);
 
-  new cdk.aws_ecs.FargateService(scope, `Metadata${capitalizedNetwork}`, {
+  new cdk.aws_ecs.FargateService(scope, `metadata-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: 1,
+    desiredCount: isProductionEnvironment ? 1 : 0,
   });
 }

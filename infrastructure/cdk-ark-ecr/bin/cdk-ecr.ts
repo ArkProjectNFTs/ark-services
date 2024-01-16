@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 import { ECRDeploymentStack } from "../lib/cdk-ecr-stack";
@@ -9,7 +10,7 @@ config();
 const app = new cdk.App();
 new ECRDeploymentStack(app, "ECRDeploymentStack", {
   env: {
-    account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION, 
-  }
+    account: "223605539824",
+    region: "us-east-1",
+  },
 });

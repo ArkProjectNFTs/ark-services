@@ -44,12 +44,16 @@ export class ArkApiStack extends cdk.Stack {
       ? "ark_project"
       : "ark_project_staging";
 
-    const lambdaSecurityGroup = new SecurityGroup(this, "LambdaSecurityGroup", {
-      securityGroupName: "LambdaSecurityGroup",
-      vpc,
-      description: "Security group for Lambdas",
-      allowAllOutbound: true,
-    });
+    const lambdaSecurityGroup = new SecurityGroup(
+      this,
+      "ark-lambda-security-group",
+      {
+        securityGroupName: "ark-lambda-security-group",
+        vpc,
+        description: "Security group for Lambdas",
+        allowAllOutbound: true,
+      }
+    );
 
     const securityGroupId = ssm.StringParameter.valueForStringParameter(
       this,
@@ -58,7 +62,7 @@ export class ArkApiStack extends cdk.Stack {
 
     const redisSecurityGroup = SecurityGroup.fromSecurityGroupId(
       this,
-      `Ark${environmentName}RedisSecurityGroup`,
+      `ark-redis-security-group-${environment}`,
       securityGroupId
     );
 
@@ -106,8 +110,8 @@ export class ArkApiStack extends cdk.Stack {
         this,
         vpc,
         lambdaSecurityGroup,
-        `BlockIndexerLambda${
-          network.charAt(0).toUpperCase() + network.slice(1)
+        `block-indexer-${network}-${
+          props.isProductionEnvironment ? "production" : "staging"
         }`,
         network,
         `${tableNamePrefix}_${network}`,
