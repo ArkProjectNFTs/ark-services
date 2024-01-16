@@ -124,7 +124,7 @@ jobs:
 
       - name: Deploy ECR Repository
         run: |
-          cd infrastructurecdk-ark-ecr
+          cd infrastructure/cdk-ark-ecr
           pnpm install
           cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
         env:
