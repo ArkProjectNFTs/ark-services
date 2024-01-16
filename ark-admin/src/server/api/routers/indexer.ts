@@ -165,40 +165,29 @@ export const indexerRouter = createTRPCRouter({
         (input.to - input.from + 1) / input.numberOfTasks,
       );
 
-      const ECS_CLUSTER =
-        input.network === "mainnet"
-          ? "arn:aws:ecs:us-east-1:223605539824:cluster/ArkStack-production-Indexers1FAD4BAF-e4xDV736tPlj"
-          : "arn:aws:ecs:us-east-1:223605539824:cluster/ArkStack-staging-Indexers1FAD4BAF-xqq2K8qQYWlQ";
-
-      const taskDefinition =
-        input.network === "mainnet"
-          ? "ArkStackproductionIndexerMainnetTaskDefinition619BD5D5"
-          : "ArkStackproductionIndexerTestnetTaskDefinition772EFD01";
+      const INDEXER_ECS_CLUSTER = process.env.ARN_ECS_INDEXER_CLUSTER ?? "";
+      const INDEXER_TASK_DEF = process.env.INDEXER_TASK_DEFINITION ?? "";
+      const INDEXER_SUBNETS = JSON.parse(
+        process.env.INDEXER_SUBNETS ?? "[]",
+      ) as string[];
+      const INDEXER_SECURITY_GROUP = process.env.INDEXER_SECURITY_GROUP ?? "";
 
       try {
         for (let i = 0; i < input.numberOfTasks; i++) {
           const subFrom = input.from + rangeSize * i;
           const subTo = Math.min(subFrom + rangeSize - 1, input.to);
 
-          const commandOptions = {
-            cluster: ECS_CLUSTER,
+          const commandOutput = await runTask(client, {
+            cluster: INDEXER_ECS_CLUSTER,
             network: input.network,
             from: subFrom,
             to: subTo,
-            subnets: [
-              "subnet-04e9a5e885cd717cd",
-              "subnet-04b569b5db185284b",
-              "subnet-05ebee80f9f4299a5",
-              "subnet-0390873cf444d4800",
-              "subnet-084e02ad63c58b3ab",
-              "subnet-0c28889f016ad63f5",
-            ],
-            taskDefinition,
+            subnets: INDEXER_SUBNETS,
+            taskDefinition: INDEXER_TASK_DEF,
             logLevel: input.logLevel ?? "info",
             forceMode: input.forceMode ?? false,
-            securityGroups: ["sg-0c1b5d08ea088eb53"],
-          };
-          const commandOutput = await runTask(client, commandOptions);
+            securityGroups: [INDEXER_SECURITY_GROUP],
+          });
 
           for (const task of commandOutput.tasks ?? []) {
             if (task.taskArn) {
