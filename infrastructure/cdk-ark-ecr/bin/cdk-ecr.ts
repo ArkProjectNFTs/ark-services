@@ -8,7 +8,7 @@ import { config } from "dotenv";
 config();
 
 const app = new cdk.App();
-new ECRDeploymentStack(app, "ECRDeploymentStack", {
+new ECRDeploymentStack(app, "ark-ecr", {
   env: {
     account: "223605539824",
     region: "us-east-1",
