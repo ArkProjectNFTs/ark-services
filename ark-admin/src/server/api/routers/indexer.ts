@@ -167,9 +167,12 @@ export const indexerRouter = createTRPCRouter({
 
       const INDEXER_ECS_CLUSTER = process.env.ARN_ECS_INDEXER_CLUSTER ?? "";
       const INDEXER_TASK_DEF = process.env.INDEXER_TASK_DEFINITION ?? "";
-      const INDEXER_SUBNETS = JSON.parse(
-        process.env.INDEXER_SUBNETS ?? "[]",
-      ) as string[];
+
+      const subnetsStr = process.env.INDEXER_SUBNETS ?? "";
+      const INDEXER_SUBNETS = subnetsStr.includes(",")
+        ? [...subnetsStr.split(",")]
+        : [subnetsStr];
+
       const INDEXER_SECURITY_GROUP = process.env.INDEXER_SECURITY_GROUP ?? "";
 
       try {
