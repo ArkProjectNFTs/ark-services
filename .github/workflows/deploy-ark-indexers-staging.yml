@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - ".github/workflows/deploy-ark-indexers-staging.yml"
-      - "infrastructure/cdk-ecr/**"
+      - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-ark-indexers/**"
       - "ark-indexer/**"
       - "ark-lambdas/**"
@@ -46,7 +46,7 @@ jobs:
 
       - name: Deploy ECR Repository
         run: |
-          cd infrastructure/cdk-ecr
+          cd infrastructure/cdk-ark-ecr
           pnpm install
           cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
         env:
@@ -58,7 +58,7 @@ jobs:
       - name: Output ECR Repository URL
         id: set_ecr_url
         run: |
-          cd infrastructure/cdk-ecr
+          cd infrastructure/cdk-ark-ecr
           ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
           echo "ECR Repository URL: $ECR_URL"
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
@@ -124,7 +124,7 @@ jobs:
 
       - name: Deploy ECR Repository
         run: |
-          cd infrastructure/cdk-ecr
+          cd infrastructurecdk-ark-ecr
           pnpm install
           cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
         env:
@@ -136,7 +136,7 @@ jobs:
       - name: Output ECR Repository URL
         id: set_ecr_url
         run: |
-          cd infrastructure/cdk-ecr
+          cd infrastructure/cdk-ark-ecr
           ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
           echo "ECR Repository URL: $ECR_URL"
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
