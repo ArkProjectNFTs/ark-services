@@ -48,7 +48,7 @@ jobs:
         run: |
           cd infrastructure/cdk-ark-ecr
           pnpm install
-          cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
+          cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
@@ -59,7 +59,7 @@ jobs:
         id: set_ecr_url
         run: |
           cd infrastructure/cdk-ark-ecr
-          ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
+          ECR_URL=$(jq -r '.ark-ecr.ECRRepositoryURL' ./cdk-outputs.json)
           echo "ECR Repository URL: $ECR_URL"
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
 
@@ -126,7 +126,7 @@ jobs:
         run: |
           cd infrastructure/cdk-ark-ecr
           pnpm install
-          cdk deploy ECRDeploymentStack --outputs-file ./cdk-outputs.json
+          cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
@@ -137,7 +137,7 @@ jobs:
         id: set_ecr_url
         run: |
           cd infrastructure/cdk-ark-ecr
-          ECR_URL=$(jq -r '.ECRDeploymentStack.ECRRepositoryURL' ./cdk-outputs.json)
+          ECR_URL=$(jq -r '.ark-ecr.ECRRepositoryURL' ./cdk-outputs.json)
           echo "ECR Repository URL: $ECR_URL"
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
 
