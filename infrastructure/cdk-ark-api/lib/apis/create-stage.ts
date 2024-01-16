@@ -15,15 +15,12 @@ function createApiStage(
   // Create deployment
   const deployment = new apigateway.Deployment(
     scope,
-    `ark-project-deployment-${environment}-${stageName}`,
+    `ark-deployment-${stageName}-${environment}`,
     { api }
   );
 
   // Create a log group for the stage
-  const stageLogGroup = new logs.LogGroup(
-    scope,
-    `ark-project-log-${stageName}`
-  );
+  const stageLogGroup = new logs.LogGroup(scope, `ark-log-${stageName}`);
 
   let lambdaUsageTable: string = "default";
 
@@ -40,12 +37,10 @@ function createApiStage(
     `/ark/${environment}/redisConnectionString`
   );
 
-  console.log("=> redisConnectionString", redisConnectionString);
-
   // Create stage and point it to the latest deployment
   const stage = new apigateway.Stage(
     scope,
-    `ark-project-stage-${environment}-${stageName}`,
+    `ark-stage-${stageName}-${environment}`,
     {
       deployment,
       stageName,
@@ -94,7 +89,7 @@ function createApiStage(
   // Fetch the hosted zone and create a CNAME record
   const hostedZone = route53.HostedZone.fromLookup(
     scope,
-    `ark-project-hosted-zone-${environment}-${stageName}`,
+    `ark-hosted-zone-${stageName}-${environment}`,
     {
       domainName: domainName,
     }
@@ -103,7 +98,7 @@ function createApiStage(
   // Create an ACM certificate
   const certificate = new acm.Certificate(
     scope,
-    `ark-project-certificate-${environment}-${stageName}`,
+    `ark-certificate-${stageName}-${environment}`,
     {
       domainName: apiURL,
       validation: acm.CertificateValidation.fromDns(hostedZone), // Use DNS validation
@@ -113,7 +108,7 @@ function createApiStage(
   // Create a custom domain name
   const customDomain = new apigateway.DomainName(
     scope,
-    `ark-project-custom-domain-${environment}-${stageName}`,
+    `ark-custom-domain-${stageName}-${environment}`,
     {
       domainName: apiURL,
       certificate: certificate,
@@ -124,7 +119,7 @@ function createApiStage(
   // Associate the custom domain with the stage
   new apigateway.BasePathMapping(
     scope,
-    `ark-project-basepath-mapping-${environment}-${stageName}`,
+    `ark-basepath-mapping-${stageName}-${environment}`,
     {
       domainName: customDomain,
       restApi: api,
@@ -135,7 +130,7 @@ function createApiStage(
   // Create a CNAME record for the custom domain
   new route53.CnameRecord(
     scope,
-    `ark-project-cname-record-${environment}-${stageName}`,
+    `ark-cname-record-${stageName}-${environment}`,
     {
       recordName: apiURL,
       zone: hostedZone,

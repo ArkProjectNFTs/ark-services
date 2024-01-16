@@ -19,8 +19,6 @@ const manifestPath = join(
   "Cargo.toml"
 );
 
-console.log("=> manifestPath", manifestPath);
-
 export function getContractLambda(
   scope: cdk.Stack,
   vpc: IVpc,

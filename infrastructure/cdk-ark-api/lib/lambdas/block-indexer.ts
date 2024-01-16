@@ -18,8 +18,6 @@ const manifestPath = join(
   "Cargo.toml"
 );
 
-console.log("=> manifestPath", manifestPath);
-
 export function deployBlockIndexerLambda(
   scope: cdk.Stack,
   vpc: IVpc,
@@ -65,18 +63,14 @@ export function deployBlockIndexerLambda(
     })
   );
 
-  const environmentName =
-    environment.charAt(0).toUpperCase() + environment.slice(1);
-
   new ssm.StringParameter(
     scope,
-    `ArkProject-${environmentName}-${network}-BlockIndexerFunctionName`,
+    `ark-${network}-block-indexer-function-name-${environment}`,
     {
       parameterName: `/ark/${environment}/${network}/blockIndexerFunctionName`,
       stringValue: blockIndexerLambda.functionName,
     }
   );
 
-  // Return the RustFunction construct
   return blockIndexerLambda;
 }

@@ -19,8 +19,6 @@ const manifestPath = join(
   "Cargo.toml"
 );
 
-console.log("=> manifestPath", manifestPath);
-
 export function getTokenEventsLambda(
   scope: cdk.Stack,
   vpc: IVpc,

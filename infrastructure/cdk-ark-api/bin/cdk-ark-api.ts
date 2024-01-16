@@ -11,15 +11,13 @@ const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
 
-const stackNameSuffix = isProductionEnvironment ? "production" : "staging";
+const environment = isProductionEnvironment ? "production" : "staging";
 
-new ArkApiStack(app, `ArkApiStack-${stackNameSuffix}`, {
+new ArkApiStack(app, `ark-api-${environment}`, {
   env: {
-    account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION,
+    account: "223605539824",
+    region: "us-east-1",
   },
   stages: stages,
   isProductionEnvironment,
-  description:
-    "This stack provisions the infrastructure for the Ark Project, which includes API endpoints for contract management and token events. It integrates with DynamoDB for data storage and provides Lambda functions for specific API operations. The stack is designed to be environment-agnostic and can be deployed to any AWS region.",
 });
