@@ -16,8 +16,8 @@ const stackName = `ark-redis-${
 
 new ArkRedisStack(app, stackName, {
   env: {
-    account: "223605539824",
-    region: "us-east-1",
+    account: process.env.AWS_ACCOUNT_ID,
+    region: process.env.AWS_REGION,
   },
   isProductionEnvironment,
   stackName,

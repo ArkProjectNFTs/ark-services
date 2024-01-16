@@ -1,0 +1,5 @@
+{
+  "ark-ecr": {
+    "ECRRepositoryURL": "223605539824.dkr.ecr.us-east-1.amazonaws.com/ark-project-repo"
+  }
+}

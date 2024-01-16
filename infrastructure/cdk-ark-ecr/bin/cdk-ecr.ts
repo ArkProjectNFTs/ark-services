@@ -10,7 +10,7 @@ config();
 const app = new cdk.App();
 new ECRDeploymentStack(app, "ark-ecr", {
   env: {
-    account: "223605539824",
-    region: "us-east-1",
+    account: process.env.AWS_ACCOUNT_ID,
+    region: process.env.AWS_REGION,
   },
 });
