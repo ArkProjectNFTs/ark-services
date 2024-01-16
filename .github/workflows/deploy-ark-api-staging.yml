@@ -6,8 +6,8 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-ark-redis.yml"
-      - "infrastructure/cdk-ark-redis/**"
+      - ".github/workflows/deploy-ark-api-staging.yml"
+      - "infrastructure/cdk-ark-api/**"
 
 jobs:
   discord-notification:
@@ -44,7 +44,7 @@ jobs:
           cd infrastructure/cdk-ark-api
           pnpm install
 
-      - name: Deploy Redis
+      - name: Deploy NFT APIs
         run: |
           cd infrastructure/cdk-ark-api
           pnpm cdk deploy --require-approval never
