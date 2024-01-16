@@ -1,13 +1,13 @@
 //! Initializes the context for ArkStack.
 
+use crate::{params, HttpParamSource};
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
 use ark_sqlx::providers::metrics::{LambdaUsageData, LambdaUsageProvider};
 use ark_sqlx::providers::SqlxCtx;
 use lambda_http::{http::StatusCode, request::RequestContext, Request, RequestExt};
 use std::collections::HashMap;
 use std::time::Instant;
-
-use crate::{params, HttpParamSource};
+use tracing::info;
 
 use crate::{LambdaHttpError, LambdaHttpResponse};
 
@@ -50,6 +50,8 @@ impl LambdaCtx {
         let creation_instant = Instant::now();
 
         let stage_vars = event.stage_variables();
+
+        info!("Stage vars: {:?}", stage_vars);
 
         let table_name = &stage_vars
             .first("tableName")

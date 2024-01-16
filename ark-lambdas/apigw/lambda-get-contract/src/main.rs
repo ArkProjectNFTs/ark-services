@@ -15,6 +15,7 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
+use tracing::info;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -25,6 +26,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     // 3. Process the request.
     let r = process_event(&ctx, &address).await;
+
+    info!("Last evaluated key: {:?}", r);
 
     // 4. Send the response.
     let mut req_params = HashMap::new();
