@@ -46,11 +46,11 @@ export class ArkApiStack extends cdk.Stack {
 
     const lambdaSecurityGroup = new SecurityGroup(
       this,
-      "ark-lambda-security-group",
+      `ark-lambda-security-group-${environment}`,
       {
-        securityGroupName: "ark-lambda-security-group",
+        securityGroupName: `ark-lambda-security-group-${environment}`,
         vpc,
-        description: "Security group for Lambdas",
+        description: `Security group for Lambdas (${environmentName})`,
         allowAllOutbound: true,
       }
     );
