@@ -38,6 +38,11 @@ pub trait ArkEventProvider {
         token_id: &str,
     ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
 
+    async fn get_events(
+        &self,
+        ctx: &DynamoDbCtx,
+    ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError>;
+
     async fn get_contract_events(
         &self,
         ctx: &DynamoDbCtx,
