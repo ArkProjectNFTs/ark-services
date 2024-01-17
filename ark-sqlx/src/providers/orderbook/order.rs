@@ -243,7 +243,7 @@ impl OrderProvider {
             .bind(&event_data.previous_owner.clone().unwrap_or_default())
             .bind(&event_data.new_owner.clone().unwrap_or_default())
             .bind(&event_data.amount)
-            .bind(&event_data.canceled_reason)
+            .bind(&event_data.canceled_reason.clone().unwrap_or_default())
             .execute(&client.pool)
             .await?;
 
@@ -410,7 +410,7 @@ impl OrderProvider {
                     event_type: token_data.order_type.into(),
                     event_timestamp: block_timestamp as i64,
                     order_status: OrderStatus::Cancelled,
-                    canceled_reason: Some(data.reason.clone()),
+                    canceled_reason: data.reason.clone().into(),
                     new_owner: None,
                     amount: None,
                     previous_owner: None,
