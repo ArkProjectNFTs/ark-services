@@ -1,5 +1,3 @@
-# ark-services 💠
-
 ![Ark Project](/images/arkproject.png)
 
 ## Project Structure
