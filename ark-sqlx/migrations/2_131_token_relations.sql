@@ -6,9 +6,8 @@ CREATE TABLE orderbook_token (
        token_id TEXT NOT NULL,
        listed_timestamp BIGINT NOT NULL,
        updated_timestamp BIGINT NOT NULL,
-       status TEXT NOT NULL,
        current_owner TEXT NOT NULL,
-       current_price TEXT NOT NULL,
+       current_price TEXT NULL,
 
        quantity TEXT NULL,
        start_amount TEXT NULL,
@@ -42,39 +41,7 @@ CREATE TABLE orderbook_token_offers (
       offer_amount TEXT NOT NULL,
       offer_quantity TEXT NOT NULL,
       offer_timestamp BIGINT NOT NULL,
-      offer_status TEXT NOT NULL,
-      offer_expiry BIGINT,
       FOREIGN KEY (token_id, token_address) REFERENCES orderbook_token(token_id, token_address)
-);
-
-CREATE TABLE orderbook_order_cancelled (
-       block_id BIGINT NOT NULL,
-       block_timestamp BIGINT NOT NULL,
-
-       order_hash TEXT NOT NULL,
-       reason TEXT NOT NULL,
-
-       PRIMARY KEY (order_hash)
-);
-
-CREATE TABLE orderbook_order_fulfilled (
-       block_id BIGINT NOT NULL,
-       block_timestamp BIGINT NOT NULL,
-
-       order_hash TEXT NOT NULL,
-       fulfiller TEXT NOT NULL,
-       related_order_hash TEXT DEFAULT NULL,
-
-       PRIMARY KEY (order_hash)
-);
-
-CREATE TABLE orderbook_order_executed (
-       block_id BIGINT NOT NULL,
-       block_timestamp BIGINT NOT NULL,
-
-       order_hash TEXT NOT NULL,
-
-       PRIMARY KEY (order_hash)
 );
 
 -- rename orderbook_order_placed to orderbook_order_created
