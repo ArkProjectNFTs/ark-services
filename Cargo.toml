@@ -18,6 +18,7 @@ members = [
   "ark-lambdas/apigw/lambda-get-contracts",
   "ark-lambdas/apigw/lambda-get-contract-tokens",
   "ark-lambdas/apigw/lambda-get-contract-events",
+  "ark-lambdas/apigw/lambda-get-events",
   "ark-lambdas/apigw/lambda-get-owner-tokens",
   "ark-lambdas/apigw/lambda-get-owner-contracts",
   "ark-lambdas/apigw/lambda-get-token",

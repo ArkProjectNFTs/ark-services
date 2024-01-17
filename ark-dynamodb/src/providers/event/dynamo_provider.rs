@@ -162,6 +162,11 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI5SK".to_string(),
                 AttributeValue::S(format!("TIMESTAMP#{}", block_timestamp)),
             )
+            .item("GSI6PK".to_string(), AttributeValue::S("EVENT".to_string()))
+            .item(
+                "GSI6SK".to_string(),
+                AttributeValue::N(block_timestamp.to_string()),
+            )
             .item("Data".to_string(), AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Event.to_string()))
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
@@ -331,6 +336,46 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
+        if let Some(items) = r.items {
+            for i in items {
+                let data = convert::attr_to_map(&i, "Data")?;
+                res.push(Self::data_to_event(&data)?);
+            }
+        }
+
+        Ok(DynamoDbOutput::new_lek(
+            res,
+            &r.consumed_capacity,
+            r.last_evaluated_key,
+        ))
+    }
+
+    async fn get_events(
+        &self,
+        ctx: &DynamoDbCtx,
+    ) -> Result<DynamoDbOutput<Vec<TokenEvent>>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
+
+        let r: aws_sdk_dynamodb::operation::query::QueryOutput = ctx
+            .client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI6PK-GSI6SK-index")
+            .set_key_condition_expression(Some("GSI6PK = :event".to_string()))
+            .set_expression_attribute_values(Some(values))
+            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .set_limit(self.limit)
+            .scan_index_forward(false)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut res = vec![];
+
+        info!("Query result items: {:?}", r.items);
+
         if let Some(items) = r.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
