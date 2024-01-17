@@ -1,6 +1,6 @@
 ![Ark Project](/images/arkproject.png)
 
-## Project Structure
+# Project Structure
 
 The **ark-services** repository is organized into several sub-modules:
 
