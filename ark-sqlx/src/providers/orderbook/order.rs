@@ -1,7 +1,8 @@
 use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledData, PlacedData};
+use sqlx::Row;
 use std::fmt;
-use sqlx::{Row};
-use tracing::{trace, error};
+use std::str::FromStr;
+use tracing::{error, trace};
 
 use crate::providers::{ProviderError, SqlxCtx};
 
@@ -36,8 +37,10 @@ impl From<String> for EventType {
     }
 }
 
-impl EventType {
-    pub fn from_str(s: &str) -> Result<Self, &'static str> {
+impl FromStr for EventType {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "Listing" => Ok(EventType::Listing),
             "Auction" => Ok(EventType::Auction),
@@ -46,13 +49,15 @@ impl EventType {
             _ => Err("Unknown event type"),
         }
     }
+}
 
+impl EventType {
     pub fn as_str(&self) -> &'static str {
         match self {
             EventType::Listing => "Listing",
             EventType::Auction => "Auction",
             EventType::Offer => "Offer",
-            EventType::CollectionOffer => "CollectionOffer"
+            EventType::CollectionOffer => "CollectionOffer",
         }
     }
 }
@@ -116,11 +121,10 @@ pub struct TokenData {
     token_address: String,
     order_type: String,
     offerer: String,
-    start_amount: String
+    start_amount: String,
 }
 
 impl OrderProvider {
-
     pub async fn get_token_data_by_order_hash(
         client: &SqlxCtx,
         order_hash: &str,
@@ -152,7 +156,7 @@ impl OrderProvider {
     pub async fn get_current_owner(
         client: &SqlxCtx,
         token_address: &str,
-        token_id: &str
+        token_id: &str,
     ) -> Result<String, ProviderError> {
         let query = "
             SELECT current_owner
@@ -246,10 +250,7 @@ impl OrderProvider {
         Ok(())
     }
 
-    async fn insert_offers(
-        client: &SqlxCtx,
-        offer_data: &OfferData,
-    ) -> Result<(), ProviderError> {
+    async fn insert_offers(client: &SqlxCtx, offer_data: &OfferData) -> Result<(), ProviderError> {
         trace!("Insert token offers");
         let insert_query = "
             INSERT INTO orderbook_token_offers (token_id, token_address, offer_maker, offer_amount, offer_quantity, offer_timestamp)
@@ -398,7 +399,9 @@ impl OrderProvider {
         )
         .await?;
 
-        if let Some(token_data) = Self::get_token_data_by_order_hash(client, &data.order_hash).await? {
+        if let Some(token_data) =
+            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
+        {
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
@@ -411,10 +414,10 @@ impl OrderProvider {
                     new_owner: None,
                     amount: None,
                     previous_owner: None,
-                }
-            ).await?;
+                },
+            )
+            .await?;
         }
-
 
         Ok(())
     }
@@ -447,7 +450,9 @@ impl OrderProvider {
         )
         .await?;
 
-        if let Some(token_data) = Self::get_token_data_by_order_hash(client, &data.order_hash).await? {
+        if let Some(token_data) =
+            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
+        {
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
@@ -460,8 +465,9 @@ impl OrderProvider {
                     new_owner: None,
                     amount: None,
                     previous_owner: None,
-                }
-            ).await?;
+                },
+            )
+            .await?;
         }
 
         Ok(())
@@ -493,7 +499,9 @@ impl OrderProvider {
         )
         .await?;
 
-        if let Some(token_data) = Self::get_token_data_by_order_hash(client, &data.order_hash).await? {
+        if let Some(token_data) =
+            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
+        {
             let mut new_owner = None;
             let mut previous_owner = None;
             match token_data.order_type.clone().into() {
@@ -507,16 +515,21 @@ impl OrderProvider {
                         &token_data.token_id.clone(),
                         &token_data.start_amount,
                         &new_owner.clone().unwrap(),
-                    ).await?;
-                    previous_owner = Some(Self::get_current_owner(client, &token_data.token_address, &token_data.token_id).await?);
-
+                    )
+                    .await?;
+                    previous_owner = Some(
+                        Self::get_current_owner(
+                            client,
+                            &token_data.token_address,
+                            &token_data.token_id,
+                        )
+                        .await?,
+                    );
                 }
                 _ => {
                     error!("Unknown order type {:?}", token_data.order_type);
                 }
             }
-            error!("new_owner owner {:?}", new_owner);
-            error!("previous owner {:?}", previous_owner);
 
             Self::insert_event_history(
                 client,
@@ -530,8 +543,9 @@ impl OrderProvider {
                     new_owner,
                     amount: None,
                     previous_owner,
-                }
-            ).await?;
+                },
+            )
+            .await?;
         }
 
         Ok(())
