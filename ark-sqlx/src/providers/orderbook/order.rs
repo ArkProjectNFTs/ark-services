@@ -226,8 +226,8 @@ impl OrderProvider {
         trace!("Insert event history");
 
         let q = "
-            INSERT INTO orderbook_token_history (token_id, token_address, event_type, order_status, event_timestamp, previous_owner, new_owner, amount)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+            INSERT INTO orderbook_token_history (token_id, token_address, event_type, order_status, event_timestamp, previous_owner, new_owner, amount, canceled_reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
         ";
 
         let _r = sqlx::query(q)
@@ -239,6 +239,7 @@ impl OrderProvider {
             .bind(&event_data.previous_owner.clone().unwrap_or_default())
             .bind(&event_data.new_owner.clone().unwrap_or_default())
             .bind(&event_data.amount)
+            .bind(&event_data.canceled_reason)
             .execute(&client.pool)
             .await?;
 
