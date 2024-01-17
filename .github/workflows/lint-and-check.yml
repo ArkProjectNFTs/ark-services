@@ -4,9 +4,21 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "ark-dynamodb/**"
+      - "ark-indexer/**"
+      - "ark-lambdas/**"
+      - "ark-metadata-refresh/**"
+      - "ark-sqlx/**"
+      - "arkchain-indexer/**"
   pull_request:
-    types: [opened, synchronize, reopened, closed]
-
+    paths:
+      - "ark-dynamodb/**"
+      - "ark-indexer/**"
+      - "ark-lambdas/**"
+      - "ark-metadata-refresh/**"
+      - "ark-sqlx/**"
+      - "arkchain-indexer/**"
 env:
   CARGO_TERM_COLOR: always
 
