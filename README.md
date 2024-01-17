@@ -2,7 +2,7 @@
 
 ## Project Structure
 
-The **ark-services** project is organized into several sub-modules:
+The **ark-services** repository is organized into several sub-modules:
 
 ### ark-dynamodb
 
