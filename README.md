@@ -1,5 +1,7 @@
 # ark-services 💠
 
+![Ark Project](/images/arkproject.png)
+
 ## Project Structure
 
 The **ark-services** project is organized into several sub-modules:
