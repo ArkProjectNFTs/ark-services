@@ -1,0 +1,12 @@
+[package]
+name = "ark-orderbook-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4.4.0"
+actix-rt = "2.9.0"
+sqlx = { version = "0.7", features = ["postgres"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
