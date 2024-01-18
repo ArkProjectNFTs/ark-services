@@ -45,6 +45,12 @@ impl From<SqlxError> for ProviderError {
     }
 }
 
+impl From<&str> for ProviderError {
+    fn from(err: &str) -> Self {
+        ProviderError::DataValueError(err.to_string())
+    }
+}
+
 impl From<ProviderError> for StorageError {
     fn from(e: ProviderError) -> Self {
         StorageError::ProviderError(e.to_string())

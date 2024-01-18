@@ -27,9 +27,7 @@ cd ark-project/
 
 # Addresses does not matter to test
 cargo run -p solis -- \
-    --messaging crates/solis/messaging.local.json \
-    --orderbook-address 0x1234 \
-    --executor-address 0x1234
+    --messaging crates/solis/messaging.local.json
 ```
 
 3. Spin up the database and migrations:
@@ -40,7 +38,7 @@ sudo docker run -d \
     -e POSTGRES_PASSWORD=123 \
     postgres
     
-cargo install sqlx
+cargo install sqlx-cli
 
 sqlx database reset \
     --database-url postgres://postgres:123@localhost:5432/arkchain
@@ -48,7 +46,7 @@ sqlx database reset \
 
 4. Run some commands to emit mocked events
 ```
-cd ark-project/crates/ark-contracts/arkchain
+cd ark-project/contracts
 
 # the first time only
 make generate_artifacts
