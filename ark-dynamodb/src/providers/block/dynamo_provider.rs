@@ -96,6 +96,14 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
                 "GSI1SK".to_string(),
                 AttributeValue::S(self.get_pk(block_timestamp)),
             )
+            .item(
+                "GSI6PK".to_string(),
+                AttributeValue::S(String::from("BLOCK")),
+            )
+            .item(
+                "GSI6SK".to_string(),
+                AttributeValue::N(block_number.to_string()),
+            )
             .item("Data", AttributeValue::M(data))
             .item("Type", AttributeValue::S(EntityType::Block.to_string()))
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
