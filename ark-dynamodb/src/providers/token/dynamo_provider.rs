@@ -297,7 +297,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .key_condition_expression("GSI5PK = :gsi_pk AND begins_with(GSI5SK, :gsi_sk)")
             .expression_attribute_values(
                 ":gsi_pk",
-                AttributeValue::S(String::from("METADATA#false")),
+                AttributeValue::S(String::from("METADATA#TO_REFRESH")),
             )
             .expression_attribute_values(":gsi_sk", AttributeValue::S(sort_key))
             .scan_index_forward(false)
@@ -427,7 +427,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .item("GSI4SK".to_string(), AttributeValue::S(pk.clone()))
             .item(
                 "GSI5PK".to_string(),
-                AttributeValue::S("METADATA#false".to_string()),
+                AttributeValue::S("METADATA#TO_REFRESH".to_string()),
             )
             .item(
                 "GSI5SK".to_string(),
