@@ -35,11 +35,6 @@ export class ArkApiStack extends cdk.Stack {
     // V1 API
     const versionedRoot = api.root.addResource("v1");
 
-    versionedRoot.addCorsPreflight({
-      allowOrigins: apigateway.Cors.ALL_ORIGINS,
-      allowMethods: apigateway.Cors.ALL_METHODS,
-    });
-
     const tableNamePrefix = props.isProductionEnvironment
       ? "ark_project"
       : "ark_project_staging";
@@ -164,6 +159,10 @@ export class ArkApiStack extends cdk.Stack {
       {
         restApiName: `ark-project-api-${environment}`,
         deploy: false, // Disable automatic deployment
+        defaultCorsPreflightOptions: {
+          allowOrigins: apigateway.Cors.ALL_ORIGINS,
+          allowMethods: apigateway.Cors.ALL_METHODS,
+        },
       }
     );
   }

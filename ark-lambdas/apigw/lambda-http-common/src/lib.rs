@@ -7,7 +7,7 @@ pub use lambda_context::LambdaCtx;
 
 use ark_dynamodb::ProviderError;
 use ark_sqlx::providers::ProviderError as SqlxProviderError;
-use lambda_http::{Body, Error, Response};
+use lambda_http::{http::header, Body, Error, Response};
 use serde::Serialize;
 
 /// Generic response returned from any http lambda.
@@ -58,7 +58,7 @@ impl TryFrom<LambdaHttpError> for Response<Body> {
     fn try_from(e: LambdaHttpError) -> Result<Self, Self::Error> {
         Ok(Response::builder()
             .status(400)
-            .header("Content-Type", "text/plain")
+            .header(header::CONTENT_TYPE, "text/plain")
             .body(match e {
                 LambdaHttpError::ParamParsing(s) => s.into(),
                 LambdaHttpError::ParamMissing(s) => s.into(),
@@ -73,7 +73,13 @@ impl TryFrom<LambdaHttpError> for Response<Body> {
 pub fn ok_body_rsp<T: Serialize>(body: &T) -> Result<Response<Body>, Error> {
     Ok(Response::builder()
         .status(200)
-        .header("content-type", "application/json")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        .header(header::ACCESS_CONTROL_ALLOW_METHODS, "GET, POST, OPTIONS")
+        .header(
+            header::ACCESS_CONTROL_ALLOW_HEADERS,
+            "Content-Type, Authorization",
+        )
         .body(serde_json::to_string(&body)?.into())
         .map_err(Box::new)?)
 }
@@ -82,7 +88,7 @@ pub fn ok_body_rsp<T: Serialize>(body: &T) -> Result<Response<Body>, Error> {
 pub fn not_found_rsp() -> Result<Response<Body>, Error> {
     Ok(Response::builder()
         .status(404)
-        .header("Content-Type", "text/plain")
+        .header(header::CONTENT_TYPE, "text/plain")
         .body("".into())
         .map_err(Box::new)?)
 }
@@ -91,7 +97,7 @@ pub fn not_found_rsp() -> Result<Response<Body>, Error> {
 pub fn bad_request_rsp(message: &str) -> Result<Response<Body>, Error> {
     Ok(Response::builder()
         .status(400)
-        .header("Content-Type", "text/plain")
+        .header(header::CONTENT_TYPE, "text/plain")
         .body(message.into())
         .map_err(Box::new)?)
 }
@@ -100,7 +106,7 @@ pub fn bad_request_rsp(message: &str) -> Result<Response<Body>, Error> {
 pub fn internal_server_error_rsp(message: &str) -> Result<Response<Body>, Error> {
     Ok(Response::builder()
         .status(500)
-        .header("Content-Type", "text/plain")
+        .header(header::CONTENT_TYPE, "text/plain")
         .body(message.into())
         .map_err(Box::new)?)
 }
