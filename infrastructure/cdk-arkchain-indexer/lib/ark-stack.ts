@@ -2,13 +2,15 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 import { ArkIndexersStackProps } from "./types";
-import { deployIndexer } from "./ecs/indexer";
 import { Vpc, InstanceType, InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
 import {
   DatabaseInstance,
   DatabaseInstanceEngine,
   PostgresEngineVersion,
 } from 'aws-cdk-lib/aws-rds';
+import { SecretValue } from "aws-cdk-lib";
+import { deployIndexer } from "./ecs/indexer";
+
 export class ArkIndexersStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkIndexersStackProps) {
     super(scope, id, props);
@@ -29,15 +31,19 @@ export class ArkIndexersStack extends cdk.Stack {
       deleteAutomatedBackups: true,
       backupRetention: cdk.Duration.days(0),
       deletionProtection: false,
+      databaseName: 'arkchain-indexer',
+      credentials: {
+        username: process.env.DB_USERNAME || 'defaultUsername',
+        password: SecretValue.unsafePlainText(process.env.DB_PASSWORD || 'defaultPassword'),
+      },
     });
 
-    /*deployIndexer(
+    deployIndexer(
       this,
       props.networks,
-      vpc,
       props.isProductionEnvironment,
       props.indexerVersion
-    );*/
+    );
 
   }
 }

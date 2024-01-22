@@ -1,22 +1,12 @@
 import * as cdk from "aws-cdk-lib";
-import { IVpc } from "aws-cdk-lib/aws-ec2";
-import { Cluster } from "aws-cdk-lib/aws-ecs";
-import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
-import { PolicyStatement } from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as ssm from "aws-cdk-lib/aws-ssm";
 
 export async function deployIndexer(
   scope: cdk.Stack,
   networks: string[],
-  vpc: IVpc,
   isProductionEnvironment: boolean,
   indexerVersion: string
 ) {
-  const cluster = new Cluster(scope, "indexers", {
-    vpc: vpc,
-  });
 
   const ecrRepository = cdk.aws_ecr.Repository.fromRepositoryName(
     scope,
@@ -25,11 +15,6 @@ export async function deployIndexer(
   );
 
   networks.forEach((network) => {
-    const tableName = isProductionEnvironment
-      ? `ark_project_${network}`
-      : `ark_project_staging_${network}`;
-
-
     deployIndexerServices(
       isProductionEnvironment,
       scope,
