@@ -75,6 +75,7 @@ function deployIndexerServices(
   new cdk.aws_ecs.FargateService(scope, `arkchain-indexer-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
+    desiredCount: 1,
   });
 
 }
