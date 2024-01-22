@@ -53,9 +53,7 @@ export function tokensApi(
     }
   );
 
-  const metadataRessource =
-    tokenContractAddressResource.addResource("metadata");
-
+  const metadataRessource = tokensTokenIdResource.addResource("metadata");
   const refreshMetadataRessource = metadataRessource.addResource("refresh");
 
   refreshMetadataRessource.addMethod(
