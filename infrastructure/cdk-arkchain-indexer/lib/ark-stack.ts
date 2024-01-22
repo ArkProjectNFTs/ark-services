@@ -31,7 +31,7 @@ export class ArkIndexersStack extends cdk.Stack {
       deleteAutomatedBackups: true,
       backupRetention: cdk.Duration.days(0),
       deletionProtection: false,
-      databaseName: 'arkchain-indexer',
+      databaseName: 'arkchainindexer',
       credentials: {
         username: process.env.DB_USERNAME || 'defaultUsername',
         password: SecretValue.unsafePlainText(process.env.DB_PASSWORD || 'defaultPassword'),
