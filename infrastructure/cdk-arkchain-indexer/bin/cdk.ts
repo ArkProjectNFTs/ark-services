@@ -17,7 +17,7 @@ const networks: string[] = isProductionEnvironment
   : ["mainnet"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
-const stackName = `ark-arkchain-indexer-${environment}`;
+const stackName = `arkchain-indexer-${environment}`;
 const indexerVersion: string = process.env.INDEXER_VERSION ?? "UNDEFINED";
 
 new ArkIndexersStack(app, stackName, {

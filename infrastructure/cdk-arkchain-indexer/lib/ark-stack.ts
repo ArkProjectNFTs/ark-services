@@ -42,7 +42,8 @@ export class ArkIndexersStack extends cdk.Stack {
       this,
       props.networks,
       props.isProductionEnvironment,
-      props.indexerVersion
+      props.indexerVersion,
+      vpc
     );
 
   }

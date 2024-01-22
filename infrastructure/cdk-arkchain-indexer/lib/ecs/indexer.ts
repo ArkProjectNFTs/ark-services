@@ -1,12 +1,18 @@
 import * as cdk from "aws-cdk-lib";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
+import { Cluster } from "aws-cdk-lib/aws-ecs";
 
 export async function deployIndexer(
   scope: cdk.Stack,
   networks: string[],
   isProductionEnvironment: boolean,
-  indexerVersion: string
+  indexerVersion: string,
+  vpc: cdk.aws_ec2.IVpc
 ) {
+
+  const cluster = new Cluster(scope, "arkchain-indexer", {
+    vpc: vpc,
+  });
 
   const ecrRepository = cdk.aws_ecr.Repository.fromRepositoryName(
     scope,
@@ -21,6 +27,7 @@ export async function deployIndexer(
       ecrRepository,
       network,
       indexerVersion,
+      cluster
     );
   });
 }
@@ -31,6 +38,7 @@ function deployIndexerServices(
   ecrRepository: cdk.aws_ecr.IRepository,
   network: string,
   indexerVersion: string,
+  cluster: cdk.aws_ecs.ICluster
 ) {
   const logGroup = new LogGroup(scope, `/ecs/arkchain-indexer-${network}`, {
     removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -64,5 +72,9 @@ function deployIndexerServices(
     },
   });
 
+  new cdk.aws_ecs.FargateService(scope, `arkchain-indexer-${network}`, {
+    cluster: cluster,
+    taskDefinition: taskDefinition,
+  });
 
 }
