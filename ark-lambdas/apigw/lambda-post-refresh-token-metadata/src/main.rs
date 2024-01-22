@@ -41,7 +41,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
                     &ctx.dynamodb,
                     address.as_str(),
                     token_id_hex.as_str(),
-                    "true",
+                    "TO_REFRESH",
                 )
                 .await
             {
