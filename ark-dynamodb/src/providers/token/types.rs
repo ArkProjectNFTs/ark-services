@@ -7,6 +7,7 @@ use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use tracing::warn;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TokenData {
@@ -293,12 +294,11 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
         let metadata = if data.get("Metadata").is_some() {
             let m = convert::attr_to_map(&data, "Metadata")?;
 
-            let normalized_metadata =
-                extract_normalized_metadata_from_hashmap(m.clone()).map_err(|_| {
-                    ProviderError::DataValueError(String::from(
-                        "Extracting normalized metadata from hashmap failed",
-                    ))
-                })?;
+            let normalized_metadata = extract_normalized_metadata_from_hashmap(m.clone())
+                .unwrap_or_else(|error| {
+                    warn!("Failed to extract normalized metadata: {}", error);
+                    NormalizedMetadata::default()
+                });
 
             let raw_metadata = match m.get("RawMetadata") {
                 Some(AttributeValue::S(s)) => s.clone(),
