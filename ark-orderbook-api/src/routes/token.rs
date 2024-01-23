@@ -1,7 +1,10 @@
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::web;
 
 use crate::handlers::token_handler;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.route("/token/{address}/{id}", web::get().to(token_handler::get_token));
+    cfg.route(
+        "/token/{address}/{id}",
+        web::get().to(token_handler::get_token),
+    );
 }

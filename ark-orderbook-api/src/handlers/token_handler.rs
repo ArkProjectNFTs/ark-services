@@ -1,17 +1,16 @@
 use actix_web::{web, HttpResponse, Responder};
-use serde::{Serialize, Deserialize};
+use sqlx::PgPool;
 
-#[derive(Serialize, Deserialize)]
-pub struct ApiResponse {
-    status: String,
-    message: String,
-}
+use crate::db::query::get_token_data;
 
-pub async fn get_token(path: web::Path<(String, String)>) -> impl Responder {
-    let (address, id) = path.into_inner();
-    let response = ApiResponse {
-        status: "success".to_string(),
-        message: "Operation completed successfully".to_string(),
-    };
-    HttpResponse::Ok().json(response)
+pub async fn get_token(
+    path: web::Path<(String, String)>,
+    db_pool: web::Data<PgPool>,
+) -> impl Responder {
+    let (token_address, token_id) = path.into_inner();
+
+    match get_token_data(&db_pool, &token_address, &token_id).await {
+        Ok(token_data) => HttpResponse::Ok().json(token_data),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
 }
