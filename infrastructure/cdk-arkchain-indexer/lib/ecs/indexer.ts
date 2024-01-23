@@ -69,6 +69,7 @@ function deployIndexerServices(
       HEAD_OF_CHAIN: "true",
       INDEXER_VERSION: indexerVersion,
       RUST_LOG: "INFO",
+      RPC_PROVIDER: `https://juno.${network}.arkproject.dev`,
     },
   });
 
