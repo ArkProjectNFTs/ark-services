@@ -281,7 +281,9 @@ fn extract_normalized_metadata_from_hashmap(
 impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
     type Error = ProviderError;
 
-    fn try_from(data: HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+    fn try_from(obj: HashMap<String, AttributeValue>) -> Result<Self, Self::Error> {
+        let data = convert::attr_to_map(&obj, "Data")?;
+
         let mint_info = match convert::attr_to_map(&data, "MintInfo") {
             Ok(m) => Some(TokenMintInfo {
                 address: convert::attr_to_str(&m, "Address")?,
@@ -313,10 +315,22 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
                 _ => None,
             };
 
+            let awaiting_metadata_update = match obj.get("GSI5PK") {
+                Some(AttributeValue::S(gsi5pk)) => {
+                    if gsi5pk.contains("TO_REFRESH") {
+                        Some(true)
+                    } else {
+                        Some(false)
+                    }
+                }
+                _ => Some(false),
+            };
+
             Some(TokenMetadata {
                 raw: raw_metadata.clone(),
                 normalized: normalized_metadata,
                 metadata_updated_at,
+                awaiting_metadata_update,
             })
         } else {
             None
@@ -399,21 +413,23 @@ mod tests {
 
     #[test]
     fn test_try_from() {
-        let mock_data = {
+        let mock_item = {
             let mut map = HashMap::new();
-            map.insert(
+            let mut data = HashMap::new();
+
+            data.insert(
                 "Owner".to_string(),
                 AttributeValue::S("owner_address".to_string()),
             );
-            map.insert(
+            data.insert(
                 "ContractAddress".to_string(),
                 AttributeValue::S("contract_address".to_string()),
             );
-            map.insert(
+            data.insert(
                 "TokenId".to_string(),
                 AttributeValue::S("token_id".to_string()),
             );
-            map.insert(
+            data.insert(
                 "TokenIdHex".to_string(),
                 AttributeValue::S("token_id_hex".to_string()),
             );
@@ -435,12 +451,13 @@ mod tests {
                 AttributeValue::M(normalized_metadata),
             );
 
-            map.insert("Metadata".to_string(), AttributeValue::M(metadata));
+            data.insert("Metadata".to_string(), AttributeValue::M(metadata));
+            map.insert("Data".to_string(), AttributeValue::M(data));
 
             map
         };
 
-        let token_data = TokenData::try_from(mock_data).unwrap();
+        let token_data = TokenData::try_from(mock_item).unwrap();
 
         assert_eq!(token_data.owner, "owner_address");
         let metadata_result = token_data.metadata.unwrap();
@@ -486,6 +503,7 @@ mod tests {
                 },
                 raw: String::from("{ \"image\": \"image_url\" }"),
                 metadata_updated_at: None,
+                awaiting_metadata_update: None,
             }),
         };
 
@@ -529,11 +547,11 @@ mod tests {
                     trait_type: Some("trait".to_string()),
                     value: MetadataTraitValue::String("value".to_string()),
                 }]),
-
                 properties: None,
             },
             raw: "{ \"image\": \"image_url\" }".to_string(),
             metadata_updated_at: None,
+            awaiting_metadata_update: None,
         };
 
         // Call the function
