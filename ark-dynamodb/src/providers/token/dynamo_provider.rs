@@ -505,8 +505,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let mut res = vec![];
         if let Some(items) = r.items {
             for i in items {
-                let data = convert::attr_to_map(&i, "Data")?;
-                res.push(data.try_into()?);
+                res.push(i.try_into()?);
             }
         }
 
@@ -559,8 +558,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let mut res = vec![];
         if let Some(items) = r.items {
             for i in items {
-                let data = convert::attr_to_map(&i, "Data")?;
-                res.push(data.try_into()?);
+                res.push(i.try_into()?);
             }
         }
 
