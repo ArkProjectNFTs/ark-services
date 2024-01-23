@@ -107,9 +107,15 @@ impl DynamoDbPaginator {
                 let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
 
                 for (key, value) in lek {
-                    let value = value
-                        .as_s()
-                        .expect("Paginator service only support String keys in LEK");
+                    let value = match value {
+                        AttributeValue::S(s) => s,
+                        AttributeValue::N(n) => n,
+                        _ => {
+                            return Err(ProviderError::ParsingError(
+                                "Invalid LEK type".to_string(),
+                            ));
+                        }
+                    };
                     conn.hset(hash_key.clone(), key, value)
                         .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
                 }
