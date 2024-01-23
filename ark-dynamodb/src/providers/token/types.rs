@@ -17,6 +17,7 @@ pub struct TokenData {
     pub owner: String,
     pub mint_info: Option<TokenMintInfo>,
     pub metadata: Option<TokenMetadata>,
+    pub awaiting_metadata_update: Option<bool>,
 }
 
 impl TokenData {
@@ -315,25 +316,24 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
                 _ => None,
             };
 
-            let awaiting_metadata_update = match obj.get("GSI5PK") {
-                Some(AttributeValue::S(gsi5pk)) => {
-                    if gsi5pk.contains("TO_REFRESH") {
-                        Some(true)
-                    } else {
-                        Some(false)
-                    }
-                }
-                _ => Some(false),
-            };
-
             Some(TokenMetadata {
                 raw: raw_metadata.clone(),
                 normalized: normalized_metadata,
                 metadata_updated_at,
-                awaiting_metadata_update,
             })
         } else {
             None
+        };
+
+        let awaiting_metadata_update = match obj.get("GSI5PK") {
+            Some(AttributeValue::S(gsi5pk)) => {
+                if gsi5pk.contains("TO_REFRESH") {
+                    Some(true)
+                } else {
+                    Some(false)
+                }
+            }
+            _ => Some(false),
         };
 
         Ok(TokenData {
@@ -343,6 +343,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             token_id_hex: convert::attr_to_str(&data, "TokenIdHex")?,
             mint_info,
             metadata,
+            awaiting_metadata_update,
         })
     }
 }
@@ -503,8 +504,8 @@ mod tests {
                 },
                 raw: String::from("{ \"image\": \"image_url\" }"),
                 metadata_updated_at: None,
-                awaiting_metadata_update: None,
             }),
+            awaiting_metadata_update: None,
         };
 
         let result_map: HashMap<String, AttributeValue> = (&mock_token_data).into();
@@ -551,7 +552,6 @@ mod tests {
             },
             raw: "{ \"image\": \"image_url\" }".to_string(),
             metadata_updated_at: None,
-            awaiting_metadata_update: None,
         };
 
         // Call the function
