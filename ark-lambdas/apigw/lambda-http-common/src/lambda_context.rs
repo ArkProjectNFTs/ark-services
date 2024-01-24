@@ -73,10 +73,15 @@ impl LambdaCtx {
             .first("paginationCache")
             .expect("paginationCache must be set in stage variables");
 
-        let max_items_limit = stage_vars
+        let max_items_limit_default = stage_vars
             .first("maxItemsLimit")
             .as_ref()
             .map(|v| v.parse::<i32>().expect("Invalid i32 for max items"));
+
+        let limit_param = params::string_param(event, "limit", HttpParamSource::QueryString)
+            .and_then(|limit_str| limit_str.parse::<i32>().ok());
+
+        let max_items_limit = limit_param.or(max_items_limit_default);
 
         let paginator = DynamoDbPaginator::new(pagination_db);
 
