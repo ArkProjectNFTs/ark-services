@@ -189,7 +189,7 @@ function deployMetadataServices(
   taskDefinition.addContainer(`ark_metadata`, {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
-      "metadata-latest"
+      `metadata-${isProductionEnvironment ? "production" : "staging"}-latest`
     ),
     logging: cdk.aws_ecs.LogDrivers.awsLogs({
       streamPrefix: "ecs",
