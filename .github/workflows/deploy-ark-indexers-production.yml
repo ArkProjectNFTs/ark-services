@@ -161,7 +161,8 @@ jobs:
       - name: Build metadata, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-metadata
-          docker buildx build --tag $ECR_URL:metadata-latest --file docker/metadata/Dockerfile . --load
+          docker buildx build --tag $ECR_URL:metadata-production-latest --file docker/metadata/Dockerfile . --load
+          docker push $ECR_URL:metadata-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
