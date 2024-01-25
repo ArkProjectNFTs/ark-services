@@ -15,5 +15,6 @@ pub struct TokenData {
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
     pub broker_id: Option<String>,
-    pub is_listed: Option<bool>
+    pub is_listed: Option<bool>,
+    pub has_offer: Option<bool>
 }
