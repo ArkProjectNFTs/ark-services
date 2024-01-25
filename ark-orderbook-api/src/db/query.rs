@@ -8,3 +8,10 @@ pub async fn get_token_data<D: DatabaseAccess + Sync>(
 ) -> Result<TokenData, sqlx::Error> {
     db_access.get_token_data(token_address, token_id).await
 }
+
+pub async fn get_token_by_collection_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    token_address: &str,
+) -> Result<Vec<TokenData>, sqlx::Error> {
+    db_access.get_token_by_collection_data(token_address).await
+}
