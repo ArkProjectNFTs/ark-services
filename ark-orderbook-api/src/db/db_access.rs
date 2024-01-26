@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use crate::models::token::{TokenData, TokenWithHistory, TokenHistory};
+use crate::models::token::{TokenData, TokenWithHistory, TokenHistory, TokenWithOffers, TokenOffer};
 use sqlx::Error;
 use sqlx::PgPool;
 
@@ -8,6 +8,7 @@ pub trait DatabaseAccess: Send + Sync {
     async fn get_token_data(&self, token_address: &str, token_id: &str) -> Result<TokenData, Error>;
     async fn get_token_by_collection_data(&self, token_address: &str) -> Result<Vec<TokenData>, Error>;
     async fn get_token_history_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithHistory, Error>;
+    async fn get_token_offers_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithOffers, Error>;
 }
 
 #[async_trait]
@@ -109,6 +110,32 @@ impl DatabaseAccess for PgPool {
             history: history,
         })
     }
+
+    async fn get_token_offers_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithOffers, Error> {
+        let token_info = sqlx::query!(
+            "SELECT token_id, token_address, current_owner, current_price
+             FROM orderbook_token
+             WHERE token_id = $1 AND token_address = $2",
+            token_id, token_address
+        ).fetch_one(self).await?;
+
+        let offers = sqlx::query_as!(
+            TokenOffer,
+            "SELECT offer_maker, offer_amount, offer_quantity, offer_timestamp
+            FROM orderbook_token_offers
+            WHERE token_id = $1 AND token_address = $2
+            ORDER BY offer_timestamp DESC;",
+            token_id, token_address
+        ).fetch_all(self).await?;
+
+        Ok(TokenWithOffers {
+            token_id: token_info.token_id,
+            token_address: token_info.token_address,
+            current_owner: token_info.current_owner,
+            current_price: token_info.current_price,
+            offers: offers,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -194,6 +221,24 @@ impl DatabaseAccess for MockDb {
             current_owner: "owner123".to_string(),
             current_price: Some("100".to_string()),
             history,
+        })
+    }
+
+    async fn get_token_offers_data(&self, _token_address: &str, _token_id: &str) -> Result<TokenWithOffers, Error> {
+        let offers = vec![
+            TokenOffer {
+                offer_maker: "maker123".to_string(),
+                offer_amount: "100".to_string(),
+                offer_quantity: "10".to_string(),
+                offer_timestamp: 1234567890,
+            },
+        ];
+        Ok(TokenWithOffers {
+            token_address: "0xABCDEF123456".to_string(),
+            token_id: "token789".to_string(),
+            current_owner: "owner123".to_string(),
+            current_price: Some("100".to_string()),
+            offers: offers,
         })
     }
 }

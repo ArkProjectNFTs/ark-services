@@ -38,3 +38,20 @@ pub struct TokenHistory {
     pub amount: Option<String>,
     pub canceled_reason: Option<String>,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct TokenOffer {
+    pub offer_maker: String,
+    pub offer_amount: String,
+    pub offer_quantity: String,
+    pub offer_timestamp: i64,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TokenWithOffers {
+    pub token_address: String,
+    pub token_id: String,
+    pub current_owner: String,
+    pub current_price: Option<String>,
+    pub offers: Vec<TokenOffer>,
+}

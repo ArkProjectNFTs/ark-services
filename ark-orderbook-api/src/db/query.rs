@@ -1,4 +1,4 @@
-use crate::models::token::{TokenData, TokenWithHistory};
+use crate::models::token::{TokenData, TokenWithHistory, TokenWithOffers};
 use crate::db::db_access::DatabaseAccess;
 
 pub async fn get_token_data<D: DatabaseAccess + Sync>(
@@ -22,4 +22,12 @@ pub async fn get_token_history_data<D: DatabaseAccess + Sync>(
     token_id: &str,
 ) -> Result<TokenWithHistory, sqlx::Error> {
     db_access.get_token_history_data(token_address, token_id).await
+}
+
+pub async fn get_token_offers_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    token_address: &str,
+    token_id: &str,
+) -> Result<TokenWithOffers, sqlx::Error> {
+    db_access.get_token_offers_data(token_address, token_id).await
 }
