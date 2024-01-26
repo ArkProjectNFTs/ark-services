@@ -18,3 +18,23 @@ pub struct TokenData {
     pub is_listed: Option<bool>,
     pub has_offer: Option<bool>
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct TokenWithHistory {
+    pub token_address: String,
+    pub token_id: String,
+    pub current_owner: String,
+    pub current_price: Option<String>,
+    pub history: Vec<TokenHistory>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TokenHistory {
+    pub event_type: String,
+    pub event_timestamp: i64,
+    pub order_status: String,
+    pub previous_owner: Option<String>,
+    pub new_owner: Option<String>,
+    pub amount: Option<String>,
+    pub canceled_reason: Option<String>,
+}

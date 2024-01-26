@@ -13,4 +13,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/tokens/collection/{collection_id}",
         web::get().to(token_handler::get_tokens_by_collection::<PgPool>),
     );
+
+    cfg.route(
+        "/token/{address}/{id}/history",
+        web::get().to(token_handler::get_token_history::<PgPool>),
+    );
 }
