@@ -1,6 +1,6 @@
 use crate::providers::token::types::TokenData;
 use crate::providers::ArkTokenProvider;
-use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
+use crate::{DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 
 use arkproject::metadata::types::TokenMetadata;
 use arkproject::pontos::storage::types::TokenMintInfo;
@@ -273,8 +273,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         if let Some(item) = &r.item {
-            let data = convert::attr_to_map(item, "Data")?;
-            let token_data: TokenData = data.try_into()?;
+            let token_data: TokenData = item.clone().try_into()?;
             Ok(DynamoDbOutput::new(Some(token_data), &r.consumed_capacity))
         } else {
             Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
