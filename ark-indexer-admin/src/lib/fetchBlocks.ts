@@ -47,19 +47,17 @@ async function fetchAllDynamoItems(
   do {
     const result: QueryCommandOutput = await db.query({
       TableName: tableName,
-      IndexName: "GSI1PK-GSI1SK-index",
-      KeyConditionExpression: "#GSI1PK = :GSI1PK",
+      IndexName: "GSI6PK-GSI6SK-index",
+      KeyConditionExpression: "#GSI6PK = :GSI6PK",
       ExpressionAttributeNames: {
-        "#GSI1PK": "GSI1PK",
-        "#status": "Data.M.Status",
+        "#GSI6PK": "GSI6PK",
       },
       ExpressionAttributeValues: {
-        ":GSI1PK": { S: "BLOCK" },
-        ":noneValue": { S: "NONE" },
+        ":GSI6PK": { S: "BLOCK" },
       },
-      FilterExpression: "#status <> :noneValue",
       ProjectionExpression: "PK",
       ExclusiveStartKey: lastEvaluatedKey,
+      ScanIndexForward: false,
     });
 
     items.push(...(result.Items ?? []));
