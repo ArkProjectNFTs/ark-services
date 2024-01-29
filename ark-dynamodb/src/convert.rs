@@ -2,6 +2,7 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use std::collections::HashMap;
 use tracing::trace;
 
+
 use crate::ProviderError;
 
 /// Returns a HashMap<String, AttributeValue> from the given attribute, `ProviderError` if data is missing or invalid data value.
