@@ -8,4 +8,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/token/{address}/{id}",
         web::get().to(token_handler::get_token::<PgPool>),
     );
+
+    cfg.route(
+        "/tokens/collection/{collection_id}",
+        web::get().to(token_handler::get_tokens_by_collection::<PgPool>),
+    );
 }
