@@ -23,4 +23,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/token/{address}/{id}/offers",
         web::get().to(token_handler::get_token_offers::<PgPool>),
     );
+
+    cfg.route(
+        "/tokens/{owner}",
+        web::get().to(token_handler::get_tokens_by_account::<PgPool>),
+    );
 }

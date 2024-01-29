@@ -5,6 +5,7 @@ use crate::db::query::{
     get_token_by_collection_data,
     get_token_history_data,
     get_token_offers_data,
+    get_tokens_by_account_data,
 };
 
 pub async fn get_token<D: DatabaseAccess + Sync>(
@@ -58,11 +59,23 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
     }
 }
 
+pub async fn get_tokens_by_account<D: DatabaseAccess + Sync>(
+    path: web::Path<String>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let owner = path.into_inner();
+    let db_access = db_pool.get_ref();
+    match get_tokens_by_account_data(db_access, owner.as_str()).await {
+        Ok(token_data) => HttpResponse::Ok().json(token_data),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use actix_web::{test, web, App, http};
     use crate::db::db_access::MockDb;
-    use crate::handlers::token_handler::{get_token, get_tokens_by_collection,get_token_history, get_token_offers};
+    use crate::handlers::token_handler::{get_token, get_tokens_by_account, get_tokens_by_collection,get_token_history, get_token_offers};
     use crate::models::token::{TokenData, TokenWithHistory, TokenWithOffers};
 
     #[actix_rt::test]
@@ -201,5 +214,52 @@ mod tests {
         assert_eq!(token_offers.offers[0].offer_quantity, "10");
         assert_eq!(token_offers.offers[0].offer_timestamp, 1234567890);
     }
+
+    #[actix_rt::test]
+    async fn test_get_tokens_data() {
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(MockDb))
+                .route("/tokens/{owner}", web::get().to(get_tokens_by_account::<MockDb>)),
+        ).await;
+
+        let req = test::TestRequest::get().uri("/tokens/owner123").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), http::StatusCode::OK);
+        let response_body = test::read_body(resp).await;
+        let tokens: Vec<TokenData> = serde_json::from_slice(&response_body).unwrap();
+
+        assert_eq!(tokens.len(), 2);
+
+        assert_eq!(tokens[0].token_chain_id, "chainXYZ");
+        assert_eq!(tokens[0].token_address, "0xABCDEF123456");
+        assert_eq!(tokens[0].token_id, "token789");
+        assert_eq!(tokens[0].listed_timestamp, 1234567890);
+        assert_eq!(tokens[0].updated_timestamp, 1234567891);
+        assert_eq!(tokens[0].current_owner, "owner123");
+        assert_eq!(tokens[0].current_price, Some("100".to_string()));
+        assert_eq!(tokens[0].quantity, Some("10".to_string()));
+        assert_eq!(tokens[0].start_amount, Some("50".to_string()));
+        assert_eq!(tokens[0].end_amount, Some("150".to_string()));
+        assert_eq!(tokens[0].start_date, Some(1234567890));
+        assert_eq!(tokens[0].end_date, Some(1234567891));
+        assert_eq!(tokens[0].broker_id, Some("brokerXYZ".to_string()));
+
+        assert_eq!(tokens[1].token_chain_id, "chainWXYZ");
+        assert_eq!(tokens[1].token_address, "0xABCDEF1234567");
+        assert_eq!(tokens[1].token_id, "token7890");
+        assert_eq!(tokens[1].listed_timestamp, 2234567890);
+        assert_eq!(tokens[1].updated_timestamp, 2234567891);
+        assert_eq!(tokens[1].current_owner, "owner1234");
+        assert_eq!(tokens[1].current_price, Some("200".to_string()));
+        assert_eq!(tokens[1].quantity, Some("20".to_string()));
+        assert_eq!(tokens[1].start_amount, Some("100".to_string()));
+        assert_eq!(tokens[1].end_amount, Some("300".to_string()));
+        assert_eq!(tokens[1].start_date, Some(2234567890));
+        assert_eq!(tokens[1].end_date, Some(2234567891));
+        assert_eq!(tokens[1].broker_id, Some("brokerWXYZ".to_string()));
+
+    }
+
 }
 
