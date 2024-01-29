@@ -51,13 +51,10 @@ async function fetchAllDynamoItems(
       KeyConditionExpression: "#GSI6PK = :GSI6PK",
       ExpressionAttributeNames: {
         "#GSI6PK": "GSI6PK",
-        // "#status": "Data.M.Status",
       },
       ExpressionAttributeValues: {
         ":GSI6PK": { S: "BLOCK" },
-        // ":noneValue": { S: "NONE" },
       },
-      // FilterExpression: "#status <> :noneValue",
       ProjectionExpression: "PK",
       ExclusiveStartKey: lastEvaluatedKey,
       ScanIndexForward: false,
