@@ -31,3 +31,10 @@ pub async fn get_token_offers_data<D: DatabaseAccess + Sync>(
 ) -> Result<TokenWithOffers, sqlx::Error> {
     db_access.get_token_offers_data(token_address, token_id).await
 }
+
+pub async fn get_tokens_by_account_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    owner: &str,
+) -> Result<Vec<TokenData>, sqlx::Error> {
+    db_access.get_tokens_by_owner_data(owner).await
+}
