@@ -1,18 +1,14 @@
-use actix_web::{web, HttpResponse, Responder};
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
-    get_token_data,
-    get_token_by_collection_data,
-    get_token_history_data,
-    get_token_offers_data,
+    get_token_by_collection_data, get_token_data, get_token_history_data, get_token_offers_data,
     get_tokens_by_account_data,
 };
+use actix_web::{web, HttpResponse, Responder};
 
 pub async fn get_token<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
-
     let (token_address, token_id) = path.into_inner();
     let db_access = db_pool.get_ref();
 
@@ -21,7 +17,6 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
-
 
 pub async fn get_tokens_by_collection<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
@@ -73,10 +68,13 @@ pub async fn get_tokens_by_account<D: DatabaseAccess + Sync>(
 
 #[cfg(test)]
 mod tests {
-    use actix_web::{test, web, App, http};
     use crate::db::db_access::MockDb;
-    use crate::handlers::token_handler::{get_token, get_tokens_by_account, get_tokens_by_collection,get_token_history, get_token_offers};
+    use crate::handlers::token_handler::{
+        get_token, get_token_history, get_token_offers, get_tokens_by_account,
+        get_tokens_by_collection,
+    };
     use crate::models::token::{TokenData, TokenWithHistory, TokenWithOffers};
+    use actix_web::{http, test, web, App};
 
     #[actix_rt::test]
     async fn test_get_token_handler() {
@@ -84,9 +82,12 @@ mod tests {
             App::new()
                 .app_data(web::Data::new(MockDb))
                 .route("/token/{address}/{id}", web::get().to(get_token::<MockDb>)),
-        ).await;
+        )
+        .await;
 
-        let req = test::TestRequest::get().uri("/token/0xABCDEF123456/token789").to_request();
+        let req = test::TestRequest::get()
+            .uri("/token/0xABCDEF123456/token789")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         let status = resp.status();
         assert_eq!(status, http::StatusCode::OK);
@@ -111,13 +112,15 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_get_tokens_by_collection_handler() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(MockDb))
-                .route("/tokens/collection/{address}", web::get().to(get_tokens_by_collection::<MockDb>)),
-        ).await;
+        let app = test::init_service(App::new().app_data(web::Data::new(MockDb)).route(
+            "/tokens/collection/{address}",
+            web::get().to(get_tokens_by_collection::<MockDb>),
+        ))
+        .await;
 
-        let req = test::TestRequest::get().uri("/tokens/collection/0xABCDEF123456").to_request();
+        let req = test::TestRequest::get()
+            .uri("/tokens/collection/0xABCDEF123456")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         let status = resp.status();
         assert_eq!(status, http::StatusCode::OK);
@@ -163,13 +166,15 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_get_token_history_handler() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(MockDb))
-                .route("/token/{address}/{id}/history", web::get().to(get_token_history::<MockDb>)),
-        ).await;
+        let app = test::init_service(App::new().app_data(web::Data::new(MockDb)).route(
+            "/token/{address}/{id}/history",
+            web::get().to(get_token_history::<MockDb>),
+        ))
+        .await;
 
-        let req = test::TestRequest::get().uri("/token/0xABCDEF123456/token789/history").to_request();
+        let req = test::TestRequest::get()
+            .uri("/token/0xABCDEF123456/token789/history")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), http::StatusCode::OK);
 
@@ -184,25 +189,29 @@ mod tests {
         assert_eq!(token_history.history[0].event_type, "Listing");
         assert_eq!(token_history.history[0].event_timestamp, 1234567890);
         assert_eq!(token_history.history[0].order_status, "Active");
-        assert_eq!(token_history.history[0].new_owner, Some("owner123".to_string()));
+        assert_eq!(
+            token_history.history[0].new_owner,
+            Some("owner123".to_string())
+        );
         assert_eq!(token_history.history[0].amount, Some("100".to_string()));
     }
 
     #[actix_rt::test]
     async fn test_get_token_offers_handler() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(MockDb))
-                .route("/token/{address}/{id}/offers", web::get().to(get_token_offers::<MockDb>)),
-        ).await;
+        let app = test::init_service(App::new().app_data(web::Data::new(MockDb)).route(
+            "/token/{address}/{id}/offers",
+            web::get().to(get_token_offers::<MockDb>),
+        ))
+        .await;
 
-        let req = test::TestRequest::get().uri("/token/0xABCDEF123456/token789/offers").to_request();
+        let req = test::TestRequest::get()
+            .uri("/token/0xABCDEF123456/token789/offers")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), http::StatusCode::OK);
 
         let response_body = test::read_body(resp).await;
         let token_offers: TokenWithOffers = serde_json::from_slice(&response_body).unwrap();
-
 
         assert_eq!(token_offers.token_address, "0xABCDEF123456");
         assert_eq!(token_offers.token_id, "token789");
@@ -217,13 +226,15 @@ mod tests {
 
     #[actix_rt::test]
     async fn test_get_tokens_data() {
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(MockDb))
-                .route("/tokens/{owner}", web::get().to(get_tokens_by_account::<MockDb>)),
-        ).await;
+        let app = test::init_service(App::new().app_data(web::Data::new(MockDb)).route(
+            "/tokens/{owner}",
+            web::get().to(get_tokens_by_account::<MockDb>),
+        ))
+        .await;
 
-        let req = test::TestRequest::get().uri("/tokens/owner123").to_request();
+        let req = test::TestRequest::get()
+            .uri("/tokens/owner123")
+            .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), http::StatusCode::OK);
         let response_body = test::read_body(resp).await;
@@ -258,8 +269,5 @@ mod tests {
         assert_eq!(tokens[1].start_date, Some(2234567890));
         assert_eq!(tokens[1].end_date, Some(2234567891));
         assert_eq!(tokens[1].broker_id, Some("brokerWXYZ".to_string()));
-
     }
-
 }
-

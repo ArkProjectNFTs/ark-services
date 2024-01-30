@@ -1,23 +1,38 @@
+use crate::models::token::{
+    TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
+};
 use async_trait::async_trait;
-use crate::models::token::{TokenData, TokenWithHistory, TokenHistory, TokenWithOffers, TokenOffer};
 use sqlx::Error;
 use sqlx::PgPool;
 
 #[async_trait]
 pub trait DatabaseAccess: Send + Sync {
-    async fn get_token_data(&self, token_address: &str, token_id: &str) -> Result<TokenData, Error>;
-    async fn get_token_by_collection_data(&self, token_address: &str) -> Result<Vec<TokenData>, Error>;
-    async fn get_token_history_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithHistory, Error>;
-    async fn get_token_offers_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithOffers, Error>;
+    async fn get_token_data(&self, token_address: &str, token_id: &str)
+        -> Result<TokenData, Error>;
+    async fn get_token_by_collection_data(
+        &self,
+        token_address: &str,
+    ) -> Result<Vec<TokenData>, Error>;
+    async fn get_token_history_data(
+        &self,
+        token_address: &str,
+        token_id: &str,
+    ) -> Result<TokenWithHistory, Error>;
+    async fn get_token_offers_data(
+        &self,
+        token_address: &str,
+        token_id: &str,
+    ) -> Result<TokenWithOffers, Error>;
     async fn get_tokens_by_owner_data(&self, owner: &str) -> Result<Vec<TokenData>, Error>;
 }
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
-    async fn get_token_data(&self,
-                            token_address: &str,
-                            token_id: &str) -> Result<TokenData, Error> {
-
+    async fn get_token_data(
+        &self,
+        token_address: &str,
+        token_id: &str,
+    ) -> Result<TokenData, Error> {
         let token_data = sqlx::query_as!(
             TokenData,
             "SELECT
@@ -86,10 +101,12 @@ impl DatabaseAccess for PgPool {
         ).fetch_all(self).await?;
 
         Ok(tokens_data)
-
     }
 
-    async fn get_token_by_collection_data(&self, token_address: &str) -> Result<Vec<TokenData>, Error> {
+    async fn get_token_by_collection_data(
+        &self,
+        token_address: &str,
+    ) -> Result<Vec<TokenData>, Error> {
         let token_data = sqlx::query_as!(
             TokenData,
             "SELECT
@@ -121,13 +138,20 @@ impl DatabaseAccess for PgPool {
         Ok(token_data)
     }
 
-    async fn get_token_history_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithHistory, Error> {
+    async fn get_token_history_data(
+        &self,
+        token_address: &str,
+        token_id: &str,
+    ) -> Result<TokenWithHistory, Error> {
         let token_info = sqlx::query!(
             "SELECT token_id, token_address, current_owner, current_price
              FROM orderbook_token
              WHERE token_id = $1 AND token_address = $2",
-            token_id, token_address
-        ).fetch_one(self).await?;
+            token_id,
+            token_address
+        )
+        .fetch_one(self)
+        .await?;
 
         let history = sqlx::query_as!(
             TokenHistory,
@@ -136,8 +160,11 @@ impl DatabaseAccess for PgPool {
              FROM orderbook_token_history
              WHERE token_id = $1 AND token_address = $2
              ORDER BY event_timestamp DESC",
-            token_id, token_address
-        ).fetch_all(self).await?;
+            token_id,
+            token_address
+        )
+        .fetch_all(self)
+        .await?;
 
         Ok(TokenWithHistory {
             token_id: token_info.token_id,
@@ -148,13 +175,20 @@ impl DatabaseAccess for PgPool {
         })
     }
 
-    async fn get_token_offers_data(&self, token_address: &str, token_id: &str) -> Result<TokenWithOffers, Error> {
+    async fn get_token_offers_data(
+        &self,
+        token_address: &str,
+        token_id: &str,
+    ) -> Result<TokenWithOffers, Error> {
         let token_info = sqlx::query!(
             "SELECT token_id, token_address, current_owner, current_price
              FROM orderbook_token
              WHERE token_id = $1 AND token_address = $2",
-            token_id, token_address
-        ).fetch_one(self).await?;
+            token_id,
+            token_address
+        )
+        .fetch_one(self)
+        .await?;
 
         let offers = sqlx::query_as!(
             TokenOffer,
@@ -162,8 +196,11 @@ impl DatabaseAccess for PgPool {
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
             ORDER BY offer_timestamp DESC;",
-            token_id, token_address
-        ).fetch_all(self).await?;
+            token_id,
+            token_address
+        )
+        .fetch_all(self)
+        .await?;
 
         Ok(TokenWithOffers {
             token_id: token_info.token_id,
@@ -181,7 +218,11 @@ pub struct MockDb;
 #[cfg(test)]
 #[async_trait]
 impl DatabaseAccess for MockDb {
-    async fn get_token_data(&self, _token_address: &str, _token_id: &str) -> Result<TokenData, Error> {
+    async fn get_token_data(
+        &self,
+        _token_address: &str,
+        _token_id: &str,
+    ) -> Result<TokenData, Error> {
         Ok(TokenData {
             token_chain_id: "chainXYZ".to_string(),
             token_address: "0xABCDEF123456".to_string(),
@@ -201,56 +242,62 @@ impl DatabaseAccess for MockDb {
         })
     }
 
-    async fn get_token_by_collection_data(&self, _token_address: &str) -> Result<Vec<TokenData>, Error> {
-        Ok(vec![TokenData {
-            token_chain_id: "chainXYZ".to_string(),
-            token_address: "0xABCDEF123456".to_string(),
-            token_id: "token789".to_string(),
-            listed_timestamp: 1234567890,
-            updated_timestamp: 1234567891,
-            current_owner: "owner123".to_string(),
-            current_price: Some("100".to_string()),
-            quantity: Some("10".to_string()),
-            start_amount: Some("50".to_string()),
-            end_amount: Some("150".to_string()),
-            start_date: Some(1234567890),
-            end_date: Some(1234567891),
-            is_listed: Some(true),
-            has_offer: Some(false),
-            broker_id: Some("brokerXYZ".to_string()),
-        },
-        TokenData {
-            token_chain_id: "chainWXYZ".to_string(),
-            token_address: "0xABCDEF1234567".to_string(),
-            token_id: "token7890".to_string(),
-            listed_timestamp: 1234567890,
-            updated_timestamp: 1234567891,
-            current_owner: "owner1234".to_string(),
-            current_price: Some("100".to_string()),
-            quantity: Some("10".to_string()),
-            start_amount: Some("50".to_string()),
-            end_amount: Some("150".to_string()),
-            start_date: Some(1234567890),
-            end_date: Some(1234567891),
-            is_listed: Some(true),
-            has_offer: Some(false),
-            broker_id: Some("brokerXYZ".to_string()),
-        }])
+    async fn get_token_by_collection_data(
+        &self,
+        _token_address: &str,
+    ) -> Result<Vec<TokenData>, Error> {
+        Ok(vec![
+            TokenData {
+                token_chain_id: "chainXYZ".to_string(),
+                token_address: "0xABCDEF123456".to_string(),
+                token_id: "token789".to_string(),
+                listed_timestamp: 1234567890,
+                updated_timestamp: 1234567891,
+                current_owner: "owner123".to_string(),
+                current_price: Some("100".to_string()),
+                quantity: Some("10".to_string()),
+                start_amount: Some("50".to_string()),
+                end_amount: Some("150".to_string()),
+                start_date: Some(1234567890),
+                end_date: Some(1234567891),
+                is_listed: Some(true),
+                has_offer: Some(false),
+                broker_id: Some("brokerXYZ".to_string()),
+            },
+            TokenData {
+                token_chain_id: "chainWXYZ".to_string(),
+                token_address: "0xABCDEF1234567".to_string(),
+                token_id: "token7890".to_string(),
+                listed_timestamp: 1234567890,
+                updated_timestamp: 1234567891,
+                current_owner: "owner1234".to_string(),
+                current_price: Some("100".to_string()),
+                quantity: Some("10".to_string()),
+                start_amount: Some("50".to_string()),
+                end_amount: Some("150".to_string()),
+                start_date: Some(1234567890),
+                end_date: Some(1234567891),
+                is_listed: Some(true),
+                has_offer: Some(false),
+                broker_id: Some("brokerXYZ".to_string()),
+            },
+        ])
     }
 
-    async fn get_token_history_data(&self, _token_address: &str, _token_id: &str) -> Result<TokenWithHistory, Error> {
-
-        let history = vec![
-            TokenHistory {
-                event_type: "Listing".to_string(),
-                event_timestamp: 1234567890,
-                order_status: "Active".to_string(),
-                previous_owner: None,
-                new_owner: Some("owner123".to_string()),
-                amount: Some("100".to_string()),
-                canceled_reason: None,
-            },
-        ];
+    async fn get_token_history_data(
+        &self,
+        _token_address: &str,
+        _token_id: &str,
+    ) -> Result<TokenWithHistory, Error> {
+        let history = vec![TokenHistory {
+            event_type: "Listing".to_string(),
+            event_timestamp: 1234567890,
+            order_status: "Active".to_string(),
+            previous_owner: None,
+            new_owner: Some("owner123".to_string()),
+            amount: Some("100".to_string()),
+            canceled_reason: None,
+        }];
 
         Ok(TokenWithHistory {
             token_address: "0xABCDEF123456".to_string(),
@@ -261,15 +308,17 @@ impl DatabaseAccess for MockDb {
         })
     }
 
-    async fn get_token_offers_data(&self, _token_address: &str, _token_id: &str) -> Result<TokenWithOffers, Error> {
-        let offers = vec![
-            TokenOffer {
-                offer_maker: "maker123".to_string(),
-                offer_amount: "100".to_string(),
-                offer_quantity: "10".to_string(),
-                offer_timestamp: 1234567890,
-            },
-        ];
+    async fn get_token_offers_data(
+        &self,
+        _token_address: &str,
+        _token_id: &str,
+    ) -> Result<TokenWithOffers, Error> {
+        let offers = vec![TokenOffer {
+            offer_maker: "maker123".to_string(),
+            offer_amount: "100".to_string(),
+            offer_quantity: "10".to_string(),
+            offer_timestamp: 1234567890,
+        }];
         Ok(TokenWithOffers {
             token_address: "0xABCDEF123456".to_string(),
             token_id: "token789".to_string(),
