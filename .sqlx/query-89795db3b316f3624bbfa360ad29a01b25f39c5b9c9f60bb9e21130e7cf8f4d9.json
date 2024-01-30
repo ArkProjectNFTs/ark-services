@@ -1,0 +1,59 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT event_type, event_timestamp, order_status,\n                    previous_owner, new_owner, amount, canceled_reason\n             FROM orderbook_token_history\n             WHERE token_id = $1 AND token_address = $2\n             ORDER BY event_timestamp DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "event_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "event_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "order_status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "previous_owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "new_owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "canceled_reason",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "89795db3b316f3624bbfa360ad29a01b25f39c5b9c9f60bb9e21130e7cf8f4d9"
+}

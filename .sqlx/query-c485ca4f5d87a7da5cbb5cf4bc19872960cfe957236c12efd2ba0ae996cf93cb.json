@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,\n                t.updated_timestamp, t.current_owner, t.current_price,\n                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,\n                t.broker_id,\n                COALESCE(\n                    (SELECT MAX(th.event_timestamp)\n                     FROM orderbook_token_history th\n                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Listing'\n                    ) <\n                    (SELECT MAX(th.event_timestamp)\n                     FROM orderbook_token_history th\n                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'\n                    ), FALSE) AS is_listed,\n                EXISTS(\n                    SELECT 1\n                    FROM orderbook_token_history th\n                    WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'\n                ) AS has_offer\n            FROM\n                orderbook_token t\n            WHERE\n                t.token_address = $1;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token_chain_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "token_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "token_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "listed_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "updated_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "current_owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "current_price",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "quantity",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "start_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "end_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "start_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 11,
+        "name": "end_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "broker_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "is_listed",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 14,
+        "name": "has_offer",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "c485ca4f5d87a7da5cbb5cf4bc19872960cfe957236c12efd2ba0ae996cf93cb"
+}
