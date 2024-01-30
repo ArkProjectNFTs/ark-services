@@ -76,7 +76,7 @@ async fn process_event(
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
-        total_count: None,
+        total_count: dynamo_rsp.total_count,
         result: items,
     })?;
 
