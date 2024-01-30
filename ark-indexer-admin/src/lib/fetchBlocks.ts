@@ -16,11 +16,13 @@ import { type Range } from "./range";
  * @returns {Object} - Returns ranges, rangeSize, and count.
  */
 export async function fetchBlocks(network: Network, latest: number) {
-  const items: Record<string, AttributeValue>[] =
-    await fetchAllDynamoItems(network);
+  const items: Record<string, AttributeValue>[] = await fetchAllBlocks(network);
+
   const count = latest - items.length;
   const rangeCount = 120;
   const rangeSize = Math.ceil(latest / rangeCount);
+
+  console.log("Blocks ranges:", { count, rangeCount, rangeSize });
 
   const ranges: Range[] = createEmptyRanges(latest, rangeCount, rangeSize);
   populateRangesWithBlocks(ranges, items, rangeSize, latest);
@@ -29,13 +31,13 @@ export async function fetchBlocks(network: Network, latest: number) {
 }
 
 /**
- * Fetch all items from DynamoDB for a given network.
+ * Fetch all indexed blocks
  *
  * @param {Network} network - Network type parameter.
  *
  * @returns {Promise<Record<string, AttributeValue>[]>} - Returns all fetched items.
  */
-async function fetchAllDynamoItems(
+async function fetchAllBlocks(
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> {
   let lastEvaluatedKey: Record<string, AttributeValue> | undefined = undefined;
@@ -57,7 +59,7 @@ async function fetchAllDynamoItems(
       },
       ProjectionExpression: "PK",
       ExclusiveStartKey: lastEvaluatedKey,
-      ScanIndexForward: false,
+      ScanIndexForward: true,
     });
 
     items.push(...(result.Items ?? []));
