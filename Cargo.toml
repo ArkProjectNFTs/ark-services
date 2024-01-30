@@ -29,7 +29,7 @@ members = [
   "ark-metadata-refresh",
   "ark-sqlx",
   "arkchain-indexer",
-  # "ark-orderbook-api",
+  "ark-orderbook-api",
 ]
 resolver = "2"
 
