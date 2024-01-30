@@ -48,41 +48,33 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
     let contract_provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    // Fetch all the tokens and keep unique contracts addresses.
-    let mut contract_addresses: HashSet<String> = HashSet::new();
-    let mut contracts = vec![];
+    let mut contract_addresses = HashSet::new();
+    let mut contracts = Vec::new();
 
-    let mut capacity = 0.0;
+    let dynamo_rsp = provider
+        .get_owner_tokens(&ctx.dynamodb, owner_address, None)
+        .await?;
 
-    loop {
-        let dynamo_rsp = provider
-            .get_owner_tokens(&ctx.dynamodb, owner_address, None)
-            .await?;
+    let mut capacity = dynamo_rsp.capacity;
 
-        for data in dynamo_rsp.inner() {
-            if contract_addresses.insert(data.contract_address.clone()) {
-                // Was inserted, fetch data of this contract.
-                let c_rsp = contract_provider
-                    .get_contract(&ctx.dynamodb, &data.contract_address)
-                    .await?;
-
-                capacity += c_rsp.capacity;
-
-                if let Some(contract) = c_rsp.inner().clone() {
-                    contracts.push(contract);
-                }
-            }
-        }
-
-        capacity += dynamo_rsp.capacity;
-
-        if dynamo_rsp.lek.is_none() {
-            break;
-        }
+    for data in dynamo_rsp.inner() {
+        contract_addresses.insert(data.contract_address.clone());
     }
 
+    if !contract_addresses.is_empty() {
+        let batch_contracts_rsp = contract_provider
+            .get_batch_contracts(&ctx.dynamodb, contract_addresses.into_iter().collect())
+            .await?;
+
+        capacity += batch_contracts_rsp.capacity;
+        contracts = batch_contracts_rsp.inner().clone();
+    }
+
+    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+
     let rsp = common::ok_body_rsp(&ArkApiResponse {
-        cursor: None,
+        cursor,
+        total_count: dynamo_rsp.total_count,
         result: contracts,
     })?;
 

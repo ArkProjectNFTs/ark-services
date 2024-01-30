@@ -251,6 +251,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -299,6 +300,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -347,6 +349,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -387,6 +390,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -434,6 +438,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 }

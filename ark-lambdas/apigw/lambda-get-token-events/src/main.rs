@@ -61,6 +61,7 @@ async fn process_event(
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
+        total_count: None,
         result: items,
     })?;
 

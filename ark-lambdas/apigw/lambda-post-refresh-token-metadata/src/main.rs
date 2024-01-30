@@ -52,6 +52,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
                     );
                     common::ok_body_rsp(&ArkApiResponse {
                         cursor: None,
+                        total_count: None,
                         result: "We've queued this token to update its metadata! It will be updated soon.",
                     })
                 }

@@ -62,6 +62,7 @@ async fn process_event(
     let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {
             cursor: None,
+            total_count: None,
             result: data,
         })
     } else {

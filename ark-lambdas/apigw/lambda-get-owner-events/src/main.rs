@@ -68,6 +68,7 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
+        total_count: None,
         result: items,
     })?;
 

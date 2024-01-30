@@ -18,6 +18,33 @@ use providers::{
 use std::collections::HashMap;
 use std::fmt;
 
+pub trait ConsumedCapacityTrait {
+    fn total_capacity(&self) -> f64;
+}
+
+impl ConsumedCapacityTrait for &Option<ConsumedCapacity> {
+    fn total_capacity(&self) -> f64 {
+        if let Some(cc) = self {
+            cc.capacity_units.unwrap_or(0.0)
+        } else {
+            0.0
+        }
+    }
+}
+
+impl ConsumedCapacityTrait for &Option<Vec<ConsumedCapacity>> {
+    fn total_capacity(&self) -> f64 {
+        if let Some(capacities) = self {
+            capacities
+                .iter()
+                .map(|cc| cc.capacity_units.unwrap_or(0.0))
+                .sum()
+        } else {
+            0.0
+        }
+    }
+}
+
 /// A context for dynamodb AWS execution.
 #[derive(Debug)]
 pub struct DynamoDbCtx {
@@ -32,20 +59,18 @@ pub struct DynamoDbOutput<T> {
     inner: T,
     pub lek: Option<HashMap<String, AttributeValue>>,
     pub capacity: f64,
+    pub total_count: Option<i32>,
 }
 
 impl<T> DynamoDbOutput<T> {
-    pub fn new(inner: T, consumed_capacity: &Option<ConsumedCapacity>) -> Self {
-        let capacity = if let Some(cc) = consumed_capacity {
-            cc.capacity_units.unwrap_or(0.0)
-        } else {
-            0.0
-        };
+    pub fn new<C: ConsumedCapacityTrait>(inner: T, consumed_capacity: C) -> Self {
+        let capacity = consumed_capacity.total_capacity();
 
         Self {
             inner,
             capacity,
             lek: None,
+            total_count: None,
         }
     }
 
@@ -53,9 +78,11 @@ impl<T> DynamoDbOutput<T> {
         inner: T,
         consumed_capacity: &Option<ConsumedCapacity>,
         lek: Option<HashMap<String, AttributeValue>>,
+        total_count: Option<i32>,
     ) -> Self {
         let mut o = Self::new(inner, consumed_capacity);
         o.lek = lek;
+        o.total_count = total_count;
         o
     }
 

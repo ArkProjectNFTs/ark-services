@@ -6,7 +6,7 @@ use arkproject::metadata::types::TokenMetadata;
 use arkproject::pontos::storage::types::TokenMintInfo;
 use arkproject::starknet::CairoU256;
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
+use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, Select};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
@@ -512,6 +512,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -527,19 +528,16 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S(format!("OWNER#{}", owner_address)),
         );
 
-        if let Some(contract_address) = contract_address {
-            values.insert(
-                ":token".to_string(),
-                AttributeValue::S(format!("TOKEN#{}", contract_address)),
-            );
+        let token_prefix = if let Some(contract_address) = contract_address {
+            format!("TOKEN#{}", contract_address)
         } else {
-            values.insert(
-                ":token".to_string(),
-                AttributeValue::S("TOKEN#".to_string()),
-            );
-        }
+            "TOKEN#".to_string()
+        };
 
-        let r = ctx
+        values.insert(":token".to_string(), AttributeValue::S(token_prefix));
+
+        // Requête pour obtenir le nombre total d'éléments
+        let count_request = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -547,24 +545,43 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .set_key_condition_expression(Some(
                 "GSI2PK = :owner AND begins_with(GSI2SK, :token)".to_string(),
             ))
-            .set_expression_attribute_values(Some(values))
+            .set_expression_attribute_values(Some(values.clone()))
+            .select(Select::Count)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let total_count = count_request.count;
+
+        let items_request = ctx
+            .client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI2PK-GSI2SK-index")
+            .set_key_condition_expression(Some(
+                "GSI2PK = :owner AND begins_with(GSI2SK, :token)".to_string(),
+            ))
+            .set_expression_attribute_values(Some(values.clone()))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let mut res = vec![];
-        if let Some(items) = r.items {
-            for i in items {
-                res.push(i.try_into()?);
+        let mut res = Vec::new();
+        if let Some(items) = items_request.items {
+            for item in items {
+                res.push(item.try_into()?);
             }
         }
 
-        Ok(DynamoDbOutput::new_lek(
+        let output = DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
-            r.last_evaluated_key,
-        ))
+            &items_request.consumed_capacity,
+            items_request.last_evaluated_key,
+            Some(total_count),
+        );
+
+        Ok(output)
     }
 }

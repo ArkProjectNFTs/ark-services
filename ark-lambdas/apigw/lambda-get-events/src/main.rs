@@ -45,6 +45,7 @@ async fn process_event(ctx: &LambdaCtx) -> Result<LambdaHttpResponse, Error> {
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
+        total_count: None,
         result: items,
     })?;
 

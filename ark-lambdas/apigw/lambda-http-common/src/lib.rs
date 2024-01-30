@@ -13,10 +13,11 @@ use serde::Serialize;
 /// Generic response returned from any http lambda.
 #[derive(Debug, Serialize)]
 pub struct ArkApiResponse<T: Serialize> {
+    pub result: T,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cursor: Option<String>,
-    pub result: T,
-    // To be extended as needed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_count: Option<i32>,
 }
 
 /// Generic response from Lambdas.

@@ -1,6 +1,6 @@
 use arkproject::pontos::storage::types::ContractInfo;
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
+use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use tracing::{debug, trace};
@@ -130,6 +130,42 @@ impl ArkContractProvider for DynamoDbContractProvider {
         Ok(().into())
     }
 
+    async fn get_batch_contracts(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_addresses: Vec<String>,
+    ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError> {
+        let mut keys = Vec::new();
+        for address in contract_addresses {
+            let mut key = HashMap::new();
+            key.insert("PK".to_string(), AttributeValue::S(self.get_pk(&address)));
+            key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
+            keys.push(key);
+        }
+
+        let r = ctx
+            .client
+            .batch_get_item()
+            .request_items(
+                self.table_name.clone(),
+                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
+            )
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut contract_infos = Vec::new();
+        if let Some(responses) = r.responses {
+            for item in responses.get(&self.table_name).unwrap_or(&Vec::new()) {
+                let data = convert::attr_to_map(item, "Data")?;
+                contract_infos.push(Self::data_to_info(&data)?);
+            }
+        }
+
+        Ok(DynamoDbOutput::new(contract_infos, &r.consumed_capacity))
+    }
+
     async fn get_contract(
         &self,
         ctx: &DynamoDbCtx,
@@ -198,6 +234,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             res,
             &r.consumed_capacity,
             r.last_evaluated_key,
+            None,
         ))
     }
 }
