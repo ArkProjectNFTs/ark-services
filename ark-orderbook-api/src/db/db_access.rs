@@ -171,7 +171,7 @@ impl DatabaseAccess for PgPool {
             token_address: token_info.token_address,
             current_owner: token_info.current_owner,
             current_price: token_info.current_price,
-            history: history,
+            history,
         })
     }
 
@@ -207,7 +207,7 @@ impl DatabaseAccess for PgPool {
             token_address: token_info.token_address,
             current_owner: token_info.current_owner,
             current_price: token_info.current_price,
-            offers: offers,
+            offers,
         })
     }
 }
