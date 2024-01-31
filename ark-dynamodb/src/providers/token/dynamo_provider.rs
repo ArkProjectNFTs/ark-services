@@ -11,7 +11,7 @@ use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -290,26 +290,61 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         client: &Self::Client,
         contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError> {
-        let sort_key = match contract_address_filter {
+        let gsi5sk = match contract_address_filter {
             Some(contract_address) => format!("CONTRACT#0x{:064x}", contract_address),
             None => "CONTRACT".to_string(),
         };
+
+        let excluded_contracts: Vec<String> = vec![
+            "0x07b696af58c967c1b14c9dde0ace001720635a660a8e90c565ea459345318b30".to_string(),
+            "0x07f5e93a406f46c49ad2fdeb013a5f25ef5d2dc5a658b6832d6c421898399aa4".to_string(),
+            "0x00fff107e2403123c7df78d91728a7ee5cfd557aec0fa2d2bdc5891c286bbfff".to_string(),
+            "0x01bd387d18e52e0a04a87c5f9232e9b3cbd1d630837926e6fece2dea4a65bea9".to_string(),
+            "0x04a3621276a83251b557a8140e915599ae8e7b6207b067ea701635c0d509801e".to_string(),
+        ];
+
+        let mut filter_expression = String::new();
+        let mut expression_attribute_values = HashMap::new();
+
+        for (index, contract) in excluded_contracts.iter().enumerate() {
+            let attribute_key = format!(":exclude_key{}", index);
+            if index > 0 {
+                filter_expression.push_str(" AND ");
+            }
+            filter_expression.push_str(format!("#GSI1PK <> {}", attribute_key).as_str());
+            expression_attribute_values.insert(
+                attribute_key,
+                AttributeValue::S(format!("CONTRACT#{}", contract)),
+            );
+        }
+
+        expression_attribute_values.insert(
+            ":gsi5pk".to_string(),
+            AttributeValue::S(String::from("METADATA#TO_REFRESH")),
+        );
+        expression_attribute_values
+            .insert(":gsi5sk".to_string(), AttributeValue::S(gsi5sk.clone()));
+
+        let fe = match filter_expression.len() {
+            0 => None,
+            _ => Some(filter_expression),
+        };
+
         let query_result = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI5PK-GSI5SK-index")
-            .key_condition_expression("GSI5PK = :gsi_pk AND begins_with(GSI5SK, :gsi_sk)")
-            .expression_attribute_values(
-                ":gsi_pk",
-                AttributeValue::S(String::from("METADATA#TO_REFRESH")),
-            )
-            .expression_attribute_values(":gsi_sk", AttributeValue::S(sort_key))
-            .scan_index_forward(false)
+            .key_condition_expression("GSI5PK = :gsi5pk AND begins_with(GSI5SK, :gsi5sk)")
+            .set_expression_attribute_values(Some(expression_attribute_values))
+            .expression_attribute_names("#GSI1PK", "GSI1PK")
+            .set_filter_expression(fe)
             .send()
             .await;
 
         match query_result {
             Ok(query_output) => {
+                info!("query_output: {:?}", query_output);
+
                 if query_output.items.is_none() {
                     return Ok(vec![]);
                 }
@@ -380,7 +415,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 }
                 return Ok(results);
             }
-            Err(_) => {
+            Err(err) => {
+                error!("Failed to query DynamoDB: {:?}", err);
                 return Err(ProviderError::DatabaseError(String::from(
                     "Failed to query DynamoDB",
                 )));
