@@ -36,8 +36,7 @@ async fn main() -> Result<()> {
     // sudo docker run -d --name arkchain-db -p 5432:5432 -e POSTGRES_PASSWORD=123 postgres
     // cd ark-sqlx
     // sqlx database reset --database-url postgres://postgres:123@localhost:5432/arkchain
-    let storage =
-        SqlxArkchainProvider::new(&db_url).await?;
+    let storage = SqlxArkchainProvider::new(&db_url).await?;
     let handler = DefaultEventHandler {};
 
     let indexer = Arc::new(Diri::new(
