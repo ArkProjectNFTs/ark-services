@@ -6,9 +6,9 @@ use tracing::{error, info};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
-    let r = process_event(&ctx).await;
-
     let req_params = HashMap::new();
+
+    let r = process_event(&ctx).await;
 
     match r {
         Ok(lambda_rsp) => {
