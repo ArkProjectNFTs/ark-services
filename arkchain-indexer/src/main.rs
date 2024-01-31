@@ -6,11 +6,12 @@ use anyhow::Result;
 use ark_sqlx::providers::SqlxArkchainProvider;
 use arkproject::diri::{event_handler::EventHandler, Diri};
 use async_trait::async_trait;
+use dotenv::dotenv;
 use starknet::{
     core::types::BlockId,
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
-use std::sync::Arc;
+use std::{env, sync::Arc};
 use tracing::{error, info, trace, warn};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
@@ -18,12 +19,17 @@ use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    dotenv().ok();
+
     init_logging();
     trace!("Starting...");
 
-    let rpc_url = Url::parse("http://127.0.0.1:7777").unwrap();
+    let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
+    let rpc_url_converted = Url::parse(&rpc_url).unwrap();
+
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
-        HttpTransport::new(rpc_url),
+        HttpTransport::new(rpc_url_converted.clone()),
     )));
 
     // Quick launch locally:
@@ -31,7 +37,7 @@ async fn main() -> Result<()> {
     // cd ark-sqlx
     // sqlx database reset --database-url postgres://postgres:123@localhost:5432/arkchain
     let storage =
-        SqlxArkchainProvider::new("postgres://postgres:123@localhost:5432/arkchain").await?;
+        SqlxArkchainProvider::new(&db_url).await?;
     let handler = DefaultEventHandler {};
 
     let indexer = Arc::new(Diri::new(
