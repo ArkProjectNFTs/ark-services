@@ -1,7 +1,7 @@
+use super::metadata::{create_contract_filter, get_excluded_contracts};
 use crate::providers::token::types::TokenData;
 use crate::providers::ArkTokenProvider;
 use crate::{DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
-
 use arkproject::metadata::types::TokenMetadata;
 use arkproject::pontos::storage::types::TokenMintInfo;
 use arkproject::starknet::CairoU256;
@@ -290,130 +290,134 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         client: &Self::Client,
         contract_address_filter: Option<FieldElement>,
     ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError> {
-        let gsi5sk = match contract_address_filter {
-            Some(contract_address) => format!("CONTRACT#0x{:064x}", contract_address),
-            None => "CONTRACT".to_string(),
-        };
-
-        let excluded_contracts: Vec<String> = vec![
-            "0x07b696af58c967c1b14c9dde0ace001720635a660a8e90c565ea459345318b30".to_string(),
-            "0x07f5e93a406f46c49ad2fdeb013a5f25ef5d2dc5a658b6832d6c421898399aa4".to_string(),
-            "0x00fff107e2403123c7df78d91728a7ee5cfd557aec0fa2d2bdc5891c286bbfff".to_string(),
-            "0x01bd387d18e52e0a04a87c5f9232e9b3cbd1d630837926e6fece2dea4a65bea9".to_string(),
-            "0x04a3621276a83251b557a8140e915599ae8e7b6207b067ea701635c0d509801e".to_string(),
-        ];
+        let contract_filter = create_contract_filter(contract_address_filter);
+        let excluded_contracts = get_excluded_contracts();
 
         let mut filter_expression = String::new();
         let mut expression_attribute_values = HashMap::new();
+        let mut expression_attribute_names = HashMap::new();
+
+        expression_attribute_names.insert(String::from("#kn0"), String::from("GSI5PK"));
+        // expression_attribute_names.insert(String::from("#kn1"), String::from("GSI5SK"));
 
         for (index, contract) in excluded_contracts.iter().enumerate() {
-            let attribute_key = format!(":exclude_key{}", index);
+            let attribute_key = format!(":v{}", index);
             if index > 0 {
                 filter_expression.push_str(" AND ");
             }
-            filter_expression.push_str(format!("#GSI1PK <> {}", attribute_key).as_str());
+            filter_expression.push_str(format!("#n{} <> :v{}", index, index).as_str());
             expression_attribute_values.insert(
                 attribute_key,
                 AttributeValue::S(format!("CONTRACT#{}", contract)),
             );
+            expression_attribute_names.insert(format!("#n{}", index), String::from("GSI1PK"));
         }
 
         expression_attribute_values.insert(
-            ":gsi5pk".to_string(),
-            AttributeValue::S(String::from("METADATA#TO_REFRESH")),
+            ":kv0".to_string(),
+            AttributeValue::S(String::from("METADATA#false")),
         );
-        expression_attribute_values
-            .insert(":gsi5sk".to_string(), AttributeValue::S(gsi5sk.clone()));
+        // expression_attribute_values.insert(":kv1".to_string(), AttributeValue::S(contract_filter));
 
-        let fe = match filter_expression.len() {
-            0 => None,
-            _ => Some(filter_expression),
-        };
+        info!("filter_expression: {}", filter_expression);
+        info!(
+            "expression_attribute_names: {:?}",
+            expression_attribute_names
+        );
+        info!(
+            "expression_attribute_values: {:?}",
+            expression_attribute_values
+        );
 
         let query_result = client
             .query()
             .table_name(&self.table_name)
             .index_name("GSI5PK-GSI5SK-index")
-            .key_condition_expression("GSI5PK = :gsi5pk AND begins_with(GSI5SK, :gsi5sk)")
+            .set_expression_attribute_names(Some(expression_attribute_names))
             .set_expression_attribute_values(Some(expression_attribute_values))
-            .expression_attribute_names("#GSI1PK", "GSI1PK")
-            .set_filter_expression(fe)
+            .filter_expression(filter_expression)
+            .key_condition_expression("#kn0 = :kv0") // AND begins_with(#kn1, :kv1)
+            .select(Select::AllAttributes)
             .send()
             .await;
 
         match query_result {
             Ok(query_output) => {
-                info!("query_output: {:?}", query_output);
+                info!(
+                    "query_output.last_evaluated_key: {:?}",
+                    query_output.last_evaluated_key
+                );
 
-                if query_output.items.is_none() {
+                if query_output.count == 0 {
                     return Ok(vec![]);
-                }
+                } else {
+                    let mut results: Vec<(FieldElement, CairoU256)> = Vec::new();
+                    let items = query_output.items.unwrap();
 
-                let mut results: Vec<(FieldElement, CairoU256)> = Vec::new();
-                let items = query_output.items.unwrap();
+                    for item in items.iter() {
+                        if let Some(data) = item.get("Data") {
+                            if data.is_m() {
+                                let data_m = data.as_m().unwrap();
 
-                for item in items.iter() {
-                    if let Some(data) = item.get("Data") {
-                        if data.is_m() {
-                            let data_m = data.as_m().unwrap();
+                                // Extracting contract address
+                                match data_m.get("ContractAddress") {
+                                    Some(AttributeValue::S(contract_address_attribute_value)) => {
+                                        let contract_address_result = FieldElement::from_hex_be(
+                                            contract_address_attribute_value,
+                                        );
 
-                            // Extracting contract address
-                            match data_m.get("ContractAddress") {
-                                Some(AttributeValue::S(contract_address_attribute_value)) => {
-                                    let contract_address_result =
-                                        FieldElement::from_hex_be(contract_address_attribute_value);
-
-                                    let contract_address = match contract_address_result {
-                                        Ok(address) => address,
-                                        Err(_) => {
-                                            return Err(ProviderError::ParsingError(format!(
-                                                "Failed to parse contract address from: {}",
-                                                contract_address_attribute_value
-                                            )));
-                                        }
-                                    };
-
-                                    // Extracting token ID
-                                    if let Some(AttributeValue::S(token_id_attribute_value)) =
-                                        data_m.get("TokenIdHex")
-                                    {
-                                        let cairo_u256_result =
-                                            CairoU256::from_hex_be(token_id_attribute_value);
-
-                                        match cairo_u256_result {
-                                            Ok(token_id) => {
-                                                results.push((contract_address, token_id));
-                                            }
+                                        let contract_address = match contract_address_result {
+                                            Ok(address) => address,
                                             Err(_) => {
-                                                return Err(ProviderError::DataValueError(
-                                                    format!(
-                                                        "Failed to parse token ID from: {}",
-                                                        token_id_attribute_value
-                                                    ),
-                                                ));
+                                                return Err(ProviderError::ParsingError(format!(
+                                                    "Failed to parse contract address from: {}",
+                                                    contract_address_attribute_value
+                                                )));
+                                            }
+                                        };
+
+                                        // Extracting token ID
+                                        if let Some(AttributeValue::S(token_id_attribute_value)) =
+                                            data_m.get("TokenIdHex")
+                                        {
+                                            let cairo_u256_result =
+                                                CairoU256::from_hex_be(token_id_attribute_value);
+
+                                            match cairo_u256_result {
+                                                Ok(token_id) => {
+                                                    results.push((contract_address, token_id));
+                                                }
+                                                Err(_) => {
+                                                    return Err(ProviderError::DataValueError(
+                                                        format!(
+                                                            "Failed to parse token ID from: {}",
+                                                            token_id_attribute_value
+                                                        ),
+                                                    ));
+                                                }
                                             }
                                         }
                                     }
+                                    _ => {
+                                        return Err(ProviderError::DataValueError(
+                                            "ContractAddress attribute not found or not a string."
+                                                .to_string(),
+                                        ));
+                                    }
                                 }
-                                _ => {
-                                    return Err(ProviderError::DataValueError(
-                                        "ContractAddress attribute not found or not a string."
-                                            .to_string(),
-                                    ));
-                                }
+                            } else {
+                                return Err(ProviderError::DataValueError(
+                                    "Data attribute is not a map.".to_string(),
+                                ));
                             }
                         } else {
                             return Err(ProviderError::DataValueError(
-                                "Data attribute is not a map.".to_string(),
+                                "Data attribute missing.".to_string(),
                             ));
                         }
-                    } else {
-                        return Err(ProviderError::DataValueError(
-                            "Data attribute missing.".to_string(),
-                        ));
                     }
+                    return Ok(results);
                 }
-                return Ok(results);
             }
             Err(err) => {
                 error!("Failed to query DynamoDB: {:?}", err);

@@ -1,19 +1,18 @@
 //! Token module.
 //!
 mod dynamo_provider;
+mod metadata;
 use arkproject::starknet::CairoU256;
 pub use dynamo_provider::DynamoDbTokenProvider;
 pub mod types;
-
+use crate::providers::token::types::TokenData;
+use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 use arkproject::metadata::types::TokenMetadata;
 use arkproject::pontos::storage::types::TokenMintInfo;
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
 use starknet::core::types::FieldElement;
-
-use crate::providers::token::types::TokenData;
-use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.
