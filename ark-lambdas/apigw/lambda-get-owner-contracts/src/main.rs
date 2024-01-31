@@ -16,7 +16,7 @@ use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -48,33 +48,28 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
     let contract_provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    let mut contract_addresses = HashSet::new();
-    let mut contracts = Vec::new();
-
-    let dynamo_rsp = provider
-        .get_owner_tokens(&ctx.dynamodb, owner_address, None)
+    let contracts_request = provider
+        .get_owner_contracts_addresses(&ctx.dynamodb, owner_address)
         .await?;
 
-    let mut capacity = dynamo_rsp.capacity;
+    let mut capacity = contracts_request.consumed_capacity_units.unwrap_or(0.0);
 
-    for data in dynamo_rsp.inner() {
-        contract_addresses.insert(data.contract_address.clone());
-    }
+    let contracts_addresses = contracts_request.inner();
 
-    if !contract_addresses.is_empty() {
+    let contracts = if !contracts_addresses.is_empty() {
         let batch_contracts_rsp = contract_provider
-            .get_batch_contracts(&ctx.dynamodb, contract_addresses.into_iter().collect())
+            .get_batch_contracts(&ctx.dynamodb, contracts_addresses.clone())
             .await?;
 
-        capacity += batch_contracts_rsp.capacity;
-        contracts = batch_contracts_rsp.inner().clone();
-    }
-
-    let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+        capacity += batch_contracts_rsp.consumed_capacity_units.unwrap_or(0.0);
+        batch_contracts_rsp.inner().clone()
+    } else {
+        Vec::new()
+    };
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
-        cursor,
-        total_count: dynamo_rsp.total_count,
+        cursor: None,
+        total_count: contracts_request.total_count,
         result: contracts,
     })?;
 

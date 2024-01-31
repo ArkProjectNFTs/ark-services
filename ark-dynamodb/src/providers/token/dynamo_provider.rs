@@ -10,7 +10,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, Select};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tracing::{debug, info, trace};
 
 /// DynamoDB provider for tokens.
@@ -272,11 +272,16 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let consumed_capacity_units = r.consumed_capacity().and_then(|c| c.capacity_units);
         if let Some(item) = &r.item {
             let token_data: TokenData = item.clone().try_into()?;
-            Ok(DynamoDbOutput::new(Some(token_data), &r.consumed_capacity))
+            Ok(DynamoDbOutput::new(
+                Some(token_data),
+                consumed_capacity_units,
+                None,
+            ))
         } else {
-            Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
+            Ok(DynamoDbOutput::new(None, consumed_capacity_units, None))
         }
     }
 
@@ -502,17 +507,86 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
-        if let Some(items) = r.items {
+        if let Some(items) = r.clone().items {
             for i in items {
                 res.push(i.try_into()?);
             }
         }
 
+        let consumed_capacity_units = match r.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
+            consumed_capacity_units,
             r.last_evaluated_key,
             None,
+        ))
+    }
+
+    async fn get_owner_contracts_addresses(
+        &self,
+        ctx: &DynamoDbCtx,
+        owner_address: &str,
+    ) -> Result<DynamoDbOutput<Vec<String>>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(
+            ":owner".to_string(),
+            AttributeValue::S(format!("OWNER#{}", owner_address)),
+        );
+        values.insert(
+            ":token".to_string(),
+            AttributeValue::S("TOKEN#".to_string()),
+        );
+
+        let mut contracts_set: HashSet<String> = HashSet::new();
+        let mut last_evaluated_key = ctx.exclusive_start_key.clone();
+        let mut consumed_capacity_units: f64 = 0.0;
+
+        loop {
+            let query_output = ctx
+                .client
+                .query()
+                .table_name(&self.table_name)
+                .index_name("GSI2PK-GSI2SK-index")
+                .set_key_condition_expression(Some(
+                    "GSI2PK = :owner AND begins_with(GSI2SK, :token)".to_string(),
+                ))
+                .set_expression_attribute_values(Some(values.clone()))
+                .set_exclusive_start_key(last_evaluated_key)
+                .return_consumed_capacity(ReturnConsumedCapacity::Total)
+                .send()
+                .await
+                .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+            if let Some(consumed_capacity) = query_output.consumed_capacity {
+                if let Some(capacity_units) = consumed_capacity.capacity_units {
+                    consumed_capacity_units += capacity_units;
+                }
+            }
+
+            if let Some(items) = query_output.items {
+                for item in items {
+                    let token_data: TokenData = item.try_into()?;
+                    contracts_set.insert(token_data.contract_address);
+                }
+            }
+
+            if query_output.last_evaluated_key.is_none() {
+                break;
+            }
+            last_evaluated_key = query_output.last_evaluated_key;
+        }
+
+        let contracts_list: Vec<String> = contracts_set.into_iter().collect();
+        let total_count = contracts_list.len() as i32;
+
+        Ok(DynamoDbOutput::new(
+            contracts_list,
+            Some(consumed_capacity_units),
+            Some(total_count),
         ))
     }
 
@@ -537,7 +611,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         values.insert(":token".to_string(), AttributeValue::S(token_prefix));
 
         // Requête pour obtenir le nombre total d'éléments
-        let count_request = ctx
+        let count_query_output = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -551,9 +625,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let total_count = count_request.count;
+        let total_count = count_query_output.count;
 
-        let items_request = ctx
+        let query_output = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -569,16 +643,21 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = Vec::new();
-        if let Some(items) = items_request.items {
+        if let Some(items) = query_output.clone().items {
             for item in items {
                 res.push(item.try_into()?);
             }
         }
 
+        let consumed_capacity_units = match query_output.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         let output = DynamoDbOutput::new_lek(
             res,
-            &items_request.consumed_capacity,
-            items_request.last_evaluated_key,
+            consumed_capacity_units,
+            query_output.last_evaluated_key,
             Some(total_count),
         );
 

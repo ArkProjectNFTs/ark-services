@@ -1,15 +1,13 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub(crate) mod convert;
 pub mod metadata_storage;
 pub mod pagination;
 pub mod providers;
 pub mod storage;
-
-pub(crate) mod convert;
-
 use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_dynamodb::types::{AttributeValue, ConsumedCapacity};
+use aws_sdk_dynamodb::types::AttributeValue;
 pub use aws_sdk_dynamodb::Client;
 use pagination::Lek;
 use providers::{
@@ -17,33 +15,6 @@ use providers::{
 };
 use std::collections::HashMap;
 use std::fmt;
-
-pub trait ConsumedCapacityTrait {
-    fn total_capacity(&self) -> f64;
-}
-
-impl ConsumedCapacityTrait for &Option<ConsumedCapacity> {
-    fn total_capacity(&self) -> f64 {
-        if let Some(cc) = self {
-            cc.capacity_units.unwrap_or(0.0)
-        } else {
-            0.0
-        }
-    }
-}
-
-impl ConsumedCapacityTrait for &Option<Vec<ConsumedCapacity>> {
-    fn total_capacity(&self) -> f64 {
-        if let Some(capacities) = self {
-            capacities
-                .iter()
-                .map(|cc| cc.capacity_units.unwrap_or(0.0))
-                .sum()
-        } else {
-            0.0
-        }
-    }
-}
 
 /// A context for dynamodb AWS execution.
 #[derive(Debug)]
@@ -58,31 +29,28 @@ pub struct DynamoDbCtx {
 pub struct DynamoDbOutput<T> {
     inner: T,
     pub lek: Option<HashMap<String, AttributeValue>>,
-    pub capacity: f64,
+    pub consumed_capacity_units: Option<f64>,
     pub total_count: Option<i32>,
 }
 
 impl<T> DynamoDbOutput<T> {
-    pub fn new<C: ConsumedCapacityTrait>(inner: T, consumed_capacity: C) -> Self {
-        let capacity = consumed_capacity.total_capacity();
-
+    pub fn new(inner: T, consumed_capacity_units: Option<f64>, total_count: Option<i32>) -> Self {
         Self {
             inner,
-            capacity,
+            consumed_capacity_units,
             lek: None,
-            total_count: None,
+            total_count,
         }
     }
 
     pub fn new_lek(
         inner: T,
-        consumed_capacity: &Option<ConsumedCapacity>,
+        consumed_capacity_units: Option<f64>,
         lek: Option<HashMap<String, AttributeValue>>,
         total_count: Option<i32>,
     ) -> Self {
-        let mut o = Self::new(inner, consumed_capacity);
+        let mut o = Self::new(inner, consumed_capacity_units, total_count);
         o.lek = lek;
-        o.total_count = total_count;
         o
     }
 

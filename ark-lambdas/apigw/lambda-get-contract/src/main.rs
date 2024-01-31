@@ -60,8 +60,10 @@ async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpRespo
         common::not_found_rsp()?
     };
 
+    let capacity = dynamo_rsp.consumed_capacity_units.unwrap_or(0.0);
+
     Ok(LambdaHttpResponse {
-        capacity: dynamo_rsp.capacity,
+        capacity,
         inner: rsp,
     })
 }
