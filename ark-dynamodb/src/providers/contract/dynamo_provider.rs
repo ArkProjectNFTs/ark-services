@@ -1,6 +1,6 @@
 use arkproject::pontos::storage::types::ContractInfo;
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
+use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use tracing::{debug, trace};
@@ -130,6 +130,44 @@ impl ArkContractProvider for DynamoDbContractProvider {
         Ok(().into())
     }
 
+    async fn get_batch_contracts(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_addresses: Vec<String>,
+    ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError> {
+        let mut keys = Vec::new();
+        for address in contract_addresses {
+            let mut key = HashMap::new();
+            key.insert("PK".to_string(), AttributeValue::S(self.get_pk(&address)));
+            key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
+            keys.push(key);
+        }
+
+        let batch_request_output = ctx
+            .client
+            .batch_get_item()
+            .request_items(
+                self.table_name.clone(),
+                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
+            )
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut contract_infos = Vec::new();
+        if let Some(responses) = batch_request_output.responses {
+            for item in responses.get(&self.table_name).unwrap_or(&Vec::new()) {
+                let data = convert::attr_to_map(item, "Data")?;
+                contract_infos.push(Self::data_to_info(&data)?);
+            }
+        }
+
+        // let consumed_capacity_units = batch_request_output.consumed_capacity.map(|c| c.capacity());
+
+        Ok(DynamoDbOutput::new(contract_infos, None, None))
+    }
+
     async fn get_contract(
         &self,
         ctx: &DynamoDbCtx,
@@ -142,7 +180,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         );
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
 
-        let r = ctx
+        let get_item_output = ctx
             .client
             .get_item()
             .table_name(&self.table_name)
@@ -152,14 +190,20 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        if let Some(item) = &r.item {
+        let consumed_capacity_units = match get_item_output.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
+        if let Some(item) = &get_item_output.item {
             let data = convert::attr_to_map(item, "Data")?;
             Ok(DynamoDbOutput::new(
                 Some(Self::data_to_info(&data)?),
-                &r.consumed_capacity,
+                consumed_capacity_units,
+                None,
             ))
         } else {
-            Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
+            Ok(DynamoDbOutput::new(None, consumed_capacity_units, None))
         }
     }
 
@@ -172,7 +216,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         let mut values = HashMap::new();
         values.insert(":pk".to_string(), AttributeValue::S("NFT".to_string()));
 
-        let r = ctx
+        let query_output = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -186,8 +230,13 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let consumed_capacity_units = match query_output.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         let mut res = vec![];
-        if let Some(items) = r.items {
+        if let Some(items) = query_output.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_info(&data)?);
@@ -196,8 +245,9 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
-            r.last_evaluated_key,
+            consumed_capacity_units,
+            query_output.last_evaluated_key,
+            None,
         ))
     }
 }

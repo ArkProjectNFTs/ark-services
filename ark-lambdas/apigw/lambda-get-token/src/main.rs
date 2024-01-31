@@ -62,14 +62,17 @@ async fn process_event(
     let rsp = if let Some(data) = dynamo_rsp.inner() {
         common::ok_body_rsp(&ArkApiResponse {
             cursor: None,
+            total_count: None,
             result: data,
         })
     } else {
         common::not_found_rsp()
     }?;
 
+    let capacity = dynamo_rsp.consumed_capacity_units.unwrap_or(0.0);
+
     Ok(LambdaHttpResponse {
-        capacity: dynamo_rsp.capacity,
+        capacity,
         inner: rsp,
     })
 }

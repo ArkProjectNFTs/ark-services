@@ -24,6 +24,12 @@ pub trait ArkContractProvider {
         address: &str,
     ) -> Result<DynamoDbOutput<Option<ContractInfo>>, ProviderError>;
 
+    async fn get_batch_contracts(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_addresses: Vec<String>,
+    ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError>;
+
     async fn register_contract(
         &self,
         ctx: &DynamoDbCtx,

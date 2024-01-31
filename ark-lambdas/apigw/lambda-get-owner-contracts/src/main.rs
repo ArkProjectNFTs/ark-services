@@ -16,7 +16,7 @@ use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -48,41 +48,28 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
     let contract_provider = DynamoDbContractProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    // Fetch all the tokens and keep unique contracts addresses.
-    let mut contract_addresses: HashSet<String> = HashSet::new();
-    let mut contracts = vec![];
+    let contracts_request = provider
+        .get_owner_contracts_addresses(&ctx.dynamodb, owner_address)
+        .await?;
 
-    let mut capacity = 0.0;
+    let mut capacity = contracts_request.consumed_capacity_units.unwrap_or(0.0);
 
-    loop {
-        let dynamo_rsp = provider
-            .get_owner_tokens(&ctx.dynamodb, owner_address, None)
+    let contracts_addresses = contracts_request.inner();
+
+    let contracts = if !contracts_addresses.is_empty() {
+        let batch_contracts_rsp = contract_provider
+            .get_batch_contracts(&ctx.dynamodb, contracts_addresses.clone())
             .await?;
 
-        for data in dynamo_rsp.inner() {
-            if contract_addresses.insert(data.contract_address.clone()) {
-                // Was inserted, fetch data of this contract.
-                let c_rsp = contract_provider
-                    .get_contract(&ctx.dynamodb, &data.contract_address)
-                    .await?;
-
-                capacity += c_rsp.capacity;
-
-                if let Some(contract) = c_rsp.inner().clone() {
-                    contracts.push(contract);
-                }
-            }
-        }
-
-        capacity += dynamo_rsp.capacity;
-
-        if dynamo_rsp.lek.is_none() {
-            break;
-        }
-    }
+        capacity += batch_contracts_rsp.consumed_capacity_units.unwrap_or(0.0);
+        batch_contracts_rsp.inner().clone()
+    } else {
+        Vec::new()
+    };
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor: None,
+        total_count: contracts_request.total_count,
         result: contracts,
     })?;
 

@@ -199,14 +199,20 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let consumed_capacity_units = match r.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
             Ok(DynamoDbOutput::new(
                 Some(Self::data_to_event(&data)?),
-                &r.consumed_capacity,
+                consumed_capacity_units,
+                None,
             ))
         } else {
-            Ok(DynamoDbOutput::new(None, &r.consumed_capacity))
+            Ok(DynamoDbOutput::new(None, consumed_capacity_units, None))
         }
     }
 
@@ -240,17 +246,23 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
-        if let Some(items) = r.items {
+        if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);
             }
         }
 
+        let consumed_capacity_units = match r.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
+            consumed_capacity_units,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -288,17 +300,23 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
-        if let Some(items) = r.items {
+        if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);
             }
         }
 
+        let consumed_capacity_units = match r.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
+            consumed_capacity_units,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -336,17 +354,23 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
-        if let Some(items) = r.items {
+        if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);
             }
         }
 
+        let consumed_capacity_units = match r.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
+            consumed_capacity_units,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -376,17 +400,23 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
         info!("Query result items: {:?}", r.items);
 
-        if let Some(items) = r.items {
+        if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);
             }
         }
 
+        let consumed_capacity_units = match r.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
+            consumed_capacity_units,
             r.last_evaluated_key,
+            None,
         ))
     }
 
@@ -402,7 +432,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
         values.insert(":event".to_string(), AttributeValue::S("EVENT".to_string()));
         values.insert(":contract".to_string(), AttributeValue::S(gsi1pk_value));
 
-        let r: aws_sdk_dynamodb::operation::query::QueryOutput = ctx
+        let query_output = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -421,19 +451,23 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
         let mut res = vec![];
 
-        info!("Query result items: {:?}", r.items);
-
-        if let Some(items) = r.items {
+        if let Some(items) = query_output.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
                 res.push(Self::data_to_event(&data)?);
             }
         }
 
+        let consumed_capacity_units = match query_output.consumed_capacity() {
+            Some(c) => c.capacity_units,
+            None => None,
+        };
+
         Ok(DynamoDbOutput::new_lek(
             res,
-            &r.consumed_capacity,
-            r.last_evaluated_key,
+            consumed_capacity_units,
+            query_output.last_evaluated_key,
+            None,
         ))
     }
 }

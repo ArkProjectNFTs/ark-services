@@ -44,20 +44,23 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 }
 
 async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHttpResponse, Error> {
-    let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
+    let mut capacity = 0.0;
 
+    let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
     let mut leks: HashMap<String, Option<Lek>> = HashMap::new();
 
     let dynamo_rsp_from = provider
         .get_owner_from_events(&ctx.dynamodb, owner_address, "from")
         .await?;
 
+    capacity += dynamo_rsp_from.consumed_capacity_units.unwrap_or(0.0);
     leks.insert("from".to_string(), dynamo_rsp_from.lek.clone());
 
     let dynamo_rsp_to = provider
         .get_owner_to_events(&ctx.dynamodb, owner_address, "to")
         .await?;
 
+    capacity += dynamo_rsp_to.consumed_capacity_units.unwrap_or(0.0);
     leks.insert("to".to_string(), dynamo_rsp_to.lek.clone());
 
     let cursor = ctx.paginator.store_cursor_multiple(&leks)?;
@@ -68,11 +71,12 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
+        total_count: None,
         result: items,
     })?;
 
     Ok(LambdaHttpResponse {
-        capacity: dynamo_rsp_to.capacity,
+        capacity,
         inner: rsp,
     })
 }

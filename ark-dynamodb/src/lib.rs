@@ -1,15 +1,13 @@
 //! This crate contains all the common types to work with DynamoDB backend
 //! of ark-services.
 //!
+pub(crate) mod convert;
 pub mod metadata_storage;
 pub mod pagination;
 pub mod providers;
 pub mod storage;
-
-pub(crate) mod convert;
-
 use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_dynamodb::types::{AttributeValue, ConsumedCapacity};
+use aws_sdk_dynamodb::types::AttributeValue;
 pub use aws_sdk_dynamodb::Client;
 use pagination::Lek;
 use providers::{
@@ -31,30 +29,27 @@ pub struct DynamoDbCtx {
 pub struct DynamoDbOutput<T> {
     inner: T,
     pub lek: Option<HashMap<String, AttributeValue>>,
-    pub capacity: f64,
+    pub consumed_capacity_units: Option<f64>,
+    pub total_count: Option<i32>,
 }
 
 impl<T> DynamoDbOutput<T> {
-    pub fn new(inner: T, consumed_capacity: &Option<ConsumedCapacity>) -> Self {
-        let capacity = if let Some(cc) = consumed_capacity {
-            cc.capacity_units.unwrap_or(0.0)
-        } else {
-            0.0
-        };
-
+    pub fn new(inner: T, consumed_capacity_units: Option<f64>, total_count: Option<i32>) -> Self {
         Self {
             inner,
-            capacity,
+            consumed_capacity_units,
             lek: None,
+            total_count,
         }
     }
 
     pub fn new_lek(
         inner: T,
-        consumed_capacity: &Option<ConsumedCapacity>,
+        consumed_capacity_units: Option<f64>,
         lek: Option<HashMap<String, AttributeValue>>,
+        total_count: Option<i32>,
     ) -> Self {
-        let mut o = Self::new(inner, consumed_capacity);
+        let mut o = Self::new(inner, consumed_capacity_units, total_count);
         o.lek = lek;
         o
     }
