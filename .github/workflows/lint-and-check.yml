@@ -48,6 +48,8 @@ jobs:
   lints:
     name: Run Lints
     runs-on: ubuntu-latest
+    env:
+      SQLX_OFFLINE: true
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     steps:
       - name: Checkout Code

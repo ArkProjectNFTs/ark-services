@@ -16,7 +16,7 @@ pub struct TokenData {
     pub end_date: Option<i64>,
     pub broker_id: Option<String>,
     pub is_listed: Option<bool>,
-    pub has_offer: Option<bool>
+    pub has_offer: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize)]
