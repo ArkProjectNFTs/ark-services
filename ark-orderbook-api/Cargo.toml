@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.4.0"
+actix-cors = "0.6.4"
 actix-rt = "2.9.0"
 num-bigint = "0.4.4"
 sqlx = { version = "0.7", features = ["postgres", "runtime-async-std"] }
