@@ -1,4 +1,6 @@
 use crate::db::db_access::DatabaseAccess;
+use crate::utils::http_utils::convert_param_to_hex;
+
 use crate::db::query::{
     get_token_by_collection_data, get_token_data, get_token_history_data, get_token_offers_data,
     get_tokens_by_account_data,
@@ -10,12 +12,18 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let (token_address, token_id) = path.into_inner();
-    let db_access = db_pool.get_ref();
 
-    match get_token_data(db_access, &token_address, &token_id).await {
-        Ok(token_data) => HttpResponse::Ok().json(token_data),
+    match convert_param_to_hex(&token_id) {
+        Ok(token_id_hex) => {
+            let db_access = db_pool.get_ref();
+            match get_token_data(db_access, &token_address, &token_id_hex).await {
+                Ok(token_data) => HttpResponse::Ok().json(token_data),
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
+        }
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
+
 }
 
 pub async fn get_tokens_by_collection<D: DatabaseAccess + Sync>(
@@ -35,9 +43,14 @@ pub async fn get_token_history<D: DatabaseAccess + Sync>(
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let (token_address, token_id) = path.into_inner();
-    let db_access = db_pool.get_ref();
-    match get_token_history_data(db_access, &token_address, &token_id).await {
-        Ok(token_data) => HttpResponse::Ok().json(token_data),
+    match convert_param_to_hex(&token_id) {
+        Ok(token_id_hex) => {
+            let db_access = db_pool.get_ref();
+            match get_token_history_data(db_access, &token_address, &token_id_hex).await {
+                Ok(token_data) => HttpResponse::Ok().json(token_data),
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
+        }
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
@@ -86,7 +99,7 @@ mod tests {
         .await;
 
         let req = test::TestRequest::get()
-            .uri("/token/0xABCDEF123456/token789")
+            .uri("/token/0xABCDEF123456/0xABCDEF123456")
             .to_request();
         let resp = test::call_service(&app, req).await;
         let status = resp.status();
@@ -173,7 +186,7 @@ mod tests {
         .await;
 
         let req = test::TestRequest::get()
-            .uri("/token/0xABCDEF123456/token789/history")
+            .uri("/token/0xABCDEF123456/1234/history")
             .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), http::StatusCode::OK);
