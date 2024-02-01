@@ -465,6 +465,7 @@ dependencies = [
  "async-trait",
  "dotenv",
  "env_logger 0.9.3",
+ "num-bigint",
  "serde",
  "serde_json",
  "sqlx",
