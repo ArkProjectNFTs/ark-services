@@ -248,7 +248,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         if let Some(items) = initial_token_query_response.items {
-            if let Some(item) = items.get(0) {
+            if let Some(item) = items.first() {
                 info!("Item: {:?}", item);
 
                 let data = convert::attr_to_map(item, "Data").unwrap_or_default();
