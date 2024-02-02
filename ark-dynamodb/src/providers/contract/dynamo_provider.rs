@@ -206,13 +206,13 @@ impl ArkContractProvider for DynamoDbContractProvider {
         }
     }
 
-    async fn update_collection_image(
+    async fn update_nft_contract_image(
         &self,
         ctx: &DynamoDbCtx,
         contract_address: &str,
     ) -> Result<Option<String>, ProviderError> {
         debug!(
-            "Starting update_collection_image for contract address: {}",
+            "Starting update_nft_contract_image for contract address: {}",
             contract_address
         );
 
@@ -338,7 +338,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
                 if contract_info.image.is_none() {
                     match self
-                        .update_collection_image(ctx, &contract_info.contract_address)
+                        .update_nft_contract_image(ctx, &contract_info.contract_address)
                         .await
                     {
                         Ok(image) => {

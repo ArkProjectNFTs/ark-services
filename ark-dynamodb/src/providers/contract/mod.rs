@@ -40,7 +40,7 @@ pub trait ArkContractProvider {
         ctx: &DynamoDbCtx,
     ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError>;
 
-    async fn update_collection_image(
+    async fn update_nft_contract_image(
         &self,
         ctx: &DynamoDbCtx,
         contract_address: &str,
