@@ -272,10 +272,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
                             .update_expression("SET #Data.#Image = :image")
                             .expression_attribute_names("#Data", "Data")
                             .expression_attribute_names("#Image", "Image")
-                            .expression_attribute_values(
-                                ":image",
-                                AttributeValue::S(String::from(image.clone())),
-                            )
+                            .expression_attribute_values(":image", AttributeValue::S(image.clone()))
                             .send()
                             .await;
 
