@@ -19,7 +19,6 @@ async fn main() -> std::io::Result<()> {
         .expect("Could not connect to the database");
 
     HttpServer::new(move || {
-
         let cors = Cors::default()
             // Maybe we need to add some origin for security reason.
             .allow_any_origin()
