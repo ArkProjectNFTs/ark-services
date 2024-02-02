@@ -7,7 +7,7 @@ use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{self as common, ArkApiResponse, LambdaCtx, LambdaHttpResponse};
 use std::collections::HashMap;
-use tracing::{error, info};
+use tracing::error;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -23,7 +23,6 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     match r {
         Ok(lambda_rsp) => {
-            info!("Result: {:?}", lambda_rsp);
             ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
             Ok(lambda_rsp.inner)
         }
@@ -53,8 +52,6 @@ async fn process_event(ctx: &LambdaCtx) -> Result<LambdaHttpResponse, Error> {
         total_count: None,
         result: items,
     })?;
-
-    info!("Response: {:?}", rsp);
 
     let capacity = dynamo_rsp.consumed_capacity_units.unwrap_or(0.0);
 
