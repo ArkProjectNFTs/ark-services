@@ -118,6 +118,17 @@ struct OfferData {
     currency_address: String,
 }
 
+pub struct OfferExecutedInfo {
+    block_timestamp: u64,
+    token_address: String,
+    token_id: String,
+    new_owner: String,
+    price: String,
+    order_hash: String,
+    currency_chain_id: String,
+    currency_address: String,
+}
+
 #[derive(Debug)]
 pub struct TokenData {
     token_id: String,
@@ -205,14 +216,7 @@ impl OrderProvider {
 
     pub async fn update_owner_price_on_offer_executed(
         client: &SqlxCtx,
-        block_timestamp: u64,
-        token_address: &str,
-        token_id: &str,
-        new_owner: &str,
-        price: &str,
-        order_hash: &str,
-        currency_chain_id: &str,
-        currency_address: &str,
+        info: &OfferExecutedInfo,
     ) -> Result<(), ProviderError> {
         let query = "
             UPDATE orderbook_token
@@ -226,14 +230,14 @@ impl OrderProvider {
         ";
 
         sqlx::query(query)
-            .bind(token_address)
-            .bind(token_id)
-            .bind(new_owner)
-            .bind(block_timestamp as i64)
-            .bind(price)
-            .bind(order_hash.to_string())
-            .bind(currency_chain_id)
-            .bind(currency_address)
+            .bind(&info.token_address)
+            .bind(&info.token_id)
+            .bind(&info.new_owner)
+            .bind(info.block_timestamp as i64)
+            .bind(&info.price)
+            .bind(&info.order_hash.to_string())
+            .bind(&info.currency_chain_id)
+            .bind(&info.currency_address)
             .execute(&client.pool)
             .await?;
 
@@ -556,18 +560,18 @@ impl OrderProvider {
                 EventType::Offer | EventType::Auction | EventType::CollectionOffer => {
                     new_owner = Some(token_data.offerer);
 
-                    Self::update_owner_price_on_offer_executed(
-                        client,
+                    let params = OfferExecutedInfo {
                         block_timestamp,
-                        &token_data.token_address.clone(),
-                        &token_data.token_id.clone(),
-                        &token_data.start_amount,
-                        &new_owner.clone().unwrap(),
-                        &token_data.order_hash.clone(),
-                        &token_data.currency_chain_id.clone(),
-                        &token_data.currency_address.clone(),
-                    )
-                    .await?;
+                        token_address: token_data.token_address.clone(),
+                        token_id: token_data.token_id.clone(),
+                        new_owner: new_owner.clone().unwrap(),
+                        price: token_data.start_amount,
+                        order_hash: token_data.order_hash.clone(),
+                        currency_chain_id: token_data.currency_chain_id.clone(),
+                        currency_address: token_data.currency_address.clone(),
+                    };
+
+                    Self::update_owner_price_on_offer_executed(client, &params).await?;
                     previous_owner = Some(
                         Self::get_current_owner(
                             client,
