@@ -526,8 +526,8 @@ impl OrderProvider {
                         .await?,
                     );
                 }
-                _ => {
-                    error!("Unknown order type {:?}", token_data.order_type);
+                EventType::Listing => {
+                    trace!("Order type is 'Listing', no action taken.");
                 }
             }
 
