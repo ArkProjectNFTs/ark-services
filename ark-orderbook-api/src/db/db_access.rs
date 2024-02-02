@@ -36,7 +36,7 @@ impl DatabaseAccess for PgPool {
         let token_data = sqlx::query_as!(
             TokenData,
             "SELECT
-                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
+                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
@@ -72,7 +72,7 @@ impl DatabaseAccess for PgPool {
         let tokens_data = sqlx::query_as!(
             TokenData,
             "SELECT
-                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
+                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
@@ -110,7 +110,7 @@ impl DatabaseAccess for PgPool {
         let token_data = sqlx::query_as!(
             TokenData,
             "SELECT
-                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
+                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
@@ -192,7 +192,7 @@ impl DatabaseAccess for PgPool {
 
         let offers = sqlx::query_as!(
             TokenOffer,
-            "SELECT offer_maker, offer_amount, offer_quantity, offer_timestamp
+            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
             ORDER BY offer_timestamp DESC;",
@@ -224,6 +224,7 @@ impl DatabaseAccess for MockDb {
         _token_id: &str,
     ) -> Result<TokenData, Error> {
         Ok(TokenData {
+            order_hash: "0x12345".to_string(),
             token_chain_id: "chainXYZ".to_string(),
             token_address: "0xABCDEF123456".to_string(),
             token_id: "token789".to_string(),
@@ -248,6 +249,7 @@ impl DatabaseAccess for MockDb {
     ) -> Result<Vec<TokenData>, Error> {
         Ok(vec![
             TokenData {
+                order_hash: "0x123".to_string(),
                 token_chain_id: "chainXYZ".to_string(),
                 token_address: "0xABCDEF123456".to_string(),
                 token_id: "token789".to_string(),
@@ -265,6 +267,7 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
             },
             TokenData {
+                order_hash: "0x1234".to_string(),
                 token_chain_id: "chainWXYZ".to_string(),
                 token_address: "0xABCDEF1234567".to_string(),
                 token_id: "token7890".to_string(),
@@ -314,6 +317,7 @@ impl DatabaseAccess for MockDb {
         _token_id: &str,
     ) -> Result<TokenWithOffers, Error> {
         let offers = vec![TokenOffer {
+            order_hash: "0x123".to_string(),
             offer_maker: "maker123".to_string(),
             offer_amount: "100".to_string(),
             offer_quantity: "10".to_string(),
@@ -331,6 +335,7 @@ impl DatabaseAccess for MockDb {
     async fn get_tokens_by_owner_data(&self, _owner: &str) -> Result<Vec<TokenData>, Error> {
         Ok(vec![
             TokenData {
+                order_hash: "0x123".to_string(),
                 token_chain_id: "chainXYZ".to_string(),
                 token_address: "0xABCDEF123456".to_string(),
                 token_id: "token789".to_string(),
@@ -348,6 +353,7 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
             },
             TokenData {
+                order_hash: "0x123".to_string(),
                 token_chain_id: "chainWXYZ".to_string(),
                 token_address: "0xABCDEF1234567".to_string(),
                 token_id: "token7890".to_string(),
