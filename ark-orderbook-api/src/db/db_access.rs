@@ -324,7 +324,7 @@ impl DatabaseAccess for MockDb {
             token_id: "token789".to_string(),
             current_owner: "owner123".to_string(),
             current_price: Some("100".to_string()),
-            offers: offers,
+            offers,
         })
     }
 

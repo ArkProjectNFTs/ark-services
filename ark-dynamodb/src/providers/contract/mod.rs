@@ -1,14 +1,12 @@
 //! Contract module.
 //!
 mod dynamo_provider;
-pub use dynamo_provider::DynamoDbContractProvider;
-
+use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 use arkproject::pontos::storage::types::ContractInfo;
 use async_trait::async_trait;
+pub use dynamo_provider::DynamoDbContractProvider;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
-
-use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the contract level.
@@ -41,4 +39,10 @@ pub trait ArkContractProvider {
         &self,
         ctx: &DynamoDbCtx,
     ) -> Result<DynamoDbOutput<Vec<ContractInfo>>, ProviderError>;
+
+    async fn update_nft_contract_image(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_address: &str,
+    ) -> Result<Option<String>, ProviderError>;
 }

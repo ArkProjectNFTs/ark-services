@@ -1,12 +1,10 @@
-use arkproject::pontos::storage::types::ContractInfo;
+use super::{ArkContractProvider, ContractInfo};
+use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes, ReturnConsumedCapacity};
+use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes, ReturnConsumedCapacity, Select};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
-use tracing::{debug, trace};
-
-use super::ArkContractProvider;
-use crate::{convert, DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
+use tracing::{debug, error, info, trace, warn};
 
 /// DynamoDB provider for contracts.
 pub struct DynamoDbContractProvider {
@@ -43,6 +41,7 @@ impl DynamoDbContractProvider {
             contract_address: convert::attr_to_str(data, "ContractAddress")?,
             name: Some(get_attr_or_default("Name")),
             symbol: Some(get_attr_or_default("Symbol")),
+            image: Some(get_attr_or_default("Image")),
         })
     }
 
@@ -207,6 +206,99 @@ impl ArkContractProvider for DynamoDbContractProvider {
         }
     }
 
+    async fn update_nft_contract_image(
+        &self,
+        ctx: &DynamoDbCtx,
+        contract_address: &str,
+    ) -> Result<Option<String>, ProviderError> {
+        debug!(
+            "Starting update_nft_contract_image for contract address: {}",
+            contract_address
+        );
+
+        let initial_token_query_response = ctx
+            .client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI1PK-GSI1SK-index")
+            .key_condition_expression("#GSI1PK = :gsi1pk AND begins_with(#GSI1SK, :gsi1sk)")
+            .expression_attribute_names("#GSI1PK", "GSI1PK")
+            .expression_attribute_names("#GSI1SK", "GSI1SK")
+            .expression_attribute_names("#Data", "Data")
+            .expression_attribute_names("#Metadata", "Metadata")
+            .expression_attribute_names("#NormalizedMetadata", "NormalizedMetadata")
+            .expression_attribute_names("#Image", "Image")
+            .expression_attribute_names("#GSI5PK", "GSI5PK")
+            .expression_attribute_values(
+                ":gsi1pk",
+                AttributeValue::S(format!("CONTRACT#{}", contract_address)),
+            )
+            .expression_attribute_values(":gsi1sk", AttributeValue::S(String::from("TOKEN")))
+            .expression_attribute_values(
+                ":gsi5pk",
+                AttributeValue::S(String::from("METADATA#true")),
+            )
+            .select(Select::SpecificAttributes)
+            .projection_expression("#Data.#Metadata.#NormalizedMetadata.#Image")
+            .filter_expression("#GSI5PK = :gsi5pk")
+            .limit(1)
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        if let Some(items) = initial_token_query_response.items {
+            if let Some(item) = items.first() {
+                info!("Item: {:?}", item);
+
+                let data = convert::attr_to_map(item, "Data").unwrap_or_default();
+                let metadata = convert::attr_to_map(&data, "Metadata").unwrap_or_default();
+                let normalized_metadata =
+                    convert::attr_to_map(&metadata, "NormalizedMetadata").unwrap_or_default();
+
+                if let Ok(image) = convert::attr_to_str(&normalized_metadata, "Image") {
+                    if !image.is_empty() && (image.contains("http") || image.contains("ipfs")) {
+                        info!("Updating contract image: {:?}", image);
+
+                        let update_result = ctx
+                            .client
+                            .update_item()
+                            .table_name(self.table_name.clone())
+                            .key(
+                                "PK",
+                                AttributeValue::S(format!("CONTRACT#{}", contract_address)),
+                            )
+                            .key("SK", AttributeValue::S(String::from("CONTRACT")))
+                            .update_expression("SET #Data.#Image = :image")
+                            .expression_attribute_names("#Data", "Data")
+                            .expression_attribute_names("#Image", "Image")
+                            .expression_attribute_values(":image", AttributeValue::S(image.clone()))
+                            .send()
+                            .await;
+
+                        match update_result {
+                            Ok(_) => info!(
+                                "Image URL updated successfully for contract: {}",
+                                contract_address
+                            ),
+                            Err(e) => {
+                                error!(
+                                    "Error updating image URL for contract: {}. Error: {:?}",
+                                    contract_address, e
+                                );
+                                return Err(ProviderError::DatabaseError(format!("{:?}", e)));
+                            }
+                        }
+
+                        return Ok(Some(image));
+                    }
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
     async fn get_nft_contracts(
         &self,
         ctx: &DynamoDbCtx,
@@ -216,7 +308,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
         let mut values = HashMap::new();
         values.insert(":pk".to_string(), AttributeValue::S("NFT".to_string()));
 
-        let query_output = ctx
+        let collections_query_output = ctx
             .client
             .query()
             .table_name(&self.table_name)
@@ -230,23 +322,42 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let consumed_capacity_units = match query_output.consumed_capacity() {
-            Some(c) => c.capacity_units,
-            None => None,
-        };
+        let consumed_capacity_units: f64 = collections_query_output
+            .consumed_capacity()
+            .and_then(|c| c.capacity_units())
+            .unwrap_or(0.0);
 
         let mut res = vec![];
-        if let Some(items) = query_output.items {
+        if let Some(items) = collections_query_output.items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_info(&data)?);
+                let mut contract_info = Self::data_to_info(&data)?;
+
+                if contract_info.image.is_none() {
+                    match self
+                        .update_nft_contract_image(ctx, &contract_info.contract_address)
+                        .await
+                    {
+                        Ok(image) => {
+                            contract_info.image = image;
+                        }
+                        Err(e) => {
+                            warn!(
+                                "Error while fetching and updating collection image: {:?}",
+                                e
+                            );
+                        }
+                    }
+                }
+
+                res.push(contract_info);
             }
         }
 
         Ok(DynamoDbOutput::new_lek(
             res,
-            consumed_capacity_units,
-            query_output.last_evaluated_key,
+            Some(consumed_capacity_units),
+            collections_query_output.last_evaluated_key,
             None,
         ))
     }

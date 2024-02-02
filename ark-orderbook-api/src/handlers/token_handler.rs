@@ -23,7 +23,6 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
         }
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
-
 }
 
 pub async fn get_tokens_by_collection<D: DatabaseAccess + Sync>(
