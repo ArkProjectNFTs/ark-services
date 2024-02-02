@@ -18,6 +18,8 @@ pub struct TokenData {
     pub broker_id: Option<String>,
     pub is_listed: Option<bool>,
     pub has_offer: Option<bool>,
+    pub currency_address: Option<String>,
+    pub currency_chain_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -47,6 +49,8 @@ pub struct TokenOffer {
     pub offer_amount: String,
     pub offer_quantity: String,
     pub offer_timestamp: i64,
+    pub currency_address: Option<String>,
+    pub currency_chain_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
