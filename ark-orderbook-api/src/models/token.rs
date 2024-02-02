@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct TokenData {
+    pub order_hash: String,
     pub token_chain_id: String,
     pub token_address: String,
     pub token_id: String,
@@ -41,6 +42,7 @@ pub struct TokenHistory {
 
 #[derive(Serialize, Deserialize)]
 pub struct TokenOffer {
+    pub order_hash: String,
     pub offer_maker: String,
     pub offer_amount: String,
     pub offer_quantity: String,
