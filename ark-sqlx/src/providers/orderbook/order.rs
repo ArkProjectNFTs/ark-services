@@ -141,11 +141,31 @@ impl OrderProvider {
             WHERE order_hash = $1;
         ";
 
-        if let Some((token_id, token_address, order_type, offerer, start_amount, order_hash, currency_chain_id, currency_address)) =
-            sqlx::query_as::<_, (String, String, String, String, String, String, String, String)>(query)
-                .bind(order_hash)
-                .fetch_optional(&client.pool)
-                .await?
+        if let Some((
+            token_id,
+            token_address,
+            order_type,
+            offerer,
+            start_amount,
+            order_hash,
+            currency_chain_id,
+            currency_address,
+        )) = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+                String,
+            ),
+        >(query)
+        .bind(order_hash)
+        .fetch_optional(&client.pool)
+        .await?
         {
             Ok(Some(TokenData {
                 token_id,
@@ -545,7 +565,7 @@ impl OrderProvider {
                         &new_owner.clone().unwrap(),
                         &token_data.order_hash.clone(),
                         &token_data.currency_chain_id.clone(),
-                        &token_data.currency_address.clone()
+                        &token_data.currency_address.clone(),
                     )
                     .await?;
                     previous_owner = Some(
