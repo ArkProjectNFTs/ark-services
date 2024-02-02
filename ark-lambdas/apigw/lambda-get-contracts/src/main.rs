@@ -7,7 +7,7 @@ use ark_dynamodb::providers::{ArkContractProvider, DynamoDbContractProvider};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{self as common, ArkApiResponse, LambdaCtx, LambdaHttpResponse};
 use std::collections::HashMap;
-use tracing::error;
+use tracing::{error, info};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
