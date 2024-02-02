@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use routes::token;
 use sqlx::postgres::PgPoolOptions;
@@ -18,7 +19,16 @@ async fn main() -> std::io::Result<()> {
         .expect("Could not connect to the database");
 
     HttpServer::new(move || {
+
+        let cors = Cors::default()
+            // Maybe we need to add some origin for security reason.
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header()
+            .max_age(3600);
+
         App::new()
+            .wrap(cors)
             .app_data(web::Data::new(db_pool.clone()))
             .configure(token::config)
     })
