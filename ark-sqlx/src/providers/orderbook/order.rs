@@ -114,6 +114,8 @@ struct OfferData {
     maker: String,
     amount: String,
     quantity: String,
+    currency_chain_id: String,
+    currency_address: String,
 }
 
 #[derive(Debug)]
@@ -124,6 +126,8 @@ pub struct TokenData {
     offerer: String,
     start_amount: String,
     order_hash: String,
+    currency_chain_id: String,
+    currency_address: String,
 }
 
 impl OrderProvider {
@@ -132,13 +136,13 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, token_address, order_type, offerer, start_amount, order_hash
+            SELECT token_id, token_address, order_type, offerer, start_amount, order_hash, currency_chain_id, currency_address
             FROM orderbook_order_created
             WHERE order_hash = $1;
         ";
 
-        if let Some((token_id, token_address, order_type, offerer, start_amount, order_hash)) =
-            sqlx::query_as::<_, (String, String, String, String, String, String)>(query)
+        if let Some((token_id, token_address, order_type, offerer, start_amount, order_hash, currency_chain_id, currency_address)) =
+            sqlx::query_as::<_, (String, String, String, String, String, String, String, String)>(query)
                 .bind(order_hash)
                 .fetch_optional(&client.pool)
                 .await?
@@ -150,6 +154,8 @@ impl OrderProvider {
                 offerer,
                 start_amount,
                 order_hash,
+                currency_chain_id,
+                currency_address,
             }))
         } else {
             Ok(None)
@@ -185,12 +191,15 @@ impl OrderProvider {
         new_owner: &str,
         price: &str,
         order_hash: &str,
+        currency_chain_id: &str,
+        currency_address: &str,
     ) -> Result<(), ProviderError> {
         let query = "
             UPDATE orderbook_token
             SET
                 current_owner = $3, updated_timestamp = $4,
                 current_price = $5, order_hash = $6,
+                currency_chain_id = $7, currency_address = $8
                 start_date = null, end_date = null,
                 start_amount = null, end_amount = null,
             WHERE token_address = $1 AND token_id = $2;
@@ -203,6 +212,8 @@ impl OrderProvider {
             .bind(block_timestamp as i64)
             .bind(price)
             .bind(order_hash.to_string())
+            .bind(currency_chain_id)
+            .bind(currency_address)
             .execute(&client.pool)
             .await?;
 
@@ -261,8 +272,8 @@ impl OrderProvider {
     async fn insert_offers(client: &SqlxCtx, offer_data: &OfferData) -> Result<(), ProviderError> {
         trace!("Insert token offers");
         let insert_query = "
-            INSERT INTO orderbook_token_offers (token_id, token_address, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash)
-            VALUES ($1, $2, $3, $4, $5, $6, $7);
+            INSERT INTO orderbook_token_offers (token_id, token_address, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
         ";
 
         sqlx::query(insert_query)
@@ -273,6 +284,8 @@ impl OrderProvider {
             .bind(&offer_data.quantity)
             .bind(offer_data.timestamp)
             .bind(&offer_data.order_hash)
+            .bind(&offer_data.currency_chain_id)
+            .bind(&offer_data.currency_address)
             .execute(&client.pool)
             .await?;
 
@@ -324,8 +337,8 @@ impl OrderProvider {
 
         // insert token only for the first listing
         let upsert_query = "
-            INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash, currency_address, currency_chain_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             ON CONFLICT (token_id, token_address)
             DO NOTHING;
         ";
@@ -344,6 +357,8 @@ impl OrderProvider {
             .bind(data.end_date as i64)
             .bind(data.broker_id.clone())
             .bind(data.order_hash.clone())
+            .bind(data.currency_address.clone())
+            .bind(data.currency_chain_id.clone())
             .execute(&client.pool)
             .await?;
 
@@ -376,6 +391,8 @@ impl OrderProvider {
                     amount: data.start_amount.clone(),
                     quantity: data.quantity.clone(),
                     order_hash: data.order_hash.clone(),
+                    currency_chain_id: data.currency_chain_id.clone(),
+                    currency_address: data.currency_address.clone(),
                 },
             )
             .await?;
@@ -527,6 +544,8 @@ impl OrderProvider {
                         &token_data.start_amount,
                         &new_owner.clone().unwrap(),
                         &token_data.order_hash.clone(),
+                        &token_data.currency_chain_id.clone(),
+                        &token_data.currency_address.clone()
                     )
                     .await?;
                     previous_owner = Some(
