@@ -135,7 +135,7 @@ impl DynamoDbPaginator {
                 }
             };
 
-            conn.hset(&hash_key, key, &result)
+            conn.hset(&hash_key, key, result)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
         }
 
