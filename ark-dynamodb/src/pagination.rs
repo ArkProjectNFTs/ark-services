@@ -48,7 +48,11 @@ impl DynamoDbPaginator {
             if let Some(d) = data {
                 let mut map: Lek = Lek::new();
                 for (k, v) in d {
-                    map.insert(k.clone(), AttributeValue::S(v.clone()));
+                    if v == "GSI6SK" {
+                        map.insert(k.clone(), AttributeValue::N(v.clone()));
+                    } else {
+                        map.insert(k.clone(), AttributeValue::S(v.clone()));
+                    }
                 }
 
                 Ok(Some(map))
