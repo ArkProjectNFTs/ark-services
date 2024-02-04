@@ -5,6 +5,7 @@ use redis::Commands;
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::error;
+use tracing::info;
 use uuid::Uuid;
 
 /// A paginator for DynamoDB operations.
@@ -48,13 +49,12 @@ impl DynamoDbPaginator {
             if let Some(d) = data {
                 let mut map: Lek = Lek::new();
                 for (k, v) in d {
-                    if v == "GSI6SK" {
+                    if k == "GSI6SK" {
                         map.insert(k.clone(), AttributeValue::N(v.clone()));
                     } else {
                         map.insert(k.clone(), AttributeValue::S(v.clone()));
                     }
                 }
-
                 Ok(Some(map))
             } else {
                 Ok(None)
@@ -103,6 +103,8 @@ impl DynamoDbPaginator {
         &self,
         last_evaluated_key: &Option<Lek>,
     ) -> Result<Option<String>, ProviderError> {
+        info!("Storing cursor: {:?}", last_evaluated_key);
+
         let lek = match last_evaluated_key {
             Some(lek) => lek,
             None => {
