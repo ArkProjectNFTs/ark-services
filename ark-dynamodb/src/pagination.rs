@@ -5,6 +5,7 @@ use redis::Commands;
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::error;
+use tracing::info;
 use uuid::Uuid;
 
 /// A paginator for DynamoDB operations.
@@ -48,9 +49,12 @@ impl DynamoDbPaginator {
             if let Some(d) = data {
                 let mut map: Lek = Lek::new();
                 for (k, v) in d {
-                    map.insert(k.clone(), AttributeValue::S(v.clone()));
+                    if k == "GSI6SK" {
+                        map.insert(k.clone(), AttributeValue::N(v.clone()));
+                    } else {
+                        map.insert(k.clone(), AttributeValue::S(v.clone()));
+                    }
                 }
-
                 Ok(Some(map))
             } else {
                 Ok(None)
@@ -99,34 +103,49 @@ impl DynamoDbPaginator {
         &self,
         last_evaluated_key: &Option<Lek>,
     ) -> Result<Option<String>, ProviderError> {
-        if let Some(lek) = last_evaluated_key {
-            if let Ok(mut conn) = self
-                .client
-                .get_connection_with_timeout(Duration::from_secs(2))
-            {
-                let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
+        info!("Storing cursor: {:?}", last_evaluated_key);
 
-                for (key, value) in lek {
-                    let value = value
-                        .as_s()
-                        .expect("Paginator service only support String keys in LEK");
-                    conn.hset(hash_key.clone(), key, value)
-                        .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
-                }
-
-                let ttl = get_hash_ttl();
-                conn.expire(hash_key.clone(), ttl)
-                    .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
-
-                Ok(Some(hash_key))
-            } else {
-                error!("Failed to establish a connection with the paginator client.");
-                Ok(None)
+        let lek = match last_evaluated_key {
+            Some(lek) => lek,
+            None => {
+                error!("'last_evaluated_key' is required but was not provided.");
+                return Ok(None);
             }
-        } else {
-            error!("'last_evaluated_key' is required but was not provided.");
-            Ok(None)
+        };
+
+        let mut conn = match self
+            .client
+            .get_connection_with_timeout(Duration::from_secs(2))
+        {
+            Ok(conn) => conn,
+            Err(_) => {
+                error!("Failed to establish a connection with the paginator client.");
+                return Ok(None);
+            }
+        };
+
+        let hash_key: String = Uuid::new_v4().to_hyphenated().to_string();
+
+        for (key, value) in lek {
+            let result = match value {
+                AttributeValue::S(s) => s,
+                AttributeValue::N(n) => n,
+                _ => {
+                    return Err(ProviderError::PaginationCacheError(
+                        "LEK parsing error (unknown type)".to_string(),
+                    ));
+                }
+            };
+
+            conn.hset(&hash_key, key, result)
+                .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
         }
+
+        let ttl = get_hash_ttl();
+        conn.expire(&hash_key, ttl)
+            .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
+
+        Ok(Some(hash_key))
     }
 
     /// Stores the given `last_evaluated_keys` content in cache.

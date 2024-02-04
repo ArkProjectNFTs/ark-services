@@ -25,8 +25,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
 async fn process_event(ctx: &LambdaCtx) -> Result<LambdaHttpResponse, Error> {
     info!(
-        "Processing event... table_name={}, max_items_limit={:?}",
-        ctx.table_name, ctx.max_items_limit
+        "Processing event... table_name={}, max_items_limit={:?}, exclusive_start_key={:?}",
+        ctx.table_name, ctx.max_items_limit, ctx.dynamodb.exclusive_start_key
     );
 
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
