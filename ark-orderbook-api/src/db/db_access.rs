@@ -40,13 +40,7 @@ impl DatabaseAccess for PgPool {
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
-                EXISTS(SELECT 1 FROM orderbook_token_history th
-                           WHERE th.token_id = t.token_id AND th.token_address = t.token_address
-                           AND th.event_type = 'Listing'
-                           AND th.event_timestamp < COALESCE((SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2
-                                                             WHERE th2.token_id = t.token_id AND th2.token_address = t.token_address
-                                                             AND th2.event_type = 'Offer'), th.event_timestamp)
-                          ) AS is_listed,
+                (t.start_date IS NOT NULL AND t.end_date IS NOT NULL AND CURRENT_TIMESTAMP BETWEEN t.start_date AND t.end_date) AS is_listed,
                 CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
                 t.currency_chain_id, t.currency_address
             FROM
@@ -77,13 +71,7 @@ impl DatabaseAccess for PgPool {
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
-                EXISTS(SELECT 1 FROM orderbook_token_history th
-                           WHERE th.token_id = t.token_id AND th.token_address = t.token_address
-                           AND th.event_type = 'Listing'
-                           AND th.event_timestamp < COALESCE((SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2
-                                                             WHERE th2.token_id = t.token_id AND th2.token_address = t.token_address
-                                                             AND th2.event_type = 'Offer'), th.event_timestamp)
-                          ) AS is_listed,
+                (t.start_date IS NOT NULL AND t.end_date IS NOT NULL AND CURRENT_TIMESTAMP BETWEEN t.start_date AND t.end_date) AS is_listed,
                 CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
                 t.currency_chain_id, t.currency_address
             FROM
@@ -116,15 +104,7 @@ impl DatabaseAccess for PgPool {
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
-                COALESCE(
-                    (SELECT MAX(th.event_timestamp)
-                     FROM orderbook_token_history th
-                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Listing'
-                    ) <
-                    (SELECT MAX(th.event_timestamp)
-                     FROM orderbook_token_history th
-                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'
-                    ), FALSE) AS is_listed,
+                (t.start_date IS NOT NULL AND t.end_date IS NOT NULL AND CURRENT_TIMESTAMP BETWEEN t.start_date AND t.end_date) AS is_listed,
                 EXISTS(
                     SELECT 1
                     FROM orderbook_token_history th
