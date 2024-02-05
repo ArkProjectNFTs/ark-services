@@ -53,7 +53,15 @@ impl DatabaseAccess for PgPool {
                         AND o.status = 'EXECUTED'
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
-                t.currency_chain_id, t.currency_address
+                t.currency_chain_id, t.currency_address,
+                (
+                    SELECT MAX(offer.offer_amount)
+                    FROM orderbook_token_offers AS offer
+                    WHERE offer.token_id = t.token_id
+                    AND offer.token_address = t.token_address
+                    AND offer.status = 'PLACED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
+                ) AS top_bid
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -95,7 +103,15 @@ impl DatabaseAccess for PgPool {
                         AND o.status = 'EXECUTED'
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
-                t.currency_chain_id, t.currency_address
+                t.currency_chain_id, t.currency_address,
+                (
+                    SELECT MAX(offer.offer_amount)
+                    FROM orderbook_token_offers AS offer
+                    WHERE offer.token_id = t.token_id
+                    AND offer.token_address = t.token_address
+                    AND offer.status = 'PLACED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
+                ) AS top_bid
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -139,7 +155,15 @@ impl DatabaseAccess for PgPool {
                     AND o.status = 'EXECUTED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                 ) AS has_offer,
-                t.currency_chain_id, t.currency_address
+                t.currency_chain_id, t.currency_address,
+                (
+                    SELECT MAX(offer.offer_amount)
+                    FROM orderbook_token_offers AS offer
+                    WHERE offer.token_id = t.token_id
+                    AND offer.token_address = t.token_address
+                    AND offer.status = 'PLACED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
+                ) AS top_bid
             FROM
                 orderbook_token t
             WHERE
