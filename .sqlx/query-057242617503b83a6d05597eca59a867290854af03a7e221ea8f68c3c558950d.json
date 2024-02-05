@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,\n                t.updated_timestamp, t.current_owner, t.current_price,\n                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,\n                t.broker_id,\n                COALESCE(\n                    (SELECT MAX(th.event_timestamp)\n                     FROM orderbook_token_history th\n                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Listing'\n                    ) <\n                    (SELECT MAX(th.event_timestamp)\n                     FROM orderbook_token_history th\n                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'\n                    ), FALSE) AS is_listed,\n                EXISTS(\n                    SELECT 1\n                    FROM orderbook_token_history th\n                    WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'\n                ) AS has_offer\n            FROM\n                orderbook_token t\n            WHERE\n                t.token_address = $1;",
+  "query": "SELECT\n                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,\n                t.updated_timestamp, t.current_owner, t.current_price,\n                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,\n                t.broker_id,\n                COALESCE(\n                    (SELECT MAX(th.event_timestamp)\n                     FROM orderbook_token_history th\n                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Listing'\n                    ) <\n                    (SELECT MAX(th.event_timestamp)\n                     FROM orderbook_token_history th\n                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'\n                    ), FALSE) AS is_listed,\n                EXISTS(\n                    SELECT 1\n                    FROM orderbook_token_history th\n                    WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'\n                ) AS has_offer,\n                t.currency_chain_id, t.currency_address\n            FROM\n                orderbook_token t\n            WHERE\n                t.token_address = $1;",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,16 @@
         "ordinal": 15,
         "name": "has_offer",
         "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "currency_chain_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "currency_address",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -105,8 +115,10 @@
       true,
       true,
       null,
-      null
+      null,
+      false,
+      false
     ]
   },
-  "hash": "54fcd2326a4d4520f59ea0b62600c9302987870ead31d7e948836e03bdbf65c9"
+  "hash": "057242617503b83a6d05597eca59a867290854af03a7e221ea8f68c3c558950d"
 }

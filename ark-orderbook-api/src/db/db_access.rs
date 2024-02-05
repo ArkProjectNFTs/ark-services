@@ -47,7 +47,8 @@ impl DatabaseAccess for PgPool {
                                                              WHERE th2.token_id = t.token_id AND th2.token_address = t.token_address
                                                              AND th2.event_type = 'Offer'), th.event_timestamp)
                           ) AS is_listed,
-                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer
+                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
+                t.currency_chain_id, t.currency_address
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -83,7 +84,8 @@ impl DatabaseAccess for PgPool {
                                                              WHERE th2.token_id = t.token_id AND th2.token_address = t.token_address
                                                              AND th2.event_type = 'Offer'), th.event_timestamp)
                           ) AS is_listed,
-                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer
+                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
+                t.currency_chain_id, t.currency_address
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -127,7 +129,8 @@ impl DatabaseAccess for PgPool {
                     SELECT 1
                     FROM orderbook_token_history th
                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'
-                ) AS has_offer
+                ) AS has_offer,
+                t.currency_chain_id, t.currency_address
             FROM
                 orderbook_token t
             WHERE
@@ -192,7 +195,7 @@ impl DatabaseAccess for PgPool {
 
         let offers = sqlx::query_as!(
             TokenOffer,
-            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp
+            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
             ORDER BY offer_timestamp DESC;",
@@ -240,6 +243,8 @@ impl DatabaseAccess for MockDb {
             is_listed: Some(true),
             has_offer: Some(false),
             broker_id: Some("brokerXYZ".to_string()),
+            currency_address: Some("0xABCDEF123456".to_string()),
+            currency_chain_id: Some("chainXYZ".to_string()),
         })
     }
 
@@ -265,6 +270,8 @@ impl DatabaseAccess for MockDb {
                 is_listed: Some(true),
                 has_offer: Some(false),
                 broker_id: Some("brokerXYZ".to_string()),
+                currency_address: Some("0xABCDEF123456".to_string()),
+                currency_chain_id: Some("chainXYZ".to_string()),
             },
             TokenData {
                 order_hash: "0x1234".to_string(),
@@ -283,6 +290,8 @@ impl DatabaseAccess for MockDb {
                 is_listed: Some(true),
                 has_offer: Some(false),
                 broker_id: Some("brokerXYZ".to_string()),
+                currency_address: Some("0xABCDEF123456".to_string()),
+                currency_chain_id: Some("chainXYZ".to_string()),
             },
         ])
     }
@@ -322,6 +331,8 @@ impl DatabaseAccess for MockDb {
             offer_amount: "100".to_string(),
             offer_quantity: "10".to_string(),
             offer_timestamp: 1234567890,
+            currency_address: Some("0xABCDEF123456".to_string()),
+            currency_chain_id: Some("chainXYZ".to_string()),
         }];
         Ok(TokenWithOffers {
             token_address: "0xABCDEF123456".to_string(),
@@ -351,6 +362,8 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 is_listed: None,
                 has_offer: None,
+                currency_chain_id: Some("chainXYZ".to_string()),
+                currency_address: Some("0xABCDEF123456".to_string()),
             },
             TokenData {
                 order_hash: "0x123".to_string(),
@@ -369,6 +382,8 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerWXYZ".to_string()),
                 is_listed: None,
                 has_offer: None,
+                currency_chain_id: Some("chainWXYZ".to_string()),
+                currency_address: Some("0xABCDEF1234567".to_string()),
             },
         ])
     }
