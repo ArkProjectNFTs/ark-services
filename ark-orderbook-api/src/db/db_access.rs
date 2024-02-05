@@ -45,7 +45,14 @@ impl DatabaseAccess for PgPool {
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
                     AND t.status = 'EXECUTED'
                 ) AS is_listed,
-                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
+                EXISTS(
+                        SELECT 1
+                        FROM orderbook_token_offers o
+                        WHERE o.token_id = t.token_id
+                        AND o.token_address = t.token_address
+                        AND o.status = 'EXECUTED'
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                    ) AS has_offer,
                 t.currency_chain_id, t.currency_address
             FROM
                 orderbook_token t
@@ -80,7 +87,14 @@ impl DatabaseAccess for PgPool {
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
                     AND t.status = 'EXECUTED'
                 ) AS is_listed,
-                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
+                EXISTS(
+                        SELECT 1
+                        FROM orderbook_token_offers o
+                        WHERE o.token_id = t.token_id
+                        AND o.token_address = t.token_address
+                        AND o.status = 'EXECUTED'
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                    ) AS has_offer,
                 t.currency_chain_id, t.currency_address
             FROM
                 orderbook_token t
@@ -119,8 +133,11 @@ impl DatabaseAccess for PgPool {
                 ) AS is_listed,
                 EXISTS(
                     SELECT 1
-                    FROM orderbook_token_history th
-                    WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'EXECUTED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                 ) AS has_offer,
                 t.currency_chain_id, t.currency_address
             FROM
