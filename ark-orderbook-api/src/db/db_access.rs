@@ -61,7 +61,8 @@ impl DatabaseAccess for PgPool {
                     AND offer.token_address = t.token_address
                     AND offer.status = 'PLACED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
-                ) AS top_bid
+                ) AS top_bid,
+                t.status
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -111,7 +112,8 @@ impl DatabaseAccess for PgPool {
                     AND offer.token_address = t.token_address
                     AND offer.status = 'PLACED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
-                ) AS top_bid
+                ) AS top_bid,
+                t.status
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -163,7 +165,8 @@ impl DatabaseAccess for PgPool {
                     AND offer.token_address = t.token_address
                     AND offer.status = 'PLACED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
-                ) AS top_bid
+                ) AS top_bid,
+                t.status
             FROM
                 orderbook_token t
             WHERE
@@ -278,6 +281,8 @@ impl DatabaseAccess for MockDb {
             broker_id: Some("brokerXYZ".to_string()),
             currency_address: Some("0xABCDEF123456".to_string()),
             currency_chain_id: Some("chainXYZ".to_string()),
+            top_bid: Some("100".to_string()),
+            status: "EXECUTED".to_string(),
         })
     }
 
@@ -305,6 +310,8 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
                 currency_chain_id: Some("chainXYZ".to_string()),
+                top_bid: Some("100".to_string()),
+                status: "PLACED".to_string(),
             },
             TokenData {
                 order_hash: "0x1234".to_string(),
@@ -325,6 +332,8 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
                 currency_chain_id: Some("chainXYZ".to_string()),
+                top_bid: Some("100".to_string()),
+                status: "PLACED".to_string(),
             },
         ])
     }
@@ -400,6 +409,8 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
                 currency_chain_id: Some("chainXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
+                top_bid: Some("100".to_string()),
+                status: "EXECUTED".to_string(),
             },
             TokenData {
                 order_hash: "0x123".to_string(),
@@ -420,6 +431,8 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
                 currency_chain_id: Some("chainWXYZ".to_string()),
                 currency_address: Some("0xABCDEF1234567".to_string()),
+                top_bid: Some("50".to_string()),
+                status: "EXECUTED".to_string(),
             },
         ])
     }

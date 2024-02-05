@@ -17,6 +17,7 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
         Ok(token_id_hex) => {
             let db_access = db_pool.get_ref();
             match get_token_data(db_access, &token_address, &token_id_hex).await {
+                Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
                 Err(_) => HttpResponse::InternalServerError().finish(),
             }
@@ -32,6 +33,7 @@ pub async fn get_tokens_by_collection<D: DatabaseAccess + Sync>(
     let token_address = path.into_inner();
     let db_access = db_pool.get_ref();
     match get_token_by_collection_data(db_access, &token_address).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(token_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
@@ -46,6 +48,7 @@ pub async fn get_token_history<D: DatabaseAccess + Sync>(
         Ok(token_id_hex) => {
             let db_access = db_pool.get_ref();
             match get_token_history_data(db_access, &token_address, &token_id_hex).await {
+                Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
                 Err(_) => HttpResponse::InternalServerError().finish(),
             }
@@ -61,6 +64,7 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
     let (token_address, token_id) = path.into_inner();
     let db_access = db_pool.get_ref();
     match get_token_offers_data(db_access, &token_address, &token_id).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(token_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
@@ -73,6 +77,7 @@ pub async fn get_tokens_by_account<D: DatabaseAccess + Sync>(
     let owner = path.into_inner();
     let db_access = db_pool.get_ref();
     match get_tokens_by_account_data(db_access, owner.as_str()).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(token_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
