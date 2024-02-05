@@ -187,7 +187,7 @@ impl DatabaseAccess for PgPool {
 
         let offers = sqlx::query_as!(
             TokenOffer,
-            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date
+            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date, status
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
             ORDER BY offer_timestamp DESC;",
@@ -327,6 +327,7 @@ impl DatabaseAccess for MockDb {
             end_date: 1234567899,
             currency_address: Some("0xABCDEF123456".to_string()),
             currency_chain_id: Some("chainXYZ".to_string()),
+            status: "EXECUTED".to_string(),
         }];
         Ok(TokenWithOffers {
             token_address: "0xABCDEF123456".to_string(),

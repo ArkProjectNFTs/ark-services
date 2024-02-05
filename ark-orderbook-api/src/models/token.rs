@@ -53,6 +53,7 @@ pub struct TokenOffer {
     pub currency_chain_id: Option<String>,
     pub start_date: i64,
     pub end_date: i64,
+    pub status: String,
 
 
 }
