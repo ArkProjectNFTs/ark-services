@@ -187,7 +187,7 @@ impl DatabaseAccess for PgPool {
 
         let offers = sqlx::query_as!(
             TokenOffer,
-            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address
+            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
             ORDER BY offer_timestamp DESC;",
