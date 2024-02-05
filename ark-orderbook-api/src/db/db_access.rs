@@ -62,7 +62,15 @@ impl DatabaseAccess for PgPool {
                     AND offer.status = 'PLACED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
                 ) AS top_bid,
-                t.status
+                t.status,
+                EXISTS(
+                    SELECT 1
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'FULFILLED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                ) AS buy_in_progress
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -113,7 +121,15 @@ impl DatabaseAccess for PgPool {
                     AND offer.status = 'PLACED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
                 ) AS top_bid,
-                t.status
+                t.status,
+                EXISTS(
+                    SELECT 1
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'FULFILLED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                ) AS buy_in_progress
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -166,7 +182,15 @@ impl DatabaseAccess for PgPool {
                     AND offer.status = 'PLACED'
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
                 ) AS top_bid,
-                t.status
+                t.status,
+                EXISTS(
+                    SELECT 1
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'FULFILLED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                ) AS buy_in_progress
             FROM
                 orderbook_token t
             WHERE
@@ -283,6 +307,7 @@ impl DatabaseAccess for MockDb {
             currency_chain_id: Some("chainXYZ".to_string()),
             top_bid: Some("100".to_string()),
             status: "EXECUTED".to_string(),
+            buy_in_progress: false,
         })
     }
 
@@ -312,6 +337,7 @@ impl DatabaseAccess for MockDb {
                 currency_chain_id: Some("chainXYZ".to_string()),
                 top_bid: Some("100".to_string()),
                 status: "PLACED".to_string(),
+                buy_in_progress: false,
             },
             TokenData {
                 order_hash: "0x1234".to_string(),
@@ -334,6 +360,7 @@ impl DatabaseAccess for MockDb {
                 currency_chain_id: Some("chainXYZ".to_string()),
                 top_bid: Some("100".to_string()),
                 status: "PLACED".to_string(),
+                buy_in_progress: false,
             },
         ])
     }
@@ -411,6 +438,7 @@ impl DatabaseAccess for MockDb {
                 currency_address: Some("0xABCDEF123456".to_string()),
                 top_bid: Some("100".to_string()),
                 status: "EXECUTED".to_string(),
+                buy_in_progress: false,
             },
             TokenData {
                 order_hash: "0x123".to_string(),
@@ -433,6 +461,7 @@ impl DatabaseAccess for MockDb {
                 currency_address: Some("0xABCDEF1234567".to_string()),
                 top_bid: Some("50".to_string()),
                 status: "EXECUTED".to_string(),
+                buy_in_progress: true,
             },
         ])
     }

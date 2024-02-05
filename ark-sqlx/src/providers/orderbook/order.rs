@@ -118,7 +118,7 @@ struct OfferData {
     currency_address: String,
     start_date: i64,
     end_date: i64,
-    status: String
+    status: String,
 }
 
 pub struct OfferExecutedInfo {
@@ -156,15 +156,15 @@ impl OrderProvider {
         ";
 
         if let Some((
-                        token_id,
-                        token_address,
-                        order_type,
-                        offerer,
-                        start_amount,
-                        order_hash,
-                        currency_chain_id,
-                        currency_address,
-                    )) = sqlx::query_as::<
+            token_id,
+            token_address,
+            order_type,
+            offerer,
+            start_amount,
+            order_hash,
+            currency_chain_id,
+            currency_address,
+        )) = sqlx::query_as::<
             _,
             (
                 String,
@@ -177,9 +177,9 @@ impl OrderProvider {
                 String,
             ),
         >(query)
-            .bind(order_hash)
-            .fetch_optional(&client.pool)
-            .await?
+        .bind(order_hash)
+        .fetch_optional(&client.pool)
+        .await?
         {
             Ok(Some(TokenData {
                 token_id,
@@ -224,7 +224,6 @@ impl OrderProvider {
         order_type: &str,
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
-
         let event_type = EventType::from_str(&order_type).map_err(ProviderError::from)?;
         if event_type == EventType::Listing {
             let query = "
@@ -250,7 +249,6 @@ impl OrderProvider {
         order_hash: &str,
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
-
         let query = "
             UPDATE orderbook_token
             SET
@@ -267,15 +265,12 @@ impl OrderProvider {
         Ok(())
     }
 
-
-
     pub async fn update_token_price(
         client: &SqlxCtx,
         token_address: &str,
         token_id: &str,
-        amount: &str
+        amount: &str,
     ) -> Result<(), ProviderError> {
-
         let query = "
             UPDATE orderbook_token
             SET
@@ -439,7 +434,7 @@ impl OrderProvider {
             &data.order_hash,
             OrderStatus::Placed,
         )
-            .await?;
+        .await?;
 
         // insert token only for the first listing
         let upsert_query = "
@@ -485,7 +480,7 @@ impl OrderProvider {
                 canceled_reason: None,
             },
         )
-            .await?;
+        .await?;
 
         if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
             Self::insert_offers(
@@ -502,10 +497,10 @@ impl OrderProvider {
                     end_date: data.end_date.clone() as i64,
                     currency_chain_id: data.currency_chain_id.clone(),
                     currency_address: data.currency_address.clone(),
-                    status: OrderStatus::Placed.to_string()
+                    status: OrderStatus::Placed.to_string(),
                 },
             )
-                .await?;
+            .await?;
         }
         Ok(())
     }
@@ -535,7 +530,7 @@ impl OrderProvider {
             &data.order_hash,
             OrderStatus::Cancelled,
         )
-            .await?;
+        .await?;
 
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
@@ -554,14 +549,16 @@ impl OrderProvider {
                     previous_owner: None,
                 },
             )
-                .await?;
+            .await?;
 
-            Self::update_token_status_if_listing(client,
-                                                 &token_data.token_address,
-                                                 &token_data.token_id,
-                                                 &token_data.order_type.as_str(),
-                                                 OrderStatus::Cancelled).await?;
-
+            Self::update_token_status_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                &token_data.order_type.as_str(),
+                OrderStatus::Cancelled,
+            )
+            .await?;
         }
 
         Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
@@ -595,7 +592,7 @@ impl OrderProvider {
             &data.order_hash,
             OrderStatus::Fulfilled,
         )
-            .await?;
+        .await?;
 
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
@@ -614,14 +611,16 @@ impl OrderProvider {
                     previous_owner: None,
                 },
             )
-                .await?;
+            .await?;
 
-            Self::update_token_status_if_listing(client,
-                                                 &token_data.token_address,
-                                                 &token_data.token_id,
-                                                 &token_data.order_type.as_str(),
-                                                 OrderStatus::Fulfilled).await?;
-
+            Self::update_token_status_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                &token_data.order_type.as_str(),
+                OrderStatus::Fulfilled,
+            )
+            .await?;
         }
 
         Self::update_offer_status(client, &data.order_hash, OrderStatus::Fulfilled).await?;
@@ -653,7 +652,7 @@ impl OrderProvider {
             &data.order_hash,
             OrderStatus::Executed,
         )
-            .await?;
+        .await?;
 
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
@@ -682,7 +681,7 @@ impl OrderProvider {
                             &token_data.token_address,
                             &token_data.token_id,
                         )
-                            .await?,
+                        .await?,
                     );
                 }
                 EventType::Listing => {
@@ -704,19 +703,25 @@ impl OrderProvider {
                     previous_owner,
                 },
             )
-                .await?;
+            .await?;
 
-            Self::update_token_status_if_listing(client,
-                                                 &token_data.token_address,
-                                                 &token_data.token_id,
-                                                 &token_data.order_type.as_str(),
-                                                 OrderStatus::Executed).await?;
+            Self::update_token_status_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                &token_data.order_type.as_str(),
+                OrderStatus::Executed,
+            )
+            .await?;
 
             // update price
-            Self::update_token_price(client,
-                                     &token_data.token_address,
-                                     &token_data.token_id,
-                                     &token_data.start_amount).await?;
+            Self::update_token_price(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                &token_data.start_amount,
+            )
+            .await?;
         }
 
         Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed).await?;
