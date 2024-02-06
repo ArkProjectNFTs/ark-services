@@ -288,6 +288,33 @@ impl OrderProvider {
         Ok(())
     }
 
+    pub async fn clear_token_data_if_listing(
+        client: &SqlxCtx,
+        token_address: &str,
+        token_id: &str,
+        order_type: &str,
+    ) -> Result<(), ProviderError> {
+        let event_type = EventType::from_str(order_type).map_err(ProviderError::from)?;
+        if event_type == EventType::Listing {
+            let query = "
+            UPDATE orderbook_token
+            SET
+                start_amount = null,
+                end_amount = null,
+                start_date = null,
+                end_date = null
+            WHERE token_address = $1 AND token_id = $2;
+            ";
+
+            sqlx::query(query)
+                .bind(token_address)
+                .bind(token_id)
+                .execute(&client.pool)
+                .await?;
+        }
+        Ok(())
+    }
+
     pub async fn update_owner_price_on_offer_executed(
         client: &SqlxCtx,
         info: &OfferExecutedInfo,
@@ -557,6 +584,14 @@ impl OrderProvider {
                 &token_data.token_id,
                 token_data.order_type.as_str(),
                 OrderStatus::Cancelled,
+            )
+            .await?;
+
+            Self::clear_token_data_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                token_data.order_type.as_str(),
             )
             .await?;
         }
