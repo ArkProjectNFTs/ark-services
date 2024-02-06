@@ -50,7 +50,7 @@ impl DatabaseAccess for PgPool {
                         FROM orderbook_token_offers o
                         WHERE o.token_id = t.token_id
                         AND o.token_address = t.token_address
-                        AND o.status = 'EXECUTED'
+                        AND o.status != 'CANCELLED'
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
