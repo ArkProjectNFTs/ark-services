@@ -1,4 +1,5 @@
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
+import { postBatchTokensLambda } from "../../lambdas/v1/post-batch-tokens-lambda";
 import { getContractTokensLambda } from "../../lambdas/v1/get-contract-tokens-lambda";
 import { getTokenLambda } from "../../lambdas/v1/get-token-lambda";
 import { postRefreshTokenMetadataLambda } from "../../lambdas/v1/post-refresh-token-metadata";
@@ -14,8 +15,30 @@ export function tokensApi(
   tableNamePrefix: string
 ) {
   const tokensResource = versionedRoot.addResource("tokens");
+
+  const tokensBatchResource = tokensResource.addResource("batch");
+  tokensBatchResource.addMethod(
+    "POST",
+    new apigateway.LambdaIntegration(
+      postBatchTokensLambda(
+        scope,
+        vpc,
+        lambdaSecurityGroup,
+        stages,
+        tableNamePrefix
+      ),
+      {
+        proxy: true,
+      }
+    ),
+    {
+      apiKeyRequired: true,
+    }
+  );
+
   const tokenContractAddressResource =
     tokensResource.addResource("{contract_address}");
+
   const tokensTokenIdResource =
     tokenContractAddressResource.addResource("{token_id}");
 

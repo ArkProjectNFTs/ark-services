@@ -39,6 +39,8 @@ pub enum LambdaHttpError {
     Provider(ProviderError),
     #[error(transparent)]
     SqlxProvider(SqlxProviderError),
+    #[error("Response error")]
+    ResponseError,
 }
 
 impl From<ProviderError> for LambdaHttpError {
@@ -65,6 +67,7 @@ impl TryFrom<LambdaHttpError> for Response<Body> {
                 LambdaHttpError::ParamMissing(s) => s.into(),
                 LambdaHttpError::Provider(s) => s.to_string().into(),
                 LambdaHttpError::SqlxProvider(s) => s.to_string().into(),
+                LambdaHttpError::ResponseError => "ResponseError".into(),
             })
             .map_err(Box::new)?)
     }

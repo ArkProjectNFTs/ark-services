@@ -1,48 +1,113 @@
-
-use ark_dynamodb::providers::DynamoDbTokenProvider;
+use ark_dynamodb::providers::{
+    token::types::TokensParams, ArkTokenProvider, DynamoDbTokenProvider,
+};
+use common::{format::hex_or_dec_from_str, LambdaHttpResponse};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
-use lambda_http_common::{LambdaCtx};
-use serde::Deserialize;
+use lambda_http_common::{self as common, ArkApiResponse, LambdaCtx, LambdaHttpError};
+use serde::{Deserialize, Serialize};
 use serde_json;
+use std::collections::HashMap;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
-#[derive(Deserialize)]
-struct Token {
-    contract_address: String,
-    token_id: String,
-}
-
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct BodyParameters {
-    tokens: Vec<Token>,
+    tokens: Vec<TokensParams>,
 }
 
-async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
-    let ctx = LambdaCtx::from_event(&event).await?;
+async fn process_event(
+    ctx: &LambdaCtx,
+    token_params: &Vec<TokensParams>,
+) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    let body_params = get_params(&event).await?;
-    let message = format!("Hello this is an AWS Lambda HTTP request");
+    let dynamo_rsp = provider
+        .get_batch_tokens(&ctx.dynamodb, token_params)
+        .await?;
 
-    let resp = Response::builder()
-        .status(200)
-        .header("content-type", "text/html")
-        .body(message.into())
-        .map_err(Box::new)?;
-    Ok(resp)
+    let items = dynamo_rsp.inner();
+    // let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
+
+    let rsp = common::ok_body_rsp(&ArkApiResponse {
+        cursor: None,
+        total_count: None,
+        result: items,
+    })?;
+
+    let capacity = dynamo_rsp.consumed_capacity_units.unwrap_or(0.0);
+
+    Ok(LambdaHttpResponse {
+        capacity,
+        inner: rsp,
+    })
 }
 
-async fn get_params(event: &Request) -> Result<BodyParameters, Error> {
-    let body = event.body();
+async fn function_handler(event: Request) -> Result<Response<Body>, LambdaHttpError> {
+    let ctx = LambdaCtx::from_event(&event).await?;
+    let body_params = get_params(&event).await?;
+    let r = process_event(&ctx, &body_params.tokens).await;
 
-    let body_str = match body {
-        Body::Text(text) => text,
-        _ => return Err(Error::from("Body is not text!")),
+    let token_params_str = match serde_json::to_string(&body_params.tokens) {
+        Ok(token_params_str) => token_params_str,
+        Err(_e) => "".to_string(),
     };
 
-    let body_params: BodyParameters = serde_json::from_str(body_str)?;
+    let mut req_params = HashMap::new();
+    req_params.insert("tokens".to_string(), token_params_str);
 
-    Ok(body_params)
+    match r {
+        Ok(lambda_rsp) => {
+            // ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
+            Ok(lambda_rsp.inner)
+        }
+        Err(e) => {
+            error!("Error processing event: {:?}", e);
+            // ctx.register_usage(req_params, None).await?;
+            Err(LambdaHttpError::ResponseError)
+        }
+    }
+}
+
+use tracing::error;
+
+async fn get_params(event: &Request) -> Result<BodyParameters, LambdaHttpError> {
+    let body = event.body();
+    let body_str = match body {
+        Body::Text(text) => text,
+        _ => {
+            error!("Body is not text");
+            return Err(LambdaHttpError::ParamMissing(String::from("Body error")));
+        }
+    };
+
+    let body_params: BodyParameters = serde_json::from_str(body_str).map_err(|e| {
+        error!("Error parsing body parameters: {:?}", e);
+        LambdaHttpError::ParamParsing(String::from("Body error"))
+    })?;
+
+    if body_params.tokens.is_empty() {
+        return Err(LambdaHttpError::ParamMissing(String::from(
+            "No tokens provided",
+        )));
+    }
+
+    let results: Result<Vec<TokensParams>, LambdaHttpError> = body_params
+        .tokens
+        .iter()
+        .map(|token_param| {
+            let contract_address = token_param.contract_address.to_lowercase();
+            hex_or_dec_from_str(&token_param.token_id, "tokens")
+                .map(|token_id| TokensParams {
+                    contract_address,
+                    token_id,
+                })
+                .map_err(|_e| LambdaHttpError::ParamParsing("Tokens error".into()))
+        })
+        .collect();
+
+    match results {
+        Ok(tokens) => Ok(BodyParameters { tokens }),
+        Err(e) => Err(e),
+    }
 }
 
 #[tokio::main]

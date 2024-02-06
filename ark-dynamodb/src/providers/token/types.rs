@@ -25,6 +25,12 @@ pub struct ContractData {
     pub tokens_count: u64,
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct TokensParams {
+    pub contract_address: String,
+    pub token_id: String,
+}
+
 impl TokenData {
     pub fn mint_info_to_map(info: &TokenMintInfo) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();

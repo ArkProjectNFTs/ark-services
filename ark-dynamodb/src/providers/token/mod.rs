@@ -100,4 +100,10 @@ pub trait ArkTokenProvider {
         ctx: &DynamoDbCtx,
         owner_address: &str,
     ) -> Result<DynamoDbOutput<Vec<types::ContractData>>, ProviderError>;
+
+    async fn get_batch_tokens(
+        &self,
+        ctx: &DynamoDbCtx,
+        token_params: &Vec<types::TokensParams>,
+    ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
 }

@@ -3348,6 +3348,7 @@ dependencies = [
  "lambda_runtime",
  "serde",
  "serde_json",
+ "sqlx",
  "tokio",
  "tracing",
  "tracing-subscriber",
