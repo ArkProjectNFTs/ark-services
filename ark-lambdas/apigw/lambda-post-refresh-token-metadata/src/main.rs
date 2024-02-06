@@ -9,6 +9,7 @@ use tracing::{error, info};
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, None);
+
     let (address, token_id_hex) = get_params(&event)?;
 
     match provider
