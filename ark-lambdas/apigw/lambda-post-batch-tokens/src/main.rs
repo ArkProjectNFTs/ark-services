@@ -1,9 +1,9 @@
-use std::f32::consts::E;
 
 use ark_dynamodb::providers::DynamoDbTokenProvider;
-use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, RequestPayloadExt, Response};
-use lambda_http_common::{HttpParamSource, LambdaCtx, LambdaHttpError};
+use lambda_http::{run, service_fn, Body, Error, Request, Response};
+use lambda_http_common::{LambdaCtx};
 use serde::Deserialize;
+use serde_json;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
 #[derive(Deserialize)]
@@ -21,8 +21,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let ctx = LambdaCtx::from_event(&event).await?;
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
 
-    // let (address, token_id_hex) = get_params(&event)?;
-
+    let body_params = get_params(&event).await?;
     let message = format!("Hello this is an AWS Lambda HTTP request");
 
     let resp = Response::builder()
@@ -33,19 +32,17 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     Ok(resp)
 }
 
-async fn get_params(event: &Request) -> Result<BodyParameters, LambdaHttpError> {
-    match event.payload() {
-        Ok(p) => {
-            // TODO
+async fn get_params(event: &Request) -> Result<BodyParameters, Error> {
+    let body = event.body();
 
-            return Err(LambdaHttpError::ParamParsing(
-                "Failed to parse request body".to_string(),
-            ));
-        }
-        Err(e) => Err(LambdaHttpError::ParamParsing(
-            "Failed to parse request body".to_string(),
-        )),
-    }
+    let body_str = match body {
+        Body::Text(text) => text,
+        _ => return Err(Error::from("Body is not text!")),
+    };
+
+    let body_params: BodyParameters = serde_json::from_str(body_str)?;
+
+    Ok(body_params)
 }
 
 #[tokio::main]
