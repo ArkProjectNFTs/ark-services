@@ -224,7 +224,7 @@ impl OrderProvider {
         order_type: &str,
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
-        let event_type = EventType::from_str(&order_type).map_err(ProviderError::from)?;
+        let event_type = EventType::from_str(order_type).map_err(ProviderError::from)?;
         if event_type == EventType::Listing {
             let query = "
             UPDATE orderbook_token
@@ -384,8 +384,8 @@ impl OrderProvider {
             .bind(&offer_data.order_hash)
             .bind(&offer_data.currency_chain_id)
             .bind(&offer_data.currency_address)
-            .bind(&offer_data.start_date)
-            .bind(&offer_data.end_date)
+            .bind(offer_data.start_date)
+            .bind(offer_data.end_date)
             .bind(&offer_data.status)
             .execute(&client.pool)
             .await?;
@@ -493,8 +493,8 @@ impl OrderProvider {
                     amount: data.start_amount.clone(),
                     quantity: data.quantity.clone(),
                     order_hash: data.order_hash.clone(),
-                    start_date: data.start_date.clone() as i64,
-                    end_date: data.end_date.clone() as i64,
+                    start_date: data.start_date as i64,
+                    end_date: data.end_date as i64,
                     currency_chain_id: data.currency_chain_id.clone(),
                     currency_address: data.currency_address.clone(),
                     status: OrderStatus::Placed.to_string(),
@@ -555,7 +555,7 @@ impl OrderProvider {
                 client,
                 &token_data.token_address,
                 &token_data.token_id,
-                &token_data.order_type.as_str(),
+                token_data.order_type.as_str(),
                 OrderStatus::Cancelled,
             )
             .await?;
@@ -617,7 +617,7 @@ impl OrderProvider {
                 client,
                 &token_data.token_address,
                 &token_data.token_id,
-                &token_data.order_type.as_str(),
+                token_data.order_type.as_str(),
                 OrderStatus::Fulfilled,
             )
             .await?;
@@ -709,7 +709,7 @@ impl OrderProvider {
                 client,
                 &token_data.token_address,
                 &token_data.token_id,
-                &token_data.order_type.as_str(),
+                token_data.order_type.as_str(),
                 OrderStatus::Executed,
             )
             .await?;

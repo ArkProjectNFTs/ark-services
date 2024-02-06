@@ -307,7 +307,7 @@ impl DatabaseAccess for MockDb {
             currency_chain_id: Some("chainXYZ".to_string()),
             top_bid: Some("100".to_string()),
             status: "EXECUTED".to_string(),
-            buy_in_progress: false,
+            buy_in_progress: Some(false),
         })
     }
 
@@ -337,7 +337,7 @@ impl DatabaseAccess for MockDb {
                 currency_chain_id: Some("chainXYZ".to_string()),
                 top_bid: Some("100".to_string()),
                 status: "PLACED".to_string(),
-                buy_in_progress: false,
+                buy_in_progress: Some(false),
             },
             TokenData {
                 order_hash: "0x1234".to_string(),
@@ -360,7 +360,7 @@ impl DatabaseAccess for MockDb {
                 currency_chain_id: Some("chainXYZ".to_string()),
                 top_bid: Some("100".to_string()),
                 status: "PLACED".to_string(),
-                buy_in_progress: false,
+                buy_in_progress: Some(false),
             },
         ])
     }
@@ -438,7 +438,7 @@ impl DatabaseAccess for MockDb {
                 currency_address: Some("0xABCDEF123456".to_string()),
                 top_bid: Some("100".to_string()),
                 status: "EXECUTED".to_string(),
-                buy_in_progress: false,
+                buy_in_progress: Some(false),
             },
             TokenData {
                 order_hash: "0x123".to_string(),
@@ -461,7 +461,7 @@ impl DatabaseAccess for MockDb {
                 currency_address: Some("0xABCDEF1234567".to_string()),
                 top_bid: Some("50".to_string()),
                 status: "EXECUTED".to_string(),
-                buy_in_progress: true,
+                buy_in_progress: Some(true),
             },
         ])
     }
