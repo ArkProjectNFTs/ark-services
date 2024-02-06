@@ -62,10 +62,15 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let (token_address, token_id) = path.into_inner();
-    let db_access = db_pool.get_ref();
-    match get_token_offers_data(db_access, &token_address, &token_id).await {
-        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-        Ok(token_data) => HttpResponse::Ok().json(token_data),
+    match convert_param_to_hex(&token_id) {
+        Ok(token_id_hex) => {
+            let db_access = db_pool.get_ref();
+            match get_token_offers_data(db_access, &token_address, &token_id).await {
+                Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+                Ok(token_data) => HttpResponse::Ok().json(token_data),
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
+        }
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
