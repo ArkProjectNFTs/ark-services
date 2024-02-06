@@ -40,15 +40,37 @@ impl DatabaseAccess for PgPool {
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
-                EXISTS(SELECT 1 FROM orderbook_token_history th
-                           WHERE th.token_id = t.token_id AND th.token_address = t.token_address
-                           AND th.event_type = 'Listing'
-                           AND th.event_timestamp < COALESCE((SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2
-                                                             WHERE th2.token_id = t.token_id AND th2.token_address = t.token_address
-                                                             AND th2.event_type = 'Offer'), th.event_timestamp)
-                          ) AS is_listed,
-                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
-                t.currency_chain_id, t.currency_address
+                (
+                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
+                    AND t.status = 'EXECUTED'
+                ) AS is_listed,
+                EXISTS(
+                        SELECT 1
+                        FROM orderbook_token_offers o
+                        WHERE o.token_id = t.token_id
+                        AND o.token_address = t.token_address
+                        AND o.status = 'EXECUTED'
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                    ) AS has_offer,
+                t.currency_chain_id, t.currency_address,
+                (
+                    SELECT MAX(offer.offer_amount)
+                    FROM orderbook_token_offers AS offer
+                    WHERE offer.token_id = t.token_id
+                    AND offer.token_address = t.token_address
+                    AND offer.status = 'PLACED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
+                ) AS top_bid,
+                t.status,
+                EXISTS(
+                    SELECT 1
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'FULFILLED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                ) AS buy_in_progress
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -77,15 +99,37 @@ impl DatabaseAccess for PgPool {
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
-                EXISTS(SELECT 1 FROM orderbook_token_history th
-                           WHERE th.token_id = t.token_id AND th.token_address = t.token_address
-                           AND th.event_type = 'Listing'
-                           AND th.event_timestamp < COALESCE((SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2
-                                                             WHERE th2.token_id = t.token_id AND th2.token_address = t.token_address
-                                                             AND th2.event_type = 'Offer'), th.event_timestamp)
-                          ) AS is_listed,
-                CASE WHEN COALESCE(MAX(CASE WHEN th.event_type = 'Offer' AND th.event_timestamp > (SELECT MAX(th2.event_timestamp) FROM orderbook_token_history th2 WHERE th2.event_type = 'Listing' AND th2.token_id = t.token_id AND th2.token_address = t.token_address) THEN 1 ELSE 0 END) OVER (PARTITION BY t.token_id, t.token_address ORDER BY th.event_timestamp DESC), 0) = 1 THEN TRUE ELSE FALSE END AS has_offer,
-                t.currency_chain_id, t.currency_address
+                (
+                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
+                    AND t.status = 'EXECUTED'
+                ) AS is_listed,
+                EXISTS(
+                        SELECT 1
+                        FROM orderbook_token_offers o
+                        WHERE o.token_id = t.token_id
+                        AND o.token_address = t.token_address
+                        AND o.status = 'EXECUTED'
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                    ) AS has_offer,
+                t.currency_chain_id, t.currency_address,
+                (
+                    SELECT MAX(offer.offer_amount)
+                    FROM orderbook_token_offers AS offer
+                    WHERE offer.token_id = t.token_id
+                    AND offer.token_address = t.token_address
+                    AND offer.status = 'PLACED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
+                ) AS top_bid,
+                t.status,
+                EXISTS(
+                    SELECT 1
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'FULFILLED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                ) AS buy_in_progress
             FROM
                 orderbook_token t
             LEFT JOIN
@@ -116,21 +160,37 @@ impl DatabaseAccess for PgPool {
                 t.updated_timestamp, t.current_owner, t.current_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
-                COALESCE(
-                    (SELECT MAX(th.event_timestamp)
-                     FROM orderbook_token_history th
-                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Listing'
-                    ) <
-                    (SELECT MAX(th.event_timestamp)
-                     FROM orderbook_token_history th
-                     WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'
-                    ), FALSE) AS is_listed,
+                (
+                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
+                    AND t.status = 'EXECUTED'
+                ) AS is_listed,
                 EXISTS(
                     SELECT 1
-                    FROM orderbook_token_history th
-                    WHERE th.token_id = t.token_id AND th.token_address = t.token_address AND th.event_type = 'Offer'
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'EXECUTED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                 ) AS has_offer,
-                t.currency_chain_id, t.currency_address
+                t.currency_chain_id, t.currency_address,
+                (
+                    SELECT MAX(offer.offer_amount)
+                    FROM orderbook_token_offers AS offer
+                    WHERE offer.token_id = t.token_id
+                    AND offer.token_address = t.token_address
+                    AND offer.status = 'PLACED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
+                ) AS top_bid,
+                t.status,
+                EXISTS(
+                    SELECT 1
+                    FROM orderbook_token_offers o
+                    WHERE o.token_id = t.token_id
+                    AND o.token_address = t.token_address
+                    AND o.status = 'FULFILLED'
+                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
+                ) AS buy_in_progress
             FROM
                 orderbook_token t
             WHERE
@@ -195,7 +255,7 @@ impl DatabaseAccess for PgPool {
 
         let offers = sqlx::query_as!(
             TokenOffer,
-            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address
+            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date, status
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
             ORDER BY offer_timestamp DESC;",
@@ -245,6 +305,9 @@ impl DatabaseAccess for MockDb {
             broker_id: Some("brokerXYZ".to_string()),
             currency_address: Some("0xABCDEF123456".to_string()),
             currency_chain_id: Some("chainXYZ".to_string()),
+            top_bid: Some("100".to_string()),
+            status: "EXECUTED".to_string(),
+            buy_in_progress: Some(false),
         })
     }
 
@@ -272,6 +335,9 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
                 currency_chain_id: Some("chainXYZ".to_string()),
+                top_bid: Some("100".to_string()),
+                status: "PLACED".to_string(),
+                buy_in_progress: Some(false),
             },
             TokenData {
                 order_hash: "0x1234".to_string(),
@@ -292,6 +358,9 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
                 currency_chain_id: Some("chainXYZ".to_string()),
+                top_bid: Some("100".to_string()),
+                status: "PLACED".to_string(),
+                buy_in_progress: Some(false),
             },
         ])
     }
@@ -331,8 +400,11 @@ impl DatabaseAccess for MockDb {
             offer_amount: "100".to_string(),
             offer_quantity: "10".to_string(),
             offer_timestamp: 1234567890,
+            start_date: 1234567890,
+            end_date: 1234567899,
             currency_address: Some("0xABCDEF123456".to_string()),
             currency_chain_id: Some("chainXYZ".to_string()),
+            status: "EXECUTED".to_string(),
         }];
         Ok(TokenWithOffers {
             token_address: "0xABCDEF123456".to_string(),
@@ -364,6 +436,9 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
                 currency_chain_id: Some("chainXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
+                top_bid: Some("100".to_string()),
+                status: "EXECUTED".to_string(),
+                buy_in_progress: Some(false),
             },
             TokenData {
                 order_hash: "0x123".to_string(),
@@ -384,6 +459,9 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
                 currency_chain_id: Some("chainWXYZ".to_string()),
                 currency_address: Some("0xABCDEF1234567".to_string()),
+                top_bid: Some("50".to_string()),
+                status: "EXECUTED".to_string(),
+                buy_in_progress: Some(true),
             },
         ])
     }

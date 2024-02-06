@@ -116,6 +116,9 @@ struct OfferData {
     quantity: String,
     currency_chain_id: String,
     currency_address: String,
+    start_date: i64,
+    end_date: i64,
+    status: String,
 }
 
 pub struct OfferExecutedInfo {
@@ -214,6 +217,77 @@ impl OrderProvider {
         Ok(current_owner)
     }
 
+    pub async fn update_token_status_if_listing(
+        client: &SqlxCtx,
+        token_address: &str,
+        token_id: &str,
+        order_type: &str,
+        status: OrderStatus,
+    ) -> Result<(), ProviderError> {
+        let event_type = EventType::from_str(order_type).map_err(ProviderError::from)?;
+        if event_type == EventType::Listing {
+            let query = "
+            UPDATE orderbook_token
+            SET
+                status = $3
+            WHERE token_address = $1 AND token_id = $2;
+            ";
+
+            sqlx::query(query)
+                .bind(token_address)
+                .bind(token_id)
+                .bind(status.to_string())
+                .execute(&client.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn update_offer_status(
+        client: &SqlxCtx,
+        order_hash: &str,
+        status: OrderStatus,
+    ) -> Result<(), ProviderError> {
+        let query = "
+            UPDATE orderbook_token
+            SET
+                status = $2
+            WHERE order_hash = $1;
+        ";
+
+        sqlx::query(query)
+            .bind(order_hash)
+            .bind(status.to_string())
+            .execute(&client.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_token_price(
+        client: &SqlxCtx,
+        token_address: &str,
+        token_id: &str,
+        amount: &str,
+    ) -> Result<(), ProviderError> {
+        let query = "
+            UPDATE orderbook_token
+            SET
+                start_amount = $3
+            WHERE token_address = $1 AND token_id = $2;
+            ";
+
+        sqlx::query(query)
+            .bind(token_address)
+            .bind(token_id)
+            .bind(amount)
+            .execute(&client.pool)
+            .await?;
+
+        Ok(())
+    }
+
     pub async fn update_owner_price_on_offer_executed(
         client: &SqlxCtx,
         info: &OfferExecutedInfo,
@@ -285,7 +359,7 @@ impl OrderProvider {
             .bind(event_data.event_timestamp)
             .bind(&event_data.previous_owner.clone().unwrap_or_default())
             .bind(&event_data.new_owner.clone().unwrap_or_default())
-            .bind(&event_data.amount)
+            .bind(&event_data.amount.clone().unwrap_or_default())
             .bind(&event_data.canceled_reason.clone().unwrap_or_default())
             .execute(&client.pool)
             .await?;
@@ -296,8 +370,8 @@ impl OrderProvider {
     async fn insert_offers(client: &SqlxCtx, offer_data: &OfferData) -> Result<(), ProviderError> {
         trace!("Insert token offers");
         let insert_query = "
-            INSERT INTO orderbook_token_offers (token_id, token_address, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+            INSERT INTO orderbook_token_offers (token_id, token_address, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, start_date, end_date, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         ";
 
         sqlx::query(insert_query)
@@ -310,6 +384,9 @@ impl OrderProvider {
             .bind(&offer_data.order_hash)
             .bind(&offer_data.currency_chain_id)
             .bind(&offer_data.currency_address)
+            .bind(offer_data.start_date)
+            .bind(offer_data.end_date)
+            .bind(&offer_data.status)
             .execute(&client.pool)
             .await?;
 
@@ -361,8 +438,8 @@ impl OrderProvider {
 
         // insert token only for the first listing
         let upsert_query = "
-            INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash, currency_address, currency_chain_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+            INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash, currency_address, currency_chain_id, status)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             ON CONFLICT (token_id, token_address)
             DO NOTHING;
         ";
@@ -383,6 +460,7 @@ impl OrderProvider {
             .bind(data.order_hash.clone())
             .bind(data.currency_address.clone())
             .bind(data.currency_chain_id.clone())
+            .bind(OrderStatus::Placed.to_string())
             .execute(&client.pool)
             .await?;
 
@@ -415,8 +493,11 @@ impl OrderProvider {
                     amount: data.start_amount.clone(),
                     quantity: data.quantity.clone(),
                     order_hash: data.order_hash.clone(),
+                    start_date: data.start_date as i64,
+                    end_date: data.end_date as i64,
                     currency_chain_id: data.currency_chain_id.clone(),
                     currency_address: data.currency_address.clone(),
+                    status: OrderStatus::Placed.to_string(),
                 },
             )
             .await?;
@@ -457,9 +538,9 @@ impl OrderProvider {
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
-                    token_id: token_data.token_id,
-                    token_address: token_data.token_address,
-                    event_type: token_data.order_type.into(),
+                    token_id: token_data.token_id.clone(),
+                    token_address: token_data.token_address.clone(),
+                    event_type: token_data.order_type.clone().into(),
                     event_timestamp: block_timestamp as i64,
                     order_status: OrderStatus::Cancelled,
                     canceled_reason: data.reason.clone().into(),
@@ -469,7 +550,18 @@ impl OrderProvider {
                 },
             )
             .await?;
+
+            Self::update_token_status_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                token_data.order_type.as_str(),
+                OrderStatus::Cancelled,
+            )
+            .await?;
         }
+
+        Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
 
         Ok(())
     }
@@ -508,9 +600,9 @@ impl OrderProvider {
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
-                    token_id: token_data.token_id,
-                    token_address: token_data.token_address,
-                    event_type: token_data.order_type.into(),
+                    token_id: token_data.token_id.clone(),
+                    token_address: token_data.token_address.clone(),
+                    event_type: token_data.order_type.clone().into(),
                     order_status: OrderStatus::Fulfilled,
                     event_timestamp: block_timestamp as i64,
                     canceled_reason: None,
@@ -520,7 +612,18 @@ impl OrderProvider {
                 },
             )
             .await?;
+
+            Self::update_token_status_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                token_data.order_type.as_str(),
+                OrderStatus::Fulfilled,
+            )
+            .await?;
         }
+
+        Self::update_offer_status(client, &data.order_hash, OrderStatus::Fulfilled).await?;
 
         Ok(())
     }
@@ -565,7 +668,7 @@ impl OrderProvider {
                         token_address: token_data.token_address.clone(),
                         token_id: token_data.token_id.clone(),
                         new_owner: new_owner.clone().unwrap(),
-                        price: token_data.start_amount,
+                        price: token_data.start_amount.clone(),
                         order_hash: token_data.order_hash.clone(),
                         currency_chain_id: token_data.currency_chain_id.clone(),
                         currency_address: token_data.currency_address.clone(),
@@ -589,9 +692,9 @@ impl OrderProvider {
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
-                    token_id: token_data.token_id,
-                    token_address: token_data.token_address,
-                    event_type: token_data.order_type.into(),
+                    token_id: token_data.token_id.clone(),
+                    token_address: token_data.token_address.clone(),
+                    event_type: token_data.order_type.clone().into(),
                     order_status: OrderStatus::Executed,
                     event_timestamp: block_timestamp as i64,
                     canceled_reason: None,
@@ -601,7 +704,27 @@ impl OrderProvider {
                 },
             )
             .await?;
+
+            Self::update_token_status_if_listing(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                token_data.order_type.as_str(),
+                OrderStatus::Executed,
+            )
+            .await?;
+
+            // update price
+            Self::update_token_price(
+                client,
+                &token_data.token_address,
+                &token_data.token_id,
+                &token_data.start_amount,
+            )
+            .await?;
         }
+
+        Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed).await?;
 
         Ok(())
     }
