@@ -467,8 +467,15 @@ impl OrderProvider {
         let upsert_query = "
             INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash, currency_address, currency_chain_id, status)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-            ON CONFLICT (token_id, token_address)
-            DO NOTHING;
+            ON CONFLICT (token_id, token_address) DO UPDATE SET
+            start_amount = EXCLUDED.start_amount,
+            end_amount = EXCLUDED.end_amount,
+            start_date = EXCLUDED.start_date,
+            end_date = EXCLUDED.end_date,
+            broker_id = EXCLUDED.broker_id,
+            order_hash = EXCLUDED.order_hash,
+            status = EXCLUDED.status,
+            updated_timestamp = EXCLUDED.updated_timestamp;
         ";
 
         sqlx::query(upsert_query)
