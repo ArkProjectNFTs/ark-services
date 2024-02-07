@@ -265,29 +265,6 @@ impl OrderProvider {
         Ok(())
     }
 
-    pub async fn update_token_price(
-        client: &SqlxCtx,
-        token_address: &str,
-        token_id: &str,
-        amount: &str,
-    ) -> Result<(), ProviderError> {
-        let query = "
-            UPDATE orderbook_token
-            SET
-                start_amount = $3
-            WHERE token_address = $1 AND token_id = $2;
-            ";
-
-        sqlx::query(query)
-            .bind(token_address)
-            .bind(token_id)
-            .bind(amount)
-            .execute(&client.pool)
-            .await?;
-
-        Ok(())
-    }
-
     pub async fn clear_token_data_if_listing(
         client: &SqlxCtx,
         token_address: &str,
@@ -324,9 +301,9 @@ impl OrderProvider {
             SET
                 current_owner = $3, updated_timestamp = $4,
                 current_price = $5, order_hash = $6,
-                currency_chain_id = $7, currency_address = $8
+                currency_chain_id = $7, currency_address = $8,
                 start_date = null, end_date = null,
-                start_amount = null, end_amount = null,
+                start_amount = null, end_amount = null
             WHERE token_address = $1 AND token_id = $2;
         ";
 
@@ -436,7 +413,7 @@ impl OrderProvider {
             .bind(data.order_hash.clone())
             .bind(data.order_version.clone())
             .bind(data.order_type.clone())
-            .bind(data.cancelled_order_hash.clone())
+            .bind(data.cancelled_order_hash.clone().unwrap_or_default())
             .bind(data.route.clone())
             .bind(data.currency_address.clone())
             .bind(data.currency_chain_id.clone())
@@ -753,15 +730,6 @@ impl OrderProvider {
                 &token_data.token_id,
                 token_data.order_type.as_str(),
                 OrderStatus::Executed,
-            )
-            .await?;
-
-            // update price
-            Self::update_token_price(
-                client,
-                &token_data.token_address,
-                &token_data.token_id,
-                &token_data.start_amount,
             )
             .await?;
         }
