@@ -1,5 +1,5 @@
 use crate::models::token::{
-    TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
+    RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
 };
 use async_trait::async_trait;
 use sqlx::Error;
@@ -34,7 +34,7 @@ impl DatabaseAccess for PgPool {
         token_id: &str,
     ) -> Result<TokenData, Error> {
         let token_data = sqlx::query_as!(
-            TokenData,
+            RawTokenData,
             "SELECT
                 t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
                 t.updated_timestamp, t.current_owner, t.current_price,
@@ -43,7 +43,7 @@ impl DatabaseAccess for PgPool {
                 (
                     t.start_date IS NOT NULL AND t.end_date IS NOT NULL
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status = 'EXECUTED'
+                    AND t.status != 'CANCELLED'
                 ) AS is_listed,
                 EXISTS(
                         SELECT 1
@@ -54,14 +54,8 @@ impl DatabaseAccess for PgPool {
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
-                (
-                    SELECT MAX(offer.offer_amount)
-                    FROM orderbook_token_offers AS offer
-                    WHERE offer.token_id = t.token_id
-                    AND offer.token_address = t.token_address
-                    AND offer.status = 'PLACED'
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
-                ) AS top_bid,
+                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
+                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
                 t.status,
                 EXISTS(
                     SELECT 1
@@ -88,12 +82,14 @@ impl DatabaseAccess for PgPool {
             token_id
         ).fetch_one(self).await?;
 
-        Ok(token_data)
+        let token: TokenData = TokenData::from(token_data);
+
+        Ok(token)
     }
 
     async fn get_tokens_by_owner_data(&self, owner: &str) -> Result<Vec<TokenData>, Error> {
         let tokens_data = sqlx::query_as!(
-            TokenData,
+            RawTokenData,
             "SELECT
                 t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
                 t.updated_timestamp, t.current_owner, t.current_price,
@@ -102,7 +98,7 @@ impl DatabaseAccess for PgPool {
                 (
                     t.start_date IS NOT NULL AND t.end_date IS NOT NULL
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status = 'EXECUTED'
+                    AND t.status != 'CANCELLED'
                 ) AS is_listed,
                 EXISTS(
                         SELECT 1
@@ -113,14 +109,8 @@ impl DatabaseAccess for PgPool {
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
-                (
-                    SELECT MAX(offer.offer_amount)
-                    FROM orderbook_token_offers AS offer
-                    WHERE offer.token_id = t.token_id
-                    AND offer.token_address = t.token_address
-                    AND offer.status = 'PLACED'
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
-                ) AS top_bid,
+                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
+                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
                 t.status,
                 EXISTS(
                     SELECT 1
@@ -146,7 +136,13 @@ impl DatabaseAccess for PgPool {
             owner
         ).fetch_all(self).await?;
 
-        Ok(tokens_data)
+
+        let tokens: Vec<TokenData> = tokens_data
+            .into_iter()
+            .map(TokenData::from)
+            .collect();
+
+        Ok(tokens)
     }
 
     async fn get_token_by_collection_data(
@@ -154,7 +150,7 @@ impl DatabaseAccess for PgPool {
         token_address: &str,
     ) -> Result<Vec<TokenData>, Error> {
         let token_data = sqlx::query_as!(
-            TokenData,
+            RawTokenData,
             "SELECT
                 t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
                 t.updated_timestamp, t.current_owner, t.current_price,
@@ -163,7 +159,7 @@ impl DatabaseAccess for PgPool {
                 (
                     t.start_date IS NOT NULL AND t.end_date IS NOT NULL
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status = 'EXECUTED'
+                    AND t.status != 'CANCELLED'
                 ) AS is_listed,
                 EXISTS(
                     SELECT 1
@@ -174,14 +170,8 @@ impl DatabaseAccess for PgPool {
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                 ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
-                (
-                    SELECT MAX(offer.offer_amount)
-                    FROM orderbook_token_offers AS offer
-                    WHERE offer.token_id = t.token_id
-                    AND offer.token_address = t.token_address
-                    AND offer.status = 'PLACED'
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN offer.start_date AND offer.end_date
-                ) AS top_bid,
+                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
+                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
                 t.status,
                 EXISTS(
                     SELECT 1
@@ -198,7 +188,12 @@ impl DatabaseAccess for PgPool {
             token_address
         ).fetch_all(self).await?;
 
-        Ok(token_data)
+        let tokens: Vec<TokenData> = token_data
+            .into_iter()
+            .map(TokenData::from)
+            .collect();
+
+        Ok(tokens)
     }
 
     async fn get_token_history_data(
@@ -305,7 +300,10 @@ impl DatabaseAccess for MockDb {
             broker_id: Some("brokerXYZ".to_string()),
             currency_address: Some("0xABCDEF123456".to_string()),
             currency_chain_id: Some("chainXYZ".to_string()),
-            top_bid: Some("100".to_string()),
+            top_bid: TopBid {
+                amount: Some("100".to_string()),
+                order_hash: Some("0x12345".to_string()),
+            },
             status: "EXECUTED".to_string(),
             buy_in_progress: Some(false),
         })
@@ -335,7 +333,10 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
                 currency_chain_id: Some("chainXYZ".to_string()),
-                top_bid: Some("100".to_string()),
+                top_bid: TopBid {
+                    amount: Some("100".to_string()),
+                    order_hash: Some("0x12345".to_string()),
+                },
                 status: "PLACED".to_string(),
                 buy_in_progress: Some(false),
             },
@@ -358,7 +359,10 @@ impl DatabaseAccess for MockDb {
                 broker_id: Some("brokerXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
                 currency_chain_id: Some("chainXYZ".to_string()),
-                top_bid: Some("100".to_string()),
+                top_bid: TopBid {
+                    amount: Some("100".to_string()),
+                    order_hash: Some("0x12345".to_string()),
+                },
                 status: "PLACED".to_string(),
                 buy_in_progress: Some(false),
             },
@@ -436,7 +440,10 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
                 currency_chain_id: Some("chainXYZ".to_string()),
                 currency_address: Some("0xABCDEF123456".to_string()),
-                top_bid: Some("100".to_string()),
+                top_bid: TopBid {
+                    amount: Some("100".to_string()),
+                    order_hash: Some("0x12345".to_string()),
+                },
                 status: "EXECUTED".to_string(),
                 buy_in_progress: Some(false),
             },
@@ -459,7 +466,10 @@ impl DatabaseAccess for MockDb {
                 has_offer: None,
                 currency_chain_id: Some("chainWXYZ".to_string()),
                 currency_address: Some("0xABCDEF1234567".to_string()),
-                top_bid: Some("50".to_string()),
+                top_bid: TopBid {
+                    amount: Some("100".to_string()),
+                    order_hash: Some("0x12345".to_string()),
+                },
                 status: "EXECUTED".to_string(),
                 buy_in_progress: Some(true),
             },
