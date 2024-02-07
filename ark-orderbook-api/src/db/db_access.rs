@@ -220,7 +220,7 @@ impl DatabaseAccess for PgPool {
         Ok(TokenWithHistory {
             token_id: token_info.token_id,
             token_address: token_info.token_address,
-            current_owner: token_info.current_owner,
+            current_owner: Option::from(token_info.current_owner),
             current_price: token_info.current_price,
             history,
         })
@@ -256,7 +256,7 @@ impl DatabaseAccess for PgPool {
         Ok(TokenWithOffers {
             token_id: token_info.token_id,
             token_address: token_info.token_address,
-            current_owner: token_info.current_owner,
+            current_owner: Option::from(token_info.current_owner),
             current_price: token_info.current_price,
             offers,
         })
@@ -281,7 +281,7 @@ impl DatabaseAccess for MockDb {
             token_id: "token789".to_string(),
             listed_timestamp: 1234567890,
             updated_timestamp: 1234567891,
-            current_owner: "owner123".to_string(),
+            current_owner: Some("owner123".to_string()),
             current_price: Some("100".to_string()),
             quantity: Some("10".to_string()),
             start_amount: Some("50".to_string()),
@@ -314,7 +314,7 @@ impl DatabaseAccess for MockDb {
                 token_id: "token789".to_string(),
                 listed_timestamp: 1234567890,
                 updated_timestamp: 1234567891,
-                current_owner: "owner123".to_string(),
+                current_owner: Some("owner123".to_string()),
                 current_price: Some("100".to_string()),
                 quantity: Some("10".to_string()),
                 start_amount: Some("50".to_string()),

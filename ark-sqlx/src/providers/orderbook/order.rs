@@ -440,60 +440,27 @@ impl OrderProvider {
         )
         .await?;
 
-        // insert token only for the first listing
-        let upsert_query = "
-            INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash, currency_address, currency_chain_id, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-            ON CONFLICT (token_id, token_address) DO UPDATE SET
-            start_amount = EXCLUDED.start_amount,
-            end_amount = EXCLUDED.end_amount,
-            start_date = EXCLUDED.start_date,
-            end_date = EXCLUDED.end_date,
-            broker_id = EXCLUDED.broker_id,
-            order_hash = EXCLUDED.order_hash,
-            status = EXCLUDED.status,
-            updated_timestamp = EXCLUDED.updated_timestamp;
-        ";
-
-        sqlx::query(upsert_query)
-            .bind(data.token_chain_id.clone())
-            .bind(data.token_address.clone())
-            .bind(data.token_id.clone())
-            .bind(block_timestamp as i64)
-            .bind(block_timestamp as i64)
-            .bind(data.offerer.clone())
-            .bind(data.quantity.clone())
-            .bind(data.start_amount.clone())
-            .bind(data.end_amount.clone())
-            .bind(data.start_date as i64)
-            .bind(data.end_date as i64)
-            .bind(data.broker_id.clone())
-            .bind(data.order_hash.clone())
-            .bind(data.currency_address.clone())
-            .bind(data.currency_chain_id.clone())
-            .bind(OrderStatus::Placed.to_string())
-            .execute(&client.pool)
-            .await?;
-
         let event_type = EventType::from_str(&data.order_type).map_err(ProviderError::from)?;
 
-        Self::insert_event_history(
-            client,
-            &EventHistoryData {
-                token_id: data.token_id.clone().expect("Missing token id"),
-                token_address: data.token_address.clone(),
-                event_type,
-                event_timestamp: block_timestamp as i64,
-                order_status: OrderStatus::Placed,
-                previous_owner: None,
-                new_owner: Some(data.offerer.clone()),
-                amount: Some(data.start_amount.clone()),
-                canceled_reason: None,
-            },
-        )
-        .await?;
-
         if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
+            // create token without listing information
+            let upsert_query = "
+                INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, order_hash)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                ON CONFLICT (token_id, token_address)
+                DO NOTHING;
+            ";
+
+            sqlx::query(upsert_query)
+                .bind(data.token_chain_id.clone())
+                .bind(data.token_address.clone())
+                .bind(data.token_id.clone())
+                .bind(block_timestamp as i64)
+                .bind(block_timestamp as i64)
+                .bind(data.order_hash.clone())
+                .execute(&client.pool)
+                .await?;
+
             Self::insert_offers(
                 client,
                 &OfferData {
@@ -512,7 +479,60 @@ impl OrderProvider {
                 },
             )
             .await?;
+        } else {
+            // create token with listing information
+            let upsert_query = "
+                INSERT INTO orderbook_token (token_chain_id, token_address, token_id, listed_timestamp, updated_timestamp, current_owner, quantity, start_amount, end_amount, start_date, end_date, broker_id, order_hash, currency_address, currency_chain_id, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                ON CONFLICT (token_id, token_address) DO UPDATE SET
+                current_owner = EXCLUDED.current_owner,
+                start_amount = EXCLUDED.start_amount,
+                end_amount = EXCLUDED.end_amount,
+                start_date = EXCLUDED.start_date,
+                end_date = EXCLUDED.end_date,
+                broker_id = EXCLUDED.broker_id,
+                order_hash = EXCLUDED.order_hash,
+                status = EXCLUDED.status,
+                updated_timestamp = EXCLUDED.updated_timestamp;
+            ";
+
+            sqlx::query(upsert_query)
+                .bind(data.token_chain_id.clone())
+                .bind(data.token_address.clone())
+                .bind(data.token_id.clone())
+                .bind(block_timestamp as i64)
+                .bind(block_timestamp as i64)
+                .bind(data.offerer.clone())
+                .bind(data.quantity.clone())
+                .bind(data.start_amount.clone())
+                .bind(data.end_amount.clone())
+                .bind(data.start_date as i64)
+                .bind(data.end_date as i64)
+                .bind(data.broker_id.clone())
+                .bind(data.order_hash.clone())
+                .bind(data.currency_address.clone())
+                .bind(data.currency_chain_id.clone())
+                .bind(OrderStatus::Placed.to_string())
+                .execute(&client.pool)
+                .await?;
         }
+
+        Self::insert_event_history(
+            client,
+            &EventHistoryData {
+                token_id: data.token_id.clone().expect("Missing token id"),
+                token_address: data.token_address.clone(),
+                event_type,
+                event_timestamp: block_timestamp as i64,
+                order_status: OrderStatus::Placed,
+                previous_owner: None,
+                new_owner: Some(data.offerer.clone()),
+                amount: Some(data.start_amount.clone()),
+                canceled_reason: None,
+            },
+        )
+        .await?;
+
         Ok(())
     }
 

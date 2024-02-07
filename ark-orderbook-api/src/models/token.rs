@@ -41,7 +41,7 @@ pub struct RawTokenData {
     pub token_address: String,
     pub listed_timestamp: i64,
     pub updated_timestamp: i64,
-    pub current_owner: String,
+    pub current_owner: Option<String>,
     pub current_price: Option<String>,
     pub quantity: Option<String>,
     pub start_amount: Option<String>,
@@ -73,7 +73,7 @@ pub struct TokenData {
     pub token_id: String,
     pub listed_timestamp: i64,
     pub updated_timestamp: i64,
-    pub current_owner: String,
+    pub current_owner: Option<String>,
     pub current_price: Option<String>,
     pub quantity: Option<String>,
     pub start_amount: Option<String>,
@@ -94,7 +94,7 @@ pub struct TokenData {
 pub struct TokenWithHistory {
     pub token_address: String,
     pub token_id: String,
-    pub current_owner: String,
+    pub current_owner: Option<String>,
     pub current_price: Option<String>,
     pub history: Vec<TokenHistory>,
 }
@@ -128,7 +128,7 @@ pub struct TokenOffer {
 pub struct TokenWithOffers {
     pub token_address: String,
     pub token_id: String,
-    pub current_owner: String,
+    pub current_owner: Option<String>,
     pub current_price: Option<String>,
     pub offers: Vec<TokenOffer>,
 }
