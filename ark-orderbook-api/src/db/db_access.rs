@@ -136,11 +136,7 @@ impl DatabaseAccess for PgPool {
             owner
         ).fetch_all(self).await?;
 
-
-        let tokens: Vec<TokenData> = tokens_data
-            .into_iter()
-            .map(TokenData::from)
-            .collect();
+        let tokens: Vec<TokenData> = tokens_data.into_iter().map(TokenData::from).collect();
 
         Ok(tokens)
     }
@@ -188,10 +184,7 @@ impl DatabaseAccess for PgPool {
             token_address
         ).fetch_all(self).await?;
 
-        let tokens: Vec<TokenData> = token_data
-            .into_iter()
-            .map(TokenData::from)
-            .collect();
+        let tokens: Vec<TokenData> = token_data.into_iter().map(TokenData::from).collect();
 
         Ok(tokens)
     }
