@@ -117,11 +117,11 @@ mod tests {
         let token_data: TokenData = serde_json::from_slice(&response_body).unwrap();
         assert_eq!(token_data.token_chain_id, "chainXYZ");
         assert_eq!(token_data.token_address, "0xABCDEF123456");
-        assert_eq!(token_data.token_id, "token789");
+        assert_eq!(token_data.token_id, "789");
         assert_eq!(token_data.listed_timestamp, 1234567890);
         assert_eq!(token_data.updated_timestamp, 1234567891);
-        assert_eq!(token_data.current_owner, "owner123");
-        assert_eq!(token_data.current_price, Some("100".to_string()));
+        assert_eq!(token_data.current_owner, Some("owner123".to_string()));
+        assert_eq!(token_data.last_price, Some("100".to_string()));
         assert_eq!(token_data.quantity, Some("10".to_string()));
         assert_eq!(token_data.start_amount, Some("50".to_string()));
         assert_eq!(token_data.end_amount, Some("150".to_string()));
@@ -154,11 +154,11 @@ mod tests {
         let token1 = &tokens[0];
         assert_eq!(token1.token_chain_id, "chainXYZ");
         assert_eq!(token1.token_address, "0xABCDEF123456");
-        assert_eq!(token1.token_id, "token789");
+        assert_eq!(token1.token_id, "789");
         assert_eq!(token1.listed_timestamp, 1234567890);
         assert_eq!(token1.updated_timestamp, 1234567891);
-        assert_eq!(token1.current_owner, "owner123");
-        assert_eq!(token1.current_price, Some("100".to_string()));
+        assert_eq!(token1.current_owner, Some("owner123".to_string()));
+        assert_eq!(token1.last_price, Some("100".to_string()));
         assert_eq!(token1.quantity, Some("10".to_string()));
         assert_eq!(token1.start_amount, Some("50".to_string()));
         assert_eq!(token1.end_amount, Some("150".to_string()));
@@ -171,11 +171,11 @@ mod tests {
         let token2 = &tokens[1];
         assert_eq!(token2.token_chain_id, "chainWXYZ");
         assert_eq!(token2.token_address, "0xABCDEF1234567");
-        assert_eq!(token2.token_id, "token7890");
+        assert_eq!(token2.token_id, "7890");
         assert_eq!(token2.listed_timestamp, 1234567890);
         assert_eq!(token2.updated_timestamp, 1234567891);
-        assert_eq!(token2.current_owner, "owner1234");
-        assert_eq!(token2.current_price, Some("100".to_string()));
+        assert_eq!(token2.current_owner, Some("owner1234".to_string()));
+        assert_eq!(token2.last_price, Some("100".to_string()));
         assert_eq!(token2.quantity, Some("10".to_string()));
         assert_eq!(token2.start_amount, Some("50".to_string()));
         assert_eq!(token2.end_amount, Some("150".to_string()));
@@ -204,9 +204,9 @@ mod tests {
         let token_history: TokenWithHistory = serde_json::from_slice(&response_body).unwrap();
 
         assert_eq!(token_history.token_address, "0xABCDEF123456");
-        assert_eq!(token_history.token_id, "token789");
-        assert_eq!(token_history.current_owner, "owner123");
-        assert_eq!(token_history.current_price, Some("100".to_string()));
+        assert_eq!(token_history.token_id, "789");
+        assert_eq!(token_history.current_owner, Some("owner123".to_string()));
+        assert_eq!(token_history.last_price, Some("100".to_string()));
         assert_eq!(token_history.history.len(), 1);
         assert_eq!(token_history.history[0].event_type, "Listing");
         assert_eq!(token_history.history[0].event_timestamp, 1234567890);
@@ -227,18 +227,19 @@ mod tests {
         .await;
 
         let req = test::TestRequest::get()
-            .uri("/token/0xABCDEF123456/token789/offers")
+            .uri("/token/0xABCDEF123456/789/offers")
             .to_request();
         let resp = test::call_service(&app, req).await;
+
         assert_eq!(resp.status(), http::StatusCode::OK);
 
         let response_body = test::read_body(resp).await;
         let token_offers: TokenWithOffers = serde_json::from_slice(&response_body).unwrap();
 
         assert_eq!(token_offers.token_address, "0xABCDEF123456");
-        assert_eq!(token_offers.token_id, "token789");
-        assert_eq!(token_offers.current_owner, "owner123");
-        assert_eq!(token_offers.current_price, Some("100".to_string()));
+        assert_eq!(token_offers.token_id, "789");
+        assert_eq!(token_offers.current_owner, Some("owner123".to_string()));
+        assert_eq!(token_offers.last_price, Some("100".to_string()));
         assert_eq!(token_offers.offers.len(), 1);
         assert_eq!(token_offers.offers[0].offer_maker, "maker123");
         assert_eq!(token_offers.offers[0].offer_amount, "100");
@@ -266,11 +267,11 @@ mod tests {
 
         assert_eq!(tokens[0].token_chain_id, "chainXYZ");
         assert_eq!(tokens[0].token_address, "0xABCDEF123456");
-        assert_eq!(tokens[0].token_id, "token789");
+        assert_eq!(tokens[0].token_id, "789");
         assert_eq!(tokens[0].listed_timestamp, 1234567890);
         assert_eq!(tokens[0].updated_timestamp, 1234567891);
-        assert_eq!(tokens[0].current_owner, "owner123");
-        assert_eq!(tokens[0].current_price, Some("100".to_string()));
+        assert_eq!(tokens[0].current_owner, Some("owner123".to_string()));
+        assert_eq!(tokens[0].last_price, Some("100".to_string()));
         assert_eq!(tokens[0].quantity, Some("10".to_string()));
         assert_eq!(tokens[0].start_amount, Some("50".to_string()));
         assert_eq!(tokens[0].end_amount, Some("150".to_string()));
@@ -280,11 +281,11 @@ mod tests {
 
         assert_eq!(tokens[1].token_chain_id, "chainWXYZ");
         assert_eq!(tokens[1].token_address, "0xABCDEF1234567");
-        assert_eq!(tokens[1].token_id, "token7890");
+        assert_eq!(tokens[1].token_id, "7890");
         assert_eq!(tokens[1].listed_timestamp, 2234567890);
         assert_eq!(tokens[1].updated_timestamp, 2234567891);
-        assert_eq!(tokens[1].current_owner, "owner1234");
-        assert_eq!(tokens[1].current_price, Some("200".to_string()));
+        assert_eq!(tokens[1].current_owner, Some("owner1234".to_string()));
+        assert_eq!(tokens[1].last_price, Some("200".to_string()));
         assert_eq!(tokens[1].quantity, Some("20".to_string()));
         assert_eq!(tokens[1].start_amount, Some("100".to_string()));
         assert_eq!(tokens[1].end_amount, Some("300".to_string()));

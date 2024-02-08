@@ -15,7 +15,7 @@ impl From<RawTokenData> for TokenData {
             listed_timestamp: raw_data.listed_timestamp,
             updated_timestamp: raw_data.updated_timestamp,
             current_owner: raw_data.current_owner,
-            current_price: raw_data.current_price,
+            last_price: raw_data.last_price,
             quantity: raw_data.quantity,
             start_amount: raw_data.start_amount,
             end_amount: raw_data.end_amount,
@@ -42,7 +42,7 @@ pub struct RawTokenData {
     pub listed_timestamp: i64,
     pub updated_timestamp: i64,
     pub current_owner: Option<String>,
-    pub current_price: Option<String>,
+    pub last_price: Option<String>,
     pub quantity: Option<String>,
     pub start_amount: Option<String>,
     pub end_amount: Option<String>,
@@ -74,7 +74,7 @@ pub struct TokenData {
     pub listed_timestamp: i64,
     pub updated_timestamp: i64,
     pub current_owner: Option<String>,
-    pub current_price: Option<String>,
+    pub last_price: Option<String>,
     pub quantity: Option<String>,
     pub start_amount: Option<String>,
     pub end_amount: Option<String>,
@@ -95,7 +95,7 @@ pub struct TokenWithHistory {
     pub token_address: String,
     pub token_id: String,
     pub current_owner: Option<String>,
-    pub current_price: Option<String>,
+    pub last_price: Option<String>,
     pub history: Vec<TokenHistory>,
 }
 
@@ -129,6 +129,6 @@ pub struct TokenWithOffers {
     pub token_address: String,
     pub token_id: String,
     pub current_owner: Option<String>,
-    pub current_price: Option<String>,
+    pub last_price: Option<String>,
     pub offers: Vec<TokenOffer>,
 }

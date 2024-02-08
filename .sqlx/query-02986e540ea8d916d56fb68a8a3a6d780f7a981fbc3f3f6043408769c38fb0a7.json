@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT token_id, token_address, current_owner, current_price\n             FROM orderbook_token\n             WHERE token_id = $1 AND token_address = $2",
+  "query": "SELECT token_id, token_address, current_owner, last_price\n             FROM orderbook_token\n             WHERE token_id = $1 AND token_address = $2",
   "describe": {
     "columns": [
       {
@@ -20,7 +20,7 @@
       },
       {
         "ordinal": 3,
-        "name": "current_price",
+        "name": "last_price",
         "type_info": "Text"
       }
     ],
@@ -33,9 +33,9 @@
     "nullable": [
       false,
       false,
-      false,
+      true,
       true
     ]
   },
-  "hash": "fbac143e2eaf58dbb80fda7dafd39c28e697f8fd12f4492d3c3e4085ca49230f"
+  "hash": "02986e540ea8d916d56fb68a8a3a6d780f7a981fbc3f3f6043408769c38fb0a7"
 }
