@@ -40,6 +40,8 @@ sudo docker run -d \
     
 cargo install sqlx-cli
 
+cd ark-services/ark-sqlx
+
 sqlx database reset \
     --database-url postgres://postgres:123@localhost:5432/arkchain
 ```

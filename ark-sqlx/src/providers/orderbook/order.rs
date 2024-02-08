@@ -246,7 +246,7 @@ impl OrderProvider {
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
         let query = "
-            UPDATE orderbook_token
+            UPDATE orderbook_token_offers
             SET
                 status = $2
             WHERE order_hash = $1;
@@ -315,10 +315,17 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
+        // to hide offers belonging to old owner
+        sqlx::query("update orderbook_token_offers set start_date = null, end_date = null WHERE offer_maker = $1 AND token_address = $2 AND token_id = $3 and status != 'EXECUTED'")
+            .bind(&info.new_owner)
+            .bind(&info.token_address)
+            .bind(&info.token_id)
+            .execute(&client.pool)
+            .await?;
         Ok(())
     }
 
-    pub async fn update_price_on_listing_executed(
+    pub async fn update_token_on_listing_executed(
         client: &SqlxCtx,
         token_address: &str,
         token_id: &str,
@@ -328,6 +335,8 @@ impl OrderProvider {
         let query = "
             UPDATE orderbook_token
             SET
+                start_date = null, end_date = null,
+                start_amount = null, end_amount = null,
                 updated_timestamp = $3,
                 last_price = $4
             WHERE token_address = $1 AND token_id = $2;
@@ -722,6 +731,9 @@ impl OrderProvider {
                 EventType::Offer | EventType::Auction | EventType::CollectionOffer => {
                     new_owner = Some(token_data.offerer);
 
+                    Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed)
+                        .await?;
+
                     let params = OfferExecutedInfo {
                         block_timestamp,
                         token_address: token_data.token_address.clone(),
@@ -744,8 +756,7 @@ impl OrderProvider {
                     );
                 }
                 EventType::Listing => {
-                    trace!("Order type is 'Listing', no action taken.");
-                    Self::update_price_on_listing_executed(
+                    Self::update_token_on_listing_executed(
                         client,
                         &token_data.token_address,
                         &token_data.token_id,
@@ -780,8 +791,6 @@ impl OrderProvider {
             )
             .await?;
         }
-
-        Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed).await?;
 
         Ok(())
     }
