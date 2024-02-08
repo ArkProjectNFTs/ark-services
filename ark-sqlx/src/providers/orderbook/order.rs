@@ -2,7 +2,7 @@ use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledDat
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
-use tracing::{error, trace, Event};
+use tracing::{error, trace};
 
 use crate::providers::{ProviderError, SqlxCtx};
 
@@ -325,7 +325,7 @@ impl OrderProvider {
         Ok(())
     }
 
-    pub async fn update_price_on_listing_executed(
+    pub async fn update_token_on_listing_executed(
         client: &SqlxCtx,
         token_address: &str,
         token_id: &str,
@@ -335,6 +335,8 @@ impl OrderProvider {
         let query = "
             UPDATE orderbook_token
             SET
+                start_date = null, end_date = null,
+                start_amount = null, end_amount = null,
                 updated_timestamp = $3,
                 last_price = $4
             WHERE token_address = $1 AND token_id = $2;
@@ -754,8 +756,7 @@ impl OrderProvider {
                     );
                 }
                 EventType::Listing => {
-                    trace!("Order type is 'Listing', no action taken.");
-                    Self::update_price_on_listing_executed(
+                    Self::update_token_on_listing_executed(
                         client,
                         &token_data.token_address,
                         &token_data.token_id,
