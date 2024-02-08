@@ -2,7 +2,7 @@ use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledDat
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
-use tracing::{error, trace};
+use tracing::{error, trace, Event};
 
 use crate::providers::{ProviderError, SqlxCtx};
 
@@ -246,7 +246,7 @@ impl OrderProvider {
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
         let query = "
-            UPDATE orderbook_token
+            UPDATE orderbook_token_offers
             SET
                 status = $2
             WHERE order_hash = $1;
@@ -315,6 +315,13 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
+        // to hide offers belonging to old owner
+        sqlx::query("update orderbook_token_offers set start_date = null, end_date = null WHERE offer_maker = $1 AND token_address = $2 AND token_id = $3 and status != 'EXECUTED'")
+            .bind(&info.new_owner)
+            .bind(&info.token_address)
+            .bind(&info.token_id)
+            .execute(&client.pool)
+            .await?;
         Ok(())
     }
 
@@ -722,6 +729,9 @@ impl OrderProvider {
                 EventType::Offer | EventType::Auction | EventType::CollectionOffer => {
                     new_owner = Some(token_data.offerer);
 
+                    Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed)
+                        .await?;
+
                     let params = OfferExecutedInfo {
                         block_timestamp,
                         token_address: token_data.token_address.clone(),
@@ -780,8 +790,6 @@ impl OrderProvider {
             )
             .await?;
         }
-
-        Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed).await?;
 
         Ok(())
     }
