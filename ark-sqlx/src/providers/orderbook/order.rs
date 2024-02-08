@@ -217,29 +217,25 @@ impl OrderProvider {
         Ok(current_owner)
     }
 
-    pub async fn update_token_status_if_listing(
+    pub async fn update_token_status(
         client: &SqlxCtx,
         token_address: &str,
         token_id: &str,
-        order_type: &str,
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
-        let event_type = EventType::from_str(order_type).map_err(ProviderError::from)?;
-        if event_type == EventType::Listing {
-            let query = "
-            UPDATE orderbook_token
-            SET
-                status = $3
-            WHERE token_address = $1 AND token_id = $2;
-            ";
+        let query = "
+        UPDATE orderbook_token
+        SET
+            status = $3
+        WHERE token_address = $1 AND token_id = $2;
+        ";
 
-            sqlx::query(query)
-                .bind(token_address)
-                .bind(token_id)
-                .bind(status.to_string())
-                .execute(&client.pool)
-                .await?;
-        }
+        sqlx::query(query)
+            .bind(token_address)
+            .bind(token_id)
+            .bind(status.to_string())
+            .execute(&client.pool)
+            .await?;
 
         Ok(())
     }
@@ -582,11 +578,10 @@ impl OrderProvider {
             )
             .await?;
 
-            Self::update_token_status_if_listing(
+            Self::update_token_status(
                 client,
                 &token_data.token_address,
                 &token_data.token_id,
-                token_data.order_type.as_str(),
                 OrderStatus::Cancelled,
             )
             .await?;
@@ -652,11 +647,10 @@ impl OrderProvider {
             )
             .await?;
 
-            Self::update_token_status_if_listing(
+            Self::update_token_status(
                 client,
                 &token_data.token_address,
                 &token_data.token_id,
-                token_data.order_type.as_str(),
                 OrderStatus::Fulfilled,
             )
             .await?;
@@ -744,11 +738,10 @@ impl OrderProvider {
             )
             .await?;
 
-            Self::update_token_status_if_listing(
+            Self::update_token_status(
                 client,
                 &token_data.token_address,
                 &token_data.token_id,
-                token_data.order_type.as_str(),
                 OrderStatus::Executed,
             )
             .await?;
