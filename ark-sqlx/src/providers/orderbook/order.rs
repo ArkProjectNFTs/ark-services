@@ -296,7 +296,7 @@ impl OrderProvider {
             UPDATE orderbook_token
             SET
                 current_owner = $3, updated_timestamp = $4,
-                current_price = $5, order_hash = $6,
+                last_price = $5, order_hash = $6,
                 currency_chain_id = $7, currency_address = $8,
                 start_date = null, end_date = null,
                 start_amount = null, end_amount = null
@@ -312,6 +312,32 @@ impl OrderProvider {
             .bind(&info.order_hash.to_string())
             .bind(&info.currency_chain_id)
             .bind(&info.currency_address)
+            .execute(&client.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn update_price_on_listing_executed(
+        client: &SqlxCtx,
+        token_address: &str,
+        token_id: &str,
+        block_timestamp: i64,
+        price: &str,
+    ) -> Result<(), ProviderError> {
+        let query = "
+            UPDATE orderbook_token
+            SET
+                updated_timestamp = $3,
+                last_price = $4
+            WHERE token_address = $1 AND token_id = $2;
+        ";
+
+        sqlx::query(query)
+            .bind(token_address)
+            .bind(token_id)
+            .bind(block_timestamp)
+            .bind(price)
             .execute(&client.pool)
             .await?;
 
@@ -719,6 +745,14 @@ impl OrderProvider {
                 }
                 EventType::Listing => {
                     trace!("Order type is 'Listing', no action taken.");
+                    Self::update_price_on_listing_executed(
+                        client,
+                        &token_data.token_address,
+                        &token_data.token_id,
+                        block_timestamp as i64,
+                        &token_data.start_amount,
+                    )
+                    .await?;
                 }
             }
 

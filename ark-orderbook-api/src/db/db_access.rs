@@ -37,7 +37,7 @@ impl DatabaseAccess for PgPool {
             RawTokenData,
             "SELECT
                 t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.current_price,
+                t.updated_timestamp, t.current_owner, t.last_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
                 (
@@ -73,7 +73,7 @@ impl DatabaseAccess for PgPool {
                 t.token_address = $1 AND t.token_id = $2
             GROUP BY
                 t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.current_price,
+                t.updated_timestamp, t.current_owner, t.last_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,th.event_type, th.event_timestamp
             ORDER BY
@@ -92,7 +92,7 @@ impl DatabaseAccess for PgPool {
             RawTokenData,
             "SELECT
                 t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.current_price,
+                t.updated_timestamp, t.current_owner, t.last_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
                 (
@@ -128,7 +128,7 @@ impl DatabaseAccess for PgPool {
                 t.current_owner = $1
             GROUP BY
                 t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.current_price,
+                t.updated_timestamp, t.current_owner, t.last_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,th.event_type, th.event_timestamp
             ORDER BY
@@ -149,7 +149,7 @@ impl DatabaseAccess for PgPool {
             RawTokenData,
             "SELECT
                 t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.current_price,
+                t.updated_timestamp, t.current_owner, t.last_price,
                 t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
                 t.broker_id,
                 (
@@ -195,7 +195,7 @@ impl DatabaseAccess for PgPool {
         token_id: &str,
     ) -> Result<TokenWithHistory, Error> {
         let token_info = sqlx::query!(
-            "SELECT token_id, token_address, current_owner, current_price
+            "SELECT token_id, token_address, current_owner, last_price
              FROM orderbook_token
              WHERE token_id = $1 AND token_address = $2",
             token_id,
@@ -220,8 +220,8 @@ impl DatabaseAccess for PgPool {
         Ok(TokenWithHistory {
             token_id: token_info.token_id,
             token_address: token_info.token_address,
-            current_owner: Option::from(token_info.current_owner),
-            current_price: token_info.current_price,
+            current_owner: token_info.current_owner,
+            last_price: token_info.last_price,
             history,
         })
     }
@@ -232,7 +232,7 @@ impl DatabaseAccess for PgPool {
         token_id: &str,
     ) -> Result<TokenWithOffers, Error> {
         let token_info = sqlx::query!(
-            "SELECT token_id, token_address, current_owner, current_price
+            "SELECT token_id, token_address, current_owner, last_price
              FROM orderbook_token
              WHERE token_id = $1 AND token_address = $2",
             token_id,
@@ -256,8 +256,8 @@ impl DatabaseAccess for PgPool {
         Ok(TokenWithOffers {
             token_id: token_info.token_id,
             token_address: token_info.token_address,
-            current_owner: Option::from(token_info.current_owner),
-            current_price: token_info.current_price,
+            current_owner: token_info.current_owner,
+            last_price: token_info.last_price,
             offers,
         })
     }
@@ -278,11 +278,11 @@ impl DatabaseAccess for MockDb {
             order_hash: "0x12345".to_string(),
             token_chain_id: "chainXYZ".to_string(),
             token_address: "0xABCDEF123456".to_string(),
-            token_id: "token789".to_string(),
+            token_id: "789".to_string(),
             listed_timestamp: 1234567890,
             updated_timestamp: 1234567891,
             current_owner: Some("owner123".to_string()),
-            current_price: Some("100".to_string()),
+            last_price: Some("100".to_string()),
             quantity: Some("10".to_string()),
             start_amount: Some("50".to_string()),
             end_amount: Some("150".to_string()),
@@ -311,11 +311,11 @@ impl DatabaseAccess for MockDb {
                 order_hash: "0x123".to_string(),
                 token_chain_id: "chainXYZ".to_string(),
                 token_address: "0xABCDEF123456".to_string(),
-                token_id: "token789".to_string(),
+                token_id: "789".to_string(),
                 listed_timestamp: 1234567890,
                 updated_timestamp: 1234567891,
                 current_owner: Some("owner123".to_string()),
-                current_price: Some("100".to_string()),
+                last_price: Some("100".to_string()),
                 quantity: Some("10".to_string()),
                 start_amount: Some("50".to_string()),
                 end_amount: Some("150".to_string()),
@@ -337,11 +337,11 @@ impl DatabaseAccess for MockDb {
                 order_hash: "0x1234".to_string(),
                 token_chain_id: "chainWXYZ".to_string(),
                 token_address: "0xABCDEF1234567".to_string(),
-                token_id: "token7890".to_string(),
+                token_id: "7890".to_string(),
                 listed_timestamp: 1234567890,
                 updated_timestamp: 1234567891,
-                current_owner: "owner1234".to_string(),
-                current_price: Some("100".to_string()),
+                current_owner: Some("owner1234".to_string()),
+                last_price: Some("100".to_string()),
                 quantity: Some("10".to_string()),
                 start_amount: Some("50".to_string()),
                 end_amount: Some("150".to_string()),
@@ -379,9 +379,9 @@ impl DatabaseAccess for MockDb {
 
         Ok(TokenWithHistory {
             token_address: "0xABCDEF123456".to_string(),
-            token_id: "token789".to_string(),
-            current_owner: "owner123".to_string(),
-            current_price: Some("100".to_string()),
+            token_id: "789".to_string(),
+            current_owner: Some("owner123".to_string()),
+            last_price: Some("100".to_string()),
             history,
         })
     }
@@ -391,6 +391,8 @@ impl DatabaseAccess for MockDb {
         _token_address: &str,
         _token_id: &str,
     ) -> Result<TokenWithOffers, Error> {
+        println!("Registering fulfilled order ici resultat");
+
         let offers = vec![TokenOffer {
             order_hash: "0x123".to_string(),
             offer_maker: "maker123".to_string(),
@@ -405,9 +407,9 @@ impl DatabaseAccess for MockDb {
         }];
         Ok(TokenWithOffers {
             token_address: "0xABCDEF123456".to_string(),
-            token_id: "token789".to_string(),
-            current_owner: "owner123".to_string(),
-            current_price: Some("100".to_string()),
+            token_id: "789".to_string(),
+            current_owner: Some("owner123".to_string()),
+            last_price: Some("100".to_string()),
             offers,
         })
     }
@@ -418,11 +420,11 @@ impl DatabaseAccess for MockDb {
                 order_hash: "0x123".to_string(),
                 token_chain_id: "chainXYZ".to_string(),
                 token_address: "0xABCDEF123456".to_string(),
-                token_id: "token789".to_string(),
+                token_id: "789".to_string(),
                 listed_timestamp: 1234567890,
                 updated_timestamp: 1234567891,
-                current_owner: "owner123".to_string(),
-                current_price: Some("100".to_string()),
+                current_owner: Some("owner123".to_string()),
+                last_price: Some("100".to_string()),
                 quantity: Some("10".to_string()),
                 start_amount: Some("50".to_string()),
                 end_amount: Some("150".to_string()),
@@ -444,11 +446,11 @@ impl DatabaseAccess for MockDb {
                 order_hash: "0x123".to_string(),
                 token_chain_id: "chainWXYZ".to_string(),
                 token_address: "0xABCDEF1234567".to_string(),
-                token_id: "token7890".to_string(),
+                token_id: "7890".to_string(),
                 listed_timestamp: 2234567890,
                 updated_timestamp: 2234567891,
-                current_owner: "owner1234".to_string(),
-                current_price: Some("200".to_string()),
+                current_owner: Some("owner1234".to_string()),
+                last_price: Some("200".to_string()),
                 quantity: Some("20".to_string()),
                 start_amount: Some("100".to_string()),
                 end_amount: Some("300".to_string()),
