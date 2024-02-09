@@ -20,7 +20,7 @@ export class ArkIndexersStack extends cdk.Stack {
     });
 
     // create postgres database
-    new DatabaseInstance(this, 'arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y', {
+    const dbInstance = new DatabaseInstance(this, 'arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y', {
       engine: DatabaseInstanceEngine.postgres({
         version: PostgresEngineVersion.VER_15_4,
       }),
@@ -38,12 +38,14 @@ export class ArkIndexersStack extends cdk.Stack {
       },
     });
 
+    const dbEndpointAddress = dbInstance.dbInstanceEndpointAddress;
+
     deployIndexer(
       this,
       props.networks,
       props.isProductionEnvironment,
-      props.indexerVersion,
-      vpc
+      vpc,
+      dbEndpointAddress
     );
 
   }
