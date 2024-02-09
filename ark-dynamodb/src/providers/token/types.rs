@@ -7,7 +7,7 @@ use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::warn;
+use tracing::{info, warn};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TokenData {
@@ -286,12 +286,19 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
         let data = convert::attr_to_map(&obj, "Data")?;
 
         let mint_info = match convert::attr_to_map(&data, "MintInfo") {
-            Ok(m) => Some(TokenMintInfo {
-                address: convert::attr_to_str(&m, "Address")?,
-                timestamp: convert::attr_to_u64(&m, "Timestamp")?,
-                transaction_hash: convert::attr_to_str(&m, "TransactionHash")?,
-                block_number: convert::attr_to_u64(&m, "BlockNumber")?,
-            }),
+            Ok(m) => {
+                let block_number = match convert::attr_to_u64(&m, "BlockNumber") {
+                    Ok(n) => Some(n),
+                    _ => None,
+                };
+
+                Some(TokenMintInfo {
+                    address: convert::attr_to_str(&m, "Address")?,
+                    timestamp: convert::attr_to_u64(&m, "Timestamp")?,
+                    transaction_hash: convert::attr_to_str(&m, "TransactionHash")?,
+                    block_number,
+                })
+            }
             _ => None,
         };
 
@@ -392,7 +399,7 @@ mod tests {
             address: "0x1234".to_string(),
             timestamp: 12345678,
             transaction_hash: "0x5678".to_string(),
-            block_number: 123568,
+            block_number: Some(123568),
         };
 
         let result_map = TokenData::mint_info_to_map(&mock_mint_info);
@@ -486,7 +493,7 @@ mod tests {
                 ),
                 timestamp: 1698237736,
                 transaction_hash: String::from("0x01"),
-                block_number: 169826,
+                block_number: Some(169826),
             }),
             metadata: Some(TokenMetadata {
                 normalized: NormalizedMetadata {

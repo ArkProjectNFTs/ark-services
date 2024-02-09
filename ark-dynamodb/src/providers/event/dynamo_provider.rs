@@ -36,7 +36,17 @@ impl DynamoDbEventProvider {
     pub fn data_to_event(
         data: &HashMap<String, AttributeValue>,
     ) -> Result<TokenEvent, ProviderError> {
-        Ok(TokenEvent {
+        let block_number = match convert::attr_to_u64(data, "BlockNumber") {
+            Ok(bn) => Some(bn),
+            Err(_) => None,
+        };
+
+        let updated_at = match convert::attr_to_u64(data, "UpdatedAt") {
+            Ok(u) => Some(u),
+            Err(_) => None,
+        };
+
+        let token_event = TokenEvent {
             event_id: convert::attr_to_str(data, "EventId")?,
             event_type: EventType::from_str(&convert::attr_to_str(data, "EventType")?).unwrap(),
             timestamp: convert::attr_to_u64(data, "Timestamp")?,
@@ -47,9 +57,11 @@ impl DynamoDbEventProvider {
             token_id: convert::attr_to_str(data, "TokenId")?,
             token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
             transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
-            block_number: convert::attr_to_u64(data, "BlockNumber").ok(),
-            updated_at: convert::attr_to_u64(data, "UpdatedAt").ok(),
-        })
+            block_number,
+            updated_at,
+        };
+
+        Ok(token_event)
     }
 
     pub fn event_to_data(event: &TokenEvent) -> HashMap<String, AttributeValue> {
