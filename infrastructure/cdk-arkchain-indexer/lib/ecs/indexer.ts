@@ -14,19 +14,11 @@ export async function deployIndexer(
     vpc: vpc,
   });
 
-  const ecrRepository = cdk.aws_ecr.Repository.fromRepositoryName(
-    scope,
-    "ArkProjectRepository",
-    "ark-project-repo"
-  );
-
   networks.forEach((network) => {
     deployIndexerServices(
       isProductionEnvironment,
       scope,
-      ecrRepository,
       network,
-      indexerVersion,
       cluster
     );
   });
@@ -35,9 +27,7 @@ export async function deployIndexer(
 function deployIndexerServices(
   isProductionEnvironment: boolean,
   scope: cdk.Stack,
-  ecrRepository: cdk.aws_ecr.IRepository,
   network: string,
-  indexerVersion: string,
   cluster: cdk.aws_ecs.ICluster
 ) {
   const logGroup = new LogGroup(scope, `/ecs/arkchain-indexer-${network}`, {
@@ -52,6 +42,12 @@ function deployIndexerServices(
       memoryLimitMiB: 2048,
       cpu: 512,
     }
+  );
+
+  const ecrRepository = cdk.aws_ecr.Repository.fromRepositoryName(
+    scope,
+    "ArkProjectRepository",
+    "ark-project-repo"
   );
 
   taskDefinition.addContainer("arkchain_indexer", {
