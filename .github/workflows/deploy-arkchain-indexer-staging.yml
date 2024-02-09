@@ -138,6 +138,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          ARKCHAIN_DATABASE_URL: "postgres://arkchain-indexer:1J$^&R-I4VIo@localhost:5432/arkchain-indexer"
+          ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
 
       - name: Deploy Indexer
         run: |
@@ -148,3 +150,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          ARKCHAIN_DATABASE_URL: "postgres://arkchain-indexer:1J$^&R-I4VIo@localhost:5432/arkchain-indexer"
+          ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
+
