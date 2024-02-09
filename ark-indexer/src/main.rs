@@ -1,5 +1,4 @@
 mod pontos_observer;
-
 use anyhow::Result;
 use ark_dynamodb::storage::DynamoStorage;
 use arkproject::{
@@ -9,7 +8,7 @@ use arkproject::{
 use dotenv::dotenv;
 use pontos_observer::PontosObserver;
 use regex::Regex;
-use starknet::core::types::{BlockId, BlockTag};
+use starknet::core::types::{BlockId, FieldElement};
 use std::{env, sync::Arc};
 use tracing::{debug, info, trace};
 use tracing::{span, Level};
@@ -27,21 +26,17 @@ async fn main() -> Result<()> {
     };
 
     let (from_block, to_block) = if is_head_of_chain {
-        (BlockId::Number(0), BlockId::Number(0))
+        (None, None)
     } else {
-        let from = BlockId::Number(
-            env::var("FROM_BLOCK")
-                .expect("FROM_BLOCK must be set")
-                .parse()
-                .expect("Can't parse FROM_BLOCK, expecting u64"),
-        );
+        let from_value = env::var("FROM_BLOCK")
+            .ok()
+            .and_then(|val| val.parse::<u64>().map(BlockId::Number).ok());
 
-        let to: BlockId = match env::var("TO_BLOCK") {
-            Ok(to) => BlockId::Number(to.parse().expect("Can't parse TO_BLOCK, expecting u64")),
-            Err(_) => BlockId::Tag(BlockTag::Latest),
-        };
+        let to_value = env::var("TO_BLOCK")
+            .ok()
+            .and_then(|val| val.parse::<u64>().map(BlockId::Number).ok());
 
-        (from, to)
+        (from_value, to_value)
     };
 
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
@@ -53,6 +48,9 @@ async fn main() -> Result<()> {
         Ok(val) => Some(val),
         Err(_) => None,
     };
+    let contract_address = env::var("CONTRACT_ADDRESS")
+        .ok()
+        .map(|value| FieldElement::from_hex_be(&value).expect("Invalid CONTRACT_ADDRESS"));
 
     info!(
         "🏁 Starting Indexer. Version={}, Identifier={}",
@@ -60,8 +58,8 @@ async fn main() -> Result<()> {
     );
 
     debug!(
-        "from_block={:?}, to_block={:?}, head_of_the_chain={}, rpc_url={}, table_name={}, force_mode={}, indexer_version={}, indexer_identifier={}, block_indexer_function_name={:?}",
-       from_block, to_block, is_head_of_chain, rpc_url, table_name, force_mode, indexer_version, indexer_identifier, block_indexer_function_name
+        "from_block={:?}, to_block={:?}, head_of_the_chain={}, rpc_url={}, table_name={}, force_mode={}, indexer_version={}, indexer_identifier={}, block_indexer_function_name={:?}, contract_address={:?}",
+       from_block, to_block, is_head_of_chain, rpc_url, table_name, force_mode, indexer_version, indexer_identifier, block_indexer_function_name, contract_address
     );
 
     let dynamo_storage = Arc::new(DynamoStorage::new(table_name.clone()).await);
@@ -83,20 +81,38 @@ async fn main() -> Result<()> {
             indexer_identifier,
         },
     );
-
+    // If syncing at the head of the chain
     if is_head_of_chain {
         trace!("Syncing Pontos at head of the chain");
         pontos_task.index_pending().await?;
-    } else {
-        trace!(
-            "Syncing Pontos for block range: {:?} - {:?}",
-            from_block,
-            to_block
-        );
+        return Ok(());
+    }
+
+    // Proceed only if not at the head of the chain
+    trace!(
+        "Syncing Pontos for block range: {:?} - {:?}",
+        from_block,
+        to_block
+    );
+
+    // If a contract address is specified, index contract events
+    if let Some(contract_address) = contract_address {
+        pontos_task
+            .index_contract_events(from_block, to_block, contract_address)
+            .await?;
+        return Ok(());
+    }
+
+    // If both from_block and to_block are specified, index the block range
+    if let (Some(from_block), Some(to_block)) = (from_block, to_block) {
         pontos_task
             .index_block_range(from_block, to_block, force_mode)
             .await?;
+        return Ok(());
     }
+
+    // Optionally, handle the case where either from_block or to_block is None, if needed
+    // This might include logging a warning or error if these values are expected to be present
 
     Ok(())
 }

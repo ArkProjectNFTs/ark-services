@@ -11,7 +11,7 @@ use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::{HashMap, HashSet};
-use tracing::{debug, info, trace};
+use tracing::{debug, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -212,7 +212,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         token_id_hex: &str,
     ) -> Result<Option<i64>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
-        info!("get_token: pk={}", pk);
+
+        debug!("get_token: pk={}", pk);
+
         let mut key = HashMap::new();
         key.insert("PK".to_string(), AttributeValue::S(pk));
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
@@ -257,7 +259,9 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         token_id_hex: &str,
     ) -> Result<DynamoDbOutput<Option<TokenData>>, ProviderError> {
         let pk = self.get_pk(contract_address, token_id_hex);
-        info!("get_token: pk={}", pk);
+
+        debug!("get_token: pk={}", pk);
+
         let mut key = HashMap::new();
         key.insert("PK".to_string(), AttributeValue::S(pk));
         key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
