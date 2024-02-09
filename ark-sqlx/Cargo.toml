@@ -22,7 +22,7 @@ sqlx = "0.7"
 
 [dev-dependencies]
 mockall = "0.11.2"
-sqlx = { version = "0.7", features = ["postgres", "runtime-tokio"] }
+sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls"] }
 
 [features]
 mock = ["dep:mockall"]
