@@ -85,11 +85,12 @@ jobs:
         run: |
           cd infrastructure/cdk-arkchain-indexer
           pnpm install
-          pnpm build
 
       - name: Bootstrap Indexer
         run: |
           cd infrastructure/cdk-arkchain-indexer
+          pnpm build
+          pnpm cdk context --clear
           pnpm cdk bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
@@ -104,6 +105,8 @@ jobs:
       - name: Deploy Indexer
         run: |
           cd infrastructure/cdk-arkchain-indexer
+          pnpm build
+          pnpm cdk context --clear
           pnpm cdk deploy --require-approval never
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
