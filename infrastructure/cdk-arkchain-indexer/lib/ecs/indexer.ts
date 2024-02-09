@@ -8,18 +8,20 @@ export async function deployIndexer(
   networks: string[],
   isProductionEnvironment: boolean,
   vpc: cdk.aws_ec2.IVpc,
-  dbEndpointAddress: string,
+  dbEndpointAddress: string
 ) {
-
   const cluster = new Cluster(scope, "arkchain-indexer", {
     vpc: vpc,
   });
 
-  const ecsSecurityGroup = new cdk.aws_ec2.SecurityGroup(scope, 'ECSSecurityGroup', {
-    vpc,
-    description: 'Security group for ECS tasks',
-  });
-  
+  const ecsSecurityGroup = new cdk.aws_ec2.SecurityGroup(
+    scope,
+    "ECSSecurityGroup",
+    {
+      vpc,
+      description: "Security group for ECS tasks",
+    }
+  );
 
   networks.forEach((network) => {
     deployIndexerServices(
@@ -52,7 +54,6 @@ function deployIndexerServices(
     {
       memoryLimitMiB: 2048,
       cpu: 512,
-      
     }
   );
 
@@ -61,7 +62,6 @@ function deployIndexerServices(
     "ArkProjectRepository",
     "ark-project-repo"
   );
-
 
   taskDefinition.addContainer("arkchain_indexer", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
@@ -75,9 +75,10 @@ function deployIndexerServices(
       logGroup: logGroup,
     }),
     environment: {
+      PGSSLMODE: 'require',
       RUST_LOG: "DEBUG",
-      ARKCHAIN_DATABASE_URL: `postgres://arkchainindexer:1J$^&R-I4VIo@${dbEndpointAddress}:5432/arkchainindexer`,
-      ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
+      ARKCHAIN_DATABASE_URL: `postgres://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${dbEndpointAddress}:5432/arkchainindexer`,
+      ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/",
     },
   });
 
@@ -87,5 +88,4 @@ function deployIndexerServices(
     desiredCount: 1,
     securityGroups: [ecsSecurityGroup],
   });
-
 }
