@@ -75,9 +75,13 @@ function deployIndexerServices(
       logGroup: logGroup,
     }),
     environment: {
-      PGSSLMODE: 'require',
+      PGSSLMODE: "require",
       RUST_LOG: "DEBUG",
-      ARKCHAIN_DATABASE_URL: `postgres://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${dbEndpointAddress}:5432/arkchainindexer`,
+      ARKCHAIN_DATABASE_URL: `postgres://${
+        process.env.DB_USERNAME || "defaultUsername"
+      }:${
+        process.env.DB_PASSWORD || "defaultPassword"
+      }@${dbEndpointAddress}:5432/arkchainindexer`,
       ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/",
     },
   });
