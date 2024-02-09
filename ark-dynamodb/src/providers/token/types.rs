@@ -290,6 +290,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
                 address: convert::attr_to_str(&m, "Address")?,
                 timestamp: convert::attr_to_u64(&m, "Timestamp")?,
                 transaction_hash: convert::attr_to_str(&m, "TransactionHash")?,
+                block_number: convert::attr_to_u64(&m, "BlockNumber")?,
             }),
             _ => None,
         };
@@ -391,6 +392,7 @@ mod tests {
             address: "0x1234".to_string(),
             timestamp: 12345678,
             transaction_hash: "0x5678".to_string(),
+            block_number: 123568,
         };
 
         let result_map = TokenData::mint_info_to_map(&mock_mint_info);
@@ -484,6 +486,7 @@ mod tests {
                 ),
                 timestamp: 1698237736,
                 transaction_hash: String::from("0x01"),
+                block_number: 169826,
             }),
             metadata: Some(TokenMetadata {
                 normalized: NormalizedMetadata {

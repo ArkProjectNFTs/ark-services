@@ -47,6 +47,8 @@ impl DynamoDbEventProvider {
             token_id: convert::attr_to_str(data, "TokenId")?,
             token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
             transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
+            block_number: convert::attr_to_u64(data, "BlockNumber").ok(),
+            updated_at: convert::attr_to_u64(data, "UpdatedAt").ok(),
         })
     }
 
@@ -92,6 +94,20 @@ impl DynamoDbEventProvider {
             "EventId".to_string(),
             AttributeValue::S(event.event_id.clone()),
         );
+
+        if let Some(block_number) = event.block_number {
+            map.insert(
+                "BlockNumber".to_string(),
+                AttributeValue::N(block_number.to_string()),
+            );
+        }
+
+        if let Some(updated_at) = event.updated_at {
+            map.insert(
+                "UpdatedAt".to_string(),
+                AttributeValue::N(updated_at.to_string()),
+            );
+        }
 
         map
     }
