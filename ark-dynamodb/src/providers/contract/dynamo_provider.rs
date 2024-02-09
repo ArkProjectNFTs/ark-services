@@ -307,6 +307,7 @@ impl ArkContractProvider for DynamoDbContractProvider {
 
         let mut values = HashMap::new();
         values.insert(":pk".to_string(), AttributeValue::S("NFT".to_string()));
+        values.insert(":name".to_string(), AttributeValue::S("Sheet".to_string()));
 
         let collections_query_output = ctx
             .client
@@ -316,6 +317,9 @@ impl ArkContractProvider for DynamoDbContractProvider {
             .set_key_condition_expression(Some("GSI2PK = :pk".to_string()))
             .set_expression_attribute_values(Some(values))
             .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .expression_attribute_names("#Data", "Data")
+            .expression_attribute_names("#Name", "Name")
+            .filter_expression("NOT contains(#Data.#Name, :name)".to_string())
             .set_limit(self.limit)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
