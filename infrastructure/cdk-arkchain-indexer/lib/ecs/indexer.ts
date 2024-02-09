@@ -53,6 +53,7 @@ function deployIndexerServices(
     "ark-project-repo"
   );
 
+
   taskDefinition.addContainer("arkchain_indexer", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
