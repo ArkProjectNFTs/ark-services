@@ -7,7 +7,7 @@ use arkproject::pontos::storage::types::TokenMintInfo;
 use aws_sdk_dynamodb::types::AttributeValue;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use tracing::{info, warn};
+use tracing::warn;
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct TokenData {
