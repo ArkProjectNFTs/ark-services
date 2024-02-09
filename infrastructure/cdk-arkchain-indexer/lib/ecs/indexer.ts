@@ -8,12 +8,18 @@ export async function deployIndexer(
   networks: string[],
   isProductionEnvironment: boolean,
   vpc: cdk.aws_ec2.IVpc,
-  dbEndpointAddress: string
+  dbEndpointAddress: string,
 ) {
 
   const cluster = new Cluster(scope, "arkchain-indexer", {
     vpc: vpc,
   });
+
+  const ecsSecurityGroup = new cdk.aws_ec2.SecurityGroup(scope, 'ECSSecurityGroup', {
+    vpc,
+    description: 'Security group for ECS tasks',
+  });
+  
 
   networks.forEach((network) => {
     deployIndexerServices(
@@ -21,7 +27,8 @@ export async function deployIndexer(
       scope,
       network,
       cluster,
-      dbEndpointAddress
+      dbEndpointAddress,
+      ecsSecurityGroup
     );
   });
 }
@@ -31,7 +38,8 @@ function deployIndexerServices(
   scope: cdk.Stack,
   network: string,
   cluster: cdk.aws_ecs.ICluster,
-  dbEndpointAddress: string
+  dbEndpointAddress: string,
+  ecsSecurityGroup: cdk.aws_ec2.SecurityGroup
 ) {
   const logGroup = new LogGroup(scope, `/ecs/arkchain-indexer-${network}`, {
     removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -44,6 +52,7 @@ function deployIndexerServices(
     {
       memoryLimitMiB: 2048,
       cpu: 512,
+      
     }
   );
 
@@ -76,6 +85,7 @@ function deployIndexerServices(
     cluster: cluster,
     taskDefinition: taskDefinition,
     desiredCount: 1,
+    securityGroups: [ecsSecurityGroup],
   });
 
 }

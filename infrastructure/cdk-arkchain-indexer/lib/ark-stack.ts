@@ -2,12 +2,17 @@ import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 
 import { ArkIndexersStackProps } from "./types";
-import { Vpc, InstanceType, InstanceClass, InstanceSize } from "aws-cdk-lib/aws-ec2";
+import {
+  Vpc,
+  InstanceType,
+  InstanceClass,
+  InstanceSize,
+} from "aws-cdk-lib/aws-ec2";
 import {
   DatabaseInstance,
   DatabaseInstanceEngine,
   PostgresEngineVersion,
-} from 'aws-cdk-lib/aws-rds';
+} from "aws-cdk-lib/aws-rds";
 import { SecretValue } from "aws-cdk-lib";
 import { deployIndexer } from "./ecs/indexer";
 
@@ -19,24 +24,51 @@ export class ArkIndexersStack extends cdk.Stack {
       vpcId: "vpc-0d11f7ec183208e08",
     });
 
+    const dbSecurityGroup = new cdk.aws_ec2.SecurityGroup(
+      this,
+      "DBSecurityGroup",
+      {
+        vpc,
+        description: "Allow access to RDS from ECS",
+      }
+    );
+
+    dbSecurityGroup.addIngressRule(
+      cdk.aws_ec2.Peer.anyIpv4(),
+      cdk.aws_ec2.Port.tcp(5432),
+      "Allow inbound PostgreSQL traffic"
+    );
+
     // create postgres database
-    const dbInstance = new DatabaseInstance(this, 'arkchain-indexer-staging-db', {
-      engine: DatabaseInstanceEngine.postgres({
-        version: PostgresEngineVersion.VER_15_4,
-      }),
-      instanceType: InstanceType.of(InstanceClass.T3, InstanceSize.MICRO),
-      vpc,
-      allocatedStorage: 20,
-      maxAllocatedStorage: 100,
-      deleteAutomatedBackups: true,
-      backupRetention: cdk.Duration.days(0),
-      deletionProtection: false,
-      databaseName: 'arkchainindexer',
-      credentials: {
-        username: process.env.DB_USERNAME || 'defaultUsername',
-        password: SecretValue.unsafePlainText(process.env.DB_PASSWORD || 'defaultPassword'),
-      },
-    });
+    const dbInstance = new DatabaseInstance(
+      this,
+      "arkchain-indexer-staging-db",
+      {
+        engine: DatabaseInstanceEngine.postgres({
+          version: PostgresEngineVersion.VER_15_4,
+        }),
+        instanceType: InstanceType.of(InstanceClass.T3, InstanceSize.MICRO),
+        vpc,
+        allocatedStorage: 20,
+        maxAllocatedStorage: 100,
+        deleteAutomatedBackups: true,
+        backupRetention: cdk.Duration.days(0),
+        deletionProtection: false,
+        databaseName: "arkchainindexer",
+        credentials: {
+          username: process.env.DB_USERNAME || "defaultUsername",
+          password: SecretValue.unsafePlainText(
+            process.env.DB_PASSWORD || "defaultPassword"
+          ),
+        },
+        securityGroups: [dbSecurityGroup],
+      }
+    );
+
+    dbInstance.connections.allowFrom(
+      dbSecurityGroup,
+      cdk.aws_ec2.Port.tcp(5432)
+    );
 
     const dbEndpointAddress = dbInstance.dbInstanceEndpointAddress;
 
@@ -45,8 +77,7 @@ export class ArkIndexersStack extends cdk.Stack {
       props.networks,
       props.isProductionEnvironment,
       vpc,
-      dbEndpointAddress
+      dbEndpointAddress,
     );
-
   }
 }
