@@ -28,6 +28,14 @@ jobs:
          npm install -g pnpm
          npm install -g aws-cdk
 
+     - name: Output ECR Repository URL
+       id: set_ecr_url
+       run: |
+         cd infrastructure/cdk-ark-ecr
+         ECR_URL=$(jq -r '."ark-ecr".ECRRepositoryURL' ./cdk-outputs.json)
+         echo "ECR Repository URL: $ECR_URL"
+         echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
+
      - name: Set up Docker Buildx
        uses: docker/setup-buildx-action@v1
 
@@ -97,7 +105,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer"
+          ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer?sslmode=require"
           ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
           DB_PASSWORD: "1J$^&R-I4VIo"
           DB_USERNAME: "arkchainindexer"
@@ -113,7 +121,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer"
+          ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer?sslmode=require"
           ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
           DB_PASSWORD: "1J$^&R-I4VIo"
           DB_USERNAME: "arkchainindexer"

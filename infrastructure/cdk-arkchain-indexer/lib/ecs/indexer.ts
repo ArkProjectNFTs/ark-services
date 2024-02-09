@@ -81,7 +81,7 @@ function deployIndexerServices(
         process.env.DB_USERNAME || "defaultUsername"
       }:${
         process.env.DB_PASSWORD || "defaultPassword"
-      }@${dbEndpointAddress}:5432/arkchainindexer`,
+      }@${dbEndpointAddress}:5432/arkchainindexer?sslmode=require`,
       ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/",
     },
   });
