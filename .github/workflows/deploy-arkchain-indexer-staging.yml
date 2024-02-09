@@ -81,38 +81,10 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
       - name: Install Dependencies
         run: |
           cd infrastructure/cdk-arkchain-indexer
           pnpm install
-
-      - name: Cache Cargo registry
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Cache Cargo target dir
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-target-
 
       - name: Bootstrap Indexer
         run: |
