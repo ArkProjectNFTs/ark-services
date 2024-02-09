@@ -66,7 +66,7 @@ function deployIndexerServices(
       logGroup: logGroup,
     }),
     environment: {
-      RUST_LOG: "INFO",
+      RUST_LOG: "DEBUG",
       ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer",
       ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
     },
