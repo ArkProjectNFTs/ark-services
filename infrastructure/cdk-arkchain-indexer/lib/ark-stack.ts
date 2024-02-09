@@ -20,7 +20,7 @@ export class ArkIndexersStack extends cdk.Stack {
     });
 
     // create postgres database
-    new DatabaseInstance(this, 'db-pg-arkchain', {
+    new DatabaseInstance(this, 'arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y', {
       engine: DatabaseInstanceEngine.postgres({
         version: PostgresEngineVersion.VER_15_4,
       }),
