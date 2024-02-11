@@ -48,7 +48,7 @@ export class ArkIndexersStack extends cdk.Stack {
           version: PostgresEngineVersion.VER_15_4,
         }),
         parameters: {
-          'rds.force_ssl': '1',
+          'rds.force_ssl': '0',
         },
         instanceType: InstanceType.of(InstanceClass.T3, InstanceSize.MICRO),
         vpc,
