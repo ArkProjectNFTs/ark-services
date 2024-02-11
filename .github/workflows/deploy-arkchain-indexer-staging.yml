@@ -56,7 +56,7 @@ jobs:
          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
          AWS_REGION: ${{ secrets.AWS_REGION }}
-         ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer"
+         ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer?sslmode=require"
          ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
 
      - name: Build indexer, tag, and push image to Amazon ECR
@@ -71,7 +71,7 @@ jobs:
          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
          AWS_REGION: ${{ secrets.AWS_REGION }}
-         ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer"
+         ARKCHAIN_DATABASE_URL: "postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-dbpgarkchainc6c1584f-er1cnatb6f8y.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer?sslmode=require"
          ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/"
 
  deploy:

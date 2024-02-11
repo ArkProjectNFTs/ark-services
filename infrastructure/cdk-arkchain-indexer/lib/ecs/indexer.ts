@@ -75,13 +75,13 @@ function deployIndexerServices(
       logGroup: logGroup,
     }),
     environment: {
-      PGSSLMODE: "require",
+      //PGSSLMODE: "require",
       RUST_LOG: "DEBUG",
       ARKCHAIN_DATABASE_URL: `postgres://${
         process.env.DB_USERNAME || "defaultUsername"
       }:${
         process.env.DB_PASSWORD || "defaultPassword"
-      }@${dbEndpointAddress}:5432/arkchainindexer?sslmode=require`,
+      }@${dbEndpointAddress}:5432/arkchainindexer`,
       ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/",
     },
   });
@@ -89,7 +89,7 @@ function deployIndexerServices(
   new cdk.aws_ecs.FargateService(scope, `arkchain-indexer-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: 1,
+    desiredCount: 0,
     securityGroups: [ecsSecurityGroup],
   });
 }
