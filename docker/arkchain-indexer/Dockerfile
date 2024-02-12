@@ -6,9 +6,21 @@ ENV AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
 ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
+ARG DATABASE_URL
+ENV DATABASE_URL=postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-arkchainindexerstagingdb0-7yolibwohavq.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer
+
 WORKDIR /app
 
 COPY . .
+
+# copy migration files
+COPY ../ark-sqlx/migrations ./migrations
+RUN cargo install sqlx-cli --locked
+
+COPY docker/arkchain-indexer/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
 
 RUN cargo build -p arkchain-indexer --release
 
