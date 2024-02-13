@@ -21,7 +21,7 @@ export class ArkIndexersStack extends cdk.Stack {
     super(scope, id, props);
 
     const vpc = Vpc.fromLookup(this, "ArkVPC", {
-      vpcId: "vpc-0d11f7ec183208e08",
+      vpcId: process.env.VPC_ID,
     });
 
     const dbSecurityGroup = new cdk.aws_ec2.SecurityGroup(

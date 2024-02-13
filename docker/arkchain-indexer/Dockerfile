@@ -7,7 +7,7 @@ ARG AWS_SECRET_ACCESS_KEY
 ENV AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 
 ARG DATABASE_URL
-ENV DATABASE_URL=postgres://arkchainindexer:1J$^&R-I4VIo@arkchain-indexer-staging-arkchainindexerstagingdb0-7yolibwohavq.cu3k6ojphus8.us-east-1.rds.amazonaws.com:5432/arkchainindexer
+ENV DATABASE_URL=$DATABASE_URL
 
 WORKDIR /app
 

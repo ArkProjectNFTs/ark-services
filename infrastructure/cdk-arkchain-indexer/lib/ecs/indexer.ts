@@ -82,14 +82,14 @@ function deployIndexerServices(
       }:${
         process.env.DB_PASSWORD || "defaultPassword"
       }@${dbEndpointAddress}:5432/arkchainindexer`,
-      ARKCHAIN_RPC_PROVIDER: "https://staging.solis.arkproject.dev/",
+      ARKCHAIN_RPC_PROVIDER:  process.env.ARKCHAIN_RPC_PROVIDER || "defaultProvider",
     },
   });
 
   new cdk.aws_ecs.FargateService(scope, `arkchain-indexer-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: 0,
+    desiredCount: 1,
     securityGroups: [ecsSecurityGroup],
   });
 }
