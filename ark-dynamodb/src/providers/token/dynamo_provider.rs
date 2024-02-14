@@ -602,7 +602,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         let mut contracts_list: Vec<ContractData> = Vec::new();
         for contract in contracts {
             let tokens_count = match total_by_contract.get(&contract) {
-                Some(t) => t.clone(),
+                Some(t) => *t,
                 None => 0,
             };
 
