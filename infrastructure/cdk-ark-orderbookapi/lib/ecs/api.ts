@@ -62,7 +62,7 @@ function deployApiServices(
     "ark-project-repo"
   );
 
-  taskDefinition.addContainer("ark_orderbook_api", {
+  const container = taskDefinition.addContainer("ark_orderbook_api", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
       isProductionEnvironment
@@ -79,6 +79,12 @@ function deployApiServices(
     },
   });
 
+  container.addPortMappings({
+    containerPort: 80,
+    hostPort: 80,
+    protocol: cdk.aws_ecs.Protocol.TCP,
+  });
+
   const fargateService = new cdk.aws_ecs.FargateService(scope, `ark-orderbook-api-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
@@ -88,7 +94,7 @@ function deployApiServices(
 
   const loadBalancer = new ApplicationLoadBalancer(scope, "ApiLoadBalancer", {
     vpc: vpc,
-    internetFacing: true, // Pour accès externe
+    internetFacing: true,
   });
 
   const listener = loadBalancer.addListener("Listener", {
