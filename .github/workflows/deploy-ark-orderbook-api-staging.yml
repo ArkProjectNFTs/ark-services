@@ -1,21 +1,18 @@
-name: Deploy Arkchain Indexer to AWS (Staging)
+name: Deploy Ark Orderbook Api to AWS (Staging)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - 180-feature-cdk-for-arkchain-indexer
+      - 252-feature-cdk-for-arkbook-api
     paths:
-      - ".github/workflows/deploy-arkchain-indexer-staging.yml"
+      - ".github/workflows/deploy-ark-orderbook-api-staging.yml"
       - "infrastructure/cdk-ark-ecr/**"
-      - "infrastructure/cdk-arkchain-indexer/**"
-
-env:
-  ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL }}
+      - "infrastructure/cdk-ark-orderbookapi/**"
 
 jobs:
 
- push-indexer-image:
+ push-orderbook-api-image:
    runs-on: ubuntu-latest
 
    steps:
@@ -63,23 +60,13 @@ jobs:
 
      - name: Build indexer, tag, and push image to Amazon ECR
        run: |
-         docker buildx create --use --name ecr-deploy-builder-arkchain-indexer
-         docker buildx build --tag $ECR_URL:arkchain-indexer-staging-latest --file docker/arkchain-indexer/Dockerfile . --load \
-                       --build-arg DATABASE_URL=${DATABASE_URL}
-         docker push $ECR_URL:arkchain-indexer-staging-latest
-       env:
-         ECR_URL: ${{ env.ECR_URL }}
-         RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
-         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-         AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-         AWS_REGION: ${{ secrets.AWS_REGION }}
-         DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL }}
-
+         docker buildx create --use --name ecr-deploy-builder-ark-orderbook-api
+         docker buildx build --tag $ECR_URL:ark-orderbook-api-staging-latest --file docker/ark-orderbook-api/Dockerfile . --load
+         docker push $ECR_URL:ark-orderbook-api-staging-latest
 
  deploy:
     runs-on: ubuntu-latest
-    needs: [push-indexer-image]
+    needs: [push-orderbook-api-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -94,12 +81,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-arkchain-indexer
+          cd infrastructure/cdk-ark-orderbookapi
           pnpm install
 
-      - name: Bootstrap Indexer
+      - name: Bootstrap Orderbook API
         run: |
-          cd infrastructure/cdk-arkchain-indexer
+          cd infrastructure/cdk-ark-orderbookapi
           pnpm build
           pnpm cdk context --clear
           pnpm cdk bootstrap
@@ -113,9 +100,9 @@ jobs:
           DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}
 
-      - name: Deploy Indexer
+      - name: Deploy Orderbook API
         run: |
-          cd infrastructure/cdk-arkchain-indexer
+          cd infrastructure/cdk-ark-orderbookapi
           pnpm build
           pnpm cdk context --clear
           pnpm cdk deploy --require-approval never
