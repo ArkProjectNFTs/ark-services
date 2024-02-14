@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
+import { ApplicationLoadBalancer, ApplicationTargetGroup, TargetType } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 
 export async function deployApi(
   scope: cdk.Stack,
@@ -22,22 +23,24 @@ export async function deployApi(
   );
 
   networks.forEach((network) => {
-    deployIndexerServices(
+    deployApiServices(
       isProductionEnvironment,
       scope,
       network,
       cluster,
-      ecsSecurityGroup
+      ecsSecurityGroup,
+      vpc
     );
   });
 }
 
-function deployIndexerServices(
+function deployApiServices(
   isProductionEnvironment: boolean,
   scope: cdk.Stack,
   network: string,
   cluster: cdk.aws_ecs.ICluster,
-  ecsSecurityGroup: cdk.aws_ec2.SecurityGroup
+  ecsSecurityGroup: cdk.aws_ec2.SecurityGroup,
+  vpc: cdk.aws_ec2.IVpc
 ) {
   const logGroup = new LogGroup(scope, `/ecs/orderbook-api-${network}`, {
     removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -76,10 +79,36 @@ function deployIndexerServices(
     },
   });
 
-  new cdk.aws_ecs.FargateService(scope, `ark-orderbook-api-${network}`, {
+  const fargateService = new cdk.aws_ecs.FargateService(scope, `ark-orderbook-api-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
     desiredCount: 1,
-    securityGroups: [ecsSecurityGroup],
+    securityGroups: [ecsSecurityGroup]
   });
+
+  const loadBalancer = new ApplicationLoadBalancer(scope, "ApiLoadBalancer", {
+    vpc: vpc,
+    internetFacing: true, // Pour accès externe
+  });
+
+  const listener = loadBalancer.addListener("Listener", {
+    port: 80,
+  });
+
+  const targetGroup = new ApplicationTargetGroup(scope, "TargetGroup", {
+    vpc: vpc,
+    port: 80,
+    targetType: TargetType.IP
+  });
+
+  listener.addTargets(`FargateServiceTarget-${network}`, {
+    port: 80,
+    targets: [
+      fargateService.loadBalancerTarget({
+        containerName: "ark_orderbook_api",
+        containerPort: 80,
+      }),
+    ],
+  });
+
 }
