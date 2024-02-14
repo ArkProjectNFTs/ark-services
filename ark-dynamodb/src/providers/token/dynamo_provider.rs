@@ -10,7 +10,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, Select};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use tracing::{debug, trace};
 
 /// DynamoDB provider for tokens.
@@ -545,7 +545,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
-        let mut contracts_set: HashSet<String> = HashSet::new();
+        let mut contracts_set: Vec<String> = Vec::new();
         let mut last_evaluated_key = ctx.exclusive_start_key.clone();
         let mut consumed_capacity_units: f64 = 0.0;
 
@@ -574,7 +574,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             if let Some(items) = query_output.items {
                 for item in items {
                     let token_data: TokenData = item.try_into()?;
-                    contracts_set.insert(token_data.contract_address);
+                    contracts_set.push(token_data.contract_address)
                 }
             }
 
