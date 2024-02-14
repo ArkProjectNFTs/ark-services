@@ -20,6 +20,11 @@ pub struct TokenData {
     pub awaiting_metadata_update: Option<bool>,
 }
 
+pub struct ContractData {
+    pub contract_address: String,
+    pub tokens_count: u64,
+}
+
 impl TokenData {
     pub fn mint_info_to_map(info: &TokenMintInfo) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();

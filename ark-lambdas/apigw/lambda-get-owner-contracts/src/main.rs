@@ -9,6 +9,7 @@
 //! Examples:
 //! `https://.../owners/0x1234/contracts`
 //!
+mod types;
 use ark_dynamodb::providers::{
     ArkContractProvider, ArkTokenProvider, DynamoDbContractProvider, DynamoDbTokenProvider,
 };
@@ -17,6 +18,7 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
+use types::FullContractData;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -52,20 +54,50 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
         .get_owner_contracts_addresses(&ctx.dynamodb, owner_address)
         .await?;
 
-    let mut capacity = contracts_request.consumed_capacity_units.unwrap_or(0.0);
+    let mut capacity = contracts_request
+        .consumed_capacity_units
+        .unwrap_or_default();
 
-    let contracts_addresses = contracts_request.inner();
+    let contracts = contracts_request.inner();
+    let contract_addresses: Vec<String> = contracts
+        .iter()
+        .map(|c| c.contract_address.clone())
+        .collect();
 
-    let contracts = if !contracts_addresses.is_empty() {
+    let contracts: Vec<FullContractData> = if !contracts.is_empty() {
         let batch_contracts_rsp = contract_provider
-            .get_batch_contracts(&ctx.dynamodb, contracts_addresses.clone())
+            .get_batch_contracts(&ctx.dynamodb, contract_addresses)
             .await?;
 
-        capacity += batch_contracts_rsp.consumed_capacity_units.unwrap_or(0.0);
-        batch_contracts_rsp.inner().clone()
+        capacity += batch_contracts_rsp
+            .consumed_capacity_units
+            .unwrap_or_default();
+
+        batch_contracts_rsp
+            .inner()
+            .iter()
+            .map(|complete_contract| {
+                let tokens_count = contracts
+                    .iter()
+                    .find(|&c| c.contract_address == complete_contract.contract_address)
+                    .map_or(0, |c| c.tokens_count);
+
+                FullContractData {
+                    contract_address: complete_contract.contract_address.clone(),
+                    contract_type: complete_contract.contract_type.clone(),
+                    image: complete_contract.image.clone(),
+                    name: complete_contract.name.clone(),
+                    symbol: complete_contract.symbol.clone(),
+                    tokens_count,
+                }
+            })
+            .collect()
     } else {
         Vec::new()
     };
+
+    let mut contracts = contracts;
+    contracts.sort_by(|a, b| a.contract_address.cmp(&b.contract_address));
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor: None,

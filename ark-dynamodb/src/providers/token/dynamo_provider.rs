@@ -13,6 +13,8 @@ use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use tracing::{debug, trace};
 
+use super::types::ContractData;
+
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
     table_name: String,
@@ -534,7 +536,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         ctx: &DynamoDbCtx,
         owner_address: &str,
-    ) -> Result<DynamoDbOutput<Vec<String>>, ProviderError> {
+    ) -> Result<DynamoDbOutput<Vec<ContractData>>, ProviderError> {
         let mut values = HashMap::new();
         values.insert(
             ":owner".to_string(),
@@ -545,7 +547,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             AttributeValue::S("TOKEN#".to_string()),
         );
 
-        let mut contracts_set: Vec<String> = Vec::new();
+        let mut total_by_contract: HashMap<String, u64> = HashMap::new();
+        let mut contracts: Vec<String> = Vec::new();
         let mut last_evaluated_key = ctx.exclusive_start_key.clone();
         let mut consumed_capacity_units: f64 = 0.0;
 
@@ -574,7 +577,19 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             if let Some(items) = query_output.items {
                 for item in items {
                     let token_data: TokenData = item.try_into()?;
-                    contracts_set.push(token_data.contract_address)
+
+                    if total_by_contract.contains_key(&token_data.contract_address) {
+                        let count = total_by_contract
+                            .get_mut(&token_data.contract_address)
+                            .unwrap();
+                        *count += 1;
+                    } else {
+                        total_by_contract.insert(token_data.contract_address.clone(), 1);
+                    }
+
+                    if !contracts.contains(&token_data.contract_address) {
+                        contracts.push(token_data.contract_address)
+                    }
                 }
             }
 
@@ -584,7 +599,19 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             last_evaluated_key = query_output.last_evaluated_key;
         }
 
-        let contracts_list: Vec<String> = contracts_set.into_iter().collect();
+        let mut contracts_list: Vec<ContractData> = Vec::new();
+        for contract in contracts {
+            let tokens_count = match total_by_contract.get(&contract) {
+                Some(t) => *t,
+                None => 0,
+            };
+
+            contracts_list.push(ContractData {
+                contract_address: contract,
+                tokens_count,
+            });
+        }
+
         let total_count = contracts_list.len() as i32;
 
         Ok(DynamoDbOutput::new(
