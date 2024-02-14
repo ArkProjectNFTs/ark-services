@@ -96,6 +96,9 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
         Vec::new()
     };
 
+    let mut contracts = contracts;
+    contracts.sort_by(|a, b| a.contract_address.cmp(&b.contract_address));
+
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor: None,
         total_count: contracts_request.total_count,
