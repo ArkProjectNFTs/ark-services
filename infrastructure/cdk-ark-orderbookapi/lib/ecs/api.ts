@@ -66,7 +66,7 @@ function deployApiServices(
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
       isProductionEnvironment
-        ? "arkc-orderbook-api-production-latest"
+        ? "ark-orderbook-api-production-latest"
         : "ark-orderbook-api-staging-latest"
     ),
     logging: cdk.aws_ecs.LogDrivers.awsLogs({
@@ -104,7 +104,13 @@ function deployApiServices(
   const targetGroup = new ApplicationTargetGroup(scope, "TargetGroup", {
     vpc: vpc,
     port: 80,
-    targetType: TargetType.IP
+    targetType: TargetType.IP,
+    healthCheck: {
+      path: "/health",
+      interval: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(5),
+      healthyHttpCodes: "200",
+    },
   });
 
   listener.addTargets(`FargateServiceTarget-${network}`, {
