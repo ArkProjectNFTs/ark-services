@@ -1,7 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
-import { ApplicationLoadBalancer, ApplicationTargetGroup, TargetType } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import { ApplicationLoadBalancer } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 
 export async function deployApi(
   scope: cdk.Stack,
@@ -118,20 +118,20 @@ function deployApiServices(
     port: 80,
   });
 
-  const targetGroup = new ApplicationTargetGroup(scope, "TargetGroup", {
-    vpc: vpc,
-    port: 80,
-    targetType: TargetType.IP
-  });
-
   listener.addTargets(`FargateServiceTarget-${network}`, {
     port: 80,
-    targets: [
-      fargateService.loadBalancerTarget({
-        containerName: "ark_orderbook_api",
-        containerPort: 80,
-      }),
-    ],
+    targets: [fargateService.loadBalancerTarget({
+      containerName: "ark_orderbook_api",
+      containerPort: 80,
+    })],
+    healthCheck: {
+      path: "/health",
+      interval: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(5),
+      healthyThresholdCount: 5,
+      unhealthyThresholdCount: 2,
+    },
   });
+
 
 }
