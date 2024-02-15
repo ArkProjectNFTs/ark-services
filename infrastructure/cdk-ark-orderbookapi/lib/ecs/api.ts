@@ -80,8 +80,7 @@ function deployApiServices(
   });
 
   container.addPortMappings({
-    containerPort: 80,
-    hostPort: 80,
+    containerPort: 8080,
     protocol: cdk.aws_ecs.Protocol.TCP,
   });
 
@@ -99,12 +98,12 @@ function deployApiServices(
   });
 
   lbSecurityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), cdk.aws_ec2.Port.tcp(80), 'Allow HTTP traffic from anywhere');
-  lbSecurityGroup.addEgressRule(ecsSecurityGroup, cdk.aws_ec2.Port.tcp(80), 'Allow outbound traffic to ECS security group on port 80');
+  lbSecurityGroup.addEgressRule(ecsSecurityGroup, cdk.aws_ec2.Port.tcp(8080), 'Allow outbound traffic to ECS security group on port 8080');
 
 
   ecsSecurityGroup.addIngressRule(
-    lbSecurityGroup, // Replace with your load balancer's security group reference
-    cdk.aws_ec2.Port.tcp(80),
+    lbSecurityGroup,
+    cdk.aws_ec2.Port.tcp(8080),
     "Allow inbound HTTP traffic from the load balancer"
   );
 
@@ -122,7 +121,7 @@ function deployApiServices(
     port: 80,
     targets: [fargateService.loadBalancerTarget({
       containerName: "ark_orderbook_api",
-      containerPort: 80,
+      containerPort: 8080,
     })],
     healthCheck: {
       path: "/health",
