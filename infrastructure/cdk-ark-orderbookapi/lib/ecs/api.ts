@@ -85,6 +85,7 @@ function deployApiServices(
     protocol: cdk.aws_ecs.Protocol.TCP,
   });
 
+
   const fargateService = new cdk.aws_ecs.FargateService(scope, `ark-orderbook-api-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
@@ -92,9 +93,25 @@ function deployApiServices(
     securityGroups: [ecsSecurityGroup]
   });
 
+  const lbSecurityGroup = new cdk.aws_ec2.SecurityGroup(scope, 'LBSecurityGroup', {
+    vpc,
+    description: 'Security group for the Load Balancer',
+  });
+
+  lbSecurityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), cdk.aws_ec2.Port.tcp(80), 'Allow HTTP traffic from anywhere');
+  lbSecurityGroup.addEgressRule(ecsSecurityGroup, cdk.aws_ec2.Port.tcp(80), 'Allow outbound traffic to ECS security group on port 80');
+
+
+  ecsSecurityGroup.addIngressRule(
+    lbSecurityGroup, // Replace with your load balancer's security group reference
+    cdk.aws_ec2.Port.tcp(80),
+    "Allow inbound HTTP traffic from the load balancer"
+  );
+
   const loadBalancer = new ApplicationLoadBalancer(scope, "ApiLoadBalancer", {
     vpc: vpc,
     internetFacing: true,
+    securityGroup: lbSecurityGroup
   });
 
   const listener = loadBalancer.addListener("Listener", {
@@ -104,13 +121,7 @@ function deployApiServices(
   const targetGroup = new ApplicationTargetGroup(scope, "TargetGroup", {
     vpc: vpc,
     port: 80,
-    targetType: TargetType.IP,
-    healthCheck: {
-      path: "/health",
-      interval: cdk.Duration.seconds(30),
-      timeout: cdk.Duration.seconds(5),
-      healthyHttpCodes: "200",
-    },
+    targetType: TargetType.IP
   });
 
   listener.addTargets(`FargateServiceTarget-${network}`, {
