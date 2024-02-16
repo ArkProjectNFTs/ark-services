@@ -7,6 +7,7 @@ use crate::providers::orderbook::OrderProvider;
 
 pub mod metrics;
 pub mod orderbook;
+pub mod quests;
 
 /// A context for SQLx database.
 #[derive(Debug)]

@@ -3322,6 +3322,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "lambda-post-quest"
+version = "0.1.0"
+dependencies = [
+ "ark-sqlx",
+ "lambda-http-common",
+ "lambda_http",
+ "lambda_runtime",
+ "serde",
+ "serde_json",
+ "serde_with 3.4.0",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lambda-post-refresh-token-metadata"
 version = "0.1.0"
 dependencies = [

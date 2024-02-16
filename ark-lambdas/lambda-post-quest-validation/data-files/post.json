@@ -1,0 +1,9 @@
+{
+  "httpMethod": "POST",
+  "pathParameters": {},
+  "multiValueHeaders": {
+    "Accept": ["*/*"]
+  },
+  "stageVariables": {},
+  "body": "{\"quest_type\": \"BRIDGE_NFT_L1_TO_L2\", \"contract_address\": \"\", \"token_id\": \"\", \"account_address\": \"0x07FEC6349248Dc1a35f3F9faFD19e1Ef873B687e04B7B9db4806f9E54f9EF000\", \"created_at\": \"2024-02-16 21:03:53.264\", \"updated_at\": \"2024-02-16 21:03:53.264\"}"
+}
