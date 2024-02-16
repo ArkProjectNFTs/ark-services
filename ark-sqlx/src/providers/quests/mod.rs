@@ -29,7 +29,7 @@ impl QuestProvider {
         AND public."Quest"."accountAddress" = EXCLUDED."accountAddress";
         "#;
 
-        sqlx::query(&q)
+        sqlx::query(q)
             .bind(&quest.quest_type)
             .bind(&quest.account_address)
             .execute(pool)
