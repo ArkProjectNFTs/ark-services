@@ -86,10 +86,10 @@ function deployApiServices(
   const subdomainEnvName = isProductionEnvironment ? "" : "staging.";
   const apiURL = `${subdomainEnvName}api-orderbook.${domainName}`;
 
-  const hostedZone = new route53.HostedZone(scope, 'HostedZone', {
+  const hostedZone = route53.HostedZone.fromHostedZoneAttributes(scope, 'HostedZone', {
+    hostedZoneId: 'Z057403917YO7G55AYYF9',
     zoneName: domainName,
   });
-
   const certificate = new acm.Certificate(scope, 'Certificate', {
     domainName: apiURL,
     validation: acm.CertificateValidation.fromDns(hostedZone),
@@ -131,11 +131,12 @@ function deployApiServices(
 
   const listener = loadBalancer.addListener("Listener", {
     port: 443,
+    open: true,
     certificates: [certificate],
 });
 
   listener.addTargets(`FargateServiceTarget-${network}`, {
-    port: 443,
+    port: 80,
     targets: [fargateService.loadBalancerTarget({
       containerName: "ark_orderbook_api",
       containerPort: 8080,
