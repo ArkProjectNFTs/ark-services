@@ -1,4 +1,7 @@
 import * as cdk from "aws-cdk-lib";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import * as route53targets from 'aws-cdk-lib/aws-route53-targets';
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { ApplicationLoadBalancer } from "aws-cdk-lib/aws-elasticloadbalancingv2";
@@ -79,6 +82,19 @@ function deployApiServices(
     },
   });
 
+  const domainName = 'arkproject.dev';
+  const subdomainEnvName = isProductionEnvironment ? "" : "staging.";
+  const apiURL = `${subdomainEnvName}api-orderbook.${domainName}`;
+
+  const hostedZone = new route53.HostedZone(scope, 'HostedZone', {
+    zoneName: apiURL,
+  });
+
+  const certificate = new acm.Certificate(scope, 'Certificate', {
+    domainName: apiURL,
+    validation: acm.CertificateValidation.fromDns(hostedZone),
+  });
+
   container.addPortMappings({
     containerPort: 8080,
     protocol: cdk.aws_ecs.Protocol.TCP,
@@ -114,11 +130,12 @@ function deployApiServices(
   });
 
   const listener = loadBalancer.addListener("Listener", {
-    port: 80,
-  });
+    port: 443,
+    certificates: [certificate],
+});
 
   listener.addTargets(`FargateServiceTarget-${network}`, {
-    port: 80,
+    port: 443,
     targets: [fargateService.loadBalancerTarget({
       containerName: "ark_orderbook_api",
       containerPort: 8080,
@@ -130,6 +147,12 @@ function deployApiServices(
       healthyThresholdCount: 5,
       unhealthyThresholdCount: 2,
     },
+  });
+
+  new route53.ARecord(scope, 'ApiOrderbookAliasRecord', {
+    zone: hostedZone,
+    recordName: apiURL,
+    target: route53.RecordTarget.fromAlias(new route53targets.LoadBalancerTarget(loadBalancer)),
   });
 
 
