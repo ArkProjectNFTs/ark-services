@@ -9,6 +9,7 @@ on:
       - ".github/workflows/deploy-arkchain-indexer-staging.yml"
       - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-arkchain-indexer/**"
+      - "arkchain-indexer/**"
 
 env:
   ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL }}
