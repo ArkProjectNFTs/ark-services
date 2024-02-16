@@ -3322,7 +3322,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lambda-post-quest"
+name = "lambda-post-quest-validation"
 version = "0.1.0"
 dependencies = [
  "ark-sqlx",
