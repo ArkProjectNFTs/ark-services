@@ -87,7 +87,7 @@ function deployApiServices(
   const apiURL = `${subdomainEnvName}api-orderbook.${domainName}`;
 
   const hostedZone = new route53.HostedZone(scope, 'HostedZone', {
-    zoneName: apiURL,
+    zoneName: domainName,
   });
 
   const certificate = new acm.Certificate(scope, 'Certificate', {
