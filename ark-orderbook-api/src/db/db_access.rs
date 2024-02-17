@@ -50,7 +50,7 @@ impl DatabaseAccess for PgPool {
                         FROM orderbook_token_offers o
                         WHERE o.token_id = t.token_id
                         AND o.token_address = t.token_address
-                        AND o.status != 'CANCELLED'
+                        AND o.status not in ('CANCELLED', 'FULFILLED')
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
@@ -105,7 +105,7 @@ impl DatabaseAccess for PgPool {
                         FROM orderbook_token_offers o
                         WHERE o.token_id = t.token_id
                         AND o.token_address = t.token_address
-                        AND o.status = 'EXECUTED'
+                        AND o.status not in ('CANCELLED', 'FULFILLED')
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
@@ -162,7 +162,7 @@ impl DatabaseAccess for PgPool {
                     FROM orderbook_token_offers o
                     WHERE o.token_id = t.token_id
                     AND o.token_address = t.token_address
-                    AND o.status = 'EXECUTED'
+                    AND o.status not in ('CANCELLED', 'FULFILLED')
                     AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                 ) AS has_offer,
                 t.currency_chain_id, t.currency_address,
@@ -246,6 +246,7 @@ impl DatabaseAccess for PgPool {
             "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date, status
             FROM orderbook_token_offers
             WHERE token_id = $1 AND token_address = $2
+            AND status = 'PLACED'
             ORDER BY offer_timestamp DESC;",
             token_id,
             token_address
