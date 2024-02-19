@@ -1,6 +1,6 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
-use routes::token;
+use routes::{default, token};
 use sqlx::postgres::PgPoolOptions;
 
 mod db;
@@ -30,8 +30,9 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(db_pool.clone()))
             .configure(token::config)
+            .configure(default::config)
     })
-    .bind("127.0.0.1:8080")?
+    .bind("0.0.0.0:8080")?
     .run()
     .await
 }
