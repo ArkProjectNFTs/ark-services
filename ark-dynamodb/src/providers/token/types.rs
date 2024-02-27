@@ -25,7 +25,7 @@ pub struct ContractData {
     pub tokens_count: u64,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct TokensParams {
     pub contract_address: String,
     pub token_id: String,

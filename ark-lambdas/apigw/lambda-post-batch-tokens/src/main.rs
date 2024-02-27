@@ -16,7 +16,7 @@ struct BodyParameters {
 
 async fn process_event(
     ctx: &LambdaCtx,
-    token_params: &Vec<TokensParams>,
+    token_params: Vec<TokensParams>,
 ) -> Result<LambdaHttpResponse, Error> {
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
 
@@ -44,7 +44,7 @@ async fn process_event(
 async fn function_handler(event: Request) -> Result<Response<Body>, LambdaHttpError> {
     let ctx = LambdaCtx::from_event(&event).await?;
     let body_params = get_params(&event).await?;
-    let r = process_event(&ctx, &body_params.tokens).await;
+    let r = process_event(&ctx, body_params.tokens.clone()).await;
 
     let token_params_str = match serde_json::to_string(&body_params.tokens) {
         Ok(token_params_str) => token_params_str,
