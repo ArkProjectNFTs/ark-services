@@ -460,7 +460,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn get_batch_tokens(
         &self,
         ctx: &DynamoDbCtx,
-        token_params: &Vec<TokensParams>,
+        token_params: Vec<TokensParams>,
     ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError> {
         let mut keys = Vec::new();
         for token_param in token_params {

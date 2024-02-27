@@ -104,6 +104,6 @@ pub trait ArkTokenProvider {
     async fn get_batch_tokens(
         &self,
         ctx: &DynamoDbCtx,
-        token_params: &Vec<types::TokensParams>,
+        token_params: Vec<types::TokensParams>,
     ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
 }
