@@ -5,7 +5,6 @@ use common::{format::hex_or_dec_from_str, LambdaHttpResponse};
 use lambda_http::{run, service_fn, Body, Error, Request, Response};
 use lambda_http_common::{self as common, ArkApiResponse, LambdaCtx, LambdaHttpError};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
 use tracing_subscriber::filter::{EnvFilter, LevelFilter};
 
