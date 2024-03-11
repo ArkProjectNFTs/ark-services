@@ -15,6 +15,8 @@ use starknet::core::types::FieldElement;
 use crate::providers::token::types::TokenData;
 use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
 
+use self::types::BatchTokenData;
+
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.
 #[cfg_attr(any(test, feature = "mock"), automock(type Client=aws_sdk_dynamodb::Client;))]
@@ -105,5 +107,5 @@ pub trait ArkTokenProvider {
         &self,
         ctx: &DynamoDbCtx,
         token_params: Vec<types::TokensParams>,
-    ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
+    ) -> Result<DynamoDbOutput<Vec<BatchTokenData>>, ProviderError>;
 }

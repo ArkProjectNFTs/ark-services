@@ -1,14 +1,14 @@
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 
 import * as cdk from "aws-cdk-lib";
-import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { ISecurityGroup, IVpc } from "aws-cdk-lib/aws-ec2";
 import { getContractLambda } from "../../lambdas/v1/get-contract-lambda";
 import { getContractsLambda } from "../../lambdas/v1/get-contracts-lambda";
 
 export function contractsApi(
   scope: cdk.Stack,
   vpc: IVpc,
-  lambdaSecurityGroup: SecurityGroup,
+  lambdaSecurityGroup: ISecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string

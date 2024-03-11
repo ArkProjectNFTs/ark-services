@@ -4,12 +4,12 @@ import { getContractTokensLambda } from "../../lambdas/v1/get-contract-tokens-la
 import { getTokenLambda } from "../../lambdas/v1/get-token-lambda";
 import { postRefreshTokenMetadataLambda } from "../../lambdas/v1/post-refresh-token-metadata";
 import * as cdk from "aws-cdk-lib";
-import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { ISecurityGroup, IVpc } from "aws-cdk-lib/aws-ec2";
 
 export function tokensApi(
   scope: cdk.Stack,
   vpc: IVpc,
-  lambdaSecurityGroup: SecurityGroup,
+  lambdaSecurityGroup: ISecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string

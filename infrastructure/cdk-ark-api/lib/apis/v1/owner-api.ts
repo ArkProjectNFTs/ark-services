@@ -3,12 +3,12 @@ import { getOwnerTokensLambda } from "../../lambdas/v1/get-owner-tokens-lambda";
 import { getOwnerContractsLambda } from "../../lambdas/v1/get-owner-contracts-lambda";
 import * as cdk from "aws-cdk-lib";
 import { getOwnerEventsLambda } from "../../lambdas/v1/get-owner-events-lambda";
-import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { ISecurityGroup, IVpc } from "aws-cdk-lib/aws-ec2";
 
 export function ownerApi(
   scope: cdk.Stack,
   vpc: IVpc,
-  lambdaSecurityGroup: SecurityGroup,
+  lambdaSecurityGroup: ISecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string

@@ -3,13 +3,12 @@ import { RustFunction } from "cargo-lambda-cdk";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
-import { IVpc, SecurityGroup, SubnetType } from "aws-cdk-lib/aws-ec2";
-import { join } from "path";
+import { ISecurityGroup, IVpc, SubnetType } from "aws-cdk-lib/aws-ec2";
 
 export function postRefreshTokenMetadataLambda(
   scope: cdk.Stack,
   vpc: IVpc,
-  lambdaSecurityGroup: SecurityGroup,
+  lambdaSecurityGroup: ISecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
