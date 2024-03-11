@@ -10,6 +10,6 @@
     "maxItemsLimit": "100",
     "lambdaUsageTable": "ark_lambda_usage",
     "stageName": "mainnet",
-    "sqlxUrl": "postgres://postgres:Pnv4nk2mf@35.237.127.105:5432/postgres"
+    "sqlxUrl": ""
   }
 }
