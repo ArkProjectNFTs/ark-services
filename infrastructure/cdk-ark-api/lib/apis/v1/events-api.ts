@@ -2,13 +2,13 @@ import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { getContractEventsLambda } from "../../lambdas/v1/get-contract-events-lambda";
 import { getTokenEventsLambda } from "../../lambdas/v1/get-token-events-lambda";
 import * as cdk from "aws-cdk-lib";
-import { IVpc, SecurityGroup } from "aws-cdk-lib/aws-ec2";
+import { ISecurityGroup, IVpc } from "aws-cdk-lib/aws-ec2";
 import { getEventsLambda } from "../../lambdas/v1/get-events";
 
 export function eventsApi(
   scope: cdk.Stack,
   vpc: IVpc,
-  lambdaSecurityGroup: SecurityGroup,
+  lambdaSecurityGroup: ISecurityGroup,
   versionedRoot: apigateway.IResource,
   stages: string[],
   tableNamePrefix: string

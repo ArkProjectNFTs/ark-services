@@ -24,6 +24,7 @@ members = [
   "ark-lambdas/apigw/lambda-get-token",
   "ark-lambdas/apigw/lambda-get-token-events",
   "ark-lambdas/apigw/lambda-post-refresh-token-metadata",
+  "ark-lambdas/apigw/lambda-post-batch-tokens",
   "ark-lambdas/apigw/lambda-get-owner-events",
   "ark-lambdas/lambda-block-indexer",
   "ark-metadata-refresh",

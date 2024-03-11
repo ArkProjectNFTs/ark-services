@@ -4,32 +4,16 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { AssetHashType } from "aws-cdk-lib";
 import { ISecurityGroup, IVpc, SubnetType } from "aws-cdk-lib/aws-ec2";
-import { join } from "path";
 
-const manifestPath = join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "..",
-  "..",
-  "ark-lambdas",
-  "apigw",
-  "lambda-get-contracts",
-  "Cargo.toml"
-);
-
-export function getContractsLambda(
+export function postBatchTokensLambda(
   scope: cdk.Stack,
   vpc: IVpc,
   lambdaSecurityGroup: ISecurityGroup,
   stages: string[],
   tableNamePrefix: string
 ) {
-  const indexName = "GSI2PK-GSI2SK-index";
-
-  const getContractsLambda = new RustFunction(scope, "get-contracts", {
-    manifestPath,
+  const postBatchTokensLambda = new RustFunction(scope, "post-batch-tokens", {
+    manifestPath: "../../ark-lambdas/apigw/lambda-post-batch-tokens/Cargo.toml",
     environment: {
       RUST_BACKTRACE: "1",
     },
@@ -46,27 +30,22 @@ export function getContractsLambda(
   });
 
   let resourceArns: string[] = [];
+
   for (const stage of stages) {
     resourceArns.push(
-      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}/*`
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}`
+    );
+    resourceArns.push(
+      `arn:aws:dynamodb:${scope.region}:${scope.account}:table/${tableNamePrefix}_${stage}_lambda_usage`
     );
   }
 
-  getContractsLambda.addToRolePolicy(
+  postBatchTokensLambda.addToRolePolicy(
     new iam.PolicyStatement({
       actions: ["dynamodb:*"],
       resources: resourceArns,
     })
   );
 
-  getContractsLambda.addToRolePolicy(
-    new iam.PolicyStatement({
-      actions: ["elasticache:*"],
-      resources: [
-        "arn:aws:elasticache:us-east-1:223605539824:cluster:prodrediscluster",
-      ],
-    })
-  );
-
-  return getContractsLambda;
+  return postBatchTokensLambda;
 }

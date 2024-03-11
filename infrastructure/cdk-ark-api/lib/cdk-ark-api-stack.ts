@@ -39,16 +39,23 @@ export class ArkApiStack extends cdk.Stack {
       ? "ark_project"
       : "ark_project_staging";
 
-    const lambdaSecurityGroup = new SecurityGroup(
+    const lambdaSecurityGroup = SecurityGroup.fromLookupByName(
       this,
       `ark-lambda-security-group-${environment}`,
-      {
-        securityGroupName: `ark-lambda-security-group-${environment}`,
-        vpc,
-        description: `Security group for Lambdas (${environmentName})`,
-        allowAllOutbound: true,
-      }
+      `ark-lambda-security-group-${environment}`,
+      vpc
     );
+
+    // const lambdaSecurityGroup = new SecurityGroup(
+    //   this,
+    //   `ark-lambda-security-group-${environment}`,
+    //   {
+    //     securityGroupName: `ark-lambda-security-group-${environment}`,
+    //     vpc,
+    //     description: `Security group for Lambdas (${environmentName})`,
+    //     allowAllOutbound: true,
+    //   }
+    // );
 
     const securityGroupId = ssm.StringParameter.valueForStringParameter(
       this,
@@ -61,11 +68,11 @@ export class ArkApiStack extends cdk.Stack {
       securityGroupId
     );
 
-    redisSecurityGroup.addIngressRule(
-      Peer.securityGroupId(lambdaSecurityGroup.securityGroupId),
-      Port.tcp(6379),
-      "Allow inbound Redis traffic from Lambda security group"
-    );
+    // redisSecurityGroup.addIngressRule(
+    //   Peer.securityGroupId(lambdaSecurityGroup.securityGroupId),
+    //   Port.tcp(6379),
+    //   "Allow inbound Redis traffic from Lambda security group"
+    // );
 
     contractsApi(
       this,

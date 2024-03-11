@@ -1,19 +1,20 @@
 use crate::providers::token::types::TokenData;
 use crate::providers::ArkTokenProvider;
 use crate::{DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
-
 use arkproject::metadata::types::TokenMetadata;
 use arkproject::pontos::storage::types::TokenMintInfo;
 use arkproject::starknet::CairoU256;
 use async_trait::async_trait;
-use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity, Select};
+use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes, ReturnConsumedCapacity, Select};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use tracing::{debug, trace};
 
-use super::types::ContractData;
+use super::types::{BatchTokenData, ContractData};
+
+use super::types::TokensParams;
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -454,6 +455,121 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         Ok(().into())
+    }
+
+    async fn get_batch_tokens(
+        &self,
+        ctx: &DynamoDbCtx,
+        token_params: Vec<TokensParams>,
+    ) -> Result<DynamoDbOutput<Vec<BatchTokenData>>, ProviderError> {
+        let mut keys = Vec::new();
+        let mut collection_keys = Vec::new();
+
+        for token_param in token_params {
+            let mut collection_key = HashMap::new();
+            let mut key = HashMap::new();
+
+            key.insert(
+                "PK".to_string(),
+                AttributeValue::S(format!(
+                    "TOKEN#{}#{}",
+                    token_param.contract_address, token_param.token_id
+                )),
+            );
+            key.insert("SK".to_string(), AttributeValue::S(String::from("TOKEN")));
+            keys.push(key);
+
+            collection_key.insert(
+                "PK".to_string(),
+                AttributeValue::S(format!("CONTRACT#{}", token_param.contract_address)),
+            );
+            collection_key.insert(
+                "SK".to_string(),
+                AttributeValue::S(String::from("CONTRACT")),
+            );
+
+            if !collection_keys.contains(&collection_key) {
+                collection_keys.push(collection_key);
+            }
+        }
+
+        let collections_request_output = ctx
+            .client
+            .batch_get_item()
+            .request_items(
+                self.table_name.clone(),
+                KeysAndAttributes::builder()
+                    .set_keys(Some(collection_keys))
+                    .build(),
+            )
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let batch_request_output = ctx
+            .client
+            .batch_get_item()
+            .request_items(
+                self.table_name.clone(),
+                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
+            )
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        let mut token_results: Vec<BatchTokenData> = Vec::new();
+        if let Some(responses) = batch_request_output.responses.clone() {
+            for item in responses.get(&self.table_name).unwrap_or(&Vec::new()) {
+                let token_data: Result<TokenData, _> = item.clone().try_into();
+                if let Ok(token_data) = token_data {
+                    let mut contract_name = "".to_string();
+                    if let Some(collection_responses) = &collections_request_output.responses {
+                        for collection in collection_responses
+                            .get(&self.table_name)
+                            .unwrap_or(&Vec::new())
+                        {
+                            if let Some(AttributeValue::S(pk_value)) = collection.get("PK") {
+                                if pk_value == &format!("CONTRACT#{}", token_data.contract_address)
+                                {
+                                    if let Some(AttributeValue::M(data_map)) =
+                                        collection.get("Data")
+                                    {
+                                        if let Some(AttributeValue::S(name)) = data_map.get("Name")
+                                        {
+                                            contract_name = name.clone();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    token_results.push(BatchTokenData {
+                        awaiting_metadata_update: token_data.awaiting_metadata_update,
+                        contract_address: token_data.contract_address,
+                        contract_name,
+                        owner: token_data.owner,
+                        token_id: token_data.token_id,
+                        token_id_hex: token_data.token_id_hex,
+                        metadata: token_data.metadata,
+                        mint_info: token_data.mint_info,
+                    });
+                }
+            }
+        }
+
+        let total_capacity_units: Option<f64> = batch_request_output
+            .consumed_capacity()
+            .map(|caps| caps.iter().filter_map(|c| c.capacity_units()).sum());
+
+        Ok(DynamoDbOutput::new(
+            token_results,
+            total_capacity_units,
+            None,
+        ))
     }
 
     async fn get_contract_tokens(
