@@ -83,7 +83,7 @@ function deployApiServices(
   });
 
   const domainName = 'arkproject.dev';
-  const subdomainEnvName = isProductionEnvironment ? "" : "staging.";
+  const subdomainEnvName = isProductionEnvironment ? "staging" : ".";
   const apiURL = `${subdomainEnvName}api-orderbook.${domainName}`;
 
   const hostedZone = route53.HostedZone.fromHostedZoneAttributes(scope, 'HostedZone', {
