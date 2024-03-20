@@ -1,5 +1,6 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::utils::http_utils::convert_param_to_hex;
+use tracing::{error, info};
 
 use crate::db::query::{
     get_token_by_collection_data, get_token_data, get_token_history_data, get_token_offers_data,
@@ -19,10 +20,15 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
             match get_token_data(db_access, &token_address, &token_id_hex).await {
                 Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
-                Err(_) => HttpResponse::InternalServerError().finish(),
-            }
+                Err(e) => {
+                    tracing::error!("Failed to get token data: {}", e);
+                    HttpResponse::InternalServerError().finish()
+                },            }
         }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(e) => {
+            tracing::error!("Failed to convert param to hex: {}", e);
+            HttpResponse::InternalServerError().finish()
+        },
     }
 }
 
