@@ -13,7 +13,7 @@ const isProductionEnvironment: boolean =
   process.env.DEPLOYMENT_ENV === "production";
 
 const networks: string[] = isProductionEnvironment
-  ? ["mainnet", "testnet"]
+  ? ["mainnet"]
   : ["mainnet"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
