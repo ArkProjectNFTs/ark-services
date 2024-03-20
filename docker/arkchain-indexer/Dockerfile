@@ -15,7 +15,7 @@ COPY . .
 
 # copy migration files
 COPY ../ark-sqlx/migrations ./migrations
-RUN cargo install sqlx-cli --locked
+RUN cargo install sqlx-cli --version 0.7.3 --locked
 
 COPY docker/arkchain-indexer/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
