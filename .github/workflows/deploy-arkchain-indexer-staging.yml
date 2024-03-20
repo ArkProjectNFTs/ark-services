@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
     paths:
       - ".github/workflows/deploy-arkchain-indexer-staging.yml"
       - "infrastructure/cdk-ark-ecr/**"
