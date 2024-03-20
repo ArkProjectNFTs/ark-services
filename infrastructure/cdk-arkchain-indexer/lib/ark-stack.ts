@@ -39,10 +39,11 @@ export class ArkIndexersStack extends cdk.Stack {
       "Allow inbound PostgreSQL traffic"
     );
 
+    const network = props.isProductionEnvironment ? "production" : "staging";
     // create postgres database
     const dbInstance = new DatabaseInstance(
       this,
-      "arkchain-indexer-staging-db",
+      `arkchain-indexer-${network}-db`,
       {
         engine: DatabaseInstanceEngine.postgres({
           version: PostgresEngineVersion.VER_15_4,
