@@ -7,6 +7,7 @@ edition = "2021"
 actix-web = "4.4.0"
 actix-cors = "0.6.4"
 actix-rt = "2.9.0"
+env_logger = "0.9"
 num-bigint = "0.4.4"
 sqlx = { version = "0.7", features = ["postgres", "runtime-async-std"] }
 tokio = { version = "1", features = ["full"] }
@@ -17,5 +18,3 @@ async-std = { version = "1.9", features = ["attributes"] }
 async-trait = "0.1"
 tracing = "0.1"
 
-[dev-dependencies]
-env_logger = "0.9"

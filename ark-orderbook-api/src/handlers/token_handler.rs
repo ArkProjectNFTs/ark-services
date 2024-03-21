@@ -1,6 +1,5 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::utils::http_utils::convert_param_to_hex;
-use tracing::{error, info};
 
 use crate::db::query::{
     get_token_by_collection_data, get_token_data, get_token_history_data, get_token_offers_data,
