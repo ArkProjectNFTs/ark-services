@@ -1,10 +1,9 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::utils::http_utils::convert_param_to_hex;
-
 use crate::db::query::{
     get_token_by_collection_data, get_token_data, get_token_history_data, get_token_offers_data,
     get_tokens_by_account_data,
 };
+use crate::utils::http_utils::convert_param_to_hex;
 use actix_web::{web, HttpResponse, Responder};
 
 pub async fn get_token<D: DatabaseAccess + Sync>(

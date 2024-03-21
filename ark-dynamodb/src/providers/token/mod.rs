@@ -90,6 +90,12 @@ pub trait ArkTokenProvider {
         tokens_ids: &[String],
     ) -> Result<DynamoDbOutput<Vec<TokenData>>, ProviderError>;
 
+    async fn get_owner_all(
+        &self,
+        ctx: &DynamoDbCtx,
+        owner_address: &str,
+    ) -> Result<DynamoDbOutput<Vec<types::ContractWithTokens>>, ProviderError>;
+
     async fn get_owner_tokens(
         &self,
         ctx: &DynamoDbCtx,
