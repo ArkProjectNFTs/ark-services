@@ -2,7 +2,6 @@ use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use routes::{default, token};
 use sqlx::postgres::PgPoolOptions;
-use tracing::{error, info, trace, warn};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 mod db;
