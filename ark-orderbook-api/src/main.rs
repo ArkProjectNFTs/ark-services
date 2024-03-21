@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware, web, App, HttpServer};
 use routes::{default, token};
 use sqlx::postgres::PgPoolOptions;
 
@@ -12,6 +12,7 @@ mod utils;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
+    env_logger::init();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)
@@ -28,6 +29,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
+            .wrap(middleware::Logger::default())
             .app_data(web::Data::new(db_pool.clone()))
             .configure(token::config)
             .configure(default::config)
