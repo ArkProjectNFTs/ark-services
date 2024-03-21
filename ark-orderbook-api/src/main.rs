@@ -10,7 +10,6 @@ mod models;
 mod routes;
 mod utils;
 
-
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
 fn init_logging() {
@@ -25,7 +24,7 @@ fn init_logging() {
             )
             .finish(),
     )
-        .expect("Failed to set the global tracing subscriber");
+    .expect("Failed to set the global tracing subscriber");
 }
 
 #[actix_web::main]
