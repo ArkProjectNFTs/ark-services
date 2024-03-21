@@ -699,7 +699,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
                 items_by_contract
                     .entry(token_data.contract_address.clone())
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(basic_token_data);
             }
 
