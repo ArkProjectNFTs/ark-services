@@ -19,13 +19,10 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
             match get_token_data(db_access, &token_address, &token_id_hex).await {
                 Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
-                Err(e) => {
-                    HttpResponse::InternalServerError().finish()
-                },            }
+                Err(_) => HttpResponse::InternalServerError().finish(),
+            }
         }
-        Err(_e) => {
-            HttpResponse::InternalServerError().finish()
-        },
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
