@@ -21,6 +21,7 @@ members = [
   "ark-lambdas/apigw/lambda-get-events",
   "ark-lambdas/apigw/lambda-get-owner-tokens",
   "ark-lambdas/apigw/lambda-get-owner-contracts",
+  "ark-lambdas/apigw/lambda-get-owner-all",
   "ark-lambdas/apigw/lambda-get-token",
   "ark-lambdas/apigw/lambda-get-token-events",
   "ark-lambdas/apigw/lambda-post-refresh-token-metadata",

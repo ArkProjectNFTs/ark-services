@@ -32,9 +32,28 @@ pub struct BatchTokenData {
     pub awaiting_metadata_update: Option<bool>,
 }
 
+#[derive(Default, Serialize, Deserialize)]
 pub struct ContractData {
     pub contract_address: String,
     pub tokens_count: u64,
+}
+
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct BasicTokenData {
+    pub token_id: String,
+    pub owner: String,
+    pub mint_info: Option<TokenMintInfo>,
+    pub metadata: Option<TokenMetadata>,
+    pub awaiting_metadata_update: Option<bool>,
+}
+
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
+pub struct ContractWithTokens {
+    pub contract_address: String,
+    pub contract_name: Option<String>,
+    pub contract_symbol: Option<String>,
+    pub contract_image: Option<String>,
+    pub items: Vec<BasicTokenData>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]

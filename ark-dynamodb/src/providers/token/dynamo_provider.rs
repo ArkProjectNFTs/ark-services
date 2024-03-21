@@ -1,3 +1,6 @@
+use super::types::{
+    BasicTokenData, BatchTokenData, ContractData, ContractWithTokens, TokensParams,
+};
 use crate::providers::token::types::TokenData;
 use crate::providers::ArkTokenProvider;
 use crate::{DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
@@ -10,11 +13,8 @@ use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use tracing::{debug, trace};
-
-use super::types::{BatchTokenData, ContractData};
-
-use super::types::TokensParams;
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -645,6 +645,139 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             consumed_capacity_units,
             r.last_evaluated_key,
             None,
+        ))
+    }
+
+    async fn get_owner_all(
+        &self,
+        ctx: &DynamoDbCtx,
+        owner_address: &str,
+    ) -> Result<DynamoDbOutput<Vec<ContractWithTokens>>, ProviderError> {
+        let mut values = HashMap::new();
+        values.insert(
+            ":owner".to_string(),
+            AttributeValue::S(format!("OWNER#{}", owner_address)),
+        );
+        values.insert(
+            ":token".to_string(),
+            AttributeValue::S("TOKEN#".to_string()),
+        );
+
+        let mut items_by_contract: HashMap<String, Vec<BasicTokenData>> = HashMap::new();
+        let mut last_evaluated_key = None;
+        let mut consumed_capacity_units: f64 = 0.0;
+
+        loop {
+            let tokens_query_output = ctx
+                .client
+                .query()
+                .table_name(&self.table_name)
+                .index_name("GSI2PK-GSI2SK-index")
+                .key_condition_expression("GSI2PK = :owner AND begins_with(GSI2SK, :token)")
+                .set_expression_attribute_values(Some(values.clone()))
+                .set_exclusive_start_key(last_evaluated_key)
+                .return_consumed_capacity(ReturnConsumedCapacity::Total)
+                .send()
+                .await
+                .map_err(|e| ProviderError::DatabaseError(format!("Query failed: {:?}", e)))?;
+
+            if let Some(consumed_capacity) = tokens_query_output.consumed_capacity {
+                consumed_capacity_units += consumed_capacity.capacity_units.unwrap_or(0.0);
+            }
+
+            for item in tokens_query_output.items.unwrap_or_default() {
+                let token_data: TokenData = item.try_into().map_err(|e| {
+                    ProviderError::SerializationError(format!("Deserialization failed: {:?}", e))
+                })?;
+                let basic_token_data = BasicTokenData {
+                    awaiting_metadata_update: token_data.awaiting_metadata_update,
+                    owner: token_data.owner,
+                    token_id: token_data.token_id,
+                    metadata: token_data.metadata,
+                    mint_info: token_data.mint_info,
+                };
+
+                items_by_contract
+                    .entry(token_data.contract_address.clone())
+                    .or_insert_with(Vec::new)
+                    .push(basic_token_data);
+            }
+
+            last_evaluated_key = tokens_query_output.last_evaluated_key;
+            if last_evaluated_key.is_none() {
+                break;
+            }
+        }
+
+        let mut results: Vec<ContractWithTokens> = Vec::new();
+        for (contract_address, tokens) in items_by_contract {
+            let contract_request_output = ctx
+                .client
+                .get_item()
+                .table_name(&self.table_name)
+                .key(
+                    "PK",
+                    AttributeValue::S(format!("CONTRACT#{}", &contract_address)),
+                )
+                .key("SK", AttributeValue::S("CONTRACT".to_string()))
+                .return_consumed_capacity(ReturnConsumedCapacity::Total)
+                .send()
+                .await
+                .map_err(|e| ProviderError::DatabaseError(format!("Get item failed: {:?}", e)))?;
+
+            if let Some(consumed_capacity) = contract_request_output.consumed_capacity {
+                consumed_capacity_units += consumed_capacity.capacity_units.unwrap_or(0.0);
+            }
+
+            let (contract_name, contract_symbol, contract_image) =
+                match contract_request_output.item {
+                    Some(contract_item) => match contract_item.get("Data") {
+                        Some(data_av) => {
+                            let mut result_name: Option<String> = None;
+                            let mut result_symbol: Option<String> = None;
+                            let mut result_image: Option<String> = None;
+
+                            let data = data_av.as_m();
+                            if data.is_ok() {
+                                if let Some(name) =
+                                    data.unwrap().get("Name").and_then(|n| n.as_s().ok())
+                                {
+                                    result_name = Some(name.to_owned());
+                                }
+
+                                if let Some(symbol) =
+                                    data.unwrap().get("Symbol").and_then(|s| s.as_s().ok())
+                                {
+                                    result_symbol = Some(symbol.to_owned());
+                                }
+
+                                if let Some(image) =
+                                    data.unwrap().get("Image").and_then(|s| s.as_s().ok())
+                                {
+                                    result_image = Some(image.to_owned());
+                                }
+                            }
+
+                            (result_name, result_symbol, result_image)
+                        }
+                        None => (None, None, None),
+                    },
+                    None => (None, None, None),
+                };
+
+            results.push(ContractWithTokens {
+                contract_address,
+                contract_name,
+                contract_symbol,
+                contract_image,
+                items: tokens,
+            });
+        }
+
+        Ok(DynamoDbOutput::new(
+            results.clone(),
+            Some(consumed_capacity_units),
+            Some(results.clone().len() as i32),
         ))
     }
 
