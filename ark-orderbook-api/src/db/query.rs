@@ -50,3 +50,9 @@ pub async fn delete_token_data<D: DatabaseAccess + Sync>(
 ) -> Result<u64, sqlx::Error> {
     db_access.delete_token_data(token_address, token_id).await
 }
+
+pub async fn flush_all_data_query<D: DatabaseAccess + Sync>(
+    db_access: &D,
+) -> Result<u64, sqlx::Error> {
+    db_access.flush_all_data().await
+}

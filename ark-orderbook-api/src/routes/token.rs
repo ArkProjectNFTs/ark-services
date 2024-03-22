@@ -33,4 +33,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/token/{token_address}/{token_id}",
         web::delete().to(token_handler::delete_token_context::<PgPool>),
     );
+
+    cfg.route(
+        "/flush-all-data",
+        web::delete().to(token_handler::flush_all_data::<PgPool>),
+    );
 }
