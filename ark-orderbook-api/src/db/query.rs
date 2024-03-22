@@ -42,3 +42,11 @@ pub async fn get_tokens_by_account_data<D: DatabaseAccess + Sync>(
 ) -> Result<Vec<TokenData>, sqlx::Error> {
     db_access.get_tokens_by_owner_data(owner).await
 }
+
+pub async fn delete_token_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    token_address: &str,
+    token_id: &str,
+) -> Result<u64, sqlx::Error> {
+    db_access.delete_token_data(token_address, token_id).await
+}
