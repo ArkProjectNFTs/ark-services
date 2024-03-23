@@ -24,6 +24,8 @@ pub trait DatabaseAccess: Send + Sync {
         token_id: &str,
     ) -> Result<TokenWithOffers, Error>;
     async fn get_tokens_by_owner_data(&self, owner: &str) -> Result<Vec<TokenData>, Error>;
+    async fn delete_token_data(&self, token_address: &str, token_id: &str) -> Result<u64, Error>;
+    async fn flush_all_data(&self) -> Result<u64, Error>;
 }
 
 #[async_trait]
@@ -262,6 +264,91 @@ impl DatabaseAccess for PgPool {
             offers,
         })
     }
+
+    async fn delete_token_data(&self, token_address: &str, token_id: &str) -> Result<u64, Error> {
+        let mut total_rows_affected = 0;
+        let order_hashes = sqlx::query!(
+            "SELECT order_hash FROM orderbook_token WHERE token_address = $1 AND token_id = $2",
+            token_address,
+            token_id
+        )
+        .fetch_all(self)
+        .await?
+        .iter()
+        .map(|record| record.order_hash.clone())
+        .collect::<Vec<String>>();
+
+        sqlx::query!(
+            "DELETE FROM orderbook_token_offers WHERE token_address = $1 AND token_id = $2",
+            token_address,
+            token_id
+        )
+        .execute(self)
+        .await?;
+
+        sqlx::query!(
+            "DELETE FROM orderbook_token_history WHERE token_address = $1 AND token_id = $2",
+            token_address,
+            token_id
+        )
+        .execute(self)
+        .await?;
+
+        sqlx::query!(
+            "DELETE FROM orderbook_token WHERE token_address = $1 AND token_id = $2",
+            token_address,
+            token_id
+        )
+        .execute(self)
+        .await?;
+
+        for order_hash in order_hashes {
+            let tables = vec![
+                "orderbook_order_cancelled",
+                "orderbook_order_created",
+                "orderbook_order_executed",
+                "orderbook_order_fulfilled",
+                "orderbook_order_status",
+            ];
+
+            for table in tables {
+                let rows_affected =
+                    sqlx::query(format!("DELETE FROM {} WHERE order_hash = $1", table).as_str())
+                        .bind(&order_hash)
+                        .execute(self)
+                        .await?
+                        .rows_affected();
+                total_rows_affected += rows_affected;
+            }
+        }
+
+        Ok(total_rows_affected)
+    }
+    async fn flush_all_data(&self) -> Result<u64, Error> {
+        let mut total_rows_affected = 0;
+
+        let tables = vec![
+            "orderbook_token_offers",
+            "orderbook_token_history",
+            "orderbook_token",
+            "orderbook_order_cancelled",
+            "orderbook_order_created",
+            "orderbook_order_executed",
+            "orderbook_order_fulfilled",
+            "orderbook_order_status",
+        ];
+
+        for table in tables {
+            let rows_affected =
+                sqlx::query(format!("DELETE FROM {}", table).as_str())
+                    .execute(self)
+                    .await?
+                    .rows_affected();
+            total_rows_affected += rows_affected;
+        }
+
+        Ok(total_rows_affected)
+    }
 }
 
 #[cfg(test)]
@@ -470,5 +557,9 @@ impl DatabaseAccess for MockDb {
                 buy_in_progress: Some(true),
             },
         ])
+    }
+
+    async fn delete_token_data(&self, token_address: &str, token_id: &str) -> Result<bool, Error> {
+        true.into()
     }
 }

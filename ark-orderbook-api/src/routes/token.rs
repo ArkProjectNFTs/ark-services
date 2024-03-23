@@ -28,4 +28,14 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/tokens/{owner}",
         web::get().to(token_handler::get_tokens_by_account::<PgPool>),
     );
+
+    cfg.route(
+        "/token/{token_address}/{token_id}",
+        web::delete().to(token_handler::delete_token_context::<PgPool>),
+    );
+
+    cfg.route(
+        "/flush-all-data",
+        web::delete().to(token_handler::flush_all_data::<PgPool>),
+    );
 }
