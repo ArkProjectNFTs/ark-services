@@ -9,6 +9,7 @@ use tracing::{error, trace};
 use crate::providers::{ProviderError, SqlxCtx};
 
 #[derive(Debug)]
+#[allow(clippy::enum_variant_names)]
 enum RollbackStatus {
     CancelledUser,
     CancelledByNewOrder,
@@ -26,14 +27,17 @@ impl RollbackStatus {
             _ => None,
         }
     }
+}
 
-    fn to_string(&self) -> String {
-        match self {
-            RollbackStatus::CancelledUser => "CANCELLED_USER".to_string(),
-            RollbackStatus::CancelledByNewOrder => "CANCELLED_NEW_ORDER".to_string(),
-            RollbackStatus::CancelledAssetFault => "CANCELLED_ASSET_FAULT".to_string(),
-            RollbackStatus::CancelledOwnership => "CANCELLED_OWNERSHIP".to_string(),
-        }
+impl fmt::Display for RollbackStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let string = match self {
+            RollbackStatus::CancelledUser => "CANCELLED_USER",
+            RollbackStatus::CancelledByNewOrder => "CANCELLED_NEW_ORDER",
+            RollbackStatus::CancelledAssetFault => "CANCELLED_ASSET_FAULT",
+            RollbackStatus::CancelledOwnership => "CANCELLED_OWNERSHIP",
+        };
+        write!(f, "{}", string)
     }
 }
 
