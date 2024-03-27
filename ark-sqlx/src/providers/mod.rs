@@ -1,4 +1,6 @@
-use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledData, PlacedData};
+use arkproject::diri::storage::types::{
+    CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
+};
 use arkproject::diri::storage::{Storage, StorageError, StorageResult};
 use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
@@ -111,5 +113,17 @@ impl Storage for SqlxArkchainProvider {
         data: &ExecutedData,
     ) -> StorageResult<()> {
         Ok(OrderProvider::register_executed(&self.client, block_id, block_timestamp, data).await?)
+    }
+
+    async fn status_back_to_open(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &RollbackStatusData,
+    ) -> StorageResult<()> {
+        Ok(
+            OrderProvider::status_back_to_open(&self.client, block_id, block_timestamp, data)
+                .await?,
+        )
     }
 }

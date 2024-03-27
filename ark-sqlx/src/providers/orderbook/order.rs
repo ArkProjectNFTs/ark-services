@@ -1,10 +1,41 @@
-use arkproject::diri::storage::types::{CancelledData, ExecutedData, FulfilledData, PlacedData};
+use arkproject::diri::storage::types::{
+    CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
+};
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
 use tracing::{error, trace};
 
 use crate::providers::{ProviderError, SqlxCtx};
+
+#[derive(Debug)]
+enum RollbackStatus {
+    CancelledUser,
+    CancelledByNewOrder,
+    CancelledAssetFault,
+    CancelledOwnership,
+}
+
+impl RollbackStatus {
+    fn from_code(code: u32) -> Option<RollbackStatus> {
+        match code {
+            1 => Some(RollbackStatus::CancelledUser),
+            2 => Some(RollbackStatus::CancelledByNewOrder),
+            3 => Some(RollbackStatus::CancelledAssetFault),
+            4 => Some(RollbackStatus::CancelledOwnership),
+            _ => None,
+        }
+    }
+
+    fn to_string(&self) -> String {
+        match self {
+            RollbackStatus::CancelledUser => "CANCELLED_USER".to_string(),
+            RollbackStatus::CancelledByNewOrder => "CANCELLED_NEW_ORDER".to_string(),
+            RollbackStatus::CancelledAssetFault => "CANCELLED_ASSET_FAULT".to_string(),
+            RollbackStatus::CancelledOwnership => "CANCELLED_OWNERSHIP".to_string(),
+        }
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 pub enum OrderStatus {
@@ -792,6 +823,52 @@ impl OrderProvider {
             .await?;
         }
 
+        Ok(())
+    }
+
+    pub async fn status_back_to_open(
+        client: &SqlxCtx,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &RollbackStatusData,
+    ) -> Result<(), ProviderError> {
+        let mut string_reason = String::new();
+        if let Some(first_char) = data.reason.chars().next() {
+            let reason = first_char as u32;
+            if let Some(status) = RollbackStatus::from_code(reason) {
+                string_reason = status.to_string();
+            }
+        }
+
+        if let Some(token_data) =
+            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
+        {
+            // we rollback to placed status
+            Self::update_order_status(
+                client,
+                block_id,
+                block_timestamp,
+                &data.order_hash,
+                OrderStatus::Placed,
+            )
+            .await?;
+
+            Self::insert_event_history(
+                client,
+                &EventHistoryData {
+                    token_id: token_data.token_id.clone(),
+                    token_address: token_data.token_address.clone(),
+                    event_type: token_data.order_type.clone().into(),
+                    event_timestamp: block_timestamp as i64,
+                    order_status: OrderStatus::Placed,
+                    canceled_reason: Some(string_reason),
+                    new_owner: None,
+                    amount: None,
+                    previous_owner: None,
+                },
+            )
+            .await?;
+        }
         Ok(())
     }
 }
