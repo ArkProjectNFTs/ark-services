@@ -339,11 +339,10 @@ impl DatabaseAccess for PgPool {
         ];
 
         for table in tables {
-            let rows_affected =
-                sqlx::query(format!("DELETE FROM {}", table).as_str())
-                    .execute(self)
-                    .await?
-                    .rows_affected();
+            let rows_affected = sqlx::query(format!("DELETE FROM {}", table).as_str())
+                .execute(self)
+                .await?
+                .rows_affected();
             total_rows_affected += rows_affected;
         }
 
