@@ -15,6 +15,10 @@ export default function DashboardNav({ className, ...props }: ProjectNavProps) {
       title: "Dashboard",
       href: "/",
     },
+    {
+      title: "Metadata",
+      href: "/metadata",
+    },
   ];
 
   return (
