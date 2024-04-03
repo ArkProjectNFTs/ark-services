@@ -79,6 +79,8 @@ function deployApiServices(
     environment: {
       RUST_LOG: "DEBUG",
       DATABASE_URL: process.env.DATABASE_URL || "defaultUrl",
+      API_USER: process.env.API_USER || "",
+      API_PASSWORD: process.env.API_PASSWORD || "",
     },
   });
 

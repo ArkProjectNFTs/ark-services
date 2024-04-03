@@ -115,4 +115,6 @@ jobs:
           ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
           VPC_ID: ${{ secrets.VPC_ID }}
           DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
+          API_USER: ${{ secrets.API_USER }}
+          API_PASSWORD: ${{ secrets.API_PASSWORD }}
 
