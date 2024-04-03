@@ -35,7 +35,7 @@ pub trait ArkEventProvider {
         &self,
         ctx: &DynamoDbCtx,
         event: &TokenSaleEvent,
-        block_timestamp: u64,
+        block_number: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn get_token_events(
