@@ -121,6 +121,8 @@ where
 
                 match self.block_indexer_function_name.clone() {
                     Some(fn_name) => {
+                        info!("Calling {} lambda function...", fn_name);
+
                         let response = client
                             .invoke()
                             .function_name(fn_name)

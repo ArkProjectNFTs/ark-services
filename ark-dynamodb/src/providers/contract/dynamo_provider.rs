@@ -142,13 +142,15 @@ impl ArkContractProvider for DynamoDbContractProvider {
             keys.push(key);
         }
 
+        let keys_and_attributes = KeysAndAttributes::builder()
+            .set_keys(Some(keys))
+            .build()
+            .unwrap();
+
         let batch_request_output = ctx
             .client
             .batch_get_item()
-            .request_items(
-                self.table_name.clone(),
-                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
-            )
+            .request_items(self.table_name.clone(), keys_and_attributes)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await

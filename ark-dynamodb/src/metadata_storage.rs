@@ -8,7 +8,7 @@ use arkproject::{
     starknet::CairoU256,
 };
 use async_trait::async_trait;
-use aws_config::load_from_env;
+use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
 use aws_sdk_dynamodb::Client;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
@@ -21,7 +21,11 @@ pub struct MetadataStorage {
 
 impl MetadataStorage {
     pub async fn new(table_name: String) -> Self {
-        let config = load_from_env().await;
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
         let client = Client::new(&config);
         let ctx = DynamoDbCtx {
             client,

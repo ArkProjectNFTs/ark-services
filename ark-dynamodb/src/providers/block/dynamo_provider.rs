@@ -178,8 +178,12 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             for item in items {
                 if let Some(pk) = item.get("PK").cloned() {
                     if let Some(sk) = item.get("SK").cloned() {
-                        let delete_request =
-                            DeleteRequest::builder().key("PK", pk).key("SK", sk).build();
+                        let delete_request = DeleteRequest::builder()
+                            .key("PK", pk)
+                            .key("SK", sk)
+                            .build()
+                            .unwrap();
+
                         let write_request = WriteRequest::builder()
                             .delete_request(delete_request)
                             .build();

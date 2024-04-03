@@ -493,27 +493,29 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
+        let keys_and_attributes = KeysAndAttributes::builder()
+            .set_keys(Some(collection_keys))
+            .build()
+            .unwrap();
+
         let collections_request_output = ctx
             .client
             .batch_get_item()
-            .request_items(
-                self.table_name.clone(),
-                KeysAndAttributes::builder()
-                    .set_keys(Some(collection_keys))
-                    .build(),
-            )
+            .request_items(self.table_name.clone(), keys_and_attributes)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let keys_and_attributes = KeysAndAttributes::builder()
+            .set_keys(Some(keys))
+            .build()
+            .unwrap();
+
         let batch_request_output = ctx
             .client
             .batch_get_item()
-            .request_items(
-                self.table_name.clone(),
-                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
-            )
+            .request_items(self.table_name.clone(), keys_and_attributes)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -561,13 +563,16 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
-        let total_capacity_units: Option<f64> = batch_request_output
-            .consumed_capacity()
-            .map(|caps| caps.iter().filter_map(|c| c.capacity_units()).sum());
+        let consumed_capacity_units = batch_request_output.consumed_capacity();
+
+        let mut total_capacity_units: f64 = 0.0;
+        consumed_capacity_units.iter().for_each(|c| {
+            total_capacity_units += c.capacity_units().unwrap_or(0.0);
+        });
 
         Ok(DynamoDbOutput::new(
             token_results,
-            total_capacity_units,
+            Some(total_capacity_units),
             None,
         ))
     }

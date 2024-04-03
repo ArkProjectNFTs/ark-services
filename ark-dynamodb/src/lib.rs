@@ -7,6 +7,7 @@ pub mod pagination;
 pub mod providers;
 pub mod storage;
 use aws_config::meta::region::RegionProviderChain;
+use aws_config::BehaviorVersion;
 use aws_sdk_dynamodb::types::AttributeValue;
 pub use aws_sdk_dynamodb::Client;
 use pagination::Lek;
@@ -111,7 +112,10 @@ pub enum ProviderError {
 /// Returns a newly initialized DynamoClient.
 pub async fn init_aws_dynamo_client() -> Client {
     let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
-    let config = aws_config::from_env().region(region_provider).load().await;
+    let config = aws_config::defaults(BehaviorVersion::latest())
+        .region(region_provider)
+        .load()
+        .await;
     Client::new(&config)
 }
 
