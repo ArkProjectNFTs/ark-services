@@ -1,8 +1,8 @@
 use anyhow::Result;
 use arkproject::pontos::storage::{
     types::{
-        BlockInfo, ContractInfo, ContractType, IndexerStatus, StorageError, TokenEvent, TokenInfo,
-        TokenMintInfo,
+        BlockInfo, ContractInfo, ContractType, IndexerStatus, StorageError, TokenInfo,
+        TokenMintInfo, TokenSaleEvent, TokenTransferEvent,
     },
     Storage,
 };
@@ -15,7 +15,7 @@ use aws_sdk_dynamodb::{
 use chrono::Utc;
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 
 use crate::providers::{token::types::TokenData, ArkEventProvider};
 use crate::providers::{ArkBlockProvider, ArkContractProvider, ArkTokenProvider};
@@ -299,12 +299,33 @@ impl Storage for DynamoStorage {
         }
     }
 
-    async fn register_event(
+    async fn register_sale_event(
         &self,
-        event: &TokenEvent,
+        event: &TokenSaleEvent,
         block_timestamp: u64,
     ) -> Result<(), StorageError> {
-        info!("Registering event {:?}", event);
+        trace!("Registering sale event {:?}", event);
+
+        match self
+            .provider
+            .event
+            .register_sale_event(&self.ctx, event, block_timestamp)
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("{}", e.to_string());
+                return Err(StorageError::DatabaseError(format!("{:?}", e.to_string())));
+            }
+        }
+    }
+
+    async fn register_transfer_event(
+        &self,
+        event: &TokenTransferEvent,
+        block_timestamp: u64,
+    ) -> Result<(), StorageError> {
+        trace!("Registering event {:?}", event);
 
         let info = match self
             .provider
@@ -328,7 +349,7 @@ impl Storage for DynamoStorage {
         match self
             .provider
             .event
-            .register_event(&self.ctx, event, block_timestamp)
+            .register_transfer_event(&self.ctx, event, block_timestamp)
             .await
         {
             Ok(_) => Ok(()),

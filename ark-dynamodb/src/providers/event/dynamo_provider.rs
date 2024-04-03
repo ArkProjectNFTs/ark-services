@@ -1,4 +1,6 @@
-use arkproject::pontos::storage::types::{EventType, TokenEvent};
+use arkproject::pontos::storage::types::{
+    EventType, TokenEvent, TokenSaleEvent, TokenTransferEvent,
+};
 use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
@@ -29,13 +31,13 @@ impl DynamoDbEventProvider {
         format!("{}#{}#{}", self.key_prefix, contract_address, event_id)
     }
 
-    fn get_sk(&self) -> String {
-        self.key_prefix.clone()
+    fn get_sk(&self, event_type: &EventType) -> String {
+        format!("{}#{}", self.key_prefix, event_type)
     }
 
-    pub fn data_to_event(
+    pub fn data_to_sale_event(
         data: &HashMap<String, AttributeValue>,
-    ) -> Result<TokenEvent, ProviderError> {
+    ) -> Result<TokenSaleEvent, ProviderError> {
         let block_number = match convert::attr_to_u64(data, "BlockNumber") {
             Ok(bn) => Some(bn),
             Err(_) => None,
@@ -47,7 +49,6 @@ impl DynamoDbEventProvider {
         };
 
         let event_type_str = &convert::attr_to_str(data, "EventType")?;
-
         match EventType::from_str(event_type_str.as_str()) {
             Ok(event_type) => {
                 let event = TokenEvent {
@@ -73,7 +74,94 @@ impl DynamoDbEventProvider {
         }
     }
 
-    pub fn event_to_data(event: &TokenEvent) -> HashMap<String, AttributeValue> {
+    pub fn sale_event_to_data(event: &TokenSaleEvent) -> HashMap<String, AttributeValue> {
+        let mut map = HashMap::new();
+        map.insert(
+            "Timestamp".to_string(),
+            AttributeValue::N(event.timestamp.to_string()),
+        );
+
+        map.insert(
+            "Quantity".to_string(),
+            AttributeValue::N(event.quantity.to_string()),
+        );
+
+        map.insert(
+            "Price".to_string(),
+            AttributeValue::S(event.price.to_string()),
+        );
+
+        map.insert(
+            "CurrencyContractAddress".to_string(),
+            AttributeValue::S(event.currency_address.to_string()),
+        );
+
+        map.insert(
+            "MarketplaceName".to_string(),
+            AttributeValue::S(event.marketplace_name.to_string()),
+        );
+
+        map.insert(
+            "MarketplaceContractAddress".to_string(),
+            AttributeValue::S(event.marketplace_contract_address.to_string()),
+        );
+
+        map.insert(
+            "FromAddress".to_string(),
+            AttributeValue::S(event.from_address.clone()),
+        );
+        map.insert(
+            "ToAddress".to_string(),
+            AttributeValue::S(event.to_address.clone()),
+        );
+        map.insert(
+            "NftContractAddress".to_string(),
+            AttributeValue::S(event.nft_contract_address.clone()),
+        );
+
+        if let Some(nft_type) = event.nft_type.clone() {
+            map.insert("NftType".to_string(), AttributeValue::S(nft_type));
+        }
+
+        map.insert(
+            "TransactionHash".to_string(),
+            AttributeValue::S(event.transaction_hash.clone()),
+        );
+        map.insert(
+            "TokenId".to_string(),
+            AttributeValue::S(event.token_id.clone()),
+        );
+        map.insert(
+            "TokenIdHex".to_string(),
+            AttributeValue::S(event.token_id_hex.clone()),
+        );
+        map.insert(
+            "EventType".to_string(),
+            AttributeValue::S(event.event_type.clone().to_string()),
+        );
+        map.insert(
+            "EventId".to_string(),
+            AttributeValue::S(event.event_id.clone()),
+        );
+
+        if let Some(block_number) = event.block_number {
+            map.insert(
+                "BlockNumber".to_string(),
+                AttributeValue::N(block_number.to_string()),
+            );
+        }
+
+        if let Some(updated_at) = event.updated_at {
+            map.insert(
+                "UpdatedAt".to_string(),
+                AttributeValue::N(updated_at.to_string()),
+            );
+        }
+
+        map
+    }
+
+    pub fn transfer_event_to_data(event: &TokenTransferEvent) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();
         map.insert(
             "Timestamp".to_string(),
@@ -138,13 +226,109 @@ impl DynamoDbEventProvider {
 impl ArkEventProvider for DynamoDbEventProvider {
     type Client = DynamoClient;
 
-    async fn register_event(
+    async fn register_sale_event(
         &self,
         ctx: &DynamoDbCtx,
-        event: &TokenEvent,
+        event: &TokenSaleEvent,
         block_timestamp: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
-        let data = Self::event_to_data(event);
+        let data = Self::sale_event_to_data(event);
+
+        if event.nft_type.is_none() {
+            return Err(ProviderError::MissingDataError(
+                "NFT type is empty".to_string(),
+            ));
+        }
+
+        let pk = event.nft_type.clone().unwrap();
+        let pk_value = self.get_pk(pk.as_str(), &event.event_id);
+
+        info!("Registering sale event with PK: {}", pk_value);
+
+        let _r = ctx
+            .client
+            .put_item()
+            .table_name(self.table_name.clone())
+            .item("PK".to_string(), AttributeValue::S(pk_value))
+            .item("SK".to_string(), AttributeValue::S("EVENT".to_string()))
+            .item("Type".to_string(), AttributeValue::S("Event".to_string()))
+            .item(
+                "GSI1PK".to_string(),
+                AttributeValue::S(format!("CONTRACT#{}", event.nft_contract_address)),
+            )
+            .item(
+                "GSI1SK".to_string(),
+                AttributeValue::S(format!("EVENT#{}", event.timestamp)),
+            )
+            .item(
+                "GSI2PK".to_string(),
+                AttributeValue::S(format!(
+                    "TOKEN#{}#{}",
+                    event.nft_contract_address, event.token_id_hex,
+                )),
+            )
+            .item(
+                "GSI2SK".to_string(),
+                AttributeValue::S(format!("EVENT#{}", event.event_id)),
+            )
+            .item(
+                "GSI3PK".to_string(),
+                AttributeValue::S(format!("EVENT_FROM#{}", event.from_address)),
+            )
+            .item(
+                "GSI3SK".to_string(),
+                AttributeValue::S(format!("TIMESTAMP#{}", block_timestamp)),
+            )
+            .item(
+                "GSI4PK".to_string(),
+                AttributeValue::S(format!("BLOCK#{}", block_timestamp)),
+            )
+            .item(
+                "GSI4SK".to_string(),
+                AttributeValue::S(self.get_pk(&event.nft_contract_address, &event.event_id)),
+            )
+            .item(
+                "GSI5PK".to_string(),
+                AttributeValue::S(format!("EVENT_TO#{}", event.to_address)),
+            )
+            .item(
+                "GSI5SK".to_string(),
+                AttributeValue::S(format!("TIMESTAMP#{}", block_timestamp)),
+            )
+            .item("GSI6PK".to_string(), AttributeValue::S("EVENT".to_string()))
+            .item(
+                "GSI6SK".to_string(),
+                AttributeValue::N(block_timestamp.to_string()),
+            )
+            .item(
+                "GSI7PK".to_string(),
+                AttributeValue::S(format!(
+                    "{}#{}",
+                    event.event_type.to_string(),
+                    event.marketplace_name.to_uppercase()
+                )),
+            )
+            .item(
+                "GSI7SK".to_string(),
+                AttributeValue::N(block_timestamp.to_string()),
+            )
+            .item("Data".to_string(), AttributeValue::M(data))
+            .item("Type", AttributeValue::S(EntityType::Event.to_string()))
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+        Ok(().into())
+    }
+
+    async fn register_transfer_event(
+        &self,
+        ctx: &DynamoDbCtx,
+        event: &TokenTransferEvent,
+        block_timestamp: u64,
+    ) -> Result<DynamoDbOutput<()>, ProviderError> {
+        let data = Self::transfer_event_to_data(event);
 
         let _r = ctx
             .client
@@ -154,7 +338,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "PK".to_string(),
                 AttributeValue::S(self.get_pk(&event.contract_type, &event.event_id)),
             )
-            .item("SK".to_string(), AttributeValue::S(self.get_sk()))
+            .item(
+                "SK".to_string(),
+                AttributeValue::S(self.get_sk(&event.event_type)),
+            )
             .item("Type".to_string(), AttributeValue::S("Event".to_string()))
             .item(
                 "GSI1PK".to_string(),
@@ -243,14 +430,24 @@ impl ArkEventProvider for DynamoDbEventProvider {
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
-            Ok(DynamoDbOutput::new(
-                Some(Self::data_to_event(&data)?),
-                consumed_capacity_units,
-                None,
-            ))
-        } else {
-            Ok(DynamoDbOutput::new(None, consumed_capacity_units, None))
+
+            if let Some(event_type) = data.get("EventType") {
+                let event_type = event_type.as_s().unwrap();
+                if event_type == "SALE" {
+                    let data = Self::data_to_sale_event(&data)?;
+                    let result = Some(TokenEvent::Sale(data));
+                    return Ok(DynamoDbOutput::new(result, consumed_capacity_units, None));
+                } else {
+                    let data: TokenTransferEvent = Self::data_to_transfer_event(&data)?;
+                    return Ok(DynamoDbOutput::new(
+                        Some(TokenEvent::Transfer(data)),
+                        consumed_capacity_units,
+                        None,
+                    ));
+                }
+            }
         }
+        Ok(DynamoDbOutput::new(None, consumed_capacity_units, None))
     }
 
     async fn get_token_events(
@@ -286,8 +483,13 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Ok(token_event) = Self::data_to_event(&data) {
-                    res.push(token_event);
+                if let Some(event_type) = data.get("EventType") {
+                    let event_type = event_type.as_s().unwrap();
+                    if event_type == "SALE" {
+                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
+                    } else {
+                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                    }
                 }
             }
         }
@@ -342,8 +544,13 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Ok(token_event) = Self::data_to_event(&data) {
-                    res.push(token_event);
+                if let Some(event_type) = data.get("EventType") {
+                    let event_type = event_type.as_s().unwrap();
+                    if event_type == "SALE" {
+                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
+                    } else {
+                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                    }
                 }
             }
         }
@@ -398,8 +605,13 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Ok(token_event) = Self::data_to_event(&data) {
-                    res.push(token_event);
+                if let Some(event_type) = data.get("EventType") {
+                    let event_type = event_type.as_s().unwrap();
+                    if event_type == "SALE" {
+                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
+                    } else {
+                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                    }
                 }
             }
         }
@@ -446,8 +658,13 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Ok(token_event) = Self::data_to_event(&data) {
-                    res.push(token_event);
+                if let Some(event_type) = data.get("EventType") {
+                    let event_type = event_type.as_s().unwrap();
+                    if event_type == "SALE" {
+                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
+                    } else {
+                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                    }
                 }
             }
         }
@@ -499,9 +716,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = query_output.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Ok(token_event) = Self::data_to_event(&data) {
-                    res.push(token_event);
-                }
+                let result = Self::data_to_transfer_event(&data)?;
+                res.push(TokenEvent::Transfer(result));
             }
         }
 
