@@ -142,29 +142,39 @@ impl ArkContractProvider for DynamoDbContractProvider {
             keys.push(key);
         }
 
-        let batch_request_output = ctx
-            .client
-            .batch_get_item()
-            .request_items(
-                self.table_name.clone(),
-                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
-            )
-            .return_consumed_capacity(ReturnConsumedCapacity::Total)
-            .send()
-            .await
-            .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+        let keys_and_attributes_result = KeysAndAttributes::builder()
+            .set_keys(Some(keys.clone()))
+            .build();
 
-        let mut contract_infos = Vec::new();
-        if let Some(responses) = batch_request_output.responses {
-            for item in responses.get(&self.table_name).unwrap_or(&Vec::new()) {
-                let data = convert::attr_to_map(item, "Data")?;
-                contract_infos.push(Self::data_to_info(&data)?);
+        match keys_and_attributes_result {
+            Ok(keys_and_attributes) => {
+                let batch_request_output = ctx
+                    .client
+                    .batch_get_item()
+                    .request_items(self.table_name.clone(), keys_and_attributes)
+                    .return_consumed_capacity(ReturnConsumedCapacity::Total)
+                    .send()
+                    .await
+                    .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
+
+                let mut contract_infos = Vec::new();
+                if let Some(responses) = batch_request_output.responses {
+                    for item in responses.get(&self.table_name).unwrap_or(&Vec::new()) {
+                        let data = convert::attr_to_map(item, "Data")?;
+                        contract_infos.push(Self::data_to_info(&data)?);
+                    }
+                }
+
+                // let consumed_capacity_units = batch_request_output.consumed_capacity.map(|c| c.capacity());
+                Ok(DynamoDbOutput::new(contract_infos, None, None))
+            }
+            Err(e) => {
+                error!("Error building query. Error: {:?}. Keys: {:?}", e, keys);
+                Err(ProviderError::QueryError(
+                    "Error building query with keys".to_string(),
+                ))
             }
         }
-
-        // let consumed_capacity_units = batch_request_output.consumed_capacity.map(|c| c.capacity());
-
-        Ok(DynamoDbOutput::new(contract_infos, None, None))
     }
 
     async fn get_contract(

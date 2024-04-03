@@ -14,7 +14,7 @@ use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::convert::TryInto;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -493,27 +493,47 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
+        let collection_keys_and_attributes_result = KeysAndAttributes::builder()
+            .set_keys(Some(collection_keys))
+            .build();
+
+        if collection_keys_and_attributes_result.is_err() {
+            let e = collection_keys_and_attributes_result.err().unwrap();
+            error!("Error building query. Error: {:?}. Keys: {:?}", e, keys);
+
+            return Err(ProviderError::QueryError(
+                "Failed to build keys and attributes".to_string(),
+            ));
+        }
+
+        let collection_keys_and_attributes = collection_keys_and_attributes_result.unwrap();
         let collections_request_output = ctx
             .client
             .batch_get_item()
-            .request_items(
-                self.table_name.clone(),
-                KeysAndAttributes::builder()
-                    .set_keys(Some(collection_keys))
-                    .build(),
-            )
+            .request_items(self.table_name.clone(), collection_keys_and_attributes)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        let keys_and_attributes_result = KeysAndAttributes::builder()
+            .set_keys(Some(keys.clone()))
+            .build();
+
+        if keys_and_attributes_result.is_err() {
+            let e = keys_and_attributes_result.err().unwrap();
+            error!("Error building query. Error: {:?}. Keys: {:?}", e, keys);
+
+            return Err(ProviderError::QueryError(
+                "Failed to build keys and attributes".to_string(),
+            ));
+        }
+        let keys_and_attributes = keys_and_attributes_result.unwrap();
+
         let batch_request_output = ctx
             .client
             .batch_get_item()
-            .request_items(
-                self.table_name.clone(),
-                KeysAndAttributes::builder().set_keys(Some(keys)).build(),
-            )
+            .request_items(self.table_name.clone(), keys_and_attributes)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
@@ -561,13 +581,16 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
-        let total_capacity_units: Option<f64> = batch_request_output
-            .consumed_capacity()
-            .map(|caps| caps.iter().filter_map(|c| c.capacity_units()).sum());
+        let consumed_capacity_units = batch_request_output.consumed_capacity();
+
+        let mut total_capacity_units: f64 = 0.0;
+        consumed_capacity_units.iter().for_each(|c| {
+            total_capacity_units += c.capacity_units().unwrap_or(0.0);
+        });
 
         Ok(DynamoDbOutput::new(
             token_results,
-            total_capacity_units,
+            Some(total_capacity_units),
             None,
         ))
     }

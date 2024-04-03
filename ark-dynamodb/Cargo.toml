@@ -9,9 +9,9 @@ edition = "2021"
 anyhow.workspace = true
 arkproject.workspace = true
 async-trait.workspace = true
-aws-config = "0.56.1"
-aws-sdk-dynamodb = "0.31.1"
-aws-sdk-s3 = "0.30.0"
+aws-config = "1.1.9"
+aws-sdk-dynamodb = "1.20.0"
+aws-sdk-s3 = "1.21.0"
 chrono = "0.4.19"
 log = "0.4.17"
 mockall = { version = "0.11.2", optional = true }

@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use tokio::time::sleep;
 use tokio::time::Duration;
-use tracing::trace;
+use tracing::{error, trace};
 
 use super::ArkBlockProvider;
 use crate::{convert, EntityType, ProviderError};
@@ -178,12 +178,17 @@ impl ArkBlockProvider for DynamoDbBlockProvider {
             for item in items {
                 if let Some(pk) = item.get("PK").cloned() {
                     if let Some(sk) = item.get("SK").cloned() {
-                        let delete_request =
-                            DeleteRequest::builder().key("PK", pk).key("SK", sk).build();
-                        let write_request = WriteRequest::builder()
-                            .delete_request(delete_request)
-                            .build();
-                        write_requests.push(write_request);
+                        match DeleteRequest::builder().key("PK", pk).key("SK", sk).build() {
+                            Ok(delete_request) => {
+                                let write_request = WriteRequest::builder()
+                                    .delete_request(delete_request)
+                                    .build();
+                                write_requests.push(write_request);
+                            }
+                            Err(e) => {
+                                error!("Delete request error: {:?}", e);
+                            }
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 use anyhow::Result;
 use arkproject::metadata::file_manager::{FileInfo, FileManager};
 use async_trait::async_trait;
+use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
 use aws_sdk_s3::primitives::ByteStream;
 use tracing::{error, info};
 
@@ -19,7 +20,11 @@ impl FileManager for AWSFileManager {
     async fn save(&self, file: &FileInfo) -> Result<String> {
         info!("Checking if '{}' exists on AWS S3...", file.name);
 
-        let config = aws_config::load_from_env().await;
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
         let client = aws_sdk_s3::Client::new(&config);
 
         // Compute the SHA-256 hash of the file content to use as the file key.

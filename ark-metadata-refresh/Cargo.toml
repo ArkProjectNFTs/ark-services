@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.19"
-aws-config = "0.56.1"
-aws-sdk-dynamodb = "0.33.0"
-aws-sdk-s3 = "0.33.0"
+aws-config = "1.1.9"
+aws-sdk-dynamodb = "1.20.0"
+aws-sdk-s3 = "1.21.0"
 dotenv = "0.15.0"
 starknet.workspace = true
 regex = "1.9.6"

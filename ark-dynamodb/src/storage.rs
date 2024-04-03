@@ -7,7 +7,7 @@ use arkproject::pontos::storage::{
     Storage,
 };
 use async_trait::async_trait;
-use aws_config::load_from_env;
+use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
 use aws_sdk_dynamodb::{
     types::{AttributeValue, ReturnValue},
     Client,
@@ -17,8 +17,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use tracing::{debug, error, info};
 
-use crate::providers::token::types::TokenData;
-use crate::providers::{ArkBlockProvider, ArkContractProvider, ArkEventProvider, ArkTokenProvider};
+use crate::providers::{token::types::TokenData, ArkEventProvider};
+use crate::providers::{ArkBlockProvider, ArkContractProvider, ArkTokenProvider};
 use crate::{ArkDynamoDbProvider, DynamoDbCtx};
 
 pub struct DynamoStorage {
@@ -29,8 +29,13 @@ pub struct DynamoStorage {
 
 impl DynamoStorage {
     pub async fn new(table_name: String) -> Self {
-        let config = load_from_env().await;
+        let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
+        let config = aws_config::defaults(BehaviorVersion::latest())
+            .region(region_provider)
+            .load()
+            .await;
         let client = Client::new(&config);
+
         let ctx = DynamoDbCtx {
             client,
             exclusive_start_key: None,
