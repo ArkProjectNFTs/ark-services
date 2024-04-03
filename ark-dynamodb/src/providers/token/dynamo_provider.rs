@@ -14,7 +14,7 @@ use chrono::Utc;
 use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::convert::TryInto;
-use tracing::{debug, trace};
+use tracing::{debug, error, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -493,24 +493,42 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
         }
 
-        let keys_and_attributes = KeysAndAttributes::builder()
+        let collection_keys_and_attributes_result = KeysAndAttributes::builder()
             .set_keys(Some(collection_keys))
-            .build()
-            .unwrap();
+            .build();
 
+        if collection_keys_and_attributes_result.is_err() {
+            let e = collection_keys_and_attributes_result.err().unwrap();
+            error!("Error building query. Error: {:?}. Keys: {:?}", e, keys);
+
+            return Err(ProviderError::QueryError(
+                "Failed to build keys and attributes".to_string(),
+            ));
+        }
+
+        let collection_keys_and_attributes = collection_keys_and_attributes_result.unwrap();
         let collections_request_output = ctx
             .client
             .batch_get_item()
-            .request_items(self.table_name.clone(), keys_and_attributes)
+            .request_items(self.table_name.clone(), collection_keys_and_attributes)
             .return_consumed_capacity(ReturnConsumedCapacity::Total)
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let keys_and_attributes = KeysAndAttributes::builder()
-            .set_keys(Some(keys))
-            .build()
-            .unwrap();
+        let keys_and_attributes_result = KeysAndAttributes::builder()
+            .set_keys(Some(keys.clone()))
+            .build();
+
+        if keys_and_attributes_result.is_err() {
+            let e = keys_and_attributes_result.err().unwrap();
+            error!("Error building query. Error: {:?}. Keys: {:?}", e, keys);
+
+            return Err(ProviderError::QueryError(
+                "Failed to build keys and attributes".to_string(),
+            ));
+        }
+        let keys_and_attributes = keys_and_attributes_result.unwrap();
 
         let batch_request_output = ctx
             .client

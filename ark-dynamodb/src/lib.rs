@@ -107,6 +107,8 @@ pub enum ProviderError {
     ParsingError(String),
     #[error("Serialization error: {0}")]
     SerializationError(String),
+    #[error("Query error: {0}")]
+    QueryError(String),
 }
 
 /// Returns a newly initialized DynamoClient.
