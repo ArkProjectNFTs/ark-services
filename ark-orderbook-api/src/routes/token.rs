@@ -22,5 +22,4 @@ pub fn config(cfg: &mut web::ServiceConfig) {
                 .route("/{owner}", web::get().to(token_handler::get_tokens_by_account::<PgPool>))
         )
         .route("/flush-all-data", web::delete().to(token_handler::flush_all_data::<PgPool>).wrap(auth.clone()));
-
 }
