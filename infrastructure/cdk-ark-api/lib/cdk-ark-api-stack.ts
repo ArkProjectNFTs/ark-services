@@ -107,7 +107,7 @@ export class ArkApiStack extends cdk.Stack {
       tableNamePrefix
     );
 
-    ["mainnet", "testnet"].forEach((network) => {
+    ["mainnet", "sepolia"].forEach((network) => {
       deployBlockIndexerLambda(
         this,
         vpc,

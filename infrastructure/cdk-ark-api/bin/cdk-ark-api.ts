@@ -6,7 +6,7 @@ import { ArkApiStack } from "../lib/cdk-ark-api-stack";
 
 const app = new cdk.App();
 
-const stages: string[] = ["mainnet", "testnet"];
+const stages: string[] = ["mainnet", "sepolia"];
 const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
