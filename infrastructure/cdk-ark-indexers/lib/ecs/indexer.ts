@@ -113,8 +113,11 @@ function deployIndexerServices(
       HEAD_OF_CHAIN: "true",
       INDEXER_TABLE_NAME: dynamoTable.tableName,
       INDEXER_VERSION: indexerVersion,
-      IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev",
-      RPC_PROVIDER: `https://juno.${network}.arkproject.dev`,
+      IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev/ipfs/",
+      RPC_PROVIDER:
+        network === "mainnet"
+          ? `https://juno.mainnet.arkproject.dev`
+          : `https://${network}.arkproject.dev`,
       RUST_LOG: "INFO",
       BLOCK_INDEXER_FUNCTION_NAME: blockIndexerLambda.functionName,
     },
@@ -148,7 +151,7 @@ function deployIndexerServices(
         "lambda:InvokeFunction",
         "lambda:InvokeFunctionUrl",
       ],
-      resources: [blockIndexerLambda.functionArn],
+      resources: ["*"],
     })
   );
 
