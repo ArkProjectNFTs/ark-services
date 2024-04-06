@@ -12,9 +12,7 @@ const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
 
-const networks: string[] = isProductionEnvironment
-  ? ["mainnet", "testnet"]
-  : ["mainnet"];
+const networks: string[] = ["mainnet", "sepolia"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
 const stackName = `ark-indexers-${environment}`;
