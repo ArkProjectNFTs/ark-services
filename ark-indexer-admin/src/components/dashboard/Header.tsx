@@ -22,7 +22,7 @@ import NetworkSelector from "./NetworkSelector";
 import ThemeSelect from "./ThemeSelect";
 
 interface DashboardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
-  user: (User & { id: string }) | undefined
+  user: (User & { id: string }) | undefined;
 }
 
 export default function DashboardHeader({ user }: DashboardHeaderProps) {
@@ -65,6 +65,11 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
               <Link href="/dashboard">
                 <DropdownMenuItem className="cursor-pointer">
                   Dashboard
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/metadata">
+                <DropdownMenuItem className="cursor-pointer">
+                  Metadata
                 </DropdownMenuItem>
               </Link>
             </DropdownMenuGroup>
