@@ -56,6 +56,18 @@ impl DynamoDbContractProvider {
             AttributeValue::S(info.contract_address.clone()),
         );
 
+        if let Some(name) = info.name.clone() {
+            map.insert("Name".to_string(), AttributeValue::S(name));
+        }
+
+        if let Some(symbol) = info.symbol.clone() {
+            map.insert("Symbol".to_string(), AttributeValue::S(symbol));
+        }
+
+        if let Some(image) = info.image.clone() {
+            map.insert("Image".to_string(), AttributeValue::S(image));
+        }
+
         map
     }
 }
