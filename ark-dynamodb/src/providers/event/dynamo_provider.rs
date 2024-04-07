@@ -46,9 +46,15 @@ impl DynamoDbEventProvider {
             Err(_) => None,
         };
 
+        let event_type_result = &convert::attr_to_str(data, "EventType")?;
+        let event_type = match EventType::from_str(&event_type_result.as_str()) {
+            Ok(t) => t,
+            Err(_) => EventType::Uninitialized,
+        };
+
         let token_event = TokenEvent {
             event_id: convert::attr_to_str(data, "EventId")?,
-            event_type: EventType::from_str(&convert::attr_to_str(data, "EventType")?).unwrap(),
+            event_type,
             timestamp: convert::attr_to_u64(data, "Timestamp")?,
             from_address: convert::attr_to_str(data, "FromAddress")?,
             to_address: convert::attr_to_str(data, "ToAddress")?,
