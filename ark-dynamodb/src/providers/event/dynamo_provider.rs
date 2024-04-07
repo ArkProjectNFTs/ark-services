@@ -31,8 +31,8 @@ impl DynamoDbEventProvider {
         format!("{}#{}#{}", self.key_prefix, contract_address, event_id)
     }
 
-    fn get_sk(&self, event_type: &EventType) -> String {
-        format!("{}#{}", self.key_prefix, event_type)
+    fn get_sk(&self) -> String {
+        format!("{}", self.key_prefix)
     }
 
     pub fn data_to_sale_event(
@@ -48,30 +48,33 @@ impl DynamoDbEventProvider {
             Err(_) => None,
         };
 
-        let event_type_str = &convert::attr_to_str(data, "EventType")?;
-        match EventType::from_str(event_type_str.as_str()) {
-            Ok(event_type) => {
-                let event = TokenEvent {
-                    event_id: convert::attr_to_str(data, "EventId")?,
-                    event_type,
-                    timestamp: convert::attr_to_u64(data, "Timestamp")?,
-                    from_address: convert::attr_to_str(data, "FromAddress")?,
-                    to_address: convert::attr_to_str(data, "ToAddress")?,
-                    contract_address: convert::attr_to_str(data, "ContractAddress")?,
-                    contract_type: convert::attr_to_str(data, "ContractType")?,
-                    token_id: convert::attr_to_str(data, "TokenId")?,
-                    token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
-                    transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
-                    block_number,
-                    updated_at,
-                };
+        let event_type_result = &convert::attr_to_str(data, "EventType")?;
+        let event_type = match EventType::from_str(&event_type_result.as_str()) {
+            Ok(t) => t,
+            Err(_) => EventType::Uninitialized,
+        };
 
-                Ok(event)
-            }
-            Err(_) => Err(ProviderError::ParsingError(
-                "EventType is unknown".to_string(),
-            )),
-        }
+        let token_event = TokenSaleEvent {
+            event_id: convert::attr_to_str(data, "EventId")?,
+            event_type: event_type,
+            timestamp: convert::attr_to_u64(data, "Timestamp")?,
+            from_address: convert::attr_to_str(data, "FromAddress")?,
+            to_address: convert::attr_to_str(data, "ToAddress")?,
+            nft_contract_address: convert::attr_to_str(data, "NftContractAddress")?,
+            nft_type: convert::attr_to_str(data, "NftType").ok(),
+            token_id: convert::attr_to_str(data, "TokenId")?,
+            token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
+            transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
+            block_number,
+            updated_at,
+            currency_address: convert::attr_to_str(data, "CurrencyContractAddress")?,
+            marketplace_contract_address: convert::attr_to_str(data, "MarketplaceContractAddress")?,
+            marketplace_name: convert::attr_to_str(data, "MarketplaceName")?,
+            price: convert::attr_to_str(data, "Price")?,
+            quantity: convert::attr_to_u64(data, "Quantity")?,
+        };
+
+        Ok(token_event)
     }
 
     pub fn sale_event_to_data(event: &TokenSaleEvent) -> HashMap<String, AttributeValue> {
@@ -338,10 +341,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "PK".to_string(),
                 AttributeValue::S(self.get_pk(&event.contract_type, &event.event_id)),
             )
-            .item(
-                "SK".to_string(),
-                AttributeValue::S(self.get_sk(&event.event_type)),
-            )
+            .item("SK".to_string(), AttributeValue::S(self.get_sk()))
             .item("Type".to_string(), AttributeValue::S("Event".to_string()))
             .item(
                 "GSI1PK".to_string(),
