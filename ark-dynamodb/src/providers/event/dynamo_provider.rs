@@ -48,33 +48,71 @@ impl DynamoDbEventProvider {
             Err(_) => None,
         };
 
-        let event_type_result = &convert::attr_to_str(data, "EventType")?;
-        let event_type = match EventType::from_str(&event_type_result.as_str()) {
-            Ok(t) => t,
-            Err(_) => EventType::Uninitialized,
+        let event_type_str = &convert::attr_to_str(data, "EventType")?;
+
+        match EventType::from_str(&event_type_str.as_str()) {
+            Ok(event_type) => {
+                let token_event = TokenSaleEvent {
+                    event_id: convert::attr_to_str(data, "EventId")?,
+                    event_type: event_type,
+                    timestamp: convert::attr_to_u64(data, "Timestamp")?,
+                    from_address: convert::attr_to_str(data, "FromAddress")?,
+                    to_address: convert::attr_to_str(data, "ToAddress")?,
+                    nft_contract_address: convert::attr_to_str(data, "NftContractAddress")?,
+                    nft_type: convert::attr_to_str(data, "NftType").ok(),
+                    token_id: convert::attr_to_str(data, "TokenId")?,
+                    token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
+                    transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
+                    block_number,
+                    updated_at,
+                    currency_address: convert::attr_to_str(data, "CurrencyContractAddress")?,
+                    marketplace_contract_address: convert::attr_to_str(
+                        data,
+                        "MarketplaceContractAddress",
+                    )?,
+                    marketplace_name: convert::attr_to_str(data, "MarketplaceName")?,
+                    price: convert::attr_to_str(data, "Price")?,
+                    quantity: convert::attr_to_u64(data, "Quantity")?,
+                };
+                return Ok(token_event);
+            }
+            Err(_) => {
+                return Err(ProviderError::ParsingError(
+                    "EventType is unknown".to_string(),
+                ));
+            }
+        }
+    }
+
+    pub fn data_to_transfer_event(
+        data: &HashMap<String, AttributeValue>,
+    ) -> Result<TokenTransferEvent, ProviderError> {
+        let block_number = match convert::attr_to_u64(data, "BlockNumber") {
+            Ok(bn) => Some(bn),
+            Err(_) => None,
         };
 
-        let token_event = TokenSaleEvent {
+        let updated_at = match convert::attr_to_u64(data, "UpdatedAt") {
+            Ok(u) => Some(u),
+            Err(_) => None,
+        };
+
+        let token_event = TokenTransferEvent {
             event_id: convert::attr_to_str(data, "EventId")?,
-            event_type: event_type,
+            event_type: EventType::from_str(&convert::attr_to_str(data, "EventType")?).unwrap(),
             timestamp: convert::attr_to_u64(data, "Timestamp")?,
             from_address: convert::attr_to_str(data, "FromAddress")?,
             to_address: convert::attr_to_str(data, "ToAddress")?,
-            nft_contract_address: convert::attr_to_str(data, "NftContractAddress")?,
-            nft_type: convert::attr_to_str(data, "NftType").ok(),
+            contract_address: convert::attr_to_str(data, "ContractAddress")?,
+            contract_type: convert::attr_to_str(data, "ContractType")?,
             token_id: convert::attr_to_str(data, "TokenId")?,
             token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
             transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
             block_number,
             updated_at,
-            currency_address: convert::attr_to_str(data, "CurrencyContractAddress")?,
-            marketplace_contract_address: convert::attr_to_str(data, "MarketplaceContractAddress")?,
-            marketplace_name: convert::attr_to_str(data, "MarketplaceName")?,
-            price: convert::attr_to_str(data, "Price")?,
-            quantity: convert::attr_to_u64(data, "Quantity")?,
         };
 
-        Ok(token_event)
+        return Ok(token_event);
     }
 
     pub fn sale_event_to_data(event: &TokenSaleEvent) -> HashMap<String, AttributeValue> {
