@@ -6,6 +6,7 @@ import { runTask } from "~/lib/awsTasksSpawner";
 import { fetchBlocks } from "~/lib/fetchBlocks";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
 import { fetchLatestBlocks } from "~/lib/fetchLastestBlocks";
+import { getTableName } from "~/lib/utils";
 import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -38,7 +39,7 @@ const fetchTasks = async (
   network: Network,
 ): Promise<Record<string, AttributeValue>[]> => {
   const dynamoResult = await dynamodb.query({
-    TableName: `${process.env.TABLE_NAME_PREFIX}${network}`,
+    TableName: getTableName(network),
     IndexName: "GSI1PK-GSI1SK-index",
     KeyConditionExpression: "#GSI1PK = :GSI1PK",
     ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
@@ -72,63 +73,86 @@ const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
 };
 
 export const indexerRouter = createTRPCRouter({
-  metadata: protectedProcedure.query(async () => {
-    const contracts = {};
-    let lastEvaluatedKey;
-    let totalCount = 0;
+  metadata: protectedProcedure
+    .input(
+      z.object({
+        network: z.enum([
+          "production-sepolia",
+          "production-mainnet",
+          "staging-sepolia",
+          "staging-mainnet",
+        ]),
+      }),
+    )
+    .query(async ({ input }: { input: { network: Network } }) => {
+      const contracts = {};
+      let lastEvaluatedKey;
+      let totalCount = 0;
 
-    do {
-      const results = await dynamodb.query({
-        TableName: "ark_project_mainnet",
-        IndexName: "GSI5PK-GSI5SK-index",
-        KeyConditionExpression: "#GSI5PK = :GSI5PK",
-        ExpressionAttributeNames: { "#GSI5PK": "GSI5PK" },
-        ExpressionAttributeValues: { ":GSI5PK": { S: "METADATA#TO_REFRESH" } },
-        ExclusiveStartKey: lastEvaluatedKey,
-      });
+      do {
+        const results = await dynamodb.query({
+          TableName: getTableName(input.network),
+          IndexName: "GSI5PK-GSI5SK-index",
+          KeyConditionExpression: "#GSI5PK = :GSI5PK",
+          ExpressionAttributeNames: { "#GSI5PK": "GSI5PK" },
+          ExpressionAttributeValues: {
+            ":GSI5PK": { S: "METADATA#TO_REFRESH" },
+          },
+          ExclusiveStartKey: lastEvaluatedKey,
+        });
 
-      for (const item of results.Items) {
-        const data = item.Data?.M;
-        const tokenId = data.TokenId.S;
+        for (const item of results.Items) {
+          const data = item.Data?.M;
+          const tokenId = data.TokenId.S;
 
-        if (data?.ContractAddress?.S) {
-          const contractAddress: string = data.ContractAddress.S;
-          const contract = contracts[contractAddress] ?? { items: [] };
-          contract.items = [...contract.items, tokenId];
-          contracts[contractAddress] = contract;
+          if (data?.ContractAddress?.S) {
+            const contractAddress: string = data.ContractAddress.S;
+            const contract = contracts[contractAddress] ?? { items: [] };
+            contract.items = [...contract.items, tokenId];
+            contracts[contractAddress] = contract;
+          }
+
+          totalCount += 1;
         }
 
-        totalCount += 1;
+        lastEvaluatedKey = results.LastEvaluatedKey;
+      } while (!!lastEvaluatedKey);
+
+      for (const contractAddress of Object.keys(contracts)) {
+        const contractResult = await dynamodb.query({
+          TableName: "ark_project_mainnet",
+          KeyConditionExpression: "#PK = :PK",
+          ExpressionAttributeNames: { "#PK": "PK" },
+          ExpressionAttributeValues: {
+            ":PK": { S: `CONTRACT#${contractAddress}` },
+          },
+          Limit: 1,
+        });
+
+        const contractData = contractResult.Items?.[0]?.Data.M;
+        contracts[contractAddress].name = contractData?.Name?.S;
+        contracts[contractAddress].symbol = contractData?.Symbol?.S;
+        contracts[contractAddress].type = contractData?.ContractType?.S;
       }
 
-      lastEvaluatedKey = results.LastEvaluatedKey;
-    } while (!!lastEvaluatedKey);
-
-    for (const contractAddress of Object.keys(contracts)) {
-      const contractResult = await dynamodb.query({
-        TableName: "ark_project_mainnet",
-        KeyConditionExpression: "#PK = :PK",
-        ExpressionAttributeNames: { "#PK": "PK" },
-        ExpressionAttributeValues: {
-          ":PK": { S: `CONTRACT#${contractAddress}` },
-        },
-        Limit: 1,
-      });
-
-      const contractData = contractResult.Items?.[0]?.Data.M;
-      contracts[contractAddress].name = contractData?.Name?.S;
-      contracts[contractAddress].symbol = contractData?.Symbol?.S;
-      contracts[contractAddress].type = contractData?.ContractType?.S;
-    }
-
-    return { contracts, totalCount };
-  }),
+      return { contracts, totalCount };
+    }),
 
   latestBlocks: protectedProcedure
-    .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
+    .input(
+      z.object({
+        network: z.enum([
+          "production-sepolia",
+          "production-mainnet",
+          "staging-sepolia",
+          "staging-mainnet",
+        ]),
+      }),
+    )
     .query(async ({ input }) => {
       const results = await fetchLatestBlocks(input.network);
-      return results.map((r) => {
+
+      const items = results.map((r) => {
         const sk = r.GSI1SK?.S ?? "";
         const ts = sk.split("#")[1];
 
@@ -137,12 +161,26 @@ export const indexerRouter = createTRPCRouter({
           timestamp: ts ? parseInt(ts, 10) : 0,
         };
       });
+
+      return items;
     }),
 
   allBlocks: protectedProcedure
-    .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
+    .input(
+      z.object({
+        network: z.enum([
+          "production-sepolia",
+          "production-mainnet",
+          "staging-sepolia",
+          "staging-mainnet",
+        ]),
+      }),
+    )
     .query(async ({ input }) => {
       const latest = await fetchLastBlock(input.network);
+
+      console.log("Latest block:", latest);
+
       const { ranges, rangeSize, count } = await fetchBlocks(
         input.network,
         latest,
@@ -157,10 +195,21 @@ export const indexerRouter = createTRPCRouter({
     }),
 
   allTasks: protectedProcedure
-    .input(z.object({ network: z.enum(["testnet", "mainnet"]) }))
+    .input(
+      z.object({
+        network: z.enum([
+          "production-sepolia",
+          "production-mainnet",
+          "staging-sepolia",
+          "staging-mainnet",
+        ]),
+      }),
+    )
     .query(async ({ input }: { input: { network: Network } }) => {
       try {
         const tasks = await fetchTasks(input.network);
+
+        console.log("=> tasks", tasks, input.network);
 
         return tasks.reduce<IndexerTask[]>((acc, task) => {
           if (task.Data?.M) {
@@ -180,13 +229,17 @@ export const indexerRouter = createTRPCRouter({
     .input(
       z.object({
         taskId: z.string(),
-        network: z.enum(["testnet", "mainnet"]),
+        network: z.enum([
+          "production-sepolia",
+          "production-mainnet",
+          "staging-mainnet",
+          "staging-sepolia",
+        ]),
       }),
     )
     .mutation(async ({ input }) => {
       try {
-        const tableName = `${process.env.TABLE_NAME_PREFIX}${input.network}`;
-
+        const tableName = getTableName(input.network);
         await dynamodb.deleteItem({
           Key: {
             PK: { S: "INDEXER" },
@@ -205,7 +258,12 @@ export const indexerRouter = createTRPCRouter({
         from: z.number().min(0),
         to: z.number().min(0),
         numberOfTasks: z.number().min(1),
-        network: z.enum(["testnet", "mainnet"]),
+        network: z.enum([
+          "production-sepolia",
+          "production-mainnet",
+          "staging-mainnet",
+          "staging-sepolia",
+        ]),
         forceMode: z.boolean().optional(),
         logLevel: z.string().optional(),
       }),

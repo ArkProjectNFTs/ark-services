@@ -21,8 +21,10 @@ export default function NetworkSelector() {
           <SelectValue placeholder="Network" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="mainnet">Mainnet</SelectItem>
-          <SelectItem value="testnet">Testnet</SelectItem>
+          <SelectItem value="production-mainnet">Production Mainnet</SelectItem>
+          <SelectItem value="production-sepolia">Production Sepolia</SelectItem>
+          <SelectItem value="staging-mainnet">Staging Mainnet</SelectItem>
+          <SelectItem value="staging-sepolia">Staging Sepolia</SelectItem>
         </SelectContent>
       </Select>
     </div>

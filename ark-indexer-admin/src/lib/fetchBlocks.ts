@@ -6,6 +6,7 @@ import type {
 import { db } from "~/server/dynamodb";
 import { type Network } from "~/types";
 import { type Range } from "./range";
+import { getTableName } from "./utils";
 
 /**
  * Fetches blocks from the database, calculates ranges and returns them.
@@ -42,9 +43,7 @@ async function fetchAllBlocks(
 ): Promise<Record<string, AttributeValue>[]> {
   let lastEvaluatedKey: Record<string, AttributeValue> | undefined = undefined;
   const items: Record<string, AttributeValue>[] = [];
-
-  const tableName = `${process.env.TABLE_NAME_PREFIX}${network}`;
-  console.log("tableName", tableName);
+  const tableName = getTableName(network);
 
   do {
     const result: QueryCommandOutput = await db.query({

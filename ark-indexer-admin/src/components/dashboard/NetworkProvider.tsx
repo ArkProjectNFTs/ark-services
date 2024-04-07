@@ -3,7 +3,11 @@
 import React, { createContext, useContext, type ReactNode } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
-export type NetworkType = "mainnet" | "testnet";
+export type NetworkType =
+  | "production-mainnet"
+  | "production-sepolia"
+  | "staging-mainnet"
+  | "staging-sepolia";
 
 interface NetworkContextType {
   network: NetworkType;
@@ -21,7 +25,7 @@ export const NetworkProvider: React.FC<NetworkProviderProps> = ({
 }) => {
   const [network, setNetwork] = useLocalStorage<NetworkType>(
     "ark-admin:network",
-    "mainnet",
+    "production-mainnet",
   );
 
   return (

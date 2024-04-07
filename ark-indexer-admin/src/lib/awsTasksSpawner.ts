@@ -35,9 +35,9 @@ export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
           environment: [
             {
               name: "RPC_PROVIDER",
-              value: `https://juno.${
-                options.network === "mainnet" ? "mainnet" : "testnet"
-              }.arkproject.dev`,
+              value: options.network.includes("mainnet")
+                ? `https://juno.mainnet.arkproject.dev`
+                : `https://sepolia.arkproject.dev`,
             },
             {
               name: "HEAD_OF_CHAIN",

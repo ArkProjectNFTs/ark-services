@@ -21,7 +21,6 @@ export function DashboardRowActions<TData>({
   row,
 }: DashboardRowActionsProps<TData>) {
   const { network } = useNetwork();
-
   const indexerQuery = api.indexer.allTasks.useQuery({ network });
   const deleteTaskMutation = api.indexer.deleteTask.useMutation({
     onSuccess: async () => {

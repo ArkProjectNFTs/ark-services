@@ -3,11 +3,16 @@
 import Link from "next/link";
 
 import { api } from "~/trpc/react";
+import { useNetwork } from "./NetworkProvider";
 
 export function MetadataIndicator() {
-  const { data } = api.indexer.metadata.useQuery(undefined, {
-    refetchInterval: 5000,
-  });
+  const { network } = useNetwork();
+  const { data } = api.indexer.metadata.useQuery(
+    { network },
+    {
+      refetchInterval: 5000,
+    },
+  );
 
   console.log("data", data);
 

@@ -1,1 +1,5 @@
-export type Network = "mainnet" | "testnet";
+export type Network =
+  | "production-mainnet"
+  | "production-sepolia"
+  | "staging-mainnet"
+  | "staging-sepolia";
