@@ -46,28 +46,33 @@ impl DynamoDbEventProvider {
             Err(_) => None,
         };
 
-        let event_type_result = &convert::attr_to_str(data, "EventType")?;
-        let event_type = match EventType::from_str(&event_type_result.as_str()) {
-            Ok(t) => t,
-            Err(_) => EventType::Uninitialized,
-        };
+        let event_type_str = &convert::attr_to_str(data, "EventType")?;
 
-        let token_event = TokenEvent {
-            event_id: convert::attr_to_str(data, "EventId")?,
-            event_type,
-            timestamp: convert::attr_to_u64(data, "Timestamp")?,
-            from_address: convert::attr_to_str(data, "FromAddress")?,
-            to_address: convert::attr_to_str(data, "ToAddress")?,
-            contract_address: convert::attr_to_str(data, "ContractAddress")?,
-            contract_type: convert::attr_to_str(data, "ContractType")?,
-            token_id: convert::attr_to_str(data, "TokenId")?,
-            token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
-            transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
-            block_number,
-            updated_at,
-        };
+        match EventType::from_str(&event_type_str.as_str()) {
+            Ok(event_type) => {
+                let event = TokenEvent {
+                    event_id: convert::attr_to_str(data, "EventId")?,
+                    event_type,
+                    timestamp: convert::attr_to_u64(data, "Timestamp")?,
+                    from_address: convert::attr_to_str(data, "FromAddress")?,
+                    to_address: convert::attr_to_str(data, "ToAddress")?,
+                    contract_address: convert::attr_to_str(data, "ContractAddress")?,
+                    contract_type: convert::attr_to_str(data, "ContractType")?,
+                    token_id: convert::attr_to_str(data, "TokenId")?,
+                    token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
+                    transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
+                    block_number,
+                    updated_at,
+                };
 
-        Ok(token_event)
+                return Ok(event);
+            }
+            Err(_) => {
+                return Err(ProviderError::ParsingError(
+                    "EventType is unknown".to_string(),
+                ));
+            }
+        };
     }
 
     pub fn event_to_data(event: &TokenEvent) -> HashMap<String, AttributeValue> {
@@ -283,7 +288,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_event(&data)?);
+                let event = Self::data_to_event(&data);
+                if event.is_ok() {
+                    res.push(event.unwrap());
+                }
             }
         }
 
@@ -337,7 +345,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_event(&data)?);
+                let event = Self::data_to_event(&data);
+                if event.is_ok() {
+                    res.push(event.unwrap());
+                }
             }
         }
 
@@ -391,7 +402,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_event(&data)?);
+                let event = Self::data_to_event(&data);
+                if event.is_ok() {
+                    res.push(event.unwrap());
+                }
             }
         }
 
@@ -437,7 +451,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_event(&data)?);
+                let event = Self::data_to_event(&data);
+                if event.is_ok() {
+                    res.push(event.unwrap());
+                }
             }
         }
 
@@ -488,7 +505,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = query_output.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                res.push(Self::data_to_event(&data)?);
+                let event = Self::data_to_event(&data);
+                if event.is_ok() {
+                    res.push(event.unwrap());
+                }
             }
         }
 
