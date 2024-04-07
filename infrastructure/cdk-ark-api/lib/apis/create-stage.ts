@@ -98,7 +98,7 @@ function createApiStage(
   // Create an ACM certificate
   const certificate = new acm.Certificate(
     scope,
-    `ark-certificate-${stageName}-${environment}`,
+    `cert-${stageName}-${environment}`,
     {
       domainName: apiURL,
       validation: acm.CertificateValidation.fromDns(hostedZone), // Use DNS validation
@@ -108,7 +108,7 @@ function createApiStage(
   // Create a custom domain name
   const customDomain = new apigateway.DomainName(
     scope,
-    `ark-custom-domain-${stageName}-${environment}`,
+    `domain-${stageName}-${environment}`,
     {
       domainName: apiURL,
       certificate: certificate,
@@ -119,7 +119,7 @@ function createApiStage(
   // Associate the custom domain with the stage
   new apigateway.BasePathMapping(
     scope,
-    `ark-basepath-mapping-${stageName}-${environment}`,
+    `basepath-mapping-${stageName}-${environment}`,
     {
       domainName: customDomain,
       restApi: api,
@@ -128,15 +128,11 @@ function createApiStage(
   );
 
   // Create a CNAME record for the custom domain
-  new route53.CnameRecord(
-    scope,
-    `ark-cname-record-${stageName}-${environment}`,
-    {
-      recordName: apiURL,
-      zone: hostedZone,
-      domainName: customDomain.domainNameAliasDomainName,
-    }
-  );
+  new route53.CnameRecord(scope, `cname-record-${stageName}-${environment}`, {
+    recordName: apiURL,
+    zone: hostedZone,
+    domainName: customDomain.domainNameAliasDomainName,
+  });
 
   return stage;
 }

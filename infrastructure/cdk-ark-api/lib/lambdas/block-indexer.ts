@@ -27,12 +27,16 @@ export function deployBlockIndexerLambda(
   tableName: string,
   environment: string
 ): RustFunction {
+  const rpcProviderUri = network.includes("mainnet")
+    ? `https://juno.mainnet.arkproject.dev`
+    : `https://sepolia.arkproject.dev`;
+
   const blockIndexerLambda = new RustFunction(scope, functionName, {
     manifestPath,
     environment: {
       RUST_BACKTRACE: "1",
       RUST_LOG: "info",
-      RPC_PROVIDER: `https://juno.${network}.arkproject.dev`,
+      RPC_PROVIDER: rpcProviderUri,
       INDEXER_TABLE_NAME: tableName,
       INDEXER_VERSION: "",
     },

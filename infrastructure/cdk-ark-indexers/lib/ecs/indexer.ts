@@ -98,6 +98,10 @@ function deployIndexerServices(
     blockIndexerLambdaName
   );
 
+  const rpcProviderUri = network.includes("mainnet")
+    ? `https://juno.mainnet.arkproject.dev`
+    : `https://sepolia.arkproject.dev`;
+
   taskDefinition.addContainer("ark_indexer", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
@@ -114,10 +118,7 @@ function deployIndexerServices(
       INDEXER_TABLE_NAME: dynamoTable.tableName,
       INDEXER_VERSION: indexerVersion,
       IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev/ipfs/",
-      RPC_PROVIDER:
-        network === "mainnet"
-          ? `https://juno.mainnet.arkproject.dev`
-          : `https://${network}.arkproject.dev`,
+      RPC_PROVIDER: rpcProviderUri,
       RUST_LOG: "INFO",
       BLOCK_INDEXER_FUNCTION_NAME: blockIndexerLambda.functionName,
     },
@@ -189,6 +190,10 @@ function deployMetadataServices(
     }
   );
 
+  const rpcProviderUri = network.includes("mainnet")
+    ? `https://juno.mainnet.arkproject.dev`
+    : `https://sepolia.arkproject.dev`;
+
   taskDefinition.addContainer(`ark_metadata`, {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
@@ -201,7 +206,7 @@ function deployMetadataServices(
     environment: {
       INDEXER_TABLE_NAME: dynamoTable.tableName,
       AWS_NFT_IMAGE_BUCKET_NAME: `ark-nft-images-${network}`,
-      RPC_PROVIDER: `https://juno.${network}.arkproject.dev`,
+      RPC_PROVIDER: rpcProviderUri,
       METADATA_IPFS_TIMEOUT_IN_SEC:
         process.env.METADATA_IPFS_TIMEOUT_IN_SEC ?? "5",
       METADATA_LOOP_DELAY_IN_SEC:

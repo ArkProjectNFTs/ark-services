@@ -50,5 +50,9 @@
   "security-group:account=223605539824:region=us-east-1:securityGroupName=ark-lambda-security-group-staging:vpcId=vpc-0d11f7ec183208e08": {
     "securityGroupId": "sg-0d46c794e4c8cd83b",
     "allowAllOutbound": false
+  },
+  "security-group:account=223605539824:region=us-east-1:securityGroupName=ark-lambda-security-group-production:vpcId=vpc-0d11f7ec183208e08": {
+    "securityGroupId": "sg-0691104901a03cca5",
+    "allowAllOutbound": false
   }
 }
