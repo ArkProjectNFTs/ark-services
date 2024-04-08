@@ -1,7 +1,7 @@
 use ark_dynamodb::storage::AWSDynamoStorage;
 use arkproject::pontos::{
     event_handler::EventHandler,
-    storage::types::{TokenInfo, TokenTransferEvent},
+    storage::types::{TokenEvent, TokenInfo},
 };
 use async_trait::async_trait;
 use std::sync::Arc;
@@ -29,7 +29,7 @@ where
 {
     async fn on_token_registered(&self, _token: TokenInfo) {}
 
-    async fn on_event_registered(&self, _event: TokenTransferEvent) {}
+    async fn on_event_registered(&self, _event: TokenEvent) {}
 
     async fn on_block_processing(&self, _block_timestamp: u64, _block_numberr: Option<u64>) {}
 

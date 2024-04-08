@@ -321,7 +321,6 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .send()
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
-
         Ok(().into())
     }
 
@@ -431,21 +430,21 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
 
-            if let Some(event_type) = data.get("EventType") {
-                let event_type = event_type.as_s().unwrap();
-                if event_type == "SALE" {
-                    let data = Self::data_to_sale_event(&data)?;
-                    let result = Some(TokenEvent::Sale(data));
-                    return Ok(DynamoDbOutput::new(result, consumed_capacity_units, None));
-                } else {
-                    let data: TokenTransferEvent = Self::data_to_transfer_event(&data)?;
-                    return Ok(DynamoDbOutput::new(
-                        Some(TokenEvent::Transfer(data)),
-                        consumed_capacity_units,
-                        None,
-                    ));
+            if let Some(event_type_av) = data.get("EventType") {
+                if event_type_av.is_s() {
+                    let event_type = event_type_av.as_s().unwrap();
+                    let event: Option<TokenEvent> = match event_type.as_str() {
+                        "TRANSFER" => {
+                            let event = Self::data_to_transfer_event(&data)?;
+                            let token_event = TokenEvent::Transfer(event);
+                            Some(token_event)
+                        }
+                        "SALE" => None,
+                        _ => None,
+                    };
+                    return Ok(DynamoDbOutput::new(event, consumed_capacity_units, None));
                 }
-            }
+            };
         }
         Ok(DynamoDbOutput::new(None, consumed_capacity_units, None))
     }
@@ -479,16 +478,21 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let mut res = vec![];
+        let mut res: Vec<TokenEvent> = vec![];
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Some(event_type) = data.get("EventType") {
-                    let event_type = event_type.as_s().unwrap();
-                    if event_type == "SALE" {
-                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
-                    } else {
-                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                if let Some(AttributeValue::S(event_type)) = data.get("EventType") {
+                    let token_event = match event_type.as_str() {
+                        "TRANSFER" => Self::data_to_transfer_event(&data)
+                            .ok()
+                            .map(TokenEvent::Transfer),
+                        "SALE" => Self::data_to_sale_event(&data).ok().map(TokenEvent::Sale),
+                        _ => None,
+                    };
+
+                    if let Some(event) = token_event {
+                        res.push(event);
                     }
                 }
             }
@@ -544,12 +548,17 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Some(event_type) = data.get("EventType") {
-                    let event_type = event_type.as_s().unwrap();
-                    if event_type == "SALE" {
-                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
-                    } else {
-                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                if let Some(AttributeValue::S(event_type)) = data.get("EventType") {
+                    let token_event = match event_type.as_str() {
+                        "TRANSFER" => Self::data_to_transfer_event(&data)
+                            .ok()
+                            .map(TokenEvent::Transfer),
+                        "SALE" => Self::data_to_sale_event(&data).ok().map(TokenEvent::Sale),
+                        _ => None,
+                    };
+
+                    if let Some(event) = token_event {
+                        res.push(event);
                     }
                 }
             }
@@ -605,12 +614,17 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Some(event_type) = data.get("EventType") {
-                    let event_type = event_type.as_s().unwrap();
-                    if event_type == "SALE" {
-                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
-                    } else {
-                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                if let Some(AttributeValue::S(event_type)) = data.get("EventType") {
+                    let token_event = match event_type.as_str() {
+                        "TRANSFER" => Self::data_to_transfer_event(&data)
+                            .ok()
+                            .map(TokenEvent::Transfer),
+                        "SALE" => Self::data_to_sale_event(&data).ok().map(TokenEvent::Sale),
+                        _ => None,
+                    };
+
+                    if let Some(event) = token_event {
+                        res.push(event);
                     }
                 }
             }
@@ -658,12 +672,17 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                if let Some(event_type) = data.get("EventType") {
-                    let event_type = event_type.as_s().unwrap();
-                    if event_type == "SALE" {
-                        res.push(TokenEvent::Sale(Self::data_to_sale_event(&data)?));
-                    } else {
-                        res.push(TokenEvent::Transfer(Self::data_to_transfer_event(&data)?));
+                if let Some(AttributeValue::S(event_type)) = data.get("EventType") {
+                    let token_event = match event_type.as_str() {
+                        "TRANSFER" => Self::data_to_transfer_event(&data)
+                            .ok()
+                            .map(TokenEvent::Transfer),
+                        "SALE" => Self::data_to_sale_event(&data).ok().map(TokenEvent::Sale),
+                        _ => None,
+                    };
+
+                    if let Some(event) = token_event {
+                        res.push(event);
                     }
                 }
             }
@@ -716,8 +735,19 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = query_output.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let result = Self::data_to_transfer_event(&data)?;
-                res.push(TokenEvent::Transfer(result));
+                if let Some(AttributeValue::S(event_type)) = data.get("EventType") {
+                    let token_event = match event_type.as_str() {
+                        "TRANSFER" => Self::data_to_transfer_event(&data)
+                            .ok()
+                            .map(TokenEvent::Transfer),
+                        "SALE" => Self::data_to_sale_event(&data).ok().map(TokenEvent::Sale),
+                        _ => None,
+                    };
+
+                    if let Some(event) = token_event {
+                        res.push(event);
+                    }
+                }
             }
         }
 

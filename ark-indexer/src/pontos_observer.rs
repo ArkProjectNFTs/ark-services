@@ -1,7 +1,7 @@
 use ark_dynamodb::storage::AWSDynamoStorage;
 use arkproject::pontos::{
     event_handler::EventHandler,
-    storage::types::{IndexerStatus, TokenInfo, TokenTransferEvent},
+    storage::types::{IndexerStatus, TokenEvent, TokenInfo},
 };
 use async_trait::async_trait;
 use aws_config::BehaviorVersion;
@@ -48,7 +48,7 @@ where
         info!("on_token_registered");
     }
 
-    async fn on_event_registered(&self, _event: TokenTransferEvent) {
+    async fn on_event_registered(&self, _event: TokenEvent) {
         info!("on_event_registered");
     }
 

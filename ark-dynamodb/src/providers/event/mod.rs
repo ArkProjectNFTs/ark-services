@@ -24,18 +24,18 @@ pub trait ArkEventProvider {
         event_id: &str,
     ) -> Result<DynamoDbOutput<Option<TokenEvent>>, ProviderError>;
 
-    async fn register_sale_event(
-        &self,
-        ctx: &DynamoDbCtx,
-        event: &TokenSaleEvent,
-        block_number: u64,
-    ) -> Result<DynamoDbOutput<()>, ProviderError>;
-
     async fn register_transfer_event(
         &self,
         ctx: &DynamoDbCtx,
         event: &TokenTransferEvent,
         block_number: u64,
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
+
+    async fn register_sale_event(
+        &self,
+        ctx: &DynamoDbCtx,
+        event: &TokenSaleEvent,
+        block_timestamp: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
     async fn get_token_events(
