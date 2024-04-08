@@ -47,5 +47,5 @@ sqlx = { version = "0.7", features = ["postgres", "runtime-tokio"] }
 serde = "1.0.160"
 serde_json = "1.0.96"
 serde_with = "3.4.0"
-starknet = "0.10.0"
+starknet = "0.8.0"
 thiserror = "1.0.40"
