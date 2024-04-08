@@ -764,3 +764,103 @@ impl ArkEventProvider for DynamoDbEventProvider {
         ))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use arkproject::pontos::storage::types::EventType;
+    use aws_sdk_dynamodb::types::AttributeValue;
+    use std::collections::HashMap;
+
+    #[tokio::test]
+    async fn test_data_to_sale_event_success() {
+        let mut data = HashMap::new();
+        data.insert(
+            "BlockNumber".to_string(),
+            AttributeValue::N("12345".to_string()),
+        );
+        data.insert(
+            "UpdatedAt".to_string(),
+            AttributeValue::N("67890".to_string()),
+        );
+        data.insert(
+            "EventType".to_string(),
+            AttributeValue::S("SALE".to_string()),
+        );
+        data.insert(
+            "EventId".to_string(),
+            AttributeValue::S("event123".to_string()),
+        );
+        data.insert(
+            "Timestamp".to_string(),
+            AttributeValue::N("1619191919".to_string()),
+        );
+        data.insert(
+            "FromAddress".to_string(),
+            AttributeValue::S("from_address".to_string()),
+        );
+        data.insert(
+            "ToAddress".to_string(),
+            AttributeValue::S("to_address".to_string()),
+        );
+        data.insert(
+            "NftContractAddress".to_string(),
+            AttributeValue::S("nft_contract_address".to_string()),
+        );
+        data.insert("TokenId".to_string(), AttributeValue::S("1".to_string()));
+        data.insert(
+            "TokenIdHex".to_string(),
+            AttributeValue::S("0x1".to_string()),
+        );
+        data.insert(
+            "CurrencyContractAddress".to_string(),
+            AttributeValue::S(
+                "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7".to_string(),
+            ),
+        );
+        data.insert(
+            "MarketplaceContractAddress".to_string(),
+            AttributeValue::S(
+                "0x02e60e4a350f7a6a7ad5057509264b8137fbd40b384711f8d9fab516da240d9e".to_string(),
+            ),
+        );
+        data.insert(
+            "MarketplaceName".to_string(),
+            AttributeValue::S("Element".to_string()),
+        );
+        data.insert("Price".to_string(), AttributeValue::S("100".to_string()));
+        data.insert("Quantity".to_string(), AttributeValue::N("1".to_string()));
+        data.insert(
+            "TransactionHash".to_string(),
+            AttributeValue::S(
+                "0x022d3f77e5f1d0ec113468c23d1a002e55b97a29b7656b790fd233560fd3031e".to_string(),
+            ),
+        );
+
+        let result = DynamoDbEventProvider::data_to_sale_event(&data).unwrap();
+
+        assert_eq!(result.event_id, "event123");
+        assert_eq!(result.event_type, EventType::Sale);
+        assert_eq!(result.timestamp, 1619191919);
+        assert_eq!(result.from_address, "from_address");
+        assert_eq!(result.to_address, "to_address");
+        assert_eq!(result.nft_contract_address, "nft_contract_address");
+        assert_eq!(result.token_id, "1");
+        assert_eq!(result.token_id_hex, "0x1");
+        assert_eq!(
+            result.transaction_hash,
+            "0x022d3f77e5f1d0ec113468c23d1a002e55b97a29b7656b790fd233560fd3031e"
+        );
+        assert_eq!(
+            result.currency_address,
+            "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7"
+        );
+        assert_eq!(
+            result.marketplace_contract_address,
+            "0x02e60e4a350f7a6a7ad5057509264b8137fbd40b384711f8d9fab516da240d9e"
+        );
+        assert_eq!(result.marketplace_name, "Element");
+        assert_eq!(result.price, "100");
+        assert_eq!(result.quantity, 1);
+    }
+}
