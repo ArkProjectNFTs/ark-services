@@ -4,8 +4,7 @@ use redis::Client as RedisClient;
 use redis::Commands;
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tracing::error;
-use tracing::info;
+use tracing::{debug, error, trace};
 use uuid::Uuid;
 
 /// A paginator for DynamoDB operations.
@@ -103,12 +102,12 @@ impl DynamoDbPaginator {
         &self,
         last_evaluated_key: &Option<Lek>,
     ) -> Result<Option<String>, ProviderError> {
-        info!("Storing cursor: {:?}", last_evaluated_key);
+        trace!("Storing cursor: {:?}", last_evaluated_key);
 
         let lek = match last_evaluated_key {
             Some(lek) => lek,
             None => {
-                error!("'last_evaluated_key' is required but was not provided.");
+                debug!("'last_evaluated_key' is required but was not provided.");
                 return Ok(None);
             }
         };

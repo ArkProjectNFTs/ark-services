@@ -8,7 +8,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{info, warn};
 
 /// DynamoDB provider for events.
 pub struct DynamoDbEventProvider {
@@ -456,12 +456,16 @@ impl ArkEventProvider for DynamoDbEventProvider {
         contract_address: &str,
         event_id: &str,
     ) -> Result<DynamoDbOutput<Option<TokenEvent>>, ProviderError> {
-        let mut key = HashMap::new();
-        key.insert(
-            "PK".to_string(),
-            AttributeValue::S(self.get_pk(contract_address, event_id)),
-        );
-        key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
+        // Streamlined key creation
+        let key = {
+            let mut key = HashMap::new();
+            key.insert(
+                "PK".to_string(),
+                AttributeValue::S(self.get_pk(contract_address, event_id)),
+            );
+            key.insert("SK".to_string(), AttributeValue::S(self.key_prefix.clone()));
+            key
+        };
 
         let r = ctx
             .client
@@ -473,10 +477,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
-        let consumed_capacity_units = match r.consumed_capacity() {
-            Some(c) => c.capacity_units,
-            None => None,
-        };
+        let consumed_capacity_units = r.consumed_capacity().and_then(|c| c.capacity_units);
 
         if let Some(item) = &r.item {
             let data = convert::attr_to_map(item, "Data")?;
@@ -762,12 +763,26 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
         let mut res = vec![];
-
         if let Some(items) = query_output.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let result = Self::data_to_transfer_event(&data)?;
-                res.push(TokenEvent::Transfer(result));
+                if let Some(event_type_av) = data.get("EventType") {
+                    if let Ok(event_type) = event_type_av.as_s() {
+                        match event_type.as_str() {
+                            "SALE" => {
+                                let result = Self::data_to_sale_event(&data)?;
+                                res.push(TokenEvent::Sale(result));
+                            }
+                            "TRANSFER" => {
+                                let result = Self::data_to_transfer_event(&data)?;
+                                res.push(TokenEvent::Transfer(result));
+                            }
+                            _ => {
+                                warn!("Unknown event type: {}", event_type);
+                            }
+                        };
+                    }
+                }
             }
         }
 
