@@ -594,6 +594,7 @@ impl OrderProvider {
                 previous_owner: None,
                 new_owner: Some(data.offerer.clone()),
                 amount: Some(data.start_amount.clone()),
+                end_amount: Some(data.end_amount.clone()),
                 canceled_reason: None,
             },
         )
