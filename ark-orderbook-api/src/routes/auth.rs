@@ -1,7 +1,7 @@
-use actix_web::{Error, error};
-use actix_web::dev::{ServiceRequest};
-use actix_web_httpauth::extractors::basic::BasicAuth;
+use actix_web::dev::ServiceRequest;
+use actix_web::{error, Error};
 use actix_web::{error::ResponseError, HttpResponse};
+use actix_web_httpauth::extractors::basic::BasicAuth;
 use serde::Serialize;
 use std::fmt;
 
@@ -20,7 +20,10 @@ impl ResponseError for UnauthorizedError {
     }
 }
 
-pub async fn validator(req: ServiceRequest, credentials: BasicAuth) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+pub async fn validator(
+    req: ServiceRequest,
+    credentials: BasicAuth,
+) -> Result<ServiceRequest, (Error, ServiceRequest)> {
     let user = std::env::var("API_USER").unwrap_or_default();
     let password = std::env::var("API_PASSWORD").unwrap_or_default();
 
