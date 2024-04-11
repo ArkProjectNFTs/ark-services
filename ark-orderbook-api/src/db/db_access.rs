@@ -1,5 +1,5 @@
 use crate::models::token::{
-    RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers, TopBid,
+    RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers
 };
 use async_trait::async_trait;
 use sqlx::Error;

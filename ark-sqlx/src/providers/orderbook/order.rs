@@ -435,8 +435,8 @@ impl OrderProvider {
             .bind(&event_data.amount.clone().unwrap_or_default())
             .bind(&event_data.canceled_reason.clone().unwrap_or_default())
             .bind(&event_data.end_amount.clone().unwrap_or_default())
-            .bind(&event_data.start_date.clone().unwrap_or_default())
-            .bind(&event_data.end_date.clone().unwrap_or_default())
+            .bind(event_data.start_date.unwrap_or_default())
+            .bind(event_data.end_date.unwrap_or_default())
             .execute(&client.pool)
             .await?;
 
