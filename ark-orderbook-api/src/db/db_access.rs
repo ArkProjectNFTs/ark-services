@@ -189,7 +189,8 @@ impl DatabaseAccess for PgPool {
         let history = sqlx::query_as!(
             TokenHistory,
             "SELECT event_type, event_timestamp, order_status,
-                    previous_owner, new_owner, amount, canceled_reason
+                    previous_owner, new_owner, amount, canceled_reason,
+                    start_date, end_date, end_amount
              FROM orderbook_token_history
              WHERE token_id = $1 AND token_address = $2
              ORDER BY event_timestamp DESC",
@@ -440,8 +441,11 @@ impl DatabaseAccess for MockDb {
             order_status: "Active".to_string(),
             previous_owner: None,
             new_owner: Some("owner123".to_string()),
-            amount: Some("100".to_string()),
             canceled_reason: None,
+            start_date: Some(1234567890),
+            end_date: Some(1234567891),
+            amount: Some("100".to_string()),
+            end_amount: Some("200".to_string()),
         }];
 
         Ok(TokenWithHistory {
