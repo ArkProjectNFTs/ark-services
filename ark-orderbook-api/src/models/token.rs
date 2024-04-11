@@ -108,6 +108,9 @@ pub struct TokenHistory {
     pub new_owner: Option<String>,
     pub amount: Option<String>,
     pub canceled_reason: Option<String>,
+    pub end_amount: Option<String>,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize)]
