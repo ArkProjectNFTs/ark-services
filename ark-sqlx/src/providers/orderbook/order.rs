@@ -139,6 +139,9 @@ struct EventHistoryData {
     new_owner: Option<String>,
     amount: Option<String>,
     canceled_reason: Option<String>,
+    end_amount: Option<String>,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
 }
 
 struct OfferData {
@@ -417,8 +420,8 @@ impl OrderProvider {
         trace!("Insert event history");
 
         let q = "
-            INSERT INTO orderbook_token_history (token_id, token_address, event_type, order_status, event_timestamp, previous_owner, new_owner, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+            INSERT INTO orderbook_token_history (token_id, token_address, event_type, order_status, event_timestamp, previous_owner, new_owner, amount, canceled_reason, end_amount, start_date, end_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         ";
 
         let _r = sqlx::query(q)
@@ -431,6 +434,9 @@ impl OrderProvider {
             .bind(&event_data.new_owner.clone().unwrap_or_default())
             .bind(&event_data.amount.clone().unwrap_or_default())
             .bind(&event_data.canceled_reason.clone().unwrap_or_default())
+            .bind(&event_data.end_amount.clone().unwrap_or_default())
+            .bind(&event_data.start_date.clone().unwrap_or_default())
+            .bind(&event_data.end_date.clone().unwrap_or_default())
             .execute(&client.pool)
             .await?;
 
@@ -596,6 +602,8 @@ impl OrderProvider {
                 amount: Some(data.start_amount.clone()),
                 end_amount: Some(data.end_amount.clone()),
                 canceled_reason: None,
+                start_date: Some(data.start_date as i64),
+                end_date: Some(data.end_date as i64),
             },
         )
         .await?;
@@ -645,6 +653,9 @@ impl OrderProvider {
                     new_owner: None,
                     amount: None,
                     previous_owner: None,
+                    end_amount: None,
+                    start_date: None,
+                    end_date: None,
                 },
             )
             .await?;
@@ -714,6 +725,9 @@ impl OrderProvider {
                     new_owner: None,
                     amount: None,
                     previous_owner: None,
+                    end_amount: None,
+                    start_date: None,
+                    end_date: None,
                 },
             )
             .await?;
@@ -815,6 +829,9 @@ impl OrderProvider {
                     new_owner,
                     amount: None,
                     previous_owner,
+                    end_amount: None,
+                    start_date: None,
+                    end_date: None,
                 },
             )
             .await?;
@@ -870,6 +887,9 @@ impl OrderProvider {
                     new_owner: None,
                     amount: None,
                     previous_owner: None,
+                    end_amount: None,
+                    start_date: None,
+                    end_date: None,
                 },
             )
             .await?;
