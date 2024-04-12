@@ -48,7 +48,7 @@ impl DynamoDbEventProvider {
 
         let event_type_str = &convert::attr_to_str(data, "EventType")?;
 
-        match EventType::from_str(&event_type_str.as_str()) {
+        match EventType::from_str(event_type_str.as_str()) {
             Ok(event_type) => {
                 let event = TokenEvent {
                     event_id: convert::attr_to_str(data, "EventId")?,
@@ -65,14 +65,12 @@ impl DynamoDbEventProvider {
                     updated_at,
                 };
 
-                return Ok(event);
+                Ok(event)
             }
-            Err(_) => {
-                return Err(ProviderError::ParsingError(
-                    "EventType is unknown".to_string(),
-                ));
-            }
-        };
+            Err(_) => Err(ProviderError::ParsingError(
+                "EventType is unknown".to_string(),
+            )),
+        }
     }
 
     pub fn event_to_data(event: &TokenEvent) -> HashMap<String, AttributeValue> {
@@ -288,9 +286,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let event = Self::data_to_event(&data);
-                if event.is_ok() {
-                    res.push(event.unwrap());
+                if let Ok(token_event) = Self::data_to_event(&data) {
+                    res.push(token_event);
                 }
             }
         }
@@ -345,9 +342,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let event = Self::data_to_event(&data);
-                if event.is_ok() {
-                    res.push(event.unwrap());
+                if let Ok(token_event) = Self::data_to_event(&data) {
+                    res.push(token_event);
                 }
             }
         }
@@ -402,9 +398,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let event = Self::data_to_event(&data);
-                if event.is_ok() {
-                    res.push(event.unwrap());
+                if let Ok(token_event) = Self::data_to_event(&data) {
+                    res.push(token_event);
                 }
             }
         }
@@ -451,9 +446,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = r.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let event = Self::data_to_event(&data);
-                if event.is_ok() {
-                    res.push(event.unwrap());
+                if let Ok(token_event) = Self::data_to_event(&data) {
+                    res.push(token_event);
                 }
             }
         }
@@ -505,9 +499,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
         if let Some(items) = query_output.clone().items {
             for i in items {
                 let data = convert::attr_to_map(&i, "Data")?;
-                let event = Self::data_to_event(&data);
-                if event.is_ok() {
-                    res.push(event.unwrap());
+                if let Ok(token_event) = Self::data_to_event(&data) {
+                    res.push(token_event);
                 }
             }
         }
