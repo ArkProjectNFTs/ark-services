@@ -41,7 +41,7 @@ impl fmt::Display for RollbackStatus {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OrderStatus {
     Placed,
     Fulfilled,

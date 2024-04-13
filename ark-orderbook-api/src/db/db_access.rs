@@ -59,7 +59,7 @@ impl DatabaseAccess for PgPool {
                 (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
                 (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
                 t.status,
-                t.status = 'FULFILLED' AS buy_in_progress
+                t.buy_in_progress
             FROM
                 orderbook_token t
             LEFT JOIN
