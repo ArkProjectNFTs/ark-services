@@ -41,7 +41,7 @@ impl fmt::Display for RollbackStatus {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum OrderStatus {
     Placed,
     Fulfilled,
@@ -272,6 +272,22 @@ impl OrderProvider {
             .bind(token_address)
             .bind(token_id)
             .bind(status.to_string())
+            .execute(&client.pool)
+            .await?;
+
+        // if status is fulfilled, then buy_in_progress should be set to true
+        let buy_in_progress = status == OrderStatus::Fulfilled;
+        let query = "
+        UPDATE orderbook_token
+        SET
+            buy_in_progress = $3
+        WHERE token_address = $1 AND token_id = $2;
+        ";
+
+        sqlx::query(query)
+            .bind(token_address)
+            .bind(token_id)
+            .bind(buy_in_progress)
             .execute(&client.pool)
             .await?;
 
