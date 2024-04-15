@@ -1,41 +1,26 @@
-use actix_web::web;
+use actix_web::{web};
+use actix_web_httpauth::middleware::HttpAuthentication;
+use crate::routes::auth::validator;
 use sqlx::PgPool;
 
 use crate::handlers::token_handler;
 
+
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.route(
-        "/token/{address}/{id}",
-        web::get().to(token_handler::get_token::<PgPool>),
-    );
+    let auth = HttpAuthentication::basic(validator);
 
-    cfg.route(
-        "/tokens/collection/{collection_id}",
-        web::get().to(token_handler::get_tokens_by_collection::<PgPool>),
-    );
+    cfg.service(
+        web::scope("/token")
+            .route("/{address}/{id}", web::get().to(token_handler::get_token::<PgPool>))
+            .route("/{address}/{id}/history", web::get().to(token_handler::get_token_history::<PgPool>))
+            .route("/{address}/{id}/offers", web::get().to(token_handler::get_token_offers::<PgPool>))
+            .route("/{token_address}/{token_id}", web::delete().to(token_handler::delete_token_context::<PgPool>).wrap(auth.clone()))
+    )
+        .service(
+            web::scope("/tokens")
+                .route("/collection/{collection_id}", web::get().to(token_handler::get_tokens_by_collection::<PgPool>))
+                .route("/{owner}", web::get().to(token_handler::get_tokens_by_account::<PgPool>))
+        )
+        .route("/flush-all-data", web::delete().to(token_handler::flush_all_data::<PgPool>).wrap(auth.clone()));
 
-    cfg.route(
-        "/token/{address}/{id}/history",
-        web::get().to(token_handler::get_token_history::<PgPool>),
-    );
-
-    cfg.route(
-        "/token/{address}/{id}/offers",
-        web::get().to(token_handler::get_token_offers::<PgPool>),
-    );
-
-    cfg.route(
-        "/tokens/{owner}",
-        web::get().to(token_handler::get_tokens_by_account::<PgPool>),
-    );
-
-    cfg.route(
-        "/token/{token_address}/{token_id}",
-        web::delete().to(token_handler::delete_token_context::<PgPool>),
-    );
-
-    cfg.route(
-        "/flush-all-data",
-        web::delete().to(token_handler::flush_all_data::<PgPool>),
-    );
 }

@@ -1,14 +1,9 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
-use routes::{default, token};
+use ark_orderbook_api::routes::{default, token};
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
-mod db;
-mod handlers;
-mod models;
-mod routes;
-mod utils;
 
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
@@ -49,8 +44,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(web::Data::new(db_pool.clone()))
-            .configure(token::config)
             .configure(default::config)
+            .configure(token::config)
     })
     .bind("0.0.0.0:8080")?
     .run()

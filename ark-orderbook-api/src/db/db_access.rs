@@ -1,5 +1,6 @@
 use crate::models::token::{
-    RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
+    RawTokenData, TokenData, TokenHistory, TokenOffer,
+    TokenWithHistory, TokenWithOffers, TopBid
 };
 use async_trait::async_trait;
 use sqlx::Error;
@@ -537,7 +538,11 @@ impl DatabaseAccess for MockDb {
         ])
     }
 
-    async fn delete_token_data(&self, token_address: &str, token_id: &str) -> Result<bool, Error> {
-        true.into()
+    async fn delete_token_data(&self, _token_address: &str, _token_id: &str) -> Result<u64, Error> {
+        Ok(1)
+    }
+
+    async fn flush_all_data(&self) -> Result<u64, Error> {
+        Ok(1)
     }
 }
