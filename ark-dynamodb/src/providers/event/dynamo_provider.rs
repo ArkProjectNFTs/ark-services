@@ -8,7 +8,7 @@ use aws_sdk_dynamodb::types::{AttributeValue, ReturnConsumedCapacity};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use std::collections::HashMap;
 use std::str::FromStr;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 /// DynamoDB provider for events.
 pub struct DynamoDbEventProvider {
@@ -379,15 +379,15 @@ impl ArkEventProvider for DynamoDbEventProvider {
         block_timestamp: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         let data = Self::transfer_event_to_data(event);
+        let pk = self.get_pk(&event.contract_address, &event.event_id);
+
+        info!("Registering transfer event with PK: {}", pk);
 
         let _r = ctx
             .client
             .put_item()
             .table_name(self.table_name.clone())
-            .item(
-                "PK".to_string(),
-                AttributeValue::S(self.get_pk(&event.contract_type, &event.event_id)),
-            )
+            .item("PK".to_string(), AttributeValue::S(pk))
             .item(
                 "SK".to_string(),
                 AttributeValue::S(self.get_sk(&event.event_type)),
