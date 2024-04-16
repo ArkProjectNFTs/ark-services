@@ -127,3 +127,72 @@ impl Storage for SqlxArkchainProvider {
         )
     }
 }
+
+pub struct SqlxMarketplaceProvider {
+    client: SqlxCtx,
+}
+
+impl SqlxMarketplaceProvider {
+    pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
+        let sqlx = SqlxCtx::new(sqlx_conn_str).await?;
+
+        Ok(Self { client: sqlx })
+    }
+}
+
+#[async_trait]
+impl Storage for SqlxMarketplaceProvider {
+    async fn register_placed(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &PlacedData,
+    ) -> StorageResult<()> {
+        Ok(OrderProvider::register_placed(&self.client, block_id, block_timestamp, data).await?)
+    }
+
+    async fn register_cancelled(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &CancelledData,
+    ) -> StorageResult<()> {
+        Ok(
+            OrderProvider::register_cancelled(&self.client, block_id, block_timestamp, data)
+                .await?,
+        )
+    }
+
+    async fn register_fulfilled(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &FulfilledData,
+    ) -> StorageResult<()> {
+        Ok(
+            OrderProvider::register_fulfilled(&self.client, block_id, block_timestamp, data)
+                .await?,
+        )
+    }
+
+    async fn register_executed(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &ExecutedData,
+    ) -> StorageResult<()> {
+        Ok(OrderProvider::register_executed(&self.client, block_id, block_timestamp, data).await?)
+    }
+
+    async fn status_back_to_open(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &RollbackStatusData,
+    ) -> StorageResult<()> {
+        Ok(
+            OrderProvider::status_back_to_open(&self.client, block_id, block_timestamp, data)
+                .await?,
+        )
+    }
+}

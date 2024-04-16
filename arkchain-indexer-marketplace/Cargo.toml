@@ -1,5 +1,5 @@
 [package]
-name = "arkchain-indexer"
+name = "arkchain-indexer-marketplace"
 version.workspace = true
 authors.workspace = true
 license.workspace = true

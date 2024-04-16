@@ -59,5 +59,5 @@ make setup_orderbook_events
 
 4. Run the indexer:
 ```
-cargo run -p arkchain-indexer
+cargo run -p arkchain-indexer-marketplace
 ```

@@ -56,6 +56,7 @@ CREATE TABLE token (
 
 CREATE TABLE token_events (
   event_id SERIAL PRIMARY KEY,
+  order_hash TEXT NOT NULL DEFAULT '',
   contract_id TEXT NOT NULL,
   token_id TEXT NOT NULL,
   event_type TEXT NOT NULL CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Buy', 'Sell', 'Mint', 'Burn', 'Transfer')),
