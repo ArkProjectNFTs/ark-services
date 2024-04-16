@@ -1,0 +1,95 @@
+CREATE TABLE contract (
+  contract_id SERIAL PRIMARY KEY,
+  chain_id TEXT NOT NULL,
+  updated_timestamp BIGINT NOT NULL,
+  contract_address TEXT NOT NULL,
+  floor_price TEXT NOT NULL,
+  top_bid TEXT NOT NULL,
+  contract_type TEXT NOT NULL CHECK (contract_type IN ('erc721', 'etc')),
+  contract_name TEXT NOT NULL,
+  contract_symbol TEXT NOT NULL,
+  contract_image TEXT NOT NULL,
+  metadata_ok BOOLEAN NOT NULL DEFAULT FALSE,
+  is_spam BOOLEAN NOT NULL DEFAULT FALSE,
+  is_nsfw BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE token (
+   token_chain_id TEXT NOT NULL,
+   contract_id TEXT NOT NULL,
+   token_id TEXT NOT NULL,
+   listed_timestamp BIGINT NOT NULL,
+   updated_timestamp BIGINT NOT NULL,
+   current_owner TEXT,
+   last_price TEXT NULL,
+   order_hash TEXT NOT NULL DEFAULT '',
+   currency_address TEXT NOT NULL DEFAULT '',
+   currency_chain_id TEXT NOT NULL DEFAULT '',
+   status TEXT NOT NULL DEFAULT 'PLACED',
+   quantity TEXT NULL,
+   start_amount TEXT NULL,
+   end_amount TEXT NULL,
+   start_date BIGINT NULL,
+   end_date BIGINT NULL,
+   broker_id TEXT NULL,
+   buy_in_progress BOOLEAN NOT NULL DEFAULT FALSE,
+   has_bid BOOLEAN NOT NULL DEFAULT FALSE,
+   held_timestamp BIGINT NULL,
+   is_listed BOOLEAN NOT NULL DEFAULT FALSE,
+   listing_currency_address TEXT NOT NULL DEFAULT '',
+   listing_currency_chain_id TEXT NOT NULL DEFAULT '',
+   listing_timestamp BIGINT NULL,
+   listing_broker_id TEXT NULL,
+   listing_orderhash TEXT NOT NULL DEFAULT '',
+   listing_end_amount TEXT NULL,
+   listing_end_date BIGINT NULL,
+   metadata JSON NULL,
+   metadata_ok BOOLEAN NOT NULL DEFAULT FALSE,
+   token_id_hex TEXT NOT NULL,
+   top_bid_amount TEXT NULL,
+   top_bid_broker_id TEXT NULL,
+   top_bid_order_hash TEXT NOT NULL DEFAULT '',
+   is_burned BOOLEAN NOT NULL DEFAULT FALSE,
+
+   PRIMARY KEY (contract_id, token_id)
+);
+
+CREATE TABLE token_events (
+  event_id SERIAL PRIMARY KEY,
+  contract_id TEXT NOT NULL,
+  token_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Buy', 'Sell', 'Mint', 'Burn', 'Transfer')),
+  timestamp BIGINT NOT NULL,
+  token_id_hex TEXT NOT NULL,
+  transaction_hash TEXT NOT NULL,
+  to_address TEXT NOT NULL, -- NULL if not transfert
+  from_address TEXT NOT NULL, -- NULL if new listing
+  amount TEXT NOT NULL,
+  canceled_reason TEXT,
+  FOREIGN KEY (contract_id, token_id) REFERENCES token(contract_id, token_id)
+);
+
+CREATE TABLE token_offers (
+  offer_id SERIAL PRIMARY KEY,
+  contract_id TEXT NOT NULL,
+  token_id TEXT NOT NULL,
+  order_hash TEXT NOT NULL DEFAULT '',
+  offer_maker TEXT NOT NULL,
+  offer_amount TEXT NOT NULL,
+  offer_quantity TEXT NOT NULL,
+  offer_timestamp BIGINT NOT NULL,
+  currency_chain_id TEXT NOT NULL DEFAULT '',
+  currency_address TEXT NOT NULL DEFAULT '',
+  start_date BIGINT NOT NULL DEFAULT 0,
+  end_date BIGINT NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'PLACED',
+  FOREIGN KEY (contract_id, token_id) REFERENCES token(contract_id, token_id)
+);
+
+CREATE TABLE block (
+    block_number SERIAL PRIMARY KEY,
+    indexer_identifier TEXT NOT NULL,
+    indexer_version TEXT NOT NULL,
+    status TEXT NOT NULL,
+    timestamp BIGINT NOT NULL
+);
