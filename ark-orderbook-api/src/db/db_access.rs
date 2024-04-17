@@ -26,6 +26,7 @@ pub trait DatabaseAccess: Send + Sync {
     async fn get_tokens_by_owner_data(&self, owner: &str) -> Result<Vec<TokenData>, Error>;
     async fn delete_token_data(&self, token_address: &str, token_id: &str) -> Result<u64, Error>;
     async fn flush_all_data(&self) -> Result<u64, Error>;
+    async fn delete_migrations(&self) -> Result<u64, Error>;
 }
 
 #[async_trait]
@@ -328,6 +329,16 @@ impl DatabaseAccess for PgPool {
 
         Ok(total_rows_affected)
     }
+
+    async fn delete_migrations(&self) -> Result<u64, Error> {
+        sqlx::query!(
+            "DELETE FROM _sqlx_migrations WHERE version > 0;",
+        )
+        .execute(self)
+        .await?;
+
+        Ok(1)
+    }
 }
 
 #[cfg(test)]
@@ -546,6 +557,10 @@ impl DatabaseAccess for MockDb {
     }
 
     async fn flush_all_data(&self) -> Result<u64, Error> {
+        Ok(1)
+    }
+
+    async fn delete_migrations(&self) -> Result<u64, Error> {
         Ok(1)
     }
 }

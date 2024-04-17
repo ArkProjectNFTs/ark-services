@@ -1,7 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
     delete_token_data, flush_all_data_query, get_token_by_collection_data, get_token_data,
-    get_token_history_data, get_token_offers_data, get_tokens_by_account_data,
+    get_token_history_data, get_token_offers_data, get_tokens_by_account_data, delete_migrations_query,
 };
 use crate::utils::http_utils::convert_param_to_hex;
 use actix_web::{web, HttpResponse, Responder};
@@ -107,6 +107,14 @@ pub async fn delete_token_context<D: DatabaseAccess + Sync>(
 pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> impl Responder {
     let db_access = db_pool.get_ref();
     match flush_all_data_query(db_access).await {
+        Ok(result) => HttpResponse::Ok().json(result),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+pub async fn delete_migrations<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> impl Responder {
+    let db_access = db_pool.get_ref();
+    match delete_migrations_query(db_access).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
