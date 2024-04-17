@@ -3,7 +3,7 @@
 //! Can be run with `cargo run --example diri`.
 //!
 use anyhow::Result;
-use ark_sqlx::providers::SqlxArkchainProvider;
+use ark_sqlx::providers::SqlxMarketplaceProvider;
 use arkproject::diri::{event_handler::EventHandler, Diri};
 use async_trait::async_trait;
 use dotenv::dotenv;
@@ -34,10 +34,10 @@ async fn main() -> Result<()> {
     )));
 
     // Quick launch locally:
-    // sudo docker run -d --name arkchain-db -p 5432:5432 -e POSTGRES_PASSWORD=123 postgres
+    // sudo docker run -d --name arkchain-marketplace-db -p 5432:5432 -e POSTGRES_PASSWORD=123 postgres
     // cd ark-sqlx
-    // sqlx database reset --database-url postgres://postgres:123@localhost:5432/arkchain
-    let storage = SqlxArkchainProvider::new(&db_url).await?;
+    // sqlx database reset --database-url postgres://postgres:123@localhost:5432/arkchain-marketplace --source marketplace
+    let storage = SqlxMarketplaceProvider::new(&db_url).await?;
     let handler = DefaultEventHandler {};
 
     let indexer = Arc::new(Diri::new(
