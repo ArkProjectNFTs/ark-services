@@ -15,7 +15,7 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     info!("Get contract events: {:?}", event);
@@ -57,16 +57,16 @@ async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpRespo
     let provider = DynamoDbEventProvider::new(&ctx.table_name, ctx.max_items_limit);
     let dynamo_rsp = provider.get_contract_events(&ctx.dynamodb, address).await?;
 
-    info!("DynamoDB response: {:?}", dynamo_rsp);
+    debug!("DynamoDB response: {:?}", dynamo_rsp);
 
     let items = dynamo_rsp.inner();
     let last_evaluated_key = &dynamo_rsp.lek;
 
-    info!("Last evaluated key: {:?}", last_evaluated_key);
+    debug!("Last evaluated key: {:?}", last_evaluated_key);
 
     let cursor = ctx.paginator.store_cursor(&dynamo_rsp.lek)?;
 
-    info!("Cursor: {:?}", cursor);
+    debug!("Cursor: {:?}", cursor);
 
     let rsp = common::ok_body_rsp(&ArkApiResponse {
         cursor,
@@ -74,7 +74,7 @@ async fn process_event(ctx: &LambdaCtx, address: &str) -> Result<LambdaHttpRespo
         result: items,
     })?;
 
-    info!("Response: {:?}", rsp);
+    debug!("Response: {:?}", rsp);
 
     let capacity = dynamo_rsp.consumed_capacity_units.unwrap_or(0.0);
 

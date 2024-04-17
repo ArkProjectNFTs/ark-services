@@ -3,7 +3,7 @@
 mod dynamo_provider;
 pub use dynamo_provider::DynamoDbEventProvider;
 
-use arkproject::pontos::storage::types::TokenEvent;
+use arkproject::pontos::storage::types::{TokenEvent, TokenSaleEvent, TokenTransferEvent};
 use async_trait::async_trait;
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
@@ -24,10 +24,17 @@ pub trait ArkEventProvider {
         event_id: &str,
     ) -> Result<DynamoDbOutput<Option<TokenEvent>>, ProviderError>;
 
-    async fn register_event(
+    async fn register_transfer_event(
         &self,
         ctx: &DynamoDbCtx,
-        event: &TokenEvent,
+        event: &TokenTransferEvent,
+        block_number: u64,
+    ) -> Result<DynamoDbOutput<()>, ProviderError>;
+
+    async fn register_sale_event(
+        &self,
+        ctx: &DynamoDbCtx,
+        event: &TokenSaleEvent,
         block_number: u64,
     ) -> Result<DynamoDbOutput<()>, ProviderError>;
 
