@@ -345,6 +345,10 @@ pub struct MockDb;
 #[cfg(test)]
 #[async_trait]
 impl DatabaseAccess for MockDb {
+    async fn flush_all_data(&self) -> Result<u64, Error> {
+        Ok(0)
+    }
+
     async fn get_token_data(
         &self,
         _token_address: &str,
