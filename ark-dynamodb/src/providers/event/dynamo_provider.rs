@@ -48,38 +48,32 @@ impl DynamoDbEventProvider {
         };
 
         let event_type_str = &convert::attr_to_str(data, "EventType")?;
-
-        match EventType::from_str(&event_type_str.as_str()) {
-            Ok(event_type) => {
-                let token_event = TokenSaleEvent {
-                    event_id: convert::attr_to_str(data, "EventId")?,
-                    event_type: event_type,
-                    timestamp: convert::attr_to_u64(data, "Timestamp")?,
-                    from_address: convert::attr_to_str(data, "FromAddress")?,
-                    to_address: convert::attr_to_str(data, "ToAddress")?,
-                    nft_contract_address: convert::attr_to_str(data, "NftContractAddress")?,
-                    nft_type: convert::attr_to_str(data, "NftType").ok(),
-                    token_id: convert::attr_to_str(data, "TokenId")?,
-                    token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
-                    transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
-                    block_number,
-                    updated_at,
-                    currency_address: convert::attr_to_str(data, "CurrencyContractAddress")?,
-                    marketplace_contract_address: convert::attr_to_str(
-                        data,
-                        "MarketplaceContractAddress",
-                    )?,
-                    marketplace_name: convert::attr_to_str(data, "MarketplaceName")?,
-                    price: convert::attr_to_str(data, "Price")?,
-                    quantity: convert::attr_to_u64(data, "Quantity")?,
-                };
-                return Ok(token_event);
-            }
-            Err(_) => {
-                return Err(ProviderError::ParsingError(
-                    "EventType is unknown".to_string(),
-                ));
-            }
+        match EventType::from_str(event_type_str.as_str()) {
+            Ok(event_type) => Ok(TokenSaleEvent {
+                event_id: convert::attr_to_str(data, "EventId")?,
+                event_type,
+                timestamp: convert::attr_to_u64(data, "Timestamp")?,
+                from_address: convert::attr_to_str(data, "FromAddress")?,
+                to_address: convert::attr_to_str(data, "ToAddress")?,
+                nft_contract_address: convert::attr_to_str(data, "NftContractAddress")?,
+                nft_type: convert::attr_to_str(data, "NftType").ok(),
+                token_id: convert::attr_to_str(data, "TokenId")?,
+                token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
+                transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
+                block_number,
+                updated_at,
+                currency_address: convert::attr_to_str(data, "CurrencyContractAddress")?,
+                marketplace_contract_address: convert::attr_to_str(
+                    data,
+                    "MarketplaceContractAddress",
+                )?,
+                marketplace_name: convert::attr_to_str(data, "MarketplaceName")?,
+                price: convert::attr_to_str(data, "Price")?,
+                quantity: convert::attr_to_u64(data, "Quantity")?,
+            }),
+            Err(_) => Err(ProviderError::ParsingError(
+                "EventType is unknown".to_string(),
+            )),
         }
     }
 
@@ -97,31 +91,25 @@ impl DynamoDbEventProvider {
         };
 
         let event_type_str = &convert::attr_to_str(data, "EventType")?;
-        match EventType::from_str(&event_type_str.as_str()) {
-            Ok(event_type) => {
-                let event = TokenTransferEvent {
-                    event_id: convert::attr_to_str(data, "EventId")?,
-                    event_type,
-                    timestamp: convert::attr_to_u64(data, "Timestamp")?,
-                    from_address: convert::attr_to_str(data, "FromAddress")?,
-                    to_address: convert::attr_to_str(data, "ToAddress")?,
-                    contract_address: convert::attr_to_str(data, "ContractAddress")?,
-                    contract_type: convert::attr_to_str(data, "ContractType")?,
-                    token_id: convert::attr_to_str(data, "TokenId")?,
-                    token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
-                    transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
-                    block_number,
-                    updated_at,
-                };
-
-                return Ok(event);
-            }
-            Err(_) => {
-                return Err(ProviderError::ParsingError(
-                    "EventType is unknown".to_string(),
-                ));
-            }
-        };
+        match EventType::from_str(event_type_str.as_str()) {
+            Ok(event_type) => Ok(TokenTransferEvent {
+                event_id: convert::attr_to_str(data, "EventId")?,
+                event_type,
+                timestamp: convert::attr_to_u64(data, "Timestamp")?,
+                from_address: convert::attr_to_str(data, "FromAddress")?,
+                to_address: convert::attr_to_str(data, "ToAddress")?,
+                contract_address: convert::attr_to_str(data, "ContractAddress")?,
+                contract_type: convert::attr_to_str(data, "ContractType")?,
+                token_id: convert::attr_to_str(data, "TokenId")?,
+                token_id_hex: convert::attr_to_str(data, "TokenIdHex")?,
+                transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
+                block_number,
+                updated_at,
+            }),
+            Err(_) => Err(ProviderError::ParsingError(
+                "EventType is unknown".to_string(),
+            )),
+        }
     }
 
     pub fn sale_event_to_data(event: &TokenSaleEvent) -> HashMap<String, AttributeValue> {
@@ -354,7 +342,7 @@ impl ArkEventProvider for DynamoDbEventProvider {
                 "GSI7PK".to_string(),
                 AttributeValue::S(format!(
                     "{}#{}",
-                    event.event_type.to_string(),
+                    event.event_type,
                     event.marketplace_name.to_uppercase()
                 )),
             )
