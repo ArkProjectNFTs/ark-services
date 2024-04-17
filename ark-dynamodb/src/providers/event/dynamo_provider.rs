@@ -530,6 +530,8 @@ impl ArkEventProvider for DynamoDbEventProvider {
             .await
             .map_err(|e| ProviderError::DatabaseError(format!("{:?}", e)))?;
 
+        debug!("Query result. Items: {:?}", r.items);
+
         let mut res = vec![];
         if let Some(items) = r.clone().items {
             for i in items {
@@ -774,6 +776,10 @@ impl ArkEventProvider for DynamoDbEventProvider {
                                 res.push(TokenEvent::Sale(result));
                             }
                             "TRANSFER" => {
+                                let result = Self::data_to_transfer_event(&data)?;
+                                res.push(TokenEvent::Transfer(result));
+                            }
+                            "MINT" => {
                                 let result = Self::data_to_transfer_event(&data)?;
                                 res.push(TokenEvent::Transfer(result));
                             }

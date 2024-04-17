@@ -17,6 +17,7 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
+use tracing::{debug, error};
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -39,6 +40,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             Ok(lambda_rsp.inner)
         }
         Err(e) => {
+            error!("Error: {:?}", e);
             ctx.register_usage(req_params, None).await?;
             Err(e)
         }
@@ -85,6 +87,11 @@ fn get_params(event: &Request) -> Result<(String, String), LambdaHttpError> {
             Ok(t) => t,
             Err(e) => return Err(e),
         };
+
+    debug!(
+        "Request parameters: address={}, token_id_hex={}",
+        address, token_id_hex
+    );
 
     Ok((address, token_id_hex))
 }
