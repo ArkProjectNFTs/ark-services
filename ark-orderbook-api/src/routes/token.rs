@@ -45,5 +45,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::delete()
             .to(token_handler::flush_all_data::<PgPool>)
             .wrap(auth.clone()),
+    )
+    .route(
+        "/delete-migrations",
+        web::delete()
+            .to(token_handler::delete_migrations::<PgPool>)
+            .wrap(auth.clone()),
     );
 }

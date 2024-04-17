@@ -56,3 +56,9 @@ pub async fn flush_all_data_query<D: DatabaseAccess + Sync>(
 ) -> Result<u64, sqlx::Error> {
     db_access.flush_all_data().await
 }
+
+pub async fn delete_migrations_query<D: DatabaseAccess + Sync>(
+    db_access: &D,
+) -> Result<u64, sqlx::Error> {
+    db_access.delete_migrations().await
+}
