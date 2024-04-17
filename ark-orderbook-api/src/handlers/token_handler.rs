@@ -1,7 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
-    delete_token_data, flush_all_data_query, get_token_by_collection_data, get_token_data,
-    get_token_history_data, get_token_offers_data, get_tokens_by_account_data, delete_migrations_query,
+    delete_migrations_query, delete_token_data, flush_all_data_query, get_token_by_collection_data,
+    get_token_data, get_token_history_data, get_token_offers_data, get_tokens_by_account_data,
 };
 use crate::utils::http_utils::convert_param_to_hex;
 use actix_web::{web, HttpResponse, Responder};

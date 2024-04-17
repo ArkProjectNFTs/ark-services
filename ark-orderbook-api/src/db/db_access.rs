@@ -331,11 +331,9 @@ impl DatabaseAccess for PgPool {
     }
 
     async fn delete_migrations(&self) -> Result<u64, Error> {
-        sqlx::query!(
-            "DELETE FROM _sqlx_migrations WHERE version > 0;",
-        )
-        .execute(self)
-        .await?;
+        sqlx::query!("DELETE FROM _sqlx_migrations WHERE version > 0;",)
+            .execute(self)
+            .await?;
 
         Ok(1)
     }
