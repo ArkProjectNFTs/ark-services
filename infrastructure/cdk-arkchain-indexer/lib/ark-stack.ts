@@ -76,6 +76,7 @@ export class ArkIndexersStack extends cdk.Stack {
 
     const dbEndpointAddress = dbInstance.dbInstanceEndpointAddress;
 
+    return;
     deployIndexer(
       this,
       props.networks,
