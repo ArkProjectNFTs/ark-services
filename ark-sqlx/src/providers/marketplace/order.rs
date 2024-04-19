@@ -505,7 +505,8 @@ impl OrderProvider {
                 last_price = $5, order_hash = $6,
                 currency_chain_id = $7, currency_address = $8,
                 listing_start_date = null, listing_end_date = null,
-                listing_start_amount = null, listing_end_amount = null
+                listing_start_amount = null, listing_end_amount = null,
+                held_timestamp = $9
             WHERE contract_id = $1 AND token_id = $2;
         ";
 
@@ -518,6 +519,7 @@ impl OrderProvider {
             .bind(&info.order_hash.to_string())
             .bind(&info.currency_chain_id)
             .bind(&info.currency_address)
+            .bind(info.block_timestamp as i64)
             .execute(&client.pool)
             .await?;
 
@@ -673,6 +675,7 @@ impl OrderProvider {
                     token_id_hex,
                     listing_timestamp,
                     updated_timestamp,
+                    held_timestamp,
                     current_owner,
                     quantity,
                     listing_start_amount,
@@ -684,7 +687,7 @@ impl OrderProvider {
                     listing_currency_address,
                     listing_currency_chain_id,
                     status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 ON CONFLICT (token_id, contract_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 listing_start_amount = EXCLUDED.listing_start_amount,
@@ -702,6 +705,7 @@ impl OrderProvider {
                 .bind(contract_id.clone())
                 .bind(token_id_decimal)
                 .bind(data.token_id.clone())
+                .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
                 .bind(data.offerer.clone())
