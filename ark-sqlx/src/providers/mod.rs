@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
 
 use crate::providers::orderbook::OrderProvider;
+use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
 
 pub mod metrics;
 pub mod orderbook;
@@ -149,7 +150,7 @@ impl Storage for SqlxMarketplaceProvider {
         block_timestamp: u64,
         data: &PlacedData,
     ) -> StorageResult<()> {
-        Ok(OrderProvider::register_placed(&self.client, block_id, block_timestamp, data).await?)
+        Ok(MarketplaceOrderProvider::register_placed(&self.client, block_id, block_timestamp, data).await?)
     }
 
     async fn register_cancelled(
@@ -159,7 +160,7 @@ impl Storage for SqlxMarketplaceProvider {
         data: &CancelledData,
     ) -> StorageResult<()> {
         Ok(
-            OrderProvider::register_cancelled(&self.client, block_id, block_timestamp, data)
+            MarketplaceOrderProvider::register_cancelled(&self.client, block_id, block_timestamp, data)
                 .await?,
         )
     }
@@ -171,7 +172,7 @@ impl Storage for SqlxMarketplaceProvider {
         data: &FulfilledData,
     ) -> StorageResult<()> {
         Ok(
-            OrderProvider::register_fulfilled(&self.client, block_id, block_timestamp, data)
+            MarketplaceOrderProvider::register_fulfilled(&self.client, block_id, block_timestamp, data)
                 .await?,
         )
     }
@@ -182,7 +183,7 @@ impl Storage for SqlxMarketplaceProvider {
         block_timestamp: u64,
         data: &ExecutedData,
     ) -> StorageResult<()> {
-        Ok(OrderProvider::register_executed(&self.client, block_id, block_timestamp, data).await?)
+        Ok(MarketplaceOrderProvider::register_executed(&self.client, block_id, block_timestamp, data).await?)
     }
 
     async fn status_back_to_open(
@@ -192,7 +193,7 @@ impl Storage for SqlxMarketplaceProvider {
         data: &RollbackStatusData,
     ) -> StorageResult<()> {
         Ok(
-            OrderProvider::status_back_to_open(&self.client, block_id, block_timestamp, data)
+            MarketplaceOrderProvider::status_back_to_open(&self.client, block_id, block_timestamp, data)
                 .await?,
         )
     }
