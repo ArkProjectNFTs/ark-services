@@ -11,7 +11,6 @@ use crate::providers::orderbook::OrderProvider;
 pub mod marketplace;
 pub mod metrics;
 pub mod orderbook;
-pub mod marketplace;
 
 /// A context for SQLx database.
 #[derive(Debug)]
