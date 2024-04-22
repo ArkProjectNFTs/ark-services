@@ -16,7 +16,7 @@ CREATE TABLE contract (
 
 CREATE TABLE token (
    token_chain_id TEXT NOT NULL,
-   contract_id TEXT NOT NULL,
+   contract_id INTEGER NOT NULL,
    token_id TEXT NOT NULL,
    current_owner TEXT,
    last_price TEXT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE token (
 CREATE TABLE token_events (
   event_id SERIAL PRIMARY KEY,
   order_hash TEXT NOT NULL DEFAULT '',
-  contract_id TEXT NOT NULL,
+  contract_id INTEGER NOT NULL,
   token_id TEXT NOT NULL,
   event_type TEXT NOT NULL CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Buy', 'Sell', 'Mint', 'Burn', 'Transfer')),
   timestamp BIGINT NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE token_events (
 
 CREATE TABLE token_offers (
   offer_id SERIAL PRIMARY KEY,
-  contract_id TEXT NOT NULL,
+  contract_id INTEGER NOT NULL,
   token_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   offer_maker TEXT NOT NULL,
