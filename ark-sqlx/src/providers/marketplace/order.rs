@@ -192,7 +192,6 @@ pub struct OfferData {
     status: String,
 }
 
-
 pub struct OfferExecutedInfo {
     block_timestamp: u64,
     contract_address: String,
@@ -217,7 +216,6 @@ impl OrderProvider {
 }
 
 impl OrderProvider {
-
     async fn order_hash_exists_in_token_offers(
         client: &SqlxCtx,
         order_hash: &str,
@@ -282,36 +280,36 @@ impl OrderProvider {
     }
 
     pub async fn get_or_create_contract(
-            client: &SqlxCtx,
-            contract_address: &str,
-            chain_id: &str,
-            block_timestamp: u64,
-        ) -> Result<i32, ProviderError> {
-            match Self::get_contract(client, contract_address).await? {
-                Some(contract_id) => Ok(contract_id),
-                None => {
-                    let insert_query = "
+        client: &SqlxCtx,
+        contract_address: &str,
+        chain_id: &str,
+        block_timestamp: u64,
+    ) -> Result<i32, ProviderError> {
+        match Self::get_contract(client, contract_address).await? {
+            Some(contract_id) => Ok(contract_id),
+            None => {
+                let insert_query = "
                         INSERT INTO contract (contract_address, chain_id, updated_timestamp, contract_type)
                         VALUES ($1, $2, $3, $4)
                         RETURNING contract_id;
                     ";
-                    let result = sqlx::query(insert_query)
-                        .bind(contract_address)
-                        .bind(chain_id)
-                        .bind(block_timestamp as i64)
-                        .bind("erc721".to_string())
-                        .fetch_one(&client.pool)
-                        .await?;
-                    Ok(result.get::<i32, _>("contract_id"))
-                }
+                let result = sqlx::query(insert_query)
+                    .bind(contract_address)
+                    .bind(chain_id)
+                    .bind(block_timestamp as i64)
+                    .bind("erc721".to_string())
+                    .fetch_one(&client.pool)
+                    .await?;
+                Ok(result.get::<i32, _>("contract_id"))
             }
         }
+    }
 
-        pub async fn get_offer_data_by_order_hash(
-            client: &SqlxCtx,
-            order_hash: &str,
-        ) -> Result<Option<OfferData>, sqlx::Error> {
-            let query = "
+    pub async fn get_offer_data_by_order_hash(
+        client: &SqlxCtx,
+        order_hash: &str,
+    ) -> Result<Option<OfferData>, sqlx::Error> {
+        let query = "
                 SELECT  order_hash,
                         offer_timestamp,
                         offer_quantity,
@@ -326,7 +324,37 @@ impl OrderProvider {
                 WHERE order_hash = $1;
             ";
 
-            if let Some((
+        if let Some((
+            order_hash,
+            timestamp,
+            quantity,
+            status,
+            token_id,
+            contract_id,
+            offer_maker,
+            offer_amount,
+            currency_chain_id,
+            currency_address,
+        )) = sqlx::query_as::<
+            _,
+            (
+                String,
+                i64,
+                String,
+                String,
+                String,
+                i32,
+                String,
+                String,
+                String,
+                String,
+            ),
+        >(query)
+        .bind(order_hash)
+        .fetch_optional(&client.pool)
+        .await?
+        {
+            Ok(Some(OfferData {
                 order_hash,
                 timestamp,
                 quantity,
@@ -337,41 +365,11 @@ impl OrderProvider {
                 offer_amount,
                 currency_chain_id,
                 currency_address,
-            )) = sqlx::query_as::<
-                _,
-                (
-                    String,
-                    i64,
-                    String,
-                    String,
-                    String,
-                    i32,
-                    String,
-                    String,
-                    String,
-                    String,
-                ),
-            >(query)
-            .bind(order_hash)
-            .fetch_optional(&client.pool)
-            .await?
-            {
-                Ok(Some(OfferData {
-                    order_hash,
-                    timestamp,
-                    quantity,
-                    status,
-                    token_id,
-                    contract_id,
-                    offer_maker,
-                    offer_amount,
-                    currency_chain_id,
-                    currency_address,
-                }))
-            } else {
-                Ok(None)
-            }
+            }))
+        } else {
+            Ok(None)
         }
+    }
 
     pub async fn get_token_data_by_order_hash(
         client: &SqlxCtx,
@@ -1034,7 +1032,6 @@ impl OrderProvider {
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
         {
-
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
@@ -1123,7 +1120,7 @@ impl OrderProvider {
 
                 let params = OfferExecutedInfo {
                     block_timestamp,
-                    contract_id: offer_data.contract_id.clone(),
+                    contract_id: offer_data.contract_id,
                     token_id: offer_data.token_id.clone(),
                     to_address: offer_data.offer_maker.clone(),
                     price: offer_data.offer_amount.clone(),
@@ -1131,28 +1128,25 @@ impl OrderProvider {
                     currency_chain_id: offer_data.currency_chain_id.clone(),
                     currency_address: offer_data.currency_address.clone(),
                 };
-                 Self::update_owner_price_on_offer_executed(client, &params).await?;
-                 from_address = Some(
-                    Self::get_current_owner(
+                Self::update_owner_price_on_offer_executed(client, &params).await?;
+                from_address = Some(
+                    Self::get_current_owner(client, &offer_data.contract_id, &offer_data.token_id)
+                        .await?,
+                );
+            } else {
+                let order_in_token =
+                    Self::order_hash_exists_in_token(client, &data.order_hash).await?;
+                if order_in_token {
+                    /* EventType::Listing | EventType::Auction */
+                    Self::update_token_on_listing_executed(
                         client,
                         &offer_data.contract_id,
                         &offer_data.token_id,
+                        block_timestamp as i64,
+                        &offer_data.offer_amount,
                     )
-                    .await?,
-                 );
-            } else {
-               let order_in_token = Self::order_hash_exists_in_token(client, &data.order_hash).await?;
-               if order_in_token {
-                   /* EventType::Listing | EventType::Auction */
-                   Self::update_token_on_listing_executed(
-                       client,
-                       &offer_data.contract_id,
-                       &offer_data.token_id,
-                       block_timestamp as i64,
-                       &offer_data.offer_amount,
-                   )
-                   .await?;
-               }
+                    .await?;
+                }
             }
 
             Self::insert_event_history(
