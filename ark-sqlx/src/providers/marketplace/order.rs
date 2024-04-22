@@ -230,7 +230,11 @@ impl OrderProvider {
         Ok(exists != 0)
     }
 
-    async fn token_exists(client: &SqlxCtx, contract_id: &i32, token_id: &i64) -> Result<bool, ProviderError> {
+    async fn token_exists(
+        client: &SqlxCtx,
+        contract_id: &i32,
+        token_id: &i64,
+    ) -> Result<bool, ProviderError> {
         let query = "
             SELECT CASE
                 WHEN EXISTS (
@@ -401,15 +405,16 @@ impl OrderProvider {
             WHERE listing_orderhash = $1;
         ";
 
-        if let Some((token_id, contract_id, token_id_hex)) = sqlx::query_as::<_, (String, i32, String)>(query)
-            .bind(order_hash)
-            .fetch_optional(&client.pool)
-            .await?
+        if let Some((token_id, contract_id, token_id_hex)) =
+            sqlx::query_as::<_, (String, i32, String)>(query)
+                .bind(order_hash)
+                .fetch_optional(&client.pool)
+                .await?
         {
             Ok(Some(TokenData {
                 token_id,
                 contract_id,
-                token_id_hex
+                token_id_hex,
             }))
         } else {
             Ok(None)
@@ -521,7 +526,7 @@ impl OrderProvider {
             UPDATE token
             SET
                 current_owner = $3, updated_timestamp = $4,
-                last_price = $5, listing_order_hash = $6,
+                last_price = $5, listing_orderhash = $6,
                 currency_chain_id = $7, currency_address = $8,
                 listing_start_date = null, listing_end_date = null,
                 listing_start_amount = null, listing_end_amount = null,
