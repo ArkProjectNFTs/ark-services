@@ -204,6 +204,7 @@ pub struct OfferExecutedInfo {
 pub struct TokenData {
     token_id: String,
     contract_id: i32,
+    token_id_hex: String,
 }
 
 impl OrderProvider {
@@ -212,17 +213,41 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
-            SELECT EXISTS(
-                SELECT 1
-                FROM token_offers
-                WHERE order_hash = $1
-            );
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM token_offers
+                    WHERE order_hash = $1
+                )
+                THEN 1
+                ELSE 0
+            END;
         ";
-        let exists = sqlx::query_scalar(query)
+        let exists: i32 = sqlx::query_scalar(query)
             .bind(order_hash)
             .fetch_one(&client.pool)
             .await?;
-        Ok(exists)
+        Ok(exists != 0)
+    }
+
+    async fn token_exists(client: &SqlxCtx, contract_id: &i32, token_id: &i64) -> Result<bool, ProviderError> {
+        let query = "
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM token
+                    WHERE contract_id = $1 AND token_id = $2
+                )
+                THEN 1
+                ELSE 0
+            END;
+        ";
+        let exists: i32 = sqlx::query_scalar(query)
+            .bind(contract_id)
+            .bind(token_id.to_string())
+            .fetch_one(&client.pool)
+            .await?;
+        Ok(exists != 0)
     }
 
     async fn order_hash_exists_in_token(
@@ -230,17 +255,21 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
-            SELECT EXISTS(
-                SELECT 1
-                FROM token
-                WHERE listing_orderhash = $1
-            );
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM token
+                    WHERE listing_orderhash = $1
+                )
+                THEN 1
+                ELSE 0
+            END;
         ";
-        let exists = sqlx::query_scalar(query)
+        let exists: i32 = sqlx::query_scalar(query)
             .bind(order_hash)
             .fetch_one(&client.pool)
             .await?;
-        Ok(exists)
+        Ok(exists != 0)
     }
 
     fn convert_token_id_to_decimal(token_hex: &Option<String>) -> Result<i64, &'static str> {
@@ -367,12 +396,12 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, contract_id
+            SELECT token_id, contract_id, token_id_hex
             FROM token
             WHERE listing_orderhash = $1;
         ";
 
-        if let Some((token_id, contract_id)) = sqlx::query_as::<_, (String, i32)>(query)
+        if let Some((token_id, contract_id, token_id_hex)) = sqlx::query_as::<_, (String, i32, String)>(query)
             .bind(order_hash)
             .fetch_optional(&client.pool)
             .await?
@@ -380,6 +409,7 @@ impl OrderProvider {
             Ok(Some(TokenData {
                 token_id,
                 contract_id,
+                token_id_hex
             }))
         } else {
             Ok(None)
@@ -554,9 +584,12 @@ impl OrderProvider {
         client: &SqlxCtx,
         event_data: &EventHistoryData,
     ) -> Result<(), ProviderError> {
-        trace!("Insert event history");
         let token_id = Some(event_data.token_id.clone());
         let token_id_decimal = Self::convert_token_id_to_decimal(&token_id)?;
+        if !Self::token_exists(client, &event_data.contract_id, &token_id_decimal).await? {
+            return Err(ProviderError::from("Token does not exist"));
+        }
+
         let q = "
             INSERT INTO token_events (order_hash, token_id, token_id_hex, contract_id, event_type, timestamp, from_address, to_address, amount, canceled_reason)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
@@ -583,6 +616,10 @@ impl OrderProvider {
         trace!("Insert token offers");
         let token_id = Some(offer_data.token_id.clone());
         let token_id_decimal = Self::convert_token_id_to_decimal(&token_id)?;
+
+        if !Self::token_exists(client, &offer_data.contract_id, &token_id_decimal).await? {
+            return Err(ProviderError::from("Token does not exist"));
+        }
 
         let insert_query = "
             INSERT INTO token_offers
@@ -754,7 +791,7 @@ impl OrderProvider {
                 client,
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
-                    token_id: token_data.token_id.clone(),
+                    token_id: token_data.token_id_hex.clone(),
                     contract_id: token_data.contract_id,
                     event_type: EventType::Cancelled,
                     timestamp: block_timestamp as i64,
@@ -803,7 +840,7 @@ impl OrderProvider {
                 client,
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
-                    token_id: token_data.token_id.clone(),
+                    token_id: token_data.token_id_hex.clone(),
                     contract_id: token_data.contract_id,
                     event_type: EventType::Fulfill,
                     timestamp: block_timestamp as i64,
@@ -930,7 +967,7 @@ impl OrderProvider {
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
                     timestamp: block_timestamp as i64,
-                    token_id: token_data.token_id.clone(),
+                    token_id: token_data.token_id_hex.clone(),
                     contract_id: token_data.contract_id,
                     event_type: EventType::Rollback,
                     canceled_reason: Some(string_reason),
