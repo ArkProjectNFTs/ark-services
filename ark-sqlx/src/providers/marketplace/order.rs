@@ -240,7 +240,7 @@ impl OrderProvider {
             SELECT EXISTS(
                 SELECT 1
                 FROM token
-                WHERE order_hash = $1
+                WHERE listing_orderhash = $1
             );
         ";
         let exists = sqlx::query_scalar(query)
@@ -755,7 +755,6 @@ impl OrderProvider {
         if !Self::token_exists(client, &event_data.contract_id, &token_id_decimal).await? {
             return Err(ProviderError::from("Token does not exist"));
         }
-
         let q = "
             INSERT INTO token_events (order_hash, token_id, token_id_hex, contract_id, event_type, timestamp, from_address, to_address, amount, canceled_reason)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
