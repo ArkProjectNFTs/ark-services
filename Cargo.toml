@@ -33,6 +33,7 @@ members = [
   "arkchain-indexer",
   "ark-orderbook-api",
   "arkchain-indexer-marketplace",
+  "ark-indexer-marketplace",
 ]
 resolver = "2"
 
