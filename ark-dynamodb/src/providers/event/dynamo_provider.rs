@@ -136,7 +136,7 @@ impl DynamoDbEventProvider {
             AttributeValue::S(event.price.to_string()),
         );
 
-        if let Some(currency_address) = event.currency_address.clone() {
+        if let Some(currency_address) = &event.currency_address {
             map.insert(
                 "CurrencyContractAddress".to_string(),
                 AttributeValue::S(currency_address.to_string()),
