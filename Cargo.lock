@@ -362,7 +362,8 @@ dependencies = [
  "aws-sdk-s3",
  "chrono",
  "log",
- "mockall",
+ "mockall 0.11.4",
+ "mockall 0.12.1",
  "redis",
  "serde",
  "serde_json",
@@ -525,7 +526,8 @@ dependencies = [
  "arkproject",
  "async-trait",
  "chrono",
- "mockall",
+ "mockall 0.11.4",
+ "mockall 0.12.1",
  "serde",
  "serde_json",
  "serde_with 3.7.0",
@@ -543,7 +545,7 @@ source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.48.0#b29706af
 dependencies = [
  "anyhow",
  "async-trait",
- "mockall",
+ "mockall 0.11.4",
  "num-bigint",
  "num-traits",
  "regex",
@@ -862,7 +864,7 @@ dependencies = [
  "fastrand 2.0.2",
  "hex",
  "http 0.2.12",
- "hyper",
+ "hyper 0.14.28",
  "ring",
  "time",
  "tokio",
@@ -1183,7 +1185,7 @@ dependencies = [
  "http 0.2.12",
  "http-body 0.4.6",
  "http-body 1.0.0",
- "hyper",
+ "hyper 0.14.28",
  "hyper-rustls",
  "once_cell",
  "pin-project-lite",
@@ -1262,14 +1264,14 @@ dependencies = [
 
 [[package]]
 name = "aws_lambda_events"
-version = "0.12.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03611508dd1e514e311caec235b581c99a4cb66fa1771bd502819eed69894f12"
+checksum = "598e2ade8447dce8d3a15b6159b73354db34257851344b232fb1920c272acc61"
 dependencies = [
  "base64 0.21.7",
  "bytes",
- "http 0.2.12",
- "http-body 0.4.6",
+ "http 1.1.0",
+ "http-body 1.0.0",
  "http-serde",
  "query_map",
  "serde",
@@ -1302,12 +1304,6 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64"
@@ -2571,11 +2567,11 @@ dependencies = [
 
 [[package]]
 name = "http-serde"
-version = "1.1.3"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f560b665ad9f1572cfcaf034f7fb84338a7ce945216d64a90fd81f046a3caee"
+checksum = "1133cafcce27ea69d35e56b3a8772e265633e04de73c5f4e1afdffc1d19b5419"
 dependencies = [
- "http 0.2.12",
+ "http 1.1.0",
  "serde",
 ]
 
@@ -2622,6 +2618,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyper"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe575dd17d0862a9a33781c8c4696a55c320909004a67a00fb286ba8b1bc496d"
+dependencies = [
+ "bytes",
+ "futures-channel",
+ "futures-util",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "httparse",
+ "itoa",
+ "pin-project-lite",
+ "smallvec",
+ "tokio",
+ "want",
+]
+
+[[package]]
 name = "hyper-rustls"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2629,7 +2644,7 @@ checksum = "ec3efd23720e2049821a693cbc7e65ea87c72f1c58ff2f9522ff332b1491e590"
 dependencies = [
  "futures-util",
  "http 0.2.12",
- "hyper",
+ "hyper 0.14.28",
  "log",
  "rustls",
  "rustls-native-certs",
@@ -2644,10 +2659,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
 dependencies = [
  "bytes",
- "hyper",
+ "hyper 0.14.28",
  "native-tls",
  "tokio",
  "tokio-native-tls",
+]
+
+[[package]]
+name = "hyper-util"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca38ef113da30126bbff9cd1705f9273e15d45498615d138b0c20279ac7a76aa"
+dependencies = [
+ "bytes",
+ "futures-channel",
+ "futures-util",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "hyper 1.3.1",
+ "pin-project-lite",
+ "socket2 0.5.6",
+ "tokio",
+ "tower",
+ "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -2866,7 +2901,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "serde",
  "serde_json",
  "starknet 0.10.0",
@@ -2884,7 +2919,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -2900,7 +2935,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -2916,7 +2951,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -2932,7 +2967,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -2948,7 +2983,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -2964,7 +2999,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -2980,7 +3015,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "serde",
  "serde_json",
  "sqlx",
@@ -2998,7 +3033,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -3014,7 +3049,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -3030,7 +3065,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -3046,7 +3081,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "tokio",
  "tracing",
@@ -3079,7 +3114,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3116,7 +3151,7 @@ dependencies = [
  "lambda-http-common",
  "lambda_http",
  "lambda_runtime",
- "mockall",
+ "mockall 0.12.1",
  "sqlx",
  "starknet 0.10.0",
  "tokio",
@@ -3126,21 +3161,24 @@ dependencies = [
 
 [[package]]
 name = "lambda_http"
-version = "0.8.3"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2505c4a24f5a8d8ac66a87691215ec1f79736c5bc6e62bb921788dca9753f650"
+checksum = "5ebde9aedfdf8c2bac4365d9adafae6ca6d631b0ea221734ac802595fcd141cb"
 dependencies = [
  "aws_lambda_events",
  "base64 0.21.7",
  "bytes",
  "encoding_rs",
  "futures",
- "http 0.2.12",
- "http-body 0.4.6",
- "hyper",
+ "futures-util",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "http-body-util",
+ "hyper 1.3.1",
  "lambda_runtime",
  "mime",
  "percent-encoding",
+ "pin-project-lite",
  "serde",
  "serde_json",
  "serde_urlencoded",
@@ -3150,38 +3188,51 @@ dependencies = [
 
 [[package]]
 name = "lambda_runtime"
-version = "0.8.3"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deca8f65d7ce9a8bfddebb49d7d91b22e788a59ca0c5190f26794ab80ed7a702"
+checksum = "276c835f2217fac810a97f2ed8eabfe9be71afe4f3ffd8671b05cb528e95ff8a"
 dependencies = [
  "async-stream",
- "base64 0.20.0",
+ "base64 0.21.7",
  "bytes",
  "futures",
- "http 0.2.12",
- "http-body 0.4.6",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "http-body-util",
  "http-serde",
- "hyper",
+ "hyper 1.3.1",
+ "hyper-util",
  "lambda_runtime_api_client",
+ "pin-project",
  "serde",
  "serde_json",
  "serde_path_to_error",
  "tokio",
  "tokio-stream",
  "tower",
+ "tower-layer",
  "tracing",
 ]
 
 [[package]]
 name = "lambda_runtime_api_client"
-version = "0.8.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "690c5ae01f3acac8c9c3348b556fc443054e9b7f1deaf53e9ebab716282bf0ed"
+checksum = "722b02764422524d3f49a934b570f7c567f811eda1f9c4bdebebcfae1bad4f23"
 dependencies = [
- "http 0.2.12",
- "hyper",
+ "bytes",
+ "futures-channel",
+ "futures-util",
+ "http 1.1.0",
+ "http-body 1.0.0",
+ "http-body-util",
+ "hyper 1.3.1",
+ "hyper-util",
  "tokio",
+ "tower",
  "tower-service",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -3347,8 +3398,23 @@ dependencies = [
  "downcast",
  "fragile",
  "lazy_static",
- "mockall_derive",
- "predicates",
+ "mockall_derive 0.11.4",
+ "predicates 2.1.5",
+ "predicates-tree",
+]
+
+[[package]]
+name = "mockall"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43766c2b5203b10de348ffe19f7e54564b64f3d6018ff7648d1e2d6d3a0f0a48"
+dependencies = [
+ "cfg-if",
+ "downcast",
+ "fragile",
+ "lazy_static",
+ "mockall_derive 0.12.1",
+ "predicates 3.1.0",
  "predicates-tree",
 ]
 
@@ -3362,6 +3428,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "mockall_derive"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af7cbce79ec385a1d4f54baa90a76401eb15d9cab93685f62e7e9f942aa00ae2"
+dependencies = [
+ "cfg-if",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
 ]
 
 [[package]]
@@ -3820,6 +3898,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "predicates"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68b87bfd4605926cdfefc1c3b5f8fe560e3feca9d5552cf68c466d3d8236c7e8"
+dependencies = [
+ "anstyle",
+ "predicates-core",
+]
+
+[[package]]
 name = "predicates-core"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4011,7 +4099,7 @@ dependencies = [
  "h2",
  "http 0.2.12",
  "http-body 0.4.6",
- "hyper",
+ "hyper 0.14.28",
  "hyper-rustls",
  "hyper-tls",
  "ipnet",
@@ -5352,6 +5440,7 @@ dependencies = [
  "futures-util",
  "pin-project",
  "pin-project-lite",
+ "tokio",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -5425,6 +5514,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-serde"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc6b213177105856957181934e4920de57730fc69bf42c37ee5bb664d406d9e1"
+dependencies = [
+ "serde",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5434,12 +5533,15 @@ dependencies = [
  "nu-ansi-term",
  "once_cell",
  "regex",
+ "serde",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log 0.2.0",
+ "tracing-serde",
 ]
 
 [[package]]

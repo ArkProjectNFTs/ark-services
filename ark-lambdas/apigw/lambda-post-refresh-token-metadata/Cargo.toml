@@ -24,8 +24,8 @@ ark-dynamodb.workspace = true
 arkproject.workspace = true
 async-trait.workspace = true
 anyhow.workspace = true
-lambda_http = "0.8.1"
-lambda_runtime = "0.8.1"
+lambda_http = "0.11.1"
+lambda_runtime = "0.11.1"
 sqlx.workspace = true
 tokio = { version = "1", features = ["macros"] }
 tracing = { version = "0.1", features = ["log"] }
@@ -34,5 +34,5 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
 ] }
 
 [dev-dependencies]
-mockall = "0.11.4"
+mockall = "0.12.1"
 ark-dynamodb = { path = "../../../ark-dynamodb", features = ["mock"] }
