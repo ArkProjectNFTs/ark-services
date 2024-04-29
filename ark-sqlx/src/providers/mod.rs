@@ -7,8 +7,6 @@ use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
 
 use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
 use crate::providers::orderbook::OrderProvider;
-use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
-use crate::providers::orderbook::OrderProvider;
 
 pub mod marketplace;
 pub mod metrics;
