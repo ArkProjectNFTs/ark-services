@@ -1,11 +1,11 @@
 CREATE TABLE contract (
   contract_id SERIAL PRIMARY KEY,
-  chain_id TEXT NOT NULL,
+  chain_id TEXT,
   updated_timestamp BIGINT NOT NULL,
   contract_address TEXT NOT NULL,
   floor_price TEXT,
   top_bid TEXT,
-  contract_type TEXT NOT NULL CHECK (contract_type IN ('erc721', 'etc')),
+  contract_type TEXT NOT NULL CHECK (contract_type IN ('ERC721', 'OTHER')),
   contract_name TEXT,
   contract_symbol TEXT,
   contract_image TEXT,
@@ -15,7 +15,7 @@ CREATE TABLE contract (
 );
 
 CREATE TABLE token (
-   token_chain_id TEXT NOT NULL,
+   token_chain_id TEXT,
    contract_id INTEGER NOT NULL,
    token_id TEXT NOT NULL,
    current_owner TEXT,
@@ -51,6 +51,7 @@ CREATE TABLE token (
 
 CREATE TABLE token_events (
   event_id SERIAL PRIMARY KEY,
+  ark_event_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   contract_id INTEGER NOT NULL,
   token_id TEXT NOT NULL,
@@ -58,9 +59,9 @@ CREATE TABLE token_events (
   timestamp BIGINT NOT NULL,
   token_id_hex TEXT NOT NULL,
   transaction_hash TEXT NULL,
-  to_address TEXT NOT NULL, -- NULL if not transfert
-  from_address TEXT NOT NULL, -- NULL if new listing
-  amount TEXT NOT NULL,
+  to_address TEXT, -- NULL if not transfert
+  from_address TEXT, -- NULL if new listing
+  amount TEXT,
   canceled_reason TEXT,
   FOREIGN KEY (contract_id, token_id) REFERENCES token(contract_id, token_id)
 );

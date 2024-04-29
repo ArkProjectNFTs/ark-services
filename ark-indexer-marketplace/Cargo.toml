@@ -20,7 +20,7 @@ tracing = "0.1"
 tracing-log = "0.2.0"
 serde.workspace = true
 serde_json.workspace = true
-sqlx = "0.7"
+sqlx.workspace = true
 
 [dev-dependencies]
 sqlx = { version = "0.7", features = ["postgres", "runtime-tokio-rustls", "tls-rustls"] }

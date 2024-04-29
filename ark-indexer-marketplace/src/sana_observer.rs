@@ -1,15 +1,15 @@
-use arkproject::pontos::{
+use arkproject::sana::storage::Storage;
+use arkproject::sana::{
     event_handler::EventHandler,
     storage::types::{IndexerStatus, TokenEvent, TokenInfo},
 };
-use arkproject::pontos::storage::Storage;
 use async_trait::async_trait;
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::{primitives::Blob, Client};
 use serde::{Deserialize, Serialize};
 use std::{process::Command, sync::Arc};
 use tracing::{debug, error, info};
-pub struct PontosObserver<S: Storage> {
+pub struct SanaObserver<S: Storage> {
     storage: Arc<S>,
     pub indexer_version: String,
     pub indexer_identifier: String,
@@ -22,7 +22,7 @@ struct BlockRange {
     to_block: u64,
 }
 
-impl<S: Storage> PontosObserver<S> {
+impl<S: Storage> SanaObserver<S> {
     pub fn new(
         storage: Arc<S>,
         indexer_version: String,
@@ -39,7 +39,7 @@ impl<S: Storage> PontosObserver<S> {
 }
 
 #[async_trait]
-impl<S: Storage> EventHandler for PontosObserver<S>
+impl<S: Storage> EventHandler for SanaObserver<S>
 where
     S: Storage + Send + Sync,
 {
@@ -51,58 +51,58 @@ where
         info!("on_event_registered");
     }
 
+    /*
+        async fn on_block_processing(&self, block_timestamp: u64, block_number: Option<u64>) {
+            info!(
+                "Block processing: block_number={:?}, indexer_identifier={}, indexer_version={}, block_timestamp={}",
+                block_number, self.indexer_identifier, self.indexer_version, block_timestamp
+            );
 
-    async fn on_block_processing(&self, block_timestamp: u64, block_number: Option<u64>) {
-        info!(
-            "Block processing: block_number={:?}, indexer_identifier={}, indexer_version={}, block_timestamp={}",
-            block_number, self.indexer_identifier, self.indexer_version, block_timestamp
-        );
-
-        match self
-            .storage
-            .update_indexer_task_status(
-                self.indexer_identifier.clone(),
-                self.indexer_version.clone(),
-                IndexerStatus::Running,
-            )
-            .await
-        {
-            Ok(_) => {
-                info!("Task status updated");
-            }
-            Err(err) => {
-                error!("Task status request error: {:?}", err);
+            match self
+                .storage
+                .update_indexer_task_status(
+                    self.indexer_identifier.clone(),
+                    self.indexer_version.clone(),
+                    IndexerStatus::Running,
+                )
+                .await
+            {
+                Ok(_) => {
+                    info!("Task status updated");
+                }
+                Err(err) => {
+                    error!("Task status request error: {:?}", err);
+                }
             }
         }
-    }
 
-    async fn on_block_processed(&self, block_number: u64, indexation_progress: f64) {
-        info!(
-            "Block processed: block_number={}, indexation_progress={}",
-            block_number, indexation_progress
-        );
-        let _ = self
-            .storage
-            .update_indexer_progress(
-                self.indexer_identifier.clone(),
-                block_number,
-                indexation_progress,
-            )
-            .await;
-    }
+        async fn on_block_processed(&self, block_number: u64, indexation_progress: f64) {
+            info!(
+                "Block processed: block_number={}, indexation_progress={}",
+                block_number, indexation_progress
+            );
+            let _ = self
+                .storage
+                .update_indexer_progress(
+                    self.indexer_identifier.clone(),
+                    block_number,
+                    indexation_progress,
+                )
+                .await;
+        }
 
-    async fn on_indexation_range_completed(&self) {
-        info!("Indexation completed: {}", self.indexer_identifier);
-        let _ = self
-            .storage
-            .update_indexer_task_status(
-                self.indexer_identifier.clone(),
-                self.indexer_version.clone(),
-                IndexerStatus::Stopped,
-            )
-            .await;
-    }
-
+        async fn on_indexation_range_completed(&self) {
+            info!("Indexation completed: {}", self.indexer_identifier);
+            let _ = self
+                .storage
+                .update_indexer_task_status(
+                    self.indexer_identifier.clone(),
+                    self.indexer_version.clone(),
+                    IndexerStatus::Stopped,
+                )
+                .await;
+        }
+    */
     async fn on_new_latest_block(&self, block_number: u64) {
         let config = aws_config::defaults(BehaviorVersion::latest()).load().await;
         let client = Client::new(&config);

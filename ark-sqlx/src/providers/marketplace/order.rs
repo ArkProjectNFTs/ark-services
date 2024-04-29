@@ -209,165 +209,6 @@ pub struct TokenData {
 
 impl OrderProvider {
     async fn order_hash_exists_in_token_offers(
-}
-
-impl OrderProvider {
-    async fn order_hash_exists_in_token_offers(
-        client: &SqlxCtx,
-        order_hash: &str,
-    ) -> Result<bool, ProviderError> {
-        let query = "
-            SELECT EXISTS(
-                SELECT 1
-                FROM token_offers
-                WHERE order_hash = $1
-            );
-        ";
-        let exists = sqlx::query_scalar(query)
-            .bind(order_hash)
-            .fetch_one(&client.pool)
-            .await?;
-        Ok(exists)
-    }
-
-    async fn order_hash_exists_in_token(
-        client: &SqlxCtx,
-        order_hash: &str,
-    ) -> Result<bool, ProviderError> {
-        let query = "
-            SELECT EXISTS(
-                SELECT 1
-                FROM token
-                WHERE listing_orderhash = $1
-            );
-        ";
-        let exists = sqlx::query_scalar(query)
-            .bind(order_hash)
-            .fetch_one(&client.pool)
-            .await?;
-        Ok(exists)
-    }
-
-    fn convert_token_id_to_decimal(token_hex: &Option<String>) -> Result<i64, &'static str> {
-        let token_id_hex = match token_hex {
-            Some(token_hex) => token_hex,
-            None => return Err("Token ID is missing"),
-        };
-        let token_id_without_prefix = token_id_hex.trim_start_matches("0x");
-        let token_id_decimal = i64::from_str_radix(token_id_without_prefix, 16)
-            .map_err(|_| "Failed to convert hex to decimal")?;
-        Ok(token_id_decimal)
-    }
-
-    pub async fn get_contract(
-        client: &SqlxCtx,
-        contract_address: &str,
-    ) -> Result<Option<i32>, ProviderError> {
-        let query = "
-            SELECT contract_id
-            FROM contract
-            WHERE contract_address = $1;
-        ";
-        let result = sqlx::query(query)
-            .bind(contract_address)
-            .fetch_optional(&client.pool)
-            .await?;
-        Ok(result.map(|row| row.get("contract_id")))
-    }
-
-    pub async fn get_or_create_contract(
-        client: &SqlxCtx,
-        contract_address: &str,
-        chain_id: &str,
-        block_timestamp: u64,
-    ) -> Result<i32, ProviderError> {
-        match Self::get_contract(client, contract_address).await? {
-            Some(contract_id) => Ok(contract_id),
-            None => {
-                let insert_query = "
-                        INSERT INTO contract (contract_address, chain_id, updated_timestamp, contract_type)
-                        VALUES ($1, $2, $3, $4)
-                        RETURNING contract_id;
-                    ";
-                let result = sqlx::query(insert_query)
-                    .bind(contract_address)
-                    .bind(chain_id)
-                    .bind(block_timestamp as i64)
-                    .bind("erc721".to_string())
-                    .fetch_one(&client.pool)
-                    .await?;
-                Ok(result.get::<i32, _>("contract_id"))
-            }
-        }
-    }
-
-    pub async fn get_offer_data_by_order_hash(
-        client: &SqlxCtx,
-        order_hash: &str,
-    ) -> Result<Option<OfferData>, sqlx::Error> {
-        let query = "
-                SELECT  order_hash,
-                        offer_timestamp,
-                        offer_quantity,
-                        status,
-                        token_id,
-                        contract_id,
-                        offer_maker,
-                        offer_amount,
-                        currency_chain_id,
-                        currency_address
-                FROM token_offers
-                WHERE order_hash = $1;
-            ";
-
-        if let Some((
-            order_hash,
-            timestamp,
-            quantity,
-            status,
-            token_id,
-            contract_id,
-            offer_maker,
-            offer_amount,
-            currency_chain_id,
-            currency_address,
-        )) = sqlx::query_as::<
-            _,
-            (
-                String,
-                i64,
-                String,
-                String,
-                String,
-                i32,
-                String,
-                String,
-                String,
-                String,
-            ),
-        >(query)
-        .bind(order_hash)
-        .fetch_optional(&client.pool)
-        .await?
-        {
-            Ok(Some(OfferData {
-                order_hash,
-                timestamp,
-                quantity,
-                status,
-                token_id,
-                contract_id,
-                offer_maker,
-                offer_amount,
-                currency_chain_id,
-                currency_address,
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-
-    pub async fn get_token_data_by_order_hash(
         client: &SqlxCtx,
         order_hash: &str,
     ) -> Result<bool, ProviderError> {
@@ -480,7 +321,7 @@ impl OrderProvider {
                     .bind(contract_address)
                     .bind(chain_id)
                     .bind(block_timestamp as i64)
-                    .bind("erc721".to_string())
+                    .bind("ERC721".to_string())
                     .fetch_one(&client.pool)
                     .await?;
                 Ok(result.get::<i32, _>("contract_id"))
@@ -753,6 +594,7 @@ impl OrderProvider {
         if !Self::token_exists(client, &event_data.contract_id, &token_id_decimal).await? {
             return Err(ProviderError::from("Token does not exist"));
         }
+
         let q = "
             INSERT INTO token_events (order_hash, token_id, token_id_hex, contract_id, event_type, timestamp, from_address, to_address, amount, canceled_reason)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
@@ -1048,35 +890,6 @@ impl OrderProvider {
                 to_address = Some(offer_data.offer_maker.clone());
 
                 Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed).await?;
-
-                let params = OfferExecutedInfo {
-                    block_timestamp,
-                    contract_id: offer_data.contract_id,
-                    token_id: offer_data.token_id.clone(),
-                    to_address: offer_data.offer_maker.clone(),
-                    price: offer_data.offer_amount.clone(),
-                    order_hash: data.order_hash.clone(),
-                    currency_chain_id: offer_data.currency_chain_id.clone(),
-                    currency_address: offer_data.currency_address.clone(),
-                };
-                Self::update_owner_price_on_offer_executed(client, &params).await?;
-                from_address = Some(
-                    Self::get_current_owner(client, &offer_data.contract_id, &offer_data.token_id)
-                        .await?,
-                );
-            } else {
-                let order_in_token =
-                    Self::order_hash_exists_in_token(client, &data.order_hash).await?;
-                if order_in_token {
-                    /* EventType::Listing | EventType::Auction */
-                    Self::update_token_on_listing_executed(
-                        client,
-                        &offer_data.contract_id,
-                        &offer_data.token_id,
-                        block_timestamp as i64,
-                        &offer_data.offer_amount,
-                    )
-                    .await?;
 
                 let params = OfferExecutedInfo {
                     block_timestamp,

@@ -1,14 +1,14 @@
-mod pontos_observer;
+mod sana_observer;
 use anyhow::Result;
 use arkproject::{
-    pontos::storage::sqlx::MarketplaceSqlxStorage,
-    pontos::{Pontos, PontosConfig},
+    sana::storage::sqlx::MarketplaceSqlxStorage,
+    sana::{Sana, SanaConfig},
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
 
 use dotenv::dotenv;
-use pontos_observer::PontosObserver;
 use regex::Regex;
+use sana_observer::SanaObserver;
 use starknet::core::types::{BlockId, FieldElement};
 use std::{env, sync::Arc};
 use tracing::{debug, info, trace};
@@ -68,39 +68,39 @@ async fn main() -> Result<()> {
 
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
-    let pontos_observer = Arc::new(PontosObserver::new(
+    let sana_observer = Arc::new(SanaObserver::new(
         Arc::clone(&storage),
         indexer_version.clone(),
         indexer_identifier.clone(),
         block_indexer_function_name.clone(),
     ));
 
-    let pontos_task = Pontos::new(
+    let sana_task = Sana::new(
         Arc::clone(&starknet_client),
         storage,
-        Arc::clone(&pontos_observer),
-        PontosConfig {
+        Arc::clone(&sana_observer),
+        SanaConfig {
             indexer_version,
             indexer_identifier,
         },
     );
     // If syncing at the head of the chain
     if is_head_of_chain {
-        trace!("Syncing Pontos at head of the chain");
-        pontos_task.index_pending().await?;
+        trace!("Syncing Sana at head of the chain");
+        sana_task.index_pending().await?;
         return Ok(());
     }
 
     // Proceed only if not at the head of the chain
     trace!(
-        "Syncing Pontos for block range: {:?} - {:?}",
+        "Syncing Sana for block range: {:?} - {:?}",
         from_block,
         to_block
     );
 
     // If a contract address is specified, index contract events
     if let Some(contract_address) = contract_address {
-        pontos_task
+        sana_task
             .index_contract_events(from_block, to_block, contract_address)
             .await?;
         return Ok(());
@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
 
     // If both from_block and to_block are specified, index the block range
     if let (Some(from_block), Some(to_block)) = (from_block, to_block) {
-        pontos_task
+        sana_task
             .index_block_range(from_block, to_block, force_mode)
             .await?;
         return Ok(());
