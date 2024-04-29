@@ -5,8 +5,10 @@ use arkproject::diri::storage::{Storage, StorageError, StorageResult};
 use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
 
+use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
 use crate::providers::orderbook::OrderProvider;
 
+pub mod marketplace;
 pub mod metrics;
 pub mod orderbook;
 
@@ -125,5 +127,97 @@ impl Storage for SqlxArkchainProvider {
             OrderProvider::status_back_to_open(&self.client, block_id, block_timestamp, data)
                 .await?,
         )
+    }
+}
+
+pub struct SqlxMarketplaceProvider {
+    client: SqlxCtx,
+}
+
+impl SqlxMarketplaceProvider {
+    pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
+        let sqlx = SqlxCtx::new(sqlx_conn_str).await?;
+
+        Ok(Self { client: sqlx })
+    }
+}
+
+#[async_trait]
+impl Storage for SqlxMarketplaceProvider {
+    async fn register_placed(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &PlacedData,
+    ) -> StorageResult<()> {
+        Ok(
+            MarketplaceOrderProvider::register_placed(
+                &self.client,
+                block_id,
+                block_timestamp,
+                data,
+            )
+            .await?,
+        )
+    }
+
+    async fn register_cancelled(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &CancelledData,
+    ) -> StorageResult<()> {
+        Ok(MarketplaceOrderProvider::register_cancelled(
+            &self.client,
+            block_id,
+            block_timestamp,
+            data,
+        )
+        .await?)
+    }
+
+    async fn register_fulfilled(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &FulfilledData,
+    ) -> StorageResult<()> {
+        Ok(MarketplaceOrderProvider::register_fulfilled(
+            &self.client,
+            block_id,
+            block_timestamp,
+            data,
+        )
+        .await?)
+    }
+
+    async fn register_executed(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &ExecutedData,
+    ) -> StorageResult<()> {
+        Ok(MarketplaceOrderProvider::register_executed(
+            &self.client,
+            block_id,
+            block_timestamp,
+            data,
+        )
+        .await?)
+    }
+
+    async fn status_back_to_open(
+        &self,
+        block_id: u64,
+        block_timestamp: u64,
+        data: &RollbackStatusData,
+    ) -> StorageResult<()> {
+        Ok(MarketplaceOrderProvider::status_back_to_open(
+            &self.client,
+            block_id,
+            block_timestamp,
+            data,
+        )
+        .await?)
     }
 }

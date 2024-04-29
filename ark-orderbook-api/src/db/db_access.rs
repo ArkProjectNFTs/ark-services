@@ -474,7 +474,7 @@ impl DatabaseAccess for MockDb {
         _token_address: &str,
         _token_id: &str,
     ) -> Result<TokenWithOffers, Error> {
-        println!("Registering fulfilled order ici resultat");
+        println!("Registering fulfilled order...");
 
         let offers = vec![TokenOffer {
             order_hash: "0x123".to_string(),
