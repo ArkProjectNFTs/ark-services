@@ -8,7 +8,7 @@ pub struct SanaObserver {
     pub indexer_version: String,
     pub indexer_identifier: String,
 }
-use tracing::{error, info, trace, warn};
+use tracing::{error, info};
 
 #[derive(Deserialize, Serialize, Debug)]
 struct BlockRange {

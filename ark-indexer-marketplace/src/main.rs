@@ -5,17 +5,16 @@ use arkproject::{
     sana::{Sana, SanaConfig},
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
-
 use dotenv::dotenv;
 use regex::Regex;
 use sana_observer::SanaObserver;
 use starknet::{
-    core::types::BlockId,
+    core::types::{BlockId, BlockTag},
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
 use std::{env, sync::Arc};
-use tracing::{error, info, trace, warn};
-use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+use tracing::{error, info, warn, trace};
+use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
 #[tokio::main]
@@ -59,10 +58,11 @@ async fn main() -> Result<()> {
         },
     );
     let sleep_secs = 1;
+
     let current_block = match provider.block_number().await {
         Ok(current_block) => current_block,
         Err(e) => {
-            error!("Can't get block number");
+            error!("Can't get block number {:?}", e);
             0
         }
     };
@@ -71,60 +71,79 @@ async fn main() -> Result<()> {
     // Set to None to keep polling the head of chain.
     let to = None;
 
+    let mut previous_pending_ts = None;
+
     trace!("Syncing Sana at head of the chain");
     loop {
-        let latest_block = match provider.block_number().await {
-            Ok(block_number) => block_number,
+        let (pending_ts, _txs) = match starknet_client
+            .block_txs_hashes(BlockId::Tag(BlockTag::Pending))
+            .await
+        {
+            Ok((ts, txs)) => (ts, txs),
             Err(e) => {
-                error!("Can't get arkchain block number: {}", e);
-                tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
+                error!("Error while fetching pending block txs: {:?}", e);
                 continue;
             }
         };
-
-        trace!("Latest block {latest_block} (from={from})");
-
-        let start = from;
-        let mut end = std::cmp::min(from + range, latest_block);
-        if let Some(to) = to {
-            if end > to {
-                end = to
-            }
-        }
-
-        if start > end {
-            trace!("Nothing to fetch at block {start}");
-            tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
-            continue;
-        }
-
-        trace!("Fetching blocks {start} - {end}");
-        match sana_task
-            .index_block_range(BlockId::Number(start), BlockId::Number(end), false)
-            .await
-        {
-            Ok(_) => {
-                trace!("Blocks successfully indexed");
-
-                if let Some(to) = to {
-                    if end >= to {
-                        trace!("`to` block was reached, exit.");
-                        return Ok(());
-                    }
+        if Some(pending_ts) == previous_pending_ts {
+            trace!("Indexing pending block {}...", pending_ts);
+            sana_task.index_pending_block(pending_ts).await?;
+        } else {
+            let latest_block = match provider.block_number().await {
+                Ok(block_number) => block_number,
+                Err(e) => {
+                    error!("Can't get block number: {}", e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
+                    continue;
                 }
+            };
 
-                // +1 to not re-index the end block.
-                from = end + 1;
-            }
-            Err(e) => {
-                error!("Blocks indexing error: {}", e);
+            trace!("Latest block {latest_block} (from={from})");
 
-                // TODO: for now, any failure on the block range, we skip it.
-                // Can be changed as needed.
-                warn!("Skipping blocks range: {} - {}", start, end);
-                from = end + 1;
+            let start = from;
+            let mut end = std::cmp::min(from + range, latest_block);
+            if let Some(to) = to {
+                if end > to {
+                    end = to
+                }
             }
-        };
+
+            if start > end {
+                trace!("Nothing to fetch at block {start}");
+                tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
+                continue;
+            }
+
+            trace!("Fetching blocks {start} - {end}");
+            match sana_task
+                .index_block_range(BlockId::Number(start), BlockId::Number(end), false)
+                .await
+            {
+                Ok(_) => {
+                    trace!("Blocks successfully indexed");
+
+                    if let Some(to) = to {
+                        if end >= to {
+                            trace!("`to` block was reached, exit.");
+                            return Ok(());
+                        }
+                    }
+
+                    // +1 to not re-index the end block.
+                    from = end + 1;
+                }
+                Err(e) => {
+                    error!("Blocks indexing error: {}", e);
+
+                    // TODO: for now, any failure on the block range, we skip it.
+                    // Can be changed as needed.
+                    warn!("Skipping blocks range: {} - {}", start, end);
+                    from = end + 1;
+                }
+            };
+        }
+
+        previous_pending_ts = Some(pending_ts);
         tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
     }
 }
