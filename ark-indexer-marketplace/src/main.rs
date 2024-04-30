@@ -9,59 +9,31 @@ use arkproject::{
 use dotenv::dotenv;
 use regex::Regex;
 use sana_observer::SanaObserver;
-use starknet::core::types::{BlockId, FieldElement};
+use starknet::{
+    core::types::BlockId,
+    providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
+};
 use std::{env, sync::Arc};
-use tracing::{debug, info, trace};
-use tracing::{span, Level};
+use tracing::{error, info, trace, warn};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+use url::Url;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv().ok();
 
-    init_tracing();
-
-    let is_head_of_chain = match std::env::var("HEAD_OF_CHAIN") {
-        Ok(val) => val == "true",
-        Err(_) => false,
-    };
-
-    let (from_block, to_block) = if is_head_of_chain {
-        (None, None)
-    } else {
-        let from_value = env::var("FROM_BLOCK")
-            .ok()
-            .and_then(|val| val.parse::<u64>().map(BlockId::Number).ok());
-
-        let to_value = env::var("TO_BLOCK")
-            .ok()
-            .and_then(|val| val.parse::<u64>().map(BlockId::Number).ok());
-
-        (from_value, to_value)
-    };
+    init_logging();
 
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
-    let force_mode = env::var("FORCE_MODE").is_ok();
+    let rpc_url_converted = Url::parse(&rpc_url).unwrap();
+
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
-    let indexer_identifier = get_task_id(is_head_of_chain);
+    let indexer_identifier = get_task_id();
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
-    let block_indexer_function_name = match env::var("BLOCK_INDEXER_FUNCTION_NAME") {
-        Ok(val) => Some(val),
-        Err(_) => None,
-    };
-    let contract_address = env::var("CONTRACT_ADDRESS")
-        .ok()
-        .map(|value| FieldElement::from_hex_be(&value).expect("Invalid CONTRACT_ADDRESS"));
-
     info!(
-        "🏁 Starting Indexer. Version={}, Identifier={}",
+        "Starting Indexer. Version={}, Identifier={}",
         indexer_version, indexer_identifier
-    );
-
-    debug!(
-        "from_block={:?}, to_block={:?}, head_of_the_chain={}, rpc_url={}, force_mode={}, indexer_version={}, indexer_identifier={}, block_indexer_function_name={:?}, contract_address={:?}",
-       from_block, to_block, is_head_of_chain, rpc_url, force_mode, indexer_version, indexer_identifier, block_indexer_function_name, contract_address
     );
 
     let storage = Arc::new(MarketplaceSqlxStorage::new_any(&db_url).await?);
@@ -69,11 +41,13 @@ async fn main() -> Result<()> {
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
     let sana_observer = Arc::new(SanaObserver::new(
-        Arc::clone(&storage),
         indexer_version.clone(),
         indexer_identifier.clone(),
-        block_indexer_function_name.clone(),
     ));
+
+    let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
+        HttpTransport::new(rpc_url_converted.clone()),
+    )));
 
     let sana_task = Sana::new(
         Arc::clone(&starknet_client),
@@ -84,46 +58,80 @@ async fn main() -> Result<()> {
             indexer_identifier,
         },
     );
-    // If syncing at the head of the chain
-    if is_head_of_chain {
-        trace!("Syncing Sana at head of the chain");
-        sana_task.index_pending().await?;
-        return Ok(());
+    let sleep_secs = 1;
+    let current_block = match provider.block_number().await {
+        Ok(current_block) => current_block,
+        Err(e) => {
+            error!("Can't get block number");
+            0
+        }
+    };
+    let mut from = current_block;
+    let range = 1;
+    // Set to None to keep polling the head of chain.
+    let to = None;
+
+    trace!("Syncing Sana at head of the chain");
+    loop {
+        let latest_block = match provider.block_number().await {
+            Ok(block_number) => block_number,
+            Err(e) => {
+                error!("Can't get arkchain block number: {}", e);
+                tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
+                continue;
+            }
+        };
+
+        trace!("Latest block {latest_block} (from={from})");
+
+        let start = from;
+        let mut end = std::cmp::min(from + range, latest_block);
+        if let Some(to) = to {
+            if end > to {
+                end = to
+            }
+        }
+
+        if start > end {
+            trace!("Nothing to fetch at block {start}");
+            tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
+            continue;
+        }
+
+        trace!("Fetching blocks {start} - {end}");
+        match sana_task
+            .index_block_range(BlockId::Number(start), BlockId::Number(end), false)
+            .await
+        {
+            Ok(_) => {
+                trace!("Blocks successfully indexed");
+
+                if let Some(to) = to {
+                    if end >= to {
+                        trace!("`to` block was reached, exit.");
+                        return Ok(());
+                    }
+                }
+
+                // +1 to not re-index the end block.
+                from = end + 1;
+            }
+            Err(e) => {
+                error!("Blocks indexing error: {}", e);
+
+                // TODO: for now, any failure on the block range, we skip it.
+                // Can be changed as needed.
+                warn!("Skipping blocks range: {} - {}", start, end);
+                from = end + 1;
+            }
+        };
+        tokio::time::sleep(tokio::time::Duration::from_secs(sleep_secs)).await;
     }
-
-    // Proceed only if not at the head of the chain
-    trace!(
-        "Syncing Sana for block range: {:?} - {:?}",
-        from_block,
-        to_block
-    );
-
-    // If a contract address is specified, index contract events
-    if let Some(contract_address) = contract_address {
-        sana_task
-            .index_contract_events(from_block, to_block, contract_address)
-            .await?;
-        return Ok(());
-    }
-
-    // If both from_block and to_block are specified, index the block range
-    if let (Some(from_block), Some(to_block)) = (from_block, to_block) {
-        sana_task
-            .index_block_range(from_block, to_block, force_mode)
-            .await?;
-        return Ok(());
-    }
-
-    // Optionally, handle the case where either from_block or to_block is None, if needed
-    // This might include logging a warning or error if these values are expected to be present
-
-    Ok(())
 }
 
-fn get_task_id(is_head_of_chain: bool) -> String {
+fn get_task_id() -> String {
     match env::var("ECS_CONTAINER_METADATA_URI") {
         Ok(container_metadata_uri) => {
-            debug!("ECS_CONTAINER_METADATA_URI={}", container_metadata_uri);
             let pattern = Regex::new(r"/v3/([a-f0-9]{32})-").unwrap();
             let task_id = pattern
                 .captures(container_metadata_uri.as_str())
@@ -132,30 +140,21 @@ fn get_task_id(is_head_of_chain: bool) -> String {
 
             task_id.to_string()
         }
-        Err(_) => {
-            if is_head_of_chain {
-                String::from("LATEST")
-            } else {
-                String::from("LOCALHOST")
-            }
-        }
+        Err(_) => String::from("LATEST"),
     }
 }
 
-fn init_tracing() {
-    // Initialize the LogTracer to convert `log` records to `tracing` events
-    tracing_log::LogTracer::init().expect("Setting log tracer failed.");
+fn init_logging() {
+    const DEFAULT_LOG_FILTER: &str = "info,sana=trace,ark=trace";
 
-    // Create the layers
-    let env_filter = EnvFilter::from_default_env();
-    let fmt_layer = fmt::layer();
-
-    // Combine layers and set as global default
-    let subscriber = Registry::default().with(env_filter).with(fmt_layer);
-
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Setting default subscriber failed.");
-
-    let main_span = span!(Level::TRACE, "main");
-    let _main_guard = main_span.enter();
+    tracing::subscriber::set_global_default(
+        fmt::Subscriber::builder()
+            .with_env_filter(
+                EnvFilter::try_from_default_env()
+                    .or(EnvFilter::try_new(DEFAULT_LOG_FILTER))
+                    .expect("Invalid RUST_LOG filters"),
+            )
+            .finish(),
+    )
+    .expect("Failed to set the global tracing subscriber");
 }
