@@ -13,7 +13,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
 use std::{env, sync::Arc};
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, warn, trace};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
@@ -85,6 +85,7 @@ async fn main() -> Result<()> {
                 continue;
             }
         };
+        trace!("Indexing pending block {}...", pending_ts);
         if Some(pending_ts) == previous_pending_ts {
             trace!("Indexing pending block {}...", pending_ts);
             sana_task.index_pending_block(pending_ts).await?;
