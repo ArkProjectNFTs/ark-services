@@ -13,7 +13,7 @@ use starknet::{
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
 use std::{env, sync::Arc};
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, warn, trace};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
 
