@@ -1,0 +1,18 @@
+use crate::routes::auth::validator;
+use actix_web::web;
+use actix_web_httpauth::middleware::HttpAuthentication;
+use sqlx::PgPool;
+
+use crate::handlers::token_handler;
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    let auth = HttpAuthentication::basic(validator);
+
+    cfg.service(
+        web::scope("/collection")
+            .route(
+                "/{address}",
+                web::get().to(collection_handler::get_collection::<PgPool>),
+            )
+    )
+}
