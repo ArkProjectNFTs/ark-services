@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                 contract_image AS image,\n                 contract_name AS collection_name,\n                 (\n                     SELECT MIN(listing_start_amount)\n                     FROM token\n                     WHERE token.contract_id = contract.contract_id\n                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                 ) AS floor,\n                 CAST(0 AS INTEGER) AS floor_7d_percentage,\n                 CAST(0 AS INTEGER) AS volume_7d_eth,\n                 (\n                     SELECT MAX(offer_amount)\n                     FROM token_offers\n                     WHERE token_offers.contract_id = contract.contract_id\n                 ) AS top_offer,\n                 (\n                     SELECT COUNT(*)\n                     FROM token_events\n                     WHERE token_events.contract_id = contract.contract_id\n                     AND token_events.event_type = 'Sell'\n                     AND token_events.timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)\n                 ) AS sales_7d,\n                 CAST(0 AS INTEGER) AS marketcap,\n                 (\n                     SELECT COUNT(*)\n                     FROM token\n                     WHERE token.contract_id = contract.contract_id\n                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                 ) AS listed_items,\n                (\n                    SELECT COUNT(*)\n                    FROM token\n                    WHERE token.contract_id = contract.contract_id\n                    AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                    AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                ) * 100 / NULLIF(\n                    (\n                        SELECT COUNT(*)\n                        FROM token\n                        WHERE token.contract_id = contract.contract_id\n                    ), 0\n                ) AS listed_percentage\n                FROM\n                 contract\n             WHERE\n                 contract_address = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "collection_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "floor",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "floor_7d_percentage",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "volume_7d_eth",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "top_offer",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "sales_7d",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "marketcap",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "listed_items",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "listed_percentage",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "0a087ca9d892da05884cd9cc60167bdb855d91a4c8a61070dfc50164b8771d19"
+}
