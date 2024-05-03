@@ -1,11 +1,9 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::models::token::{TokenData, TokenWithHistory, TokenWithOffers};
+use crate::models::collection::CollectionData;
 
-pub async fn get_token_data<D: DatabaseAccess + Sync>(
+pub async fn get_collection_data<D: DatabaseAccess + Sync>(
     db_access: &D,
-    token_address: &str,
-    token_id: &str,
-) -> Result<TokenData, sqlx::Error> {
-    db_access.get_token_data(token_address, token_id).await
+    contract_address: &str,
+) -> Result<CollectionData, sqlx::Error> {
+    db_access.get_collection_data(contract_address).await
 }
-
