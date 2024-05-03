@@ -1,8 +1,7 @@
 CREATE TABLE contract (
-  contract_id SERIAL PRIMARY KEY,
+  contract_address CHAR(64) PRIMARY KEY,
   chain_id TEXT,
   updated_timestamp BIGINT NOT NULL,
-  contract_address TEXT NOT NULL,
   floor_price TEXT,
   top_bid TEXT,
   contract_type TEXT NOT NULL CHECK (contract_type IN ('ERC721', 'OTHER')),
@@ -16,7 +15,7 @@ CREATE TABLE contract (
 
 CREATE TABLE token (
    token_chain_id TEXT,
-   contract_id INTEGER NOT NULL,
+   contract_address CHAR(64) NOT NULL,
    token_id TEXT NOT NULL,
    current_owner TEXT,
    last_price TEXT NULL,
@@ -46,14 +45,15 @@ CREATE TABLE token (
    is_burned BOOLEAN NOT NULL DEFAULT FALSE,
    updated_timestamp BIGINT NOT NULL,
 
-   PRIMARY KEY (contract_id, token_id)
+   PRIMARY KEY (contract_address, token_id),
+   FOREIGN KEY (contract_address) REFERENCES contract(contract_address) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 CREATE TABLE token_events (
   event_id SERIAL PRIMARY KEY,
   ark_event_id TEXT,
+  contract_address CHAR(64) NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
-  contract_id INTEGER NOT NULL,
   token_id TEXT NOT NULL,
   event_type TEXT NOT NULL CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Buy', 'Sell', 'Mint', 'Burn', 'Transfer')),
   timestamp BIGINT NOT NULL,
@@ -63,12 +63,12 @@ CREATE TABLE token_events (
   from_address TEXT, -- NULL if new listing
   amount TEXT,
   canceled_reason TEXT,
-  FOREIGN KEY (contract_id, token_id) REFERENCES token(contract_id, token_id)
+  FOREIGN KEY (contract_address, token_id) REFERENCES token(contract_address, token_id)
 );
 
 CREATE TABLE token_offers (
   offer_id SERIAL PRIMARY KEY,
-  contract_id INTEGER NOT NULL,
+  contract_address CHAR(64) NOT NULL,
   token_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   offer_maker TEXT NOT NULL,
@@ -80,7 +80,7 @@ CREATE TABLE token_offers (
   start_date BIGINT NOT NULL DEFAULT 0,
   end_date BIGINT NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'PLACED',
-  FOREIGN KEY (contract_id, token_id) REFERENCES token(contract_id, token_id)
+  FOREIGN KEY (contract_address, token_id) REFERENCES token(contract_address, token_id)
 );
 
 CREATE TABLE block (
