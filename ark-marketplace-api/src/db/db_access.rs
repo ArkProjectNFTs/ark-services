@@ -1,22 +1,24 @@
-use crate::models::collection::{
-    CollectionData
-};
+use crate::models::collection::CollectionData;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
 
 #[async_trait]
 pub trait DatabaseAccess: Send + Sync {
-    async fn get_collection_data(&self, collection_address: &str)
-        -> Result<CollectionData, Error>;
+    async fn get_collection_data(
+        &self,
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<Vec<CollectionData>, Error>;
 }
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
     async fn get_collection_data(
         &self,
-        contract_address: &str,
-    ) -> Result<CollectionData, Error> {
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<Vec<CollectionData>, Error> {
         let collection_data = sqlx::query_as!(
             CollectionData,
             "SELECT
@@ -66,10 +68,11 @@ impl DatabaseAccess for PgPool {
                 ) AS listed_percentage
                 FROM
                  contract
-             WHERE
-                 contract_address = $1",
-            contract_address,
-        ).fetch_one(self).await?;
+           LIMIT $1 OFFSET $2",
+           items_per_page,
+           (page - 1) * items_per_page
+        ).fetch_all(self).await?;
+        // @TODO : should we filter by symbol ETH or STRK ?
 
         Ok(collection_data)
     }
@@ -82,20 +85,21 @@ pub struct MockDb;
 #[async_trait]
 impl DatabaseAccess for MockDb {
     async fn get_collection_data(
-            &self,
-            _contract_address: &str,
-        ) -> Result<CollectionData, Error> {
-            Ok(CollectionData {
-                image: "https://example.com/image.png".to_string(),
-                collection_name: "Example Collection".to_string(),
-                floor: 1.23,
-                floor_7d_percentage: 4.56,
-                volume_7d_eth: 789,
-                top_offer: Some("Top Offer".to_string()),
-                sales_7d: 10,
-                marketcap: 1112,
-                listed_items: 13,
-                listed_percentage: 14,
-            })
-        }
+        &self,
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<Vec<CollectionData>, Error> {
+        Ok(vec![CollectionData {
+            image: Some("https://example.com/image.png".to_string()),
+            collection_name: Some("Example Collection".to_string()),
+            floor: Some("1".to_string()),
+            floor_7d_percentage: Some(4),
+            volume_7d_eth: Some(789),
+            top_offer: Some("Top Offer".to_string()),
+            sales_7d: Some(10),
+            marketcap: Some(1112),
+            listed_items: Some(13),
+            listed_percentage: Some(14),
+        }])
+    }
 }
