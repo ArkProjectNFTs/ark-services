@@ -321,6 +321,7 @@ fn extract_normalized_metadata_from_hashmap(
     }
 }
 
+#[allow(clippy::unnecessary_get_then_check)]
 impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
     type Error = ProviderError;
 

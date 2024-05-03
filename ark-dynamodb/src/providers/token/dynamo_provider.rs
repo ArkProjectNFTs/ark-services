@@ -457,6 +457,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         Ok(().into())
     }
 
+    #[allow(clippy::assigning_clones)]
     async fn get_batch_tokens(
         &self,
         ctx: &DynamoDbCtx,
