@@ -1,323 +1,71 @@
-use crate::models::token::{
-    RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
-};
+use crate::models::collection::CollectionData;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
 
 #[async_trait]
 pub trait DatabaseAccess: Send + Sync {
-    async fn get_token_data(&self, token_address: &str, token_id: &str)
-        -> Result<TokenData, Error>;
+    async fn get_collection_data(&self, collection_address: &str) -> Result<CollectionData, Error>;
 }
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
-    async fn get_token_data(
-        &self,
-        token_address: &str,
-        token_id: &str,
-    ) -> Result<TokenData, Error> {
-        let token_data = sqlx::query_as!(
-            RawTokenData,
+    async fn get_collection_data(&self, contract_address: &str) -> Result<CollectionData, Error> {
+        let collection_data = sqlx::query_as!(
+            CollectionData,
             "SELECT
-                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,
+                 contract_image AS image,
+                 contract_name AS collection_name,
+                 (
+                     SELECT MIN(listing_start_amount)
+                     FROM token
+                     WHERE token.contract_id = contract.contract_id
+                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                 ) AS floor,
+                 CAST(0 AS INTEGER) AS floor_7d_percentage,
+                 CAST(0 AS INTEGER) AS volume_7d_eth,
+                 (
+                     SELECT MAX(offer_amount)
+                     FROM token_offers
+                     WHERE token_offers.contract_id = contract.contract_id
+                 ) AS top_offer,
+                 (
+                     SELECT COUNT(*)
+                     FROM token_events
+                     WHERE token_events.contract_id = contract.contract_id
+                     AND token_events.event_type = 'Sell'
+                     AND token_events.timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
+                 ) AS sales_7d,
+                 CAST(0 AS INTEGER) AS marketcap,
+                 (
+                     SELECT COUNT(*)
+                     FROM token
+                     WHERE token.contract_id = contract.contract_id
+                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                 ) AS listed_items,
                 (
-                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status != 'CANCELLED'
-                ) AS is_listed,
-                EXISTS(
-                        SELECT 1
-                        FROM orderbook_token_offers o
-                        WHERE o.token_id = t.token_id
-                        AND o.token_address = t.token_address
-                        AND o.status not in ('CANCELLED', 'FULFILLED', 'EXECUTED')
-                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
-                    ) AS has_offer,
-                t.currency_chain_id, t.currency_address,
-                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
-                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
-                t.status,
-                t.buy_in_progress
-            FROM
-                orderbook_token t
-            LEFT JOIN
-                orderbook_token_history th ON th.token_id = t.token_id AND th.token_address = t.token_address
-            WHERE
-                t.token_address = $1 AND t.token_id = $2
-            GROUP BY
-                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,th.event_type, th.event_timestamp
-            ORDER BY
-                th.event_timestamp DESC;",
-            token_address,
-            token_id
+                    SELECT COUNT(*)
+                    FROM token
+                    WHERE token.contract_id = contract.contract_id
+                    AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                    AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                ) * 100 / NULLIF(
+                    (
+                        SELECT COUNT(*)
+                        FROM token
+                        WHERE token.contract_id = contract.contract_id
+                    ), 0
+                ) AS listed_percentage
+                FROM
+                 contract
+             WHERE
+                 contract_address = $1",
+            contract_address,
         ).fetch_one(self).await?;
 
-        let token: TokenData = TokenData::from(token_data);
-
-        Ok(token)
-    }
-
-    async fn get_tokens_by_owner_data(&self, owner: &str) -> Result<Vec<TokenData>, Error> {
-        let tokens_data = sqlx::query_as!(
-            RawTokenData,
-            "SELECT
-                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,
-                (
-                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status != 'CANCELLED'
-                ) AS is_listed,
-                EXISTS(
-                        SELECT 1
-                        FROM orderbook_token_offers o
-                        WHERE o.token_id = t.token_id
-                        AND o.token_address = t.token_address
-                        AND o.status not in ('CANCELLED', 'FULFILLED', 'EXECUTED')
-                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
-                    ) AS has_offer,
-                t.currency_chain_id, t.currency_address,
-                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
-                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
-                t.status,
-                t.buy_in_progress
-            FROM
-                orderbook_token t
-            LEFT JOIN
-                orderbook_token_history th ON th.token_id = t.token_id AND th.token_address = t.token_address
-            WHERE
-                t.current_owner = $1
-            GROUP BY
-                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,th.event_type, th.event_timestamp
-            ORDER BY
-                th.event_timestamp DESC;",
-            owner
-        ).fetch_all(self).await?;
-
-        let tokens: Vec<TokenData> = tokens_data.into_iter().map(TokenData::from).collect();
-
-        Ok(tokens)
-    }
-
-    async fn get_token_by_collection_data(
-        &self,
-        token_address: &str,
-    ) -> Result<Vec<TokenData>, Error> {
-        let token_data = sqlx::query_as!(
-            RawTokenData,
-            "SELECT
-                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,
-                (
-                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status != 'CANCELLED'
-                ) AS is_listed,
-                EXISTS(
-                    SELECT 1
-                    FROM orderbook_token_offers o
-                    WHERE o.token_id = t.token_id
-                    AND o.token_address = t.token_address
-                    AND o.status not in ('CANCELLED', 'FULFILLED')
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
-                ) AS has_offer,
-                t.currency_chain_id, t.currency_address,
-                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
-                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
-                t.status,
-                t.buy_in_progress
-            FROM
-                orderbook_token t
-            WHERE
-                t.token_address = $1;",
-            token_address
-        ).fetch_all(self).await?;
-
-        let tokens: Vec<TokenData> = token_data.into_iter().map(TokenData::from).collect();
-
-        Ok(tokens)
-    }
-
-    async fn get_token_history_data(
-        &self,
-        token_address: &str,
-        token_id: &str,
-    ) -> Result<TokenWithHistory, Error> {
-        let token_info = sqlx::query!(
-            "SELECT token_id, token_address, current_owner, last_price
-             FROM orderbook_token
-             WHERE token_id = $1 AND token_address = $2",
-            token_id,
-            token_address
-        )
-        .fetch_one(self)
-        .await?;
-
-        let history = sqlx::query_as!(
-            TokenHistory,
-            "SELECT event_type, event_timestamp, order_status,
-                    previous_owner, new_owner, amount, canceled_reason,
-                    start_date, end_date, end_amount
-             FROM orderbook_token_history
-             WHERE token_id = $1 AND token_address = $2
-             ORDER BY event_timestamp DESC",
-            token_id,
-            token_address
-        )
-        .fetch_all(self)
-        .await?;
-
-        Ok(TokenWithHistory {
-            token_id: token_info.token_id,
-            token_address: token_info.token_address,
-            current_owner: token_info.current_owner,
-            last_price: token_info.last_price,
-            history,
-        })
-    }
-
-    async fn get_token_offers_data(
-        &self,
-        token_address: &str,
-        token_id: &str,
-    ) -> Result<TokenWithOffers, Error> {
-        let token_info = sqlx::query!(
-            "SELECT token_id, token_address, current_owner, last_price
-             FROM orderbook_token
-             WHERE token_id = $1 AND token_address = $2",
-            token_id,
-            token_address
-        )
-        .fetch_one(self)
-        .await?;
-
-        let offers = sqlx::query_as!(
-            TokenOffer,
-            "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date, status
-            FROM orderbook_token_offers
-            WHERE token_id = $1 AND token_address = $2
-            AND status = 'PLACED'
-            ORDER BY offer_timestamp DESC;",
-            token_id,
-            token_address
-        )
-        .fetch_all(self)
-        .await?;
-
-        Ok(TokenWithOffers {
-            token_id: token_info.token_id,
-            token_address: token_info.token_address,
-            current_owner: token_info.current_owner,
-            last_price: token_info.last_price,
-            offers,
-        })
-    }
-
-    async fn delete_token_data(&self, token_address: &str, token_id: &str) -> Result<u64, Error> {
-        let mut total_rows_affected = 0;
-        let order_hashes = sqlx::query!(
-            "SELECT order_hash FROM orderbook_token WHERE token_address = $1 AND token_id = $2",
-            token_address,
-            token_id
-        )
-        .fetch_all(self)
-        .await?
-        .iter()
-        .map(|record| record.order_hash.clone())
-        .collect::<Vec<String>>();
-
-        sqlx::query!(
-            "DELETE FROM orderbook_token_offers WHERE token_address = $1 AND token_id = $2",
-            token_address,
-            token_id
-        )
-        .execute(self)
-        .await?;
-
-        sqlx::query!(
-            "DELETE FROM orderbook_token_history WHERE token_address = $1 AND token_id = $2",
-            token_address,
-            token_id
-        )
-        .execute(self)
-        .await?;
-
-        sqlx::query!(
-            "DELETE FROM orderbook_token WHERE token_address = $1 AND token_id = $2",
-            token_address,
-            token_id
-        )
-        .execute(self)
-        .await?;
-
-        for order_hash in order_hashes {
-            let tables = vec![
-                "orderbook_order_cancelled",
-                "orderbook_order_created",
-                "orderbook_order_executed",
-                "orderbook_order_fulfilled",
-                "orderbook_order_status",
-            ];
-
-            for table in tables {
-                let rows_affected =
-                    sqlx::query(format!("DELETE FROM {} WHERE order_hash = $1", table).as_str())
-                        .bind(&order_hash)
-                        .execute(self)
-                        .await?
-                        .rows_affected();
-                total_rows_affected += rows_affected;
-            }
-        }
-
-        Ok(total_rows_affected)
-    }
-    async fn flush_all_data(&self) -> Result<u64, Error> {
-        let mut total_rows_affected = 0;
-
-        let tables = vec![
-            "orderbook_token_offers",
-            "orderbook_token_history",
-            "orderbook_token",
-            "orderbook_order_cancelled",
-            "orderbook_order_created",
-            "orderbook_order_executed",
-            "orderbook_order_fulfilled",
-            "orderbook_order_status",
-        ];
-
-        for table in tables {
-            let rows_affected = sqlx::query(format!("DELETE FROM {}", table).as_str())
-                .execute(self)
-                .await?
-                .rows_affected();
-            total_rows_affected += rows_affected;
-        }
-
-        Ok(total_rows_affected)
-    }
-
-    async fn delete_migrations(&self) -> Result<u64, Error> {
-        sqlx::query!("DELETE FROM _sqlx_migrations WHERE version > 0;",)
-            .execute(self)
-            .await?;
-
-        Ok(1)
+        Ok(collection_data)
     }
 }
 
@@ -327,224 +75,18 @@ pub struct MockDb;
 #[cfg(test)]
 #[async_trait]
 impl DatabaseAccess for MockDb {
-    async fn flush_all_data(&self) -> Result<u64, Error> {
-        Ok(0)
-    }
-
-    async fn get_token_data(
-        &self,
-        _token_address: &str,
-        _token_id: &str,
-    ) -> Result<TokenData, Error> {
-        Ok(TokenData {
-            order_hash: "0x12345".to_string(),
-            token_chain_id: "chainXYZ".to_string(),
-            token_address: "0xABCDEF123456".to_string(),
-            token_id: "789".to_string(),
-            listed_timestamp: 1234567890,
-            updated_timestamp: 1234567891,
-            current_owner: Some("owner123".to_string()),
-            last_price: Some("100".to_string()),
-            quantity: Some("10".to_string()),
-            start_amount: Some("50".to_string()),
-            end_amount: Some("150".to_string()),
-            start_date: Some(1234567890),
-            end_date: Some(1234567891),
-            is_listed: Some(true),
-            has_offer: Some(false),
-            broker_id: Some("brokerXYZ".to_string()),
-            currency_address: Some("0xABCDEF123456".to_string()),
-            currency_chain_id: Some("chainXYZ".to_string()),
-            top_bid: TopBid {
-                amount: Some("100".to_string()),
-                order_hash: Some("0x12345".to_string()),
-            },
-            status: "EXECUTED".to_string(),
-            buy_in_progress: Some(false),
+    async fn get_collection_data(&self, _contract_address: &str) -> Result<CollectionData, Error> {
+        Ok(CollectionData {
+            image: "https://example.com/image.png".to_string(),
+            collection_name: "Example Collection".to_string(),
+            floor: 1.23,
+            floor_7d_percentage: 4.56,
+            volume_7d_eth: 789,
+            top_offer: Some("Top Offer".to_string()),
+            sales_7d: 10,
+            marketcap: 1112,
+            listed_items: 13,
+            listed_percentage: 14,
         })
-    }
-
-    async fn get_token_by_collection_data(
-        &self,
-        _token_address: &str,
-    ) -> Result<Vec<TokenData>, Error> {
-        Ok(vec![
-            TokenData {
-                order_hash: "0x123".to_string(),
-                token_chain_id: "chainXYZ".to_string(),
-                token_address: "0xABCDEF123456".to_string(),
-                token_id: "789".to_string(),
-                listed_timestamp: 1234567890,
-                updated_timestamp: 1234567891,
-                current_owner: Some("owner123".to_string()),
-                last_price: Some("100".to_string()),
-                quantity: Some("10".to_string()),
-                start_amount: Some("50".to_string()),
-                end_amount: Some("150".to_string()),
-                start_date: Some(1234567890),
-                end_date: Some(1234567891),
-                is_listed: Some(true),
-                has_offer: Some(false),
-                broker_id: Some("brokerXYZ".to_string()),
-                currency_address: Some("0xABCDEF123456".to_string()),
-                currency_chain_id: Some("chainXYZ".to_string()),
-                top_bid: TopBid {
-                    amount: Some("100".to_string()),
-                    order_hash: Some("0x12345".to_string()),
-                },
-                status: "PLACED".to_string(),
-                buy_in_progress: Some(false),
-            },
-            TokenData {
-                order_hash: "0x1234".to_string(),
-                token_chain_id: "chainWXYZ".to_string(),
-                token_address: "0xABCDEF1234567".to_string(),
-                token_id: "7890".to_string(),
-                listed_timestamp: 1234567890,
-                updated_timestamp: 1234567891,
-                current_owner: Some("owner1234".to_string()),
-                last_price: Some("100".to_string()),
-                quantity: Some("10".to_string()),
-                start_amount: Some("50".to_string()),
-                end_amount: Some("150".to_string()),
-                start_date: Some(1234567890),
-                end_date: Some(1234567891),
-                is_listed: Some(true),
-                has_offer: Some(false),
-                broker_id: Some("brokerXYZ".to_string()),
-                currency_address: Some("0xABCDEF123456".to_string()),
-                currency_chain_id: Some("chainXYZ".to_string()),
-                top_bid: TopBid {
-                    amount: Some("100".to_string()),
-                    order_hash: Some("0x12345".to_string()),
-                },
-                status: "PLACED".to_string(),
-                buy_in_progress: Some(false),
-            },
-        ])
-    }
-
-    async fn get_token_history_data(
-        &self,
-        _token_address: &str,
-        _token_id: &str,
-    ) -> Result<TokenWithHistory, Error> {
-        let history = vec![TokenHistory {
-            event_type: "Listing".to_string(),
-            event_timestamp: 1234567890,
-            order_status: "Active".to_string(),
-            previous_owner: None,
-            new_owner: Some("owner123".to_string()),
-            canceled_reason: None,
-            start_date: Some(1234567890),
-            end_date: Some(1234567891),
-            amount: Some("100".to_string()),
-            end_amount: Some("200".to_string()),
-        }];
-
-        Ok(TokenWithHistory {
-            token_address: "0xABCDEF123456".to_string(),
-            token_id: "789".to_string(),
-            current_owner: Some("owner123".to_string()),
-            last_price: Some("100".to_string()),
-            history,
-        })
-    }
-
-    async fn get_token_offers_data(
-        &self,
-        _token_address: &str,
-        _token_id: &str,
-    ) -> Result<TokenWithOffers, Error> {
-        println!("Registering fulfilled order...");
-
-        let offers = vec![TokenOffer {
-            order_hash: "0x123".to_string(),
-            offer_maker: "maker123".to_string(),
-            offer_amount: "100".to_string(),
-            offer_quantity: "10".to_string(),
-            offer_timestamp: 1234567890,
-            start_date: 1234567890,
-            end_date: 1234567899,
-            currency_address: Some("0xABCDEF123456".to_string()),
-            currency_chain_id: Some("chainXYZ".to_string()),
-            status: "EXECUTED".to_string(),
-        }];
-        Ok(TokenWithOffers {
-            token_address: "0xABCDEF123456".to_string(),
-            token_id: "789".to_string(),
-            current_owner: Some("owner123".to_string()),
-            last_price: Some("100".to_string()),
-            offers,
-        })
-    }
-
-    async fn get_tokens_by_owner_data(&self, _owner: &str) -> Result<Vec<TokenData>, Error> {
-        Ok(vec![
-            TokenData {
-                order_hash: "0x123".to_string(),
-                token_chain_id: "chainXYZ".to_string(),
-                token_address: "0xABCDEF123456".to_string(),
-                token_id: "789".to_string(),
-                listed_timestamp: 1234567890,
-                updated_timestamp: 1234567891,
-                current_owner: Some("owner123".to_string()),
-                last_price: Some("100".to_string()),
-                quantity: Some("10".to_string()),
-                start_amount: Some("50".to_string()),
-                end_amount: Some("150".to_string()),
-                start_date: Some(1234567890),
-                end_date: Some(1234567891),
-                broker_id: Some("brokerXYZ".to_string()),
-                is_listed: None,
-                has_offer: None,
-                currency_chain_id: Some("chainXYZ".to_string()),
-                currency_address: Some("0xABCDEF123456".to_string()),
-                top_bid: TopBid {
-                    amount: Some("100".to_string()),
-                    order_hash: Some("0x12345".to_string()),
-                },
-                status: "EXECUTED".to_string(),
-                buy_in_progress: Some(false),
-            },
-            TokenData {
-                order_hash: "0x123".to_string(),
-                token_chain_id: "chainWXYZ".to_string(),
-                token_address: "0xABCDEF1234567".to_string(),
-                token_id: "7890".to_string(),
-                listed_timestamp: 2234567890,
-                updated_timestamp: 2234567891,
-                current_owner: Some("owner1234".to_string()),
-                last_price: Some("200".to_string()),
-                quantity: Some("20".to_string()),
-                start_amount: Some("100".to_string()),
-                end_amount: Some("300".to_string()),
-                start_date: Some(2234567890),
-                end_date: Some(2234567891),
-                broker_id: Some("brokerWXYZ".to_string()),
-                is_listed: None,
-                has_offer: None,
-                currency_chain_id: Some("chainWXYZ".to_string()),
-                currency_address: Some("0xABCDEF1234567".to_string()),
-                top_bid: TopBid {
-                    amount: Some("100".to_string()),
-                    order_hash: Some("0x12345".to_string()),
-                },
-                status: "EXECUTED".to_string(),
-                buy_in_progress: Some(true),
-            },
-        ])
-    }
-
-    async fn delete_token_data(&self, _token_address: &str, _token_id: &str) -> Result<u64, Error> {
-        Ok(1)
-    }
-
-    async fn flush_all_data(&self) -> Result<u64, Error> {
-        Ok(1)
-    }
-
-    async fn delete_migrations(&self) -> Result<u64, Error> {
-        Ok(1)
     }
 }

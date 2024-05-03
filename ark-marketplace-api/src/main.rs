@@ -1,6 +1,6 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
-use ark_orderbook_api::routes::{default, token};
+use ark_marketplace_api::routes::{collection, default};
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(db_pool.clone()))
             .configure(default::config)
-            .configure(token::config)
+            .configure(collection::config)
     })
     .bind("0.0.0.0:8080")?
     .run()
