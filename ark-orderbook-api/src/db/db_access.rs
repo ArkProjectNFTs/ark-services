@@ -1,4 +1,3 @@
-use crate::models::token::TopBid;
 use crate::models::token::{
     RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
 };
