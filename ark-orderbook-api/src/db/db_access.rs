@@ -1,3 +1,4 @@
+use crate::models::token::TopBid;
 use crate::models::token::{
     RawTokenData, TokenData, TokenHistory, TokenOffer, TokenWithHistory, TokenWithOffers,
 };
@@ -555,10 +556,6 @@ impl DatabaseAccess for MockDb {
     }
 
     async fn delete_token_data(&self, _token_address: &str, _token_id: &str) -> Result<u64, Error> {
-        Ok(1)
-    }
-
-    async fn flush_all_data(&self) -> Result<u64, Error> {
         Ok(1)
     }
 

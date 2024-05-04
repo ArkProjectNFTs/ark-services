@@ -14,5 +14,20 @@ services:
       - "5432:5432"
     restart: unless-stopped
 
+  arkchain_postgres:
+    image: postgres:latest
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${ARKCHAIN_POSTGRES_DB}
+      POSTGRES_USER: ${ARKCHAIN_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${ARKCHAIN_POSTGRES_PASSWORD}
+    volumes:
+      - arkchain_postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    restart: unless-stopped
+
 volumes:
   postgres-data:
+  arkchain_postgres-data:

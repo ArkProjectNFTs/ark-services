@@ -367,7 +367,7 @@ impl OrderProvider {
                 String,
                 String,
                 String,
-                i32,
+                String,
                 String,
                 String,
                 String,
@@ -406,7 +406,7 @@ impl OrderProvider {
         ";
 
         if let Some((token_id, contract_address, token_id_hex)) =
-            sqlx::query_as::<_, (String, i32, String)>(query)
+            sqlx::query_as::<_, (String, String, String)>(query)
                 .bind(order_hash)
                 .fetch_optional(&client.pool)
                 .await?
@@ -535,7 +535,7 @@ impl OrderProvider {
         ";
 
         sqlx::query(query)
-            .bind(info.contract_address)
+            .bind(&info.contract_address)
             .bind(&info.token_id)
             .bind(&info.to_address)
             .bind(info.block_timestamp as i64)
@@ -550,7 +550,7 @@ impl OrderProvider {
         // to hide offers belonging to old owner
         sqlx::query("update token_offers set start_date = null, end_date = null WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3 and status != 'EXECUTED'")
             .bind(&info.to_address)
-            .bind(info.contract_address)
+            .bind(&info.contract_address)
             .bind(&info.token_id)
             .execute(&client.pool)
             .await?;
@@ -604,7 +604,7 @@ impl OrderProvider {
             .bind(&event_data.order_hash)
             .bind(token_id_decimal)
             .bind(&event_data.token_id)
-            .bind(event_data.contract_address)
+            .bind(&event_data.contract_address)
             .bind(event_data.event_type.to_string())
             .bind(event_data.timestamp)
             .bind(&event_data.from_address.clone().unwrap_or_default())
@@ -634,7 +634,7 @@ impl OrderProvider {
 
         sqlx::query(insert_query)
             .bind(token_id_decimal)
-            .bind(offer_data.contract_address)
+            .bind(&offer_data.contract_address)
             .bind(&offer_data.offer_maker)
             .bind(&offer_data.offer_amount)
             .bind(&offer_data.quantity)
@@ -678,7 +678,7 @@ impl OrderProvider {
 
             sqlx::query(upsert_query)
                 .bind(data.token_chain_id.clone())
-                .bind(contract_address)
+                .bind(contract_address.clone())
                 .bind(token_id_decimal)
                 .bind(data.token_id.clone())
                 .bind(block_timestamp as i64)
@@ -691,7 +691,7 @@ impl OrderProvider {
                 client,
                 &OfferData {
                     token_id: data.token_id.clone().expect("Missing token id"),
-                    contract_address,
+                    contract_address: contract_address.clone(),
                     timestamp: block_timestamp as i64,
                     offer_maker: data.offerer.clone(),
                     offer_amount: data.start_amount.clone(),
@@ -740,7 +740,7 @@ impl OrderProvider {
 
             sqlx::query(upsert_query)
                 .bind(data.token_chain_id.clone())
-                .bind(contract_address)
+                .bind(contract_address.clone())
                 .bind(token_id_decimal)
                 .bind(data.token_id.clone())
                 .bind(block_timestamp as i64)
@@ -766,7 +766,7 @@ impl OrderProvider {
             &EventHistoryData {
                 order_hash: data.order_hash.clone(),
                 token_id: data.token_id.clone().expect("Missing token id"),
-                contract_address,
+                contract_address: contract_address.clone(),
                 event_type,
                 timestamp: block_timestamp as i64,
                 from_address: None,
@@ -797,7 +797,7 @@ impl OrderProvider {
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
                     token_id: token_data.token_id_hex.clone(),
-                    contract_address: token_data.contract_address,
+                    contract_address: token_data.contract_address.clone(),
                     event_type: EventType::Cancelled,
                     timestamp: block_timestamp as i64,
                     canceled_reason: data.reason.clone().into(),
@@ -846,7 +846,7 @@ impl OrderProvider {
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
                     token_id: token_data.token_id_hex.clone(),
-                    contract_address: token_data.contract_address,
+                    contract_address: token_data.contract_address.clone(),
                     event_type: EventType::Fulfill,
                     timestamp: block_timestamp as i64,
                     canceled_reason: None,
@@ -893,7 +893,7 @@ impl OrderProvider {
 
                 let params = OfferExecutedInfo {
                     block_timestamp,
-                    contract_address: offer_data.contract_address,
+                    contract_address: offer_data.contract_address.clone(),
                     token_id: offer_data.token_id.clone(),
                     to_address: offer_data.offer_maker.clone(),
                     price: offer_data.offer_amount.clone(),
@@ -931,7 +931,7 @@ impl OrderProvider {
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
                     token_id: offer_data.token_id.clone(),
-                    contract_address: offer_data.contract_address,
+                    contract_address: offer_data.contract_address.clone(),
                     event_type: EventType::Executed,
                     timestamp: block_timestamp as i64,
                     canceled_reason: None,
