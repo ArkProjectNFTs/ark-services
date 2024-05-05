@@ -443,32 +443,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-indexer-marketplace"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-sqlx",
- "arkproject",
- "async-trait",
- "aws-config",
- "aws-sdk-lambda",
- "chrono",
- "dotenv",
- "regex",
- "serde",
- "serde_json",
- "sqlx",
- "starknet 0.10.0",
- "tokio",
- "tracing",
- "tracing-log 0.2.0",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.48.0#b29706afd8ca42a2e2779fa2f0c680f187b521bc"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -564,11 +541,11 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.48.0#b29706afd8ca42a2e2779fa2f0c680f187b521bc"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
 dependencies = [
  "anyhow",
  "async-trait",
- "mockall 0.11.4",
+ "mockall 0.12.1",
  "num-bigint",
  "num-traits",
  "regex",
@@ -630,7 +607,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.48.0#b29706afd8ca42a2e2779fa2f0c680f187b521bc"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -640,6 +617,7 @@ dependencies = [
  "futures",
  "log",
  "pontos",
+ "sana",
  "sqlx",
  "tokio",
  "tracing",
@@ -1909,7 +1887,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.48.0#b29706afd8ca42a2e2779fa2f0c680f187b521bc"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3893,7 +3871,7 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.48.0#b29706afd8ca42a2e2779fa2f0c680f187b521bc"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -4341,6 +4319,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97a22f5af31f73a954c10289c93e8a50cc23d971e80ee446f1f6f7137a088213"
 dependencies = [
  "cipher",
+]
+
+[[package]]
+name = "sana"
+version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
+dependencies = [
+ "anyhow",
+ "ark-metadata",
+ "ark-starknet",
+ "async-trait",
+ "dotenv",
+ "futures",
+ "log",
+ "num-bigint",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "starknet 0.10.0",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "version-compare",
 ]
 
 [[package]]
