@@ -4,20 +4,22 @@ use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct Pagination {
+pub struct CollectionQueryParameters {
     page: Option<i64>,
     items_per_page: Option<i64>,
+    time_range: Option<String>,
 }
 
 pub async fn get_collection<D: DatabaseAccess + Sync>(
-    pagination: web::Query<Pagination>,
+    query_parameters: web::Query<CollectionQueryParameters>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
-    let page = pagination.page.unwrap_or(1);
-    let items_per_page = pagination.items_per_page.unwrap_or(100);
+    let page = query_parameters.page.unwrap_or(1);
+    let items_per_page = query_parameters.items_per_page.unwrap_or(100);
+    let time_range = query_parameters.time_range.as_deref().unwrap_or("");
 
     let db_access = db_pool.get_ref();
-    match get_collection_data(db_access, page, items_per_page).await {
+    match get_collection_data(db_access, page, items_per_page, time_range).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
