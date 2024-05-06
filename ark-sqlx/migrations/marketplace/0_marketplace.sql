@@ -49,7 +49,7 @@ CREATE TABLE token (
    FOREIGN KEY (contract_address) REFERENCES contract(contract_address) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
-CREATE TABLE token_events (
+CREATE TABLE token_event (
   event_id SERIAL PRIMARY KEY,
   contract_address CHAR(64) NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
@@ -65,7 +65,7 @@ CREATE TABLE token_events (
   FOREIGN KEY (contract_address, token_id) REFERENCES token(contract_address, token_id)
 );
 
-CREATE TABLE token_offers (
+CREATE TABLE token_offer (
   offer_id SERIAL PRIMARY KEY,
   contract_address CHAR(64) NOT NULL,
   token_id TEXT NOT NULL,

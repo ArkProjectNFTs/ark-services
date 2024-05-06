@@ -216,7 +216,7 @@ impl OrderProvider {
             SELECT CASE
                 WHEN EXISTS (
                     SELECT 1
-                    FROM token_offers
+                    FROM token_offer
                     WHERE order_hash = $1
                 )
                 THEN 1
@@ -344,7 +344,7 @@ impl OrderProvider {
                         offer_amount,
                         currency_chain_id,
                         currency_address
-                FROM token_offers
+                FROM token_offer
                 WHERE order_hash = $1;
             ";
 
@@ -596,7 +596,7 @@ impl OrderProvider {
         }
 
         let q = "
-            INSERT INTO token_events (order_hash, token_id, token_id_hex, contract_address, event_type, timestamp, from_address, to_address, amount, canceled_reason)
+            INSERT INTO token_event (order_hash, token_id, token_id_hex, contract_address, event_type, timestamp, from_address, to_address, amount, canceled_reason)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
         ";
 
