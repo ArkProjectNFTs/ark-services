@@ -51,7 +51,7 @@ CREATE TABLE token (
 
 CREATE TABLE token_events (
   event_id SERIAL PRIMARY KEY,
-  ark_event_id TEXT NOT NULL,
+  ark_event_id TEXT,
   order_hash TEXT NOT NULL DEFAULT '',
   contract_id INTEGER NOT NULL,
   token_id TEXT NOT NULL,
