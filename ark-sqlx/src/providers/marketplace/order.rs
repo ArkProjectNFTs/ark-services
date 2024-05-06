@@ -321,7 +321,7 @@ impl OrderProvider {
                     .bind(contract_address)
                     .bind(chain_id)
                     .bind(block_timestamp as i64)
-                    .bind("erc721".to_string())
+                    .bind("ERC721".to_string())
                     .fetch_one(&client.pool)
                     .await?;
                 Ok(result.get::<i32, _>("contract_id"))

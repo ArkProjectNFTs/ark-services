@@ -443,6 +443,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "ark-indexer-marketplace"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ark-sqlx",
+ "arkproject",
+ "async-trait",
+ "aws-config",
+ "aws-sdk-lambda",
+ "chrono",
+ "dotenv",
+ "regex",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "starknet 0.10.0",
+ "tokio",
+ "tracing",
+ "tracing-log 0.2.0",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "ark-metadata"
 version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.50.1#b680b04548f0829c39b3999f570cc924542dec1c"
