@@ -1,10 +1,10 @@
 CREATE TABLE contract (
-  contract_address CHAR(64) PRIMARY KEY,
+  contract_address CHAR(66) PRIMARY KEY,
   chain_id TEXT,
-  updated_timestamp BIGINT NOT NULL,
+  updated_timestamp BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT),
   floor_price TEXT,
   top_bid TEXT,
-  contract_type TEXT NOT NULL CHECK (contract_type IN ('ERC721', 'OTHER')),
+  contract_type TEXT NOT NULL CHECK (contract_type IN ('ERC721', 'ERC1155', 'OTHER')),
   contract_name TEXT,
   contract_symbol TEXT,
   contract_image TEXT,
@@ -15,7 +15,7 @@ CREATE TABLE contract (
 
 CREATE TABLE token (
    token_chain_id TEXT,
-   contract_address CHAR(64) NOT NULL,
+   contract_address CHAR(66) NOT NULL,
    token_id TEXT NOT NULL,
    current_owner TEXT,
    last_price TEXT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE token (
    top_bid_broker_id TEXT NULL,
    top_bid_order_hash TEXT NOT NULL DEFAULT '',
    is_burned BOOLEAN NOT NULL DEFAULT FALSE,
-   updated_timestamp BIGINT NOT NULL,
+   updated_timestamp BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT),
 
    PRIMARY KEY (contract_address, token_id),
    FOREIGN KEY (contract_address) REFERENCES contract(contract_address) ON DELETE RESTRICT ON UPDATE CASCADE
@@ -51,7 +51,7 @@ CREATE TABLE token (
 
 CREATE TABLE token_event (
   event_id SERIAL PRIMARY KEY,
-  contract_address CHAR(64) NOT NULL,
+  contract_address CHAR(66) NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   token_id TEXT NOT NULL,
   event_type TEXT NOT NULL CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Buy', 'Sell', 'Mint', 'Burn', 'Transfer')),
@@ -67,7 +67,7 @@ CREATE TABLE token_event (
 
 CREATE TABLE token_offer (
   offer_id SERIAL PRIMARY KEY,
-  contract_address CHAR(64) NOT NULL,
+  contract_address CHAR(66) NOT NULL,
   token_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   offer_maker TEXT NOT NULL,
