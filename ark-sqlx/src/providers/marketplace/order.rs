@@ -670,14 +670,13 @@ impl OrderProvider {
         if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
             // create token without listing information
             let upsert_query = "
-                INSERT INTO token (token_chain_id, contract_address, token_id, token_id_hex,  updated_timestamp, listing_orderhash)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO token (contract_address, token_id, token_id_hex,  updated_timestamp, listing_orderhash)
+                VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT (contract_address, token_id)
                 DO NOTHING;
             ";
 
             sqlx::query(upsert_query)
-                .bind(data.token_chain_id.clone())
                 .bind(contract_address.clone())
                 .bind(token_id_decimal)
                 .bind(data.token_id.clone())
@@ -707,7 +706,6 @@ impl OrderProvider {
             // create token with listing information
             let upsert_query = "
                 INSERT INTO token (
-                    token_chain_id,
                     contract_address,
                     token_id,
                     token_id_hex,
@@ -725,7 +723,7 @@ impl OrderProvider {
                     listing_currency_address,
                     listing_currency_chain_id,
                     status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                 ON CONFLICT (token_id, contract_address) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 listing_start_amount = EXCLUDED.listing_start_amount,
