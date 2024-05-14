@@ -1,5 +1,5 @@
 CREATE TABLE broker (
-    contract_address CHAR(66) NOT NULL,
+    contract_address VARCHAR(66) NOT NULL,
     name TEXT NOT NULL,
     PRIMARY KEY (contract_address)
 );
@@ -17,7 +17,7 @@ REFERENCES broker (contract_address)
 ON DELETE SET NULL; 
 
 ALTER TABLE token_event
-ADD COLUMN broker_address CHAR(66);
+ADD COLUMN broker_address VARCHAR(66);
 
 ALTER TABLE token_event
 ADD CONSTRAINT fk_broker

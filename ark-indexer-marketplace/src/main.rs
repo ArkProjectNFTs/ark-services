@@ -44,6 +44,8 @@ async fn main() -> Result<()> {
         indexer_identifier.clone(),
     ));
 
+    let chain_id = "SN_MAIN"; // TODO
+
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
         HttpTransport::new(rpc_url_converted.clone()),
     )));
@@ -87,7 +89,7 @@ async fn main() -> Result<()> {
         };
         if Some(pending_ts) == previous_pending_ts {
             trace!("Indexing pending block {}...", pending_ts);
-            sana_task.index_pending_block(pending_ts).await?;
+            sana_task.index_pending_block(pending_ts, chain_id).await?;
         } else {
             let latest_block = match provider.block_number().await {
                 Ok(block_number) => block_number,
@@ -116,7 +118,12 @@ async fn main() -> Result<()> {
 
             trace!("Fetching blocks {start} - {end}");
             match sana_task
-                .index_block_range(BlockId::Number(start), BlockId::Number(end), false)
+                .index_block_range(
+                    BlockId::Number(start),
+                    BlockId::Number(end),
+                    false,
+                    chain_id,
+                )
                 .await
             {
                 Ok(_) => {

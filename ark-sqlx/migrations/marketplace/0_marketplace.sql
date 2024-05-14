@@ -1,5 +1,5 @@
 CREATE TABLE contract (
-  contract_address CHAR(66) PRIMARY KEY,
+  contract_address VARCHAR(66) PRIMARY KEY,
   chain_id TEXT NOT NULL,
   updated_timestamp BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT),
   floor_price TEXT,
@@ -14,8 +14,8 @@ CREATE TABLE contract (
 );
 
 CREATE TABLE token (
-   contract_address CHAR(66) NOT NULL,
-   token_id NUMERIC NOT NULL,
+   contract_address VARCHAR(66) NOT NULL,
+   token_id TEXT NOT NULL,
    token_id_hex TEXT NOT NULL,
    current_owner TEXT,
    last_price TEXT NULL,
@@ -42,6 +42,7 @@ CREATE TABLE token (
    top_bid_broker_id TEXT NULL,
    top_bid_order_hash TEXT NOT NULL DEFAULT '',
    is_burned BOOLEAN NOT NULL DEFAULT FALSE,
+   block_timestamp BIGINT NOT NULL,
    updated_timestamp BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT),
 
    PRIMARY KEY (contract_address, token_id),
@@ -49,13 +50,13 @@ CREATE TABLE token (
 );
 
 CREATE TABLE token_event (
-  event_id SERIAL PRIMARY KEY,
-  contract_address CHAR(66) NOT NULL,
-  order_hash TEXT NOT NULL DEFAULT '',
-  token_id NUMERIC NOT NULL,
+  token_event_id TEXT PRIMARY KEY,
+  contract_address VARCHAR(66) NOT NULL,
+  order_hash TEXT,
+  token_id TEXT NOT NULL,
   token_id_hex TEXT NOT NULL,
-  event_type TEXT NOT NULL CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Buy', 'Sell', 'Mint', 'Burn', 'Transfer')),
-  timestamp BIGINT NOT NULL,
+  event_type TEXT CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Sale', 'Mint', 'Burn', 'Transfer')),
+  block_timestamp BIGINT NOT NULL,
   transaction_hash TEXT NULL,
   to_address TEXT, -- NULL if not transfert
   from_address TEXT, -- NULL if new listing
@@ -65,9 +66,9 @@ CREATE TABLE token_event (
 );
 
 CREATE TABLE token_offer (
-  offer_id SERIAL PRIMARY KEY,
-  contract_address CHAR(66) NOT NULL,
-  token_id NUMERIC NOT NULL,
+  token_offer_id SERIAL PRIMARY KEY,
+  contract_address VARCHAR(66) NOT NULL,
+  token_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   offer_maker TEXT NOT NULL,
   offer_amount TEXT NOT NULL,
