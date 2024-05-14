@@ -647,7 +647,7 @@ impl OrderProvider {
 
     pub async fn register_placed(
         client: &SqlxCtx,
-        block_id: u64,
+        _block_id: u64,
         block_timestamp: u64,
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
