@@ -1,4 +1,4 @@
-name: Deploy Indexer Marketplace to AWS (Production)
+name: Deploy Indexer Marketplace (Production)
 
 on:
   workflow_dispatch:
