@@ -2,7 +2,7 @@
 
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { ArkchainIndexerStack } from "../lib/ark-stack";
+import { IndexerMarketplaceStack } from "../lib/ark-stack";
 import { config } from "dotenv";
 
 config();
@@ -12,13 +12,13 @@ const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
 
-const networks: string[] = isProductionEnvironment ? ["mainnet"] : ["mainnet"];
+const networks: string[] = ["mainnet", "sepolia"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
-const stackName = `arkchain-indexer-${environment}`;
+const stackName = `ark-indexer-marketplace-${environment}`;
 const indexerVersion: string = process.env.INDEXER_VERSION ?? "UNDEFINED";
 
-new ArkchainIndexerStack(app, stackName, {
+new IndexerMarketplaceStack(app, stackName, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
     region: process.env.AWS_REGION,

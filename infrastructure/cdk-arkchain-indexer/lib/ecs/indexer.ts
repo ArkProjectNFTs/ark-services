@@ -10,7 +10,7 @@ export async function deployIndexer(
   vpc: cdk.aws_ec2.IVpc,
   dbEndpointAddress: string
 ) {
-  const cluster = new Cluster(scope, "arkchain-indexer", {
+  const cluster = new Cluster(scope, "arkproject", {
     vpc: vpc,
   });
 
@@ -82,7 +82,8 @@ function deployIndexerServices(
       }:${
         process.env.DB_PASSWORD || "defaultPassword"
       }@${dbEndpointAddress}:5432/arkchainindexer`,
-      ARKCHAIN_RPC_PROVIDER:  process.env.ARKCHAIN_RPC_PROVIDER || "defaultProvider",
+      ARKCHAIN_RPC_PROVIDER:
+        process.env.ARKCHAIN_RPC_PROVIDER || "defaultProvider",
     },
   });
 

@@ -16,7 +16,7 @@ import {
 import { SecretValue } from "aws-cdk-lib";
 import { deployIndexer } from "./ecs/indexer";
 
-export class ArkIndexersStack extends cdk.Stack {
+export class ArkchainIndexerStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: ArkIndexersStackProps) {
     super(scope, id, props);
 
@@ -49,7 +49,7 @@ export class ArkIndexersStack extends cdk.Stack {
           version: PostgresEngineVersion.VER_15_4,
         }),
         parameters: {
-          'rds.force_ssl': '0',
+          "rds.force_ssl": "0",
         },
         instanceType: InstanceType.of(InstanceClass.T3, InstanceSize.MICRO),
         vpc,
@@ -81,7 +81,7 @@ export class ArkIndexersStack extends cdk.Stack {
       props.networks,
       props.isProductionEnvironment,
       vpc,
-      dbEndpointAddress,
+      dbEndpointAddress
     );
   }
 }
