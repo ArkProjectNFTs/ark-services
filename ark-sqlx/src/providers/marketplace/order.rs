@@ -169,6 +169,7 @@ struct EventHistoryData {
     order_hash: String,
     token_id: String,
     contract_address: String,
+    chain_id: String,
     event_type: EventType,
     block_timestamp: i64,
     from_address: Option<String>,
@@ -181,6 +182,7 @@ pub struct OfferData {
     order_hash: String,
     token_id: String,
     contract_address: String,
+    chain_id: String,
     timestamp: i64,
     offer_maker: String,
     offer_amount: String,
@@ -206,6 +208,7 @@ pub struct TokenData {
     token_id: String,
     contract_address: String,
     token_id_hex: String,
+    chain_id: String,
 }
 
 impl OrderProvider {
@@ -235,13 +238,14 @@ impl OrderProvider {
         client: &SqlxCtx,
         contract_address: &String,
         token_id: &i64,
+        chain_id: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
             SELECT CASE
                 WHEN EXISTS (
                     SELECT 1
                     FROM token
-                    WHERE contract_address = $1 AND token_id = $2
+                    WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3
                 )
                 THEN 1
                 ELSE 0
@@ -250,6 +254,7 @@ impl OrderProvider {
         let exists: i32 = sqlx::query_scalar(query)
             .bind(contract_address)
             .bind(token_id.to_string())
+            .bind(chain_id.to_string())
             .fetch_one(&client.pool)
             .await?;
         Ok(exists != 0)
@@ -291,16 +296,19 @@ impl OrderProvider {
     pub async fn get_contract(
         client: &SqlxCtx,
         contract_address: &str,
+        chain_id: &str,
     ) -> Result<Option<String>, ProviderError> {
         let query = "
             SELECT contract_address
             FROM contract
-            WHERE contract_address = $1;
+            WHERE contract_address = $1 AND chain_id = $2;
         ";
         let result = sqlx::query(query)
             .bind(contract_address)
+            .bind(chain_id)
             .fetch_optional(&client.pool)
             .await?;
+
         Ok(result.map(|row| row.get("contract_address")))
     }
 
@@ -310,7 +318,7 @@ impl OrderProvider {
         chain_id: &str,
         block_timestamp: u64,
     ) -> Result<String, ProviderError> {
-        match Self::get_contract(client, contract_address).await? {
+        match Self::get_contract(client, contract_address, chain_id).await? {
             Some(contract_address) => Ok(contract_address),
             None => {
                 let insert_query = "
@@ -341,6 +349,7 @@ impl OrderProvider {
                         status,
                         token_id,
                         contract_address,
+                        chain_id,
                         offer_maker,
                         offer_amount,
                         currency_chain_id,
@@ -356,6 +365,7 @@ impl OrderProvider {
             status,
             token_id,
             contract_address,
+            chain_id,
             offer_maker,
             offer_amount,
             currency_chain_id,
@@ -365,6 +375,7 @@ impl OrderProvider {
             (
                 String,
                 i64,
+                String,
                 String,
                 String,
                 String,
@@ -386,6 +397,7 @@ impl OrderProvider {
                 status,
                 token_id,
                 contract_address,
+                chain_id,
                 offer_maker,
                 offer_amount,
                 currency_chain_id,
@@ -401,13 +413,13 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, contract_address, token_id_hex
+            SELECT token_id, contract_address, chain_id, token_id_hex
             FROM token
             WHERE listing_orderhash = $1;
         ";
 
-        if let Some((token_id, contract_address, token_id_hex)) =
-            sqlx::query_as::<_, (String, String, String)>(query)
+        if let Some((token_id, contract_address, chain_id, token_id_hex)) =
+            sqlx::query_as::<_, (String, String, String, String)>(query)
                 .bind(order_hash)
                 .fetch_optional(&client.pool)
                 .await?
@@ -416,6 +428,7 @@ impl OrderProvider {
                 token_id,
                 contract_address,
                 token_id_hex,
+                chain_id,
             }))
         } else {
             Ok(None)
@@ -426,15 +439,17 @@ impl OrderProvider {
         client: &SqlxCtx,
         contract_address: &String,
         token_id: &str,
+        chain_id: &str,
     ) -> Result<String, ProviderError> {
         let query = "
             SELECT current_owner
             FROM token
-            WHERE contract_address = $1 AND token_id = $2;
+            WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
         ";
         let result = sqlx::query(query)
             .bind(contract_address)
             .bind(token_id)
+            .bind(chain_id)
             .fetch_one(&client.pool)
             .await?;
 
@@ -587,7 +602,14 @@ impl OrderProvider {
     ) -> Result<(), ProviderError> {
         let token_id = Some(event_data.token_id.clone());
         let token_id_decimal = Self::convert_token_id_to_decimal(&token_id)?;
-        if !Self::token_exists(client, &event_data.contract_address, &token_id_decimal).await? {
+        if !Self::token_exists(
+            client,
+            &event_data.contract_address,
+            &token_id_decimal,
+            &event_data.chain_id,
+        )
+        .await?
+        {
             return Err(ProviderError::from("Token does not exist"));
         }
 
@@ -618,19 +640,27 @@ impl OrderProvider {
         let token_id = Some(offer_data.token_id.clone());
         let token_id_decimal = Self::convert_token_id_to_decimal(&token_id)?;
 
-        if !Self::token_exists(client, &offer_data.contract_address, &token_id_decimal).await? {
+        if !Self::token_exists(
+            client,
+            &offer_data.contract_address,
+            &token_id_decimal,
+            &offer_data.chain_id,
+        )
+        .await?
+        {
             return Err(ProviderError::from("Token does not exist"));
         }
 
         let insert_query = "
             INSERT INTO token_offers
-            (token_id, contract_address, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
+            (token_id, contract_address, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
         ";
 
         sqlx::query(insert_query)
             .bind(token_id_decimal)
             .bind(&offer_data.contract_address)
+            .bind(&offer_data.chain_id)
             .bind(&offer_data.offer_maker)
             .bind(&offer_data.offer_amount)
             .bind(&offer_data.quantity)
@@ -666,15 +696,16 @@ impl OrderProvider {
         if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
             // create token without listing information
             let upsert_query = "
-                INSERT INTO token (contract_address, token_id, token_id_hex,  updated_timestamp, listing_orderhash, block_timestamp, status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                ON CONFLICT (contract_address, token_id)
+                INSERT INTO token (contract_address, token_id, chain_id, token_id_hex, updated_timestamp, listing_orderhash, block_timestamp, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (contract_address, token_id, chain_id)
                 DO NOTHING;
             ";
 
             sqlx::query(upsert_query)
                 .bind(contract_address.clone())
                 .bind(token_id_decimal)
+                .bind(data.token_chain_id.clone())
                 .bind(data.token_id.clone())
                 .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
@@ -688,6 +719,7 @@ impl OrderProvider {
                 &OfferData {
                     token_id: data.token_id.clone().expect("Missing token id"),
                     contract_address: contract_address.clone(),
+                    chain_id: data.token_chain_id.clone(),
                     timestamp: block_timestamp as i64,
                     offer_maker: data.offerer.clone(),
                     offer_amount: data.start_amount.clone(),
@@ -705,6 +737,7 @@ impl OrderProvider {
                 INSERT INTO token (
                     contract_address,
                     token_id,
+                    chain_id,
                     token_id_hex,
                     listing_timestamp,
                     updated_timestamp,
@@ -721,8 +754,8 @@ impl OrderProvider {
                     listing_currency_chain_id,
                     block_timestamp,
                     status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-                ON CONFLICT (token_id, contract_address) DO UPDATE SET
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 listing_start_amount = EXCLUDED.listing_start_amount,
                 listing_end_amount = EXCLUDED.listing_end_amount,
@@ -737,6 +770,7 @@ impl OrderProvider {
             sqlx::query(upsert_query)
                 .bind(contract_address.clone())
                 .bind(token_id_decimal)
+                .bind(data.token_chain_id.clone())
                 .bind(data.token_id.clone())
                 .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
@@ -764,6 +798,7 @@ impl OrderProvider {
                 order_hash: data.order_hash.clone(),
                 token_id: data.token_id.clone().expect("Missing token id"),
                 contract_address: contract_address.clone(),
+                chain_id: data.token_chain_id.clone(),
                 event_type,
                 block_timestamp: block_timestamp as i64,
                 from_address: None,
@@ -796,6 +831,7 @@ impl OrderProvider {
                     order_hash: data.order_hash.clone(),
                     token_id: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address.clone(),
+                    chain_id: token_data.chain_id.clone(),
                     event_type: EventType::Cancelled,
                     block_timestamp: block_timestamp as i64,
                     canceled_reason: data.reason.clone().into(),
@@ -845,6 +881,7 @@ impl OrderProvider {
                     order_hash: data.order_hash.clone(),
                     token_id: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address.clone(),
+                    chain_id: token_data.chain_id.clone(),
                     event_type: EventType::Fulfill,
                     block_timestamp: block_timestamp as i64,
                     canceled_reason: None,
@@ -905,6 +942,7 @@ impl OrderProvider {
                         client,
                         &offer_data.contract_address,
                         &offer_data.token_id,
+                        &offer_data.chain_id,
                     )
                     .await?,
                 );
@@ -931,6 +969,7 @@ impl OrderProvider {
                     order_hash: data.order_hash.clone(),
                     token_id: offer_data.token_id.clone(),
                     contract_address: offer_data.contract_address.clone(),
+                    chain_id: offer_data.chain_id.clone(),
                     event_type: EventType::Executed,
                     block_timestamp: block_timestamp as i64,
                     canceled_reason: None,
@@ -978,6 +1017,7 @@ impl OrderProvider {
                     block_timestamp: block_timestamp as i64,
                     token_id: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address,
+                    chain_id: token_data.chain_id,
                     event_type: EventType::Rollback,
                     canceled_reason: Some(string_reason),
                     to_address: None,
