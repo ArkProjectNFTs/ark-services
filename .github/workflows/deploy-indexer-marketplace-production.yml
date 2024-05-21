@@ -1,4 +1,4 @@
-name: Deploy Indexer Marketplace to AWS (Staging)
+name: Deploy Indexer Marketplace to AWS (Production)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-indexer-marketplace-staging.yml"
+      - ".github/workflows/deploy-indexer-marketplace-production.yml"
       - "infrastructure/cdk-starknet-indexer/**"
       - "ark-indexer-marketplace/**"
 
@@ -20,7 +20,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🧪 Deploying Indexer Marketplace on Staging environment..."
+                  "content": "Deploying Indexer Marketplace on Production environment..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -83,8 +83,8 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-marketplace-staging-latest --file docker/indexer/Dockerfile . --load
-          docker push $ECR_URL:indexer-marketplace-staging-latest
+          docker buildx build --tag $ECR_URL:indexer-marketplace-production-latest --file docker/indexer/Dockerfile . --load
+          docker push $ECR_URL:indexer-marketplace-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}

@@ -1,9 +1,7 @@
-name: Deploy Indexers to AWS (Production)
+name: Deploy Deprecated NFT Indexers to AWS (Production)
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
 
 jobs:
   discord-notification:
