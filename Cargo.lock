@@ -282,6 +282,80 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 
 [[package]]
+name = "alloy-primitives"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db8aa973e647ec336810a9356af8aea787249c9d00b1525359f3db29a68d231b"
+dependencies = [
+ "bytes",
+ "cfg-if",
+ "const-hex",
+ "derive_more",
+ "hex-literal",
+ "itoa",
+ "ruint",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "alloy-sol-macro"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dbd17d67f3e89478c8a634416358e539e577899666c927bc3d2b1328ee9b6ca"
+dependencies = [
+ "alloy-sol-macro-expander",
+ "alloy-sol-macro-input",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
+]
+
+[[package]]
+name = "alloy-sol-macro-expander"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c6da95adcf4760bb4b108fefa51d50096c5e5fdd29ee72fed3e86ee414f2e34"
+dependencies = [
+ "alloy-sol-macro-input",
+ "const-hex",
+ "heck 0.4.1",
+ "indexmap 2.2.6",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
+ "syn-solidity",
+ "tiny-keccak",
+]
+
+[[package]]
+name = "alloy-sol-macro-input"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32c8da04c1343871fb6ce5a489218f9c85323c8340a36e9106b5fc98d4dd59d5"
+dependencies = [
+ "const-hex",
+ "dunce",
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
+ "syn-solidity",
+]
+
+[[package]]
+name = "alloy-sol-types"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "40a64d2d2395c1ac636b62419a7b17ec39031d6b2367e66e9acbf566e6055e9c"
+dependencies = [
+ "alloy-primitives",
+ "alloy-sol-macro",
+ "const-hex",
+]
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -469,7 +543,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.0#26686fe35190e7e6b1c21be4aeeeaa1ec5edabb9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.1#163cbbf51745af494f4388a065e1ae81df3ca2a6"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -565,7 +639,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.0#26686fe35190e7e6b1c21be4aeeeaa1ec5edabb9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.1#163cbbf51745af494f4388a065e1ae81df3ca2a6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -631,8 +705,10 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.0#26686fe35190e7e6b1c21be4aeeeaa1ec5edabb9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.1#163cbbf51745af494f4388a065e1ae81df3ca2a6"
 dependencies = [
+ "alloy-primitives",
+ "alloy-sol-types",
  "anyhow",
  "ark-metadata",
  "ark-starknet",
@@ -1656,6 +1732,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "const-hex"
+version = "1.11.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70ff96486ccc291d36a958107caf2c0af8c78c0af7d31ae2f35ce055130de1a6"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "hex",
+ "proptest",
+ "serde",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1911,7 +2000,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.0#26686fe35190e7e6b1c21be4aeeeaa1ec5edabb9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.1#163cbbf51745af494f4388a065e1ae81df3ca2a6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1950,6 +2039,12 @@ name = "downcast"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1435fa1053d8b2fbbe9be7e97eca7f33d37b28409959813daefc1446a14247f1"
+
+[[package]]
+name = "dunce"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56ce8c6da7551ec6c462cbaf3bfbc75131ebbfa1c944aeaa9dab51ca1c5f0c3b"
 
 [[package]]
 name = "ecdsa"
@@ -2525,6 +2620,12 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hex-literal"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
 name = "hkdf"
@@ -3895,7 +3996,7 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.0#26686fe35190e7e6b1c21be4aeeeaa1ec5edabb9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.1#163cbbf51745af494f4388a065e1ae81df3ca2a6"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -3991,12 +4092,50 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e835ff2298f5721608eb1a980ecaee1aef2c132bf95ecc026a11b7bf3c01c02e"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "proptest"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "31b476131c3c86cb68032fdc5cb6d5a1045e3e42d96b69fa599fd77701e1f5bf"
+dependencies = [
+ "bitflags 2.5.0",
+ "num-traits",
+ "rand",
+ "rand_chacha",
+ "rand_xorshift",
+ "unarray",
 ]
 
 [[package]]
@@ -4053,6 +4192,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "rand_xorshift"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
+dependencies = [
+ "rand_core",
 ]
 
 [[package]]
@@ -4240,6 +4388,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ruint"
+version = "1.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f308135fef9fc398342da5472ce7c484529df23743fb7c734e0f3d472971e62"
+dependencies = [
+ "proptest",
+ "rand",
+ "ruint-macro",
+ "serde",
+ "valuable",
+ "zeroize",
+]
+
+[[package]]
+name = "ruint-macro"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f86854cf50259291520509879a5c294c3c9a4c334e9ff65071c51e42ef1e2343"
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4348,7 +4516,7 @@ dependencies = [
 [[package]]
 name = "sana"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.0#26686fe35190e7e6b1c21be4aeeeaa1ec5edabb9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.51.1#163cbbf51745af494f4388a065e1ae81df3ca2a6"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -5261,6 +5429,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "syn-solidity"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8db114c44cf843a8bacd37a146e37987a0b823a0e8bc4fdc610c9c72ab397a5"
+dependencies = [
+ "paste",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.58",
+]
+
+[[package]]
 name = "sync_wrapper"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5634,6 +5814,12 @@ dependencies = [
  "hex",
  "static_assertions",
 ]
+
+[[package]]
+name = "unarray"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eaea85b334db583fe3274d12b4cd1880032beab409c0d774be044d4480ab9a94"
 
 [[package]]
 name = "unicode-bidi"

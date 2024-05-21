@@ -112,6 +112,7 @@ impl DynamoDbEventProvider {
                 transaction_hash: convert::attr_to_str(data, "TransactionHash")?,
                 block_number,
                 updated_at,
+                ..Default::default()
             }),
             Err(_) => Err(ProviderError::ParsingError(
                 "EventType is unknown".to_string(),
