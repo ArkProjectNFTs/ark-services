@@ -191,7 +191,7 @@ jobs:
       - name: Bootstrap Indexer Marketplace
         run: |
           cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm cdk bootstrap
+          pnpm cdk bootstrap -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -201,7 +201,7 @@ jobs:
       - name: Deploy Indexer Marketplace
         run: |
           cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm cdk deploy --require-approval never
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
