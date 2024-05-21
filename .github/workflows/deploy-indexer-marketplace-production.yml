@@ -1,4 +1,4 @@
-name: Deploy Indexers to AWS (Staging)
+name: Deploy Indexer Marketplace to AWS (Production)
 
 on:
   workflow_dispatch:
@@ -6,13 +6,9 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-ark-indexers-staging.yml"
-      - "infrastructure/cdk-ark-ecr/**"
-      - "infrastructure/cdk-ark-indexers/**"
-      - "ark-indexer/**"
-      - "ark-lambdas/**"
-      - "ark-dynamodb/**"
-      - "ark-metadata-refresh/**"
+      - ".github/workflows/deploy-indexer-marketplace-production.yml"
+      - "infrastructure/cdk-starknet-indexer/**"
+      - "ark-indexer-marketplace/**"
 
 jobs:
   discord-notification:
@@ -24,7 +20,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🧪 Deploying Indexers on Staging environment..."
+                  "content": "Deploying Indexer Marketplace on Production environment..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -87,86 +83,8 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-staging-latest --file docker/indexer/Dockerfile . --load
-          docker push $ECR_URL:indexer-staging-latest
-        env:
-          ECR_URL: ${{ env.ECR_URL }}
-          AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
-          RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
-          METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
-          METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
-          IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-  push-metadata-indexer-image:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
-      - name: Install pnpm
-        run: |
-          npm install -g pnpm
-          npm install -g aws-cdk
-
-      - name: Deploy ECR Repository
-        run: |
-          cd infrastructure/cdk-ark-ecr
-          pnpm install
-          cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Output ECR Repository URL
-        id: set_ecr_url
-        run: |
-          cd infrastructure/cdk-ark-ecr
-          ECR_URL=$(jq -r '."ark-ecr".ECRRepositoryURL' ./cdk-outputs.json)
-          echo "ECR Repository URL: $ECR_URL"
-          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Build metadata, tag, and push image to Amazon ECR
-        run: |
-          docker buildx create --use --name ecr-deploy-builder-metadata
-          docker buildx build --tag $ECR_URL:metadata-staging-latest --file docker/metadata/Dockerfile . --load
-          docker push $ECR_URL:metadata-staging-latest
+          docker buildx build --tag $ECR_URL:indexer-marketplace-production-latest --file docker/indexer/Dockerfile . --load
+          docker push $ECR_URL:indexer-marketplace-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
@@ -181,7 +99,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [push-indexer-image, push-metadata-indexer-image]
+    needs: [push-indexer-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -203,7 +121,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-indexers
+          cd infrastructure/cdk-ark-indexer-marketplace
           pnpm install
 
       - name: Cache Cargo registry
@@ -233,7 +151,7 @@ jobs:
 
       - name: Bootstrap Indexers
         run: |
-          cd infrastructure/cdk-ark-indexers
+          cd infrastructure/cdk-ark-indexer-marketplace
           pnpm cdk bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
@@ -243,7 +161,7 @@ jobs:
 
       - name: Deploy Indexers
         run: |
-          cd infrastructure/cdk-ark-indexers
+          cd infrastructure/cdk-ark-indexer-marketplace
           pnpm cdk deploy --require-approval never
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
