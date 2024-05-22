@@ -83,7 +83,7 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-marketplace-production-latest --file docker/indexer/Dockerfile . --load
+          docker buildx build --tag $ECR_URL:indexer-marketplace-production-latest --file docker/indexer-marketplace/Dockerfile . --load
           docker push $ECR_URL:indexer-marketplace-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}

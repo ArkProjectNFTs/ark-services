@@ -22,6 +22,7 @@ export class IndexerMarketplaceStack extends cdk.Stack {
       props.networks,
       vpc,
       props.isProductionEnvironment,
+      props.environmentName,
       props.indexerVersion
     );
   }
