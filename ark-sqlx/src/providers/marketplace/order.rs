@@ -559,7 +559,7 @@ impl OrderProvider {
             .await?;
 
         // to hide offers belonging to old owner
-        sqlx::query("update token_offers set start_date = null, end_date = null WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3 and status != 'EXECUTED'")
+        sqlx::query("update token_offer set start_date = null, end_date = null WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3 and status != 'EXECUTED'")
             .bind(&info.to_address)
             .bind(&info.contract_address)
             .bind(&info.token_id)
@@ -614,8 +614,8 @@ impl OrderProvider {
         }
 
         let q = "
-            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         ";
 
         let _r = sqlx::query(q)
@@ -624,6 +624,7 @@ impl OrderProvider {
             .bind(token_id_decimal)
             .bind(&event_data.token_id)
             .bind(&event_data.contract_address)
+            .bind(&event_data.chain_id)
             .bind(event_data.event_type.to_string())
             .bind(event_data.block_timestamp)
             .bind(&event_data.from_address.clone().unwrap_or_default())
@@ -652,7 +653,7 @@ impl OrderProvider {
         }
 
         let insert_query = "
-            INSERT INTO token_offers
+            INSERT INTO token_offer
             (token_id, contract_address, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
         ";

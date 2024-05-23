@@ -3,7 +3,6 @@ use crate::db::query::get_collection_data;
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
-use crate::models::collection::CollectionData;
 #[derive(Deserialize)]
 pub struct Pagination {
     page: Option<i64>,
