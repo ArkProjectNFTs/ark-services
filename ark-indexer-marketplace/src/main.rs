@@ -86,6 +86,7 @@ async fn main() -> Result<()> {
                 continue;
             }
         };
+        trace!("Indexing pending block {}...", pending_ts);
         if Some(pending_ts) == previous_pending_ts {
             trace!("Indexing pending block {}...", pending_ts);
             sana_task
