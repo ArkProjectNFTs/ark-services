@@ -559,7 +559,7 @@ impl OrderProvider {
             .await?;
 
         // to hide offers belonging to old owner
-        sqlx::query("update token_offers set start_date = null, end_date = null WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3 and status != 'EXECUTED'")
+        sqlx::query("update token_offer set start_date = null, end_date = null WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3 and status != 'EXECUTED'")
             .bind(&info.to_address)
             .bind(&info.contract_address)
             .bind(&info.token_id)
@@ -653,7 +653,7 @@ impl OrderProvider {
         }
 
         let insert_query = "
-            INSERT INTO token_offers
+            INSERT INTO token_offer
             (token_id, contract_address, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
         ";

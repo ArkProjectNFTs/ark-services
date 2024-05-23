@@ -27,7 +27,8 @@ impl DatabaseAccess for PgPool {
                  (
                      SELECT MIN(listing_start_amount)
                      FROM token
-                     WHERE token.contract_id = contract.contract_id
+                     WHERE token.contract_address = contract.contract_address
+                     AND token.chain_id = contract.chain_id
                      AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                  ) AS floor,
@@ -35,35 +36,40 @@ impl DatabaseAccess for PgPool {
                  CAST(0 AS INTEGER) AS volume_7d_eth,
                  (
                      SELECT MAX(offer_amount)
-                     FROM token_offers
-                     WHERE token_offers.contract_id = contract.contract_id
+                     FROM token_offer
+                     WHERE token_offer.contract_address = contract.contract_address
+                     AND token_offer.chain_id = contract.chain_id
                  ) AS top_offer,
                  (
                      SELECT COUNT(*)
-                     FROM token_events
-                     WHERE token_events.contract_id = contract.contract_id
-                     AND token_events.event_type = 'Sell'
-                     AND token_events.timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
+                     FROM token_event
+                     WHERE token_event.contract_address = contract.contract_address
+                     AND token_event.chain_id = contract.chain_id
+                     AND token_event.event_type = 'Sell'
+                     AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
                  ) AS sales_7d,
                  CAST(0 AS INTEGER) AS marketcap,
                  (
                      SELECT COUNT(*)
                      FROM token
-                     WHERE token.contract_id = contract.contract_id
+                     WHERE token.contract_address = contract.contract_address
+                     AND token.chain_id = contract.chain_id
                      AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                  ) AS listed_items,
                 (
                     SELECT COUNT(*)
                     FROM token
-                    WHERE token.contract_id = contract.contract_id
+                    WHERE token.contract_address = contract.contract_address
+                    AND token.chain_id = contract.chain_id
                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                 ) * 100 / NULLIF(
                     (
                         SELECT COUNT(*)
                         FROM token
-                        WHERE token.contract_id = contract.contract_id
+                        WHERE token.contract_address = contract.contract_address
+                        AND token.chain_id = contract.chain_id
                     ), 0
                 ) AS listed_percentage
                 FROM
