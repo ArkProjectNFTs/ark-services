@@ -25,5 +25,6 @@ new IndexerMarketplaceStack(app, stackName, {
   },
   networks,
   isProductionEnvironment,
+  environmentName: environment,
   indexerVersion,
 });
