@@ -35,27 +35,38 @@ CREATE TABLE token (
   listing_currency_address TEXT,
   listing_currency_chain_id TEXT,
   listing_timestamp BIGINT NULL,
-  listing_broker_id TEXT NULL,
+  listing_broker_id INTEGER NULL,
   listing_orderhash TEXT,
   listing_end_amount TEXT NULL,
   listing_end_date BIGINT NULL,
   metadata JSON NULL,
   metadata_ok BOOLEAN NOT NULL DEFAULT FALSE,
   top_bid_amount TEXT NULL,
-  top_bid_broker_id TEXT NULL,
+  top_bid_broker_id INTEGER NULL,
   top_bid_order_hash TEXT,
   is_burned BOOLEAN NOT NULL DEFAULT FALSE,
   block_timestamp BIGINT NOT NULL,
   updated_timestamp BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT),
 
   PRIMARY KEY (contract_address, chain_id, token_id),
-  FOREIGN KEY (contract_address, chain_id) REFERENCES contract(contract_address, chain_id) ON DELETE RESTRICT ON UPDATE CASCADE
+  FOREIGN KEY (contract_address, chain_id) REFERENCES contract(contract_address, chain_id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  FOREIGN KEY (listing_broker_id) REFERENCES broker(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+  FOREIGN KEY (top_bid_broker_id) REFERENCES broker(id) ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE TABLE broker (
+    id SERIAL PRIMARY KEY,
+    contract_address VARCHAR(66) NOT NULL,
+    chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+    name TEXT NOT NULL,
+    UNIQUE (contract_address, chain_id)
 );
 
 CREATE TABLE token_event (
   token_event_id TEXT PRIMARY KEY,
   contract_address VARCHAR(66) NOT NULL,
   chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+  broker_id INTEGER,
   order_hash TEXT,
   token_id TEXT NOT NULL,
   token_id_hex TEXT NOT NULL,
@@ -66,13 +77,15 @@ CREATE TABLE token_event (
   from_address TEXT, -- NULL if new listing
   amount TEXT,
   canceled_reason TEXT,
-  FOREIGN KEY (contract_address, chain_id, token_id) REFERENCES token(contract_address, chain_id, token_id)
+  FOREIGN KEY (contract_address, chain_id, token_id) REFERENCES token(contract_address, chain_id, token_id),
+  FOREIGN KEY (broker_id) REFERENCES broker(id)
 );
 
 CREATE TABLE token_offer (
   token_offer_id SERIAL PRIMARY KEY,
   contract_address VARCHAR(66) NOT NULL,
   chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+  broker_id INTEGER,
   token_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
   offer_maker TEXT NOT NULL,
@@ -84,7 +97,8 @@ CREATE TABLE token_offer (
   start_date BIGINT NOT NULL DEFAULT 0,
   end_date BIGINT NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'PLACED',
-  FOREIGN KEY (contract_address, chain_id, token_id) REFERENCES token(contract_address, chain_id, token_id)
+  FOREIGN KEY (contract_address, chain_id, token_id) REFERENCES token(contract_address, chain_id, token_id),
+  FOREIGN KEY (broker_id) REFERENCES broker(id)
 );
 
 CREATE TABLE indexer (
