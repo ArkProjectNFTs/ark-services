@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("ARKCHAIN_RPC_PROVIDER").expect("ARKCHAIN_RPC_PROVIDER must be set");
     let rpc_url_converted = Url::parse(&rpc_url).unwrap();
 
-    let db_url = env::var("ARKCHAIN_DATABASE_URL").expect("ARKCHAIN_DATABASE_URL must be set");
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
 
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
         HttpTransport::new(rpc_url_converted.clone()),

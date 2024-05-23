@@ -559,7 +559,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                                     {
                                         if let Some(AttributeValue::S(name)) = data_map.get("Name")
                                         {
-                                            contract_name = name.clone();
+                                            contract_name.clone_from(name);
                                             break;
                                         }
                                     }

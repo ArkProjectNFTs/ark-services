@@ -558,10 +558,6 @@ impl DatabaseAccess for MockDb {
         Ok(1)
     }
 
-    async fn flush_all_data(&self) -> Result<u64, Error> {
-        Ok(1)
-    }
-
     async fn delete_migrations(&self) -> Result<u64, Error> {
         Ok(1)
     }

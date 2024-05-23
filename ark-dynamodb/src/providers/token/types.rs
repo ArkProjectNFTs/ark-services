@@ -345,7 +345,7 @@ impl TryFrom<HashMap<String, AttributeValue>> for TokenData {
             _ => None,
         };
 
-        let metadata = if data.get("Metadata").is_some() {
+        let metadata = if data.contains_key("Metadata") {
             let m = convert::attr_to_map(&data, "Metadata")?;
 
             let normalized_metadata = extract_normalized_metadata_from_hashmap(m.clone())

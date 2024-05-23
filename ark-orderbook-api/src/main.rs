@@ -26,7 +26,8 @@ fn init_logging() {
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     init_logging();
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url =
+        std::env::var("ARKCHAIN_DATABASE_URL").expect("ARKCHAIN_DATABASE_URL must be set");
 
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)

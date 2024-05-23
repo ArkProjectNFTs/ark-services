@@ -29,6 +29,7 @@ async fn main() -> Result<()> {
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
     let indexer_identifier = get_task_id();
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
 
     info!(
         "Starting Indexer. Version={}, Identifier={}",
@@ -87,7 +88,9 @@ async fn main() -> Result<()> {
         };
         if Some(pending_ts) == previous_pending_ts {
             trace!("Indexing pending block {}...", pending_ts);
-            sana_task.index_pending_block(pending_ts).await?;
+            sana_task
+                .index_pending_block(pending_ts, chain_id.as_str())
+                .await?;
         } else {
             let latest_block = match provider.block_number().await {
                 Ok(block_number) => block_number,
@@ -116,7 +119,12 @@ async fn main() -> Result<()> {
 
             trace!("Fetching blocks {start} - {end}");
             match sana_task
-                .index_block_range(BlockId::Number(start), BlockId::Number(end), false)
+                .index_block_range(
+                    BlockId::Number(start),
+                    BlockId::Number(end),
+                    false,
+                    chain_id.as_str(),
+                )
                 .await
             {
                 Ok(_) => {
