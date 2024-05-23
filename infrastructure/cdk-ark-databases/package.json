@@ -1,0 +1,30 @@
+{
+  "name": "cdk-ark-databases",
+  "version": "0.1.0",
+  "bin": {
+    "cdk-ark-databases": "bin/cdk-ark-databases.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "20.7.1",
+    "aws-cdk": "2.100.0",
+    "aws-sdk": "^2.1621.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "~5.2.2"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-backup": "^1.204.0",
+    "aws-cdk-lib": "2.100.0",
+    "constructs": "^10.0.0",
+    "dotenv": "^16.3.1",
+    "source-map-support": "^0.5.21"
+  }
+}

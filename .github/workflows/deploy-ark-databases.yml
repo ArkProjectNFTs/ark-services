@@ -1,0 +1,43 @@
+name: Deploy ArkProject Databases
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-ark-databases.yml"
+      - "infrastructure/cdk-ark-databases/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "Deploying ArkProject database..."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Bootstrap Databases
+        run: |
+          cd infrastructure/cdk-ark-databases
+          pnpm cdk bootstrap
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy Databases
+        run: |
+          cd infrastructure/cdk-ark-databases
+          pnpm cdk deploy --require-approval never
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
