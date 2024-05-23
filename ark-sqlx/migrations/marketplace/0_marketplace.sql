@@ -1,3 +1,11 @@
+CREATE TABLE broker (
+    id SERIAL PRIMARY KEY,
+    contract_address VARCHAR(66) NOT NULL,
+    chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+    name TEXT NOT NULL,
+    UNIQUE (contract_address, chain_id)
+);
+
 CREATE TABLE contract (
   contract_address VARCHAR(66) NOT NULL,
   chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
@@ -52,14 +60,6 @@ CREATE TABLE token (
   FOREIGN KEY (contract_address, chain_id) REFERENCES contract(contract_address, chain_id) ON DELETE RESTRICT ON UPDATE CASCADE,
   FOREIGN KEY (listing_broker_id) REFERENCES broker(id) ON DELETE RESTRICT ON UPDATE CASCADE,
   FOREIGN KEY (top_bid_broker_id) REFERENCES broker(id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
-
-CREATE TABLE broker (
-    id SERIAL PRIMARY KEY,
-    contract_address VARCHAR(66) NOT NULL,
-    chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
-    name TEXT NOT NULL,
-    UNIQUE (contract_address, chain_id)
 );
 
 CREATE TABLE token_event (
