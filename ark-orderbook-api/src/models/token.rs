@@ -7,13 +7,6 @@ impl From<RawTokenData> for TokenData {
             order_hash: raw_data.top_bid_order_hash,
         };
 
-        let broker_id = raw_data
-            .broker_id
-            .as_deref()
-            .map(|id| id.parse::<i64>())
-            .transpose()
-            .unwrap_or(None);
-
         TokenData {
             order_hash: raw_data.order_hash,
             token_chain_id: raw_data.token_chain_id,
@@ -28,7 +21,7 @@ impl From<RawTokenData> for TokenData {
             end_amount: raw_data.end_amount,
             start_date: raw_data.start_date,
             end_date: raw_data.end_date,
-            broker_id,
+            broker_id: raw_data.broker_id,
             is_listed: raw_data.is_listed,
             has_offer: raw_data.has_offer,
             currency_chain_id: raw_data.currency_chain_id,
@@ -87,7 +80,7 @@ pub struct TokenData {
     pub end_amount: Option<String>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
-    pub broker_id: Option<i64>,
+    pub broker_id: Option<String>,
     pub is_listed: Option<bool>,
     pub has_offer: Option<bool>,
     pub currency_address: Option<String>,
