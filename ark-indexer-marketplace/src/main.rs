@@ -29,6 +29,7 @@ async fn main() -> Result<()> {
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
     let indexer_identifier = get_task_id();
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
 
     info!(
         "Starting Indexer. Version={}, Identifier={}",
@@ -43,8 +44,6 @@ async fn main() -> Result<()> {
         indexer_version.clone(),
         indexer_identifier.clone(),
     ));
-
-    let chain_id = "SN_MAIN"; // TODO
 
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
         HttpTransport::new(rpc_url_converted.clone()),
