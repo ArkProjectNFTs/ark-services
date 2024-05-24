@@ -4,6 +4,7 @@ use anyhow::Result;
 use ark_marketplace_api::routes::{collection, default};
 use aws_config::BehaviorVersion;
 use sqlx::postgres::PgPoolOptions;
+use tracing::info;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 
@@ -49,6 +50,8 @@ async fn main() -> std::io::Result<()> {
     let database_url = get_database_url()
         .await
         .expect("Could not get the database URL");
+
+    info!("database_url: {}", database_url);
 
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)
