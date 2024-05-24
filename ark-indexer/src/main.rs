@@ -43,6 +43,7 @@ async fn main() -> Result<()> {
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let force_mode = env::var("FORCE_MODE").is_ok();
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
+    let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
     let indexer_identifier = get_task_id(is_head_of_chain);
     let block_indexer_function_name = match env::var("BLOCK_INDEXER_FUNCTION_NAME") {
         Ok(val) => Some(val),
@@ -98,7 +99,7 @@ async fn main() -> Result<()> {
     // If a contract address is specified, index contract events
     if let Some(contract_address) = contract_address {
         pontos_task
-            .index_contract_events(from_block, to_block, contract_address)
+            .index_contract_events(from_block, to_block, contract_address, chain_id.as_str())
             .await?;
         return Ok(());
     }
@@ -106,7 +107,7 @@ async fn main() -> Result<()> {
     // If both from_block and to_block are specified, index the block range
     if let (Some(from_block), Some(to_block)) = (from_block, to_block) {
         pontos_task
-            .index_block_range(from_block, to_block, force_mode)
+            .index_block_range(from_block, to_block, force_mode, chain_id.as_str())
             .await?;
         return Ok(());
     }

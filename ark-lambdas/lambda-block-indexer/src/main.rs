@@ -65,6 +65,7 @@ async fn func(event: LambdaEvent<BlockRange>) -> Result<Response, Error> {
     let block_range = event.payload;
     let from_block = BlockId::Number(block_range.from_block);
     let to_block = BlockId::Number(block_range.to_block);
+    let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
 
     info!("🔄 Refresh block range: {:?} - {:?}", from_block, to_block);
 
@@ -89,7 +90,7 @@ async fn func(event: LambdaEvent<BlockRange>) -> Result<Response, Error> {
     );
 
     match pontos_task
-        .index_block_range(from_block, to_block, config.force_mode)
+        .index_block_range(from_block, to_block, config.force_mode, chain_id.as_str())
         .await
     {
         Ok(_) => {

@@ -218,6 +218,7 @@ impl Storage for DynamoStorage {
         &self,
         contract_address: &str,
         token_id_hex: &str,
+        _token_id: &str,
         info: &TokenMintInfo,
     ) -> Result<(), StorageError> {
         info!(
@@ -363,6 +364,7 @@ impl Storage for DynamoStorage {
     async fn get_contract_type(
         &self,
         contract_address: &str,
+        _chain_id: &str,
     ) -> Result<ContractType, StorageError> {
         info!("Getting contract info for contract {}", contract_address);
 
@@ -392,6 +394,7 @@ impl Storage for DynamoStorage {
         &self,
         info: &ContractInfo,
         block_timestamp: u64,
+        _chain_id: &str,
     ) -> Result<(), StorageError> {
         info!(
             "Registering contract info {:?} for contract {}",

@@ -42,6 +42,7 @@ impl DynamoDbContractProvider {
             name: Some(get_attr_or_default("Name")),
             symbol: Some(get_attr_or_default("Symbol")),
             image: Some(get_attr_or_default("Image")),
+            chain_id: "".to_string(),
         })
     }
 

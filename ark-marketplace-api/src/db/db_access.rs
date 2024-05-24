@@ -92,8 +92,8 @@ pub struct MockDb;
 impl DatabaseAccess for MockDb {
     async fn get_collection_data(
         &self,
-        page: i64,
-        items_per_page: i64,
+        _page: i64,
+        _items_per_page: i64,
     ) -> Result<Vec<CollectionData>, Error> {
         Ok(vec![CollectionData {
             image: Some("https://example.com/image.png".to_string()),
