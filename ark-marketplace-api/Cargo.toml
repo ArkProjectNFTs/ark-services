@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4.4.0"
-actix-cors = "0.6.4"
+actix-cors = "0.7.0"
 actix-rt = "2.9.0"
 actix-web-httpauth = "0.8.1"
-env_logger = "0.9"
+env_logger = "0.11.3"
 num-bigint = "0.4.4"
 sqlx = { version = "0.7", features = ["postgres", "runtime-async-std"] }
 tokio = { version = "1", features = ["full"] }
@@ -19,5 +19,6 @@ async-std = { version = "1.9", features = ["attributes"] }
 async-trait = "0.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
-
-
+aws-config = "1.5.0"
+aws-sdk-secretsmanager = "1.30.0"
+anyhow = "1.0.86"

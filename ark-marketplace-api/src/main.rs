@@ -1,6 +1,8 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
+use anyhow::Result;
 use ark_marketplace_api::routes::{collection, default};
+use aws_config::BehaviorVersion;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
@@ -22,11 +24,31 @@ fn init_logging() {
     .expect("Failed to set the global tracing subscriber");
 }
 
+async fn get_database_url() -> Result<String> {
+    match std::env::var("DATABASE_URL") {
+        Ok(url) => return Ok(url),
+        Err(_) => {
+            let secret_name = std::env::var("AWS_SECRET_NAME").expect("AWS_SECRET_NAME not set");
+            let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
+            let client = aws_sdk_secretsmanager::Client::new(&config);
+            let secret_value = client
+                .get_secret_value()
+                .secret_id(secret_name)
+                .send()
+                .await?;
+            let result = secret_value.secret_string.unwrap();
+            return Ok(result);
+        }
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     init_logging();
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_url = get_database_url()
+        .await
+        .expect("Could not get the database URL");
 
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)
