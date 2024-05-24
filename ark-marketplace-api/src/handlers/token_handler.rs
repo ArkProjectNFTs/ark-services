@@ -19,7 +19,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let time_range = query_parameters.time_range.as_deref().unwrap_or("");
 
     let db_access = db_pool.get_ref();
-    match get_collection_data(db_access, page, items_per_page, time_range).await {
+    match get_tokens_data(db_access, page, items_per_page, time_range).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -49,21 +49,7 @@ mod tests {
         let response_body = test::read_body(resp).await;
         let tokens_data: Vec<CollectionData> = serde_json::from_slice(&response_body).unwrap();
 
-        assert_eq!(
-            collection_data[0].image,
-            Some("https://example.com/image.png".to_string())
-        );
-        assert_eq!(
-            collection_data[0].collection_name,
-            Some("Example Collection".to_string())
-        );
-        assert_eq!(collection_data[0].floor, Some("1".to_string()));
-        assert_eq!(collection_data[0].floor_7d_percentage, Some(4));
-        assert_eq!(collection_data[0].volume_7d_eth, Some(789));
-        assert_eq!(collection_data[0].top_offer, Some("Top Offer".to_string()));
-        assert_eq!(collection_data[0].sales_7d, Some(10));
-        assert_eq!(collection_data[0].marketcap, Some(1112));
-        assert_eq!(collection_data[0].listed_items, Some(13));
-        assert_eq!(collection_data[0].listed_percentage, Some(14));
+        assert_eq!(tokens_data[0].id, Some("1".to_string()));
+        assert_eq!(tokens_data[0].address, Some(4));
     }
 }
