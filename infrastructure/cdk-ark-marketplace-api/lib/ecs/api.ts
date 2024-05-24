@@ -71,7 +71,7 @@ function deployApiServices(
     "ark-project-repo"
   );
 
-  const container = taskDefinition.addContainer("ark_orderbook_api", {
+  const container = taskDefinition.addContainer("marketplace_api", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
       `marketplace-api-${
@@ -91,7 +91,7 @@ function deployApiServices(
   });
 
   const domainName = "arkproject.dev";
-  const apiURL = `api.market.${domainName}`;
+  const apiURL = `api.marketplace.${domainName}`;
 
   const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
     scope,
@@ -101,8 +101,10 @@ function deployApiServices(
       zoneName: domainName,
     }
   );
-  const certificate = new acm.Certificate(scope, "Certificate", {
+
+  const certificate = new acm.Certificate(scope, "MarketplaceApiCertificate", {
     domainName: apiURL,
+    certificateName: "marketplace-api-certificate",
     validation: acm.CertificateValidation.fromDns(hostedZone),
   });
 
@@ -128,6 +130,7 @@ function deployApiServices(
     {
       vpc,
       description: "Security group for the Load Balancer",
+      allowAllOutbound: false,
     }
   );
 
@@ -136,16 +139,15 @@ function deployApiServices(
     cdk.aws_ec2.Port.tcp(80),
     "Allow HTTP traffic from anywhere"
   );
-  lbSecurityGroup.addEgressRule(
-    ecsSecurityGroup,
-    cdk.aws_ec2.Port.tcp(8080),
-    "Allow outbound traffic to ECS security group on port 8080"
-  );
-
   ecsSecurityGroup.addIngressRule(
     lbSecurityGroup,
     cdk.aws_ec2.Port.tcp(8080),
     "Allow inbound HTTP traffic from the load balancer"
+  );
+  lbSecurityGroup.addEgressRule(
+    ecsSecurityGroup,
+    cdk.aws_ec2.Port.tcp(8080),
+    "Allow outbound traffic to ECS security group on port 8080"
   );
 
   const loadBalancer = new ApplicationLoadBalancer(scope, "ApiLoadBalancer", {
