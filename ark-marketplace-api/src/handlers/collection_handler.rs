@@ -2,6 +2,12 @@ use crate::db::db_access::DatabaseAccess;
 use crate::db::query::get_collection_data;
 use actix_web::{web, HttpResponse, Responder};
 
+#[derive(Deserialize)]
+pub struct Pagination {
+    page: Option<i64>,
+    items_per_page: Option<i64>,
+}
+
 pub async fn get_collection<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
     db_pool: web::Data<D>,

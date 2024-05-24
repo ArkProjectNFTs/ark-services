@@ -139,74 +139,74 @@ jobs:
   #         AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
   #         AWS_REGION: ${{ secrets.AWS_REGION }}
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [push-indexer-image]
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+  # deploy:
+  #   runs-on: ubuntu-latest
+  #   needs: [push-indexer-image]
+  #   steps:
+  #     - name: Checkout Repository
+  #       uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
+  #     - name: Set up Node.js
+  #       uses: actions/setup-node@v2
+  #       with:
+  #         node-version: "18"
 
-      - name: Install pnpm
-        run: npm install -g pnpm
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
+  #     - name: Install Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         profile: minimal
+  #         override: true
 
-      - name: Install Dependencies
-        run: |
-          cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm install
+  #     - name: Install Dependencies
+  #       run: |
+  #         cd infrastructure/cdk-ark-indexer-marketplace
+  #         pnpm install
 
-      - name: Cache Cargo registry
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+  #     - name: Cache Cargo registry
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: |
+  #           ~/.cargo/registry
+  #           ~/.cargo/git
+  #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-cargo-
 
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
+  #     - name: Cache Cargo Dependencies
+  #       uses: Swatinem/rust-cache@v2
 
-      - name: Cache Cargo target dir
-        uses: actions/cache@v2
-        with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-target-
+  #     - name: Cache Cargo target dir
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: target
+  #         key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-target-
 
-      - name: Install Cargo Lambda
-        run: |
-          pip install cargo-lambda
+  #     - name: Install Cargo Lambda
+  #       run: |
+  #         pip install cargo-lambda
 
-      - name: Bootstrap Indexer Marketplace
-        run: |
-          cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm cdk bootstrap -c isProductionEnvironment=true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+  #     - name: Bootstrap Indexer Marketplace
+  #       run: |
+  #         cd infrastructure/cdk-ark-indexer-marketplace
+  #         pnpm cdk bootstrap -c isProductionEnvironment=true
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+  #         AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+  #         AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy Indexer Marketplace
-        run: |
-          cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+  #     - name: Deploy Indexer Marketplace
+  #       run: |
+  #         cd infrastructure/cdk-ark-indexer-marketplace
+  #         pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+  #         AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+  #         AWS_REGION: ${{ secrets.AWS_REGION }}

@@ -161,7 +161,7 @@ mod tests {
         assert_eq!(token_data.end_date, Some(1234567891));
         assert_eq!(token_data.is_listed, Some(true));
         assert_eq!(token_data.has_offer, Some(false));
-        assert_eq!(token_data.broker_id, Some("brokerXYZ".to_string()));
+        assert_eq!(token_data.broker_id, Some(0));
     }
 
     #[actix_rt::test]
@@ -198,7 +198,7 @@ mod tests {
         assert_eq!(token1.end_date, Some(1234567891));
         assert_eq!(token1.is_listed, Some(true));
         assert_eq!(token1.has_offer, Some(false));
-        assert_eq!(token1.broker_id, Some("brokerXYZ".to_string()));
+        assert_eq!(token1.broker_id, Some(0));
 
         let token2 = &tokens[1];
         assert_eq!(token2.token_chain_id, "chainWXYZ");
@@ -215,7 +215,7 @@ mod tests {
         assert_eq!(token2.end_date, Some(1234567891));
         assert_eq!(token2.is_listed, Some(true));
         assert_eq!(token2.has_offer, Some(false));
-        assert_eq!(token2.broker_id, Some("brokerXYZ".to_string()));
+        assert_eq!(token2.broker_id, Some(0));
     }
 
     #[actix_rt::test]
@@ -309,7 +309,7 @@ mod tests {
         assert_eq!(tokens[0].end_amount, Some("150".to_string()));
         assert_eq!(tokens[0].start_date, Some(1234567890));
         assert_eq!(tokens[0].end_date, Some(1234567891));
-        assert_eq!(tokens[0].broker_id, Some("brokerXYZ".to_string()));
+        assert_eq!(tokens[0].broker_id, Some(0));
 
         assert_eq!(tokens[1].token_chain_id, "chainWXYZ");
         assert_eq!(tokens[1].token_address, "0xABCDEF1234567");
@@ -323,6 +323,6 @@ mod tests {
         assert_eq!(tokens[1].end_amount, Some("300".to_string()));
         assert_eq!(tokens[1].start_date, Some(2234567890));
         assert_eq!(tokens[1].end_date, Some(2234567891));
-        assert_eq!(tokens[1].broker_id, Some("brokerWXYZ".to_string()));
+        assert_eq!(tokens[1].broker_id, Some(0));
     }
 }
