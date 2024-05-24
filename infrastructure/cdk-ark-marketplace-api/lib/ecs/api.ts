@@ -84,6 +84,9 @@ function deployApiServices(
     }),
     environment: {
       RUST_LOG: "INFO",
+      AWS_SECRET_NAME: isProductionEnvironment
+        ? "prod/ark-db-credentials"
+        : "staging/ark-db-credentials",
       // DATABASE_URL: process.env.DATABASE_URL || "defaultUrl",
       // API_USER: process.env.API_USER || "",
       // API_PASSWORD: process.env.API_PASSWORD || "",

@@ -15,7 +15,7 @@ const isProductionEnvironment: boolean =
 const networks: string[] = isProductionEnvironment ? ["mainnet"] : ["mainnet"];
 let environment = isProductionEnvironment ? "production" : "staging";
 
-new ArkMarketplaceApiStack(app, `marketplace-api-${environment}`, {
+new ArkMarketplaceApiStack(app, `ark-marketplace-api-${environment}`, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
     region: process.env.AWS_REGION,
