@@ -3,6 +3,7 @@ use actix_web::{web, App, HttpServer};
 use anyhow::Result;
 use ark_marketplace_api::routes::{collection, default};
 use aws_config::BehaviorVersion;
+use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
 use tracing::info;
 use tracing_subscriber::fmt;
@@ -25,6 +26,16 @@ fn init_logging() {
     .expect("Failed to set the global tracing subscriber");
 }
 
+#[derive(Deserialize)]
+struct DatabaseCredentials {
+    username: String,
+    password: String,
+    dbname: String,
+    engine: String,
+    port: u16,
+    host: String,
+}
+
 async fn get_database_url() -> Result<String> {
     match std::env::var("DATABASE_URL") {
         Ok(url) => return Ok(url),
@@ -38,7 +49,14 @@ async fn get_database_url() -> Result<String> {
                 .send()
                 .await?;
             let result = secret_value.secret_string.unwrap();
-            return Ok(result);
+
+            let creds: DatabaseCredentials = serde_json::from_str(&result)?;
+            let database_url = format!(
+                "postgres://{}:{}@{}:{}/{}",
+                creds.username, creds.password, creds.host, creds.port, creds.dbname
+            );
+
+            return Ok(database_url);
         }
     }
 }
