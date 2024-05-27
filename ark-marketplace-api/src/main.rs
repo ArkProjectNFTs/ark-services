@@ -31,7 +31,6 @@ struct DatabaseCredentials {
     username: String,
     password: String,
     dbname: String,
-    engine: String,
     port: u16,
     host: String,
 }
