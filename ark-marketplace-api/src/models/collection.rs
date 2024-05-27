@@ -14,3 +14,10 @@ pub struct CollectionData {
     pub listed_items: Option<i64>,
     pub listed_percentage: Option<i64>,
 }
+
+pub struct CollectionDataToken {
+    pub name: Option<String>,
+    pub image: Option<String>,
+    pub symbol: Option<String>,
+    pub token_count: i64,
+}

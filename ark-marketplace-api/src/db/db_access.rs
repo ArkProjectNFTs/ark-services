@@ -1,17 +1,25 @@
-use crate::models::collection::CollectionData;
+use crate::models::collection::{CollectionData, CollectionDataToken};
+use crate::models::token::TokenData;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
 
 #[async_trait]
 pub trait DatabaseAccess: Send + Sync {
-    async fn get_collection_data(
+    async fn get_tokens_data(
         &self,
         page: i64,
         items_per_page: i64,
-        time_range: &str,
-    ) -> Result<Vec<CollectionData>, Error>;
+    ) -> Result<Vec<TokenData>, Error>;
+
+    async fn get_collection_data(
+            &self,
+            page: i64,
+            items_per_page: i64,
+            time_range: &str,
+        ) -> Result<Vec<CollectionData>, Error>;
 }
+
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
@@ -104,6 +112,55 @@ impl DatabaseAccess for PgPool {
             .await?;
 
         Ok(collection_data)
+    }
+
+    async fn get_tokens_data(
+            &self,
+            contract_address: &str,
+            page: i64,
+            items_per_page: i64,
+        ) -> Result<Vec<TokenData>, Error> {
+
+        let collection = sqlx::query_as!(
+            CollectionDataToken,
+            "SELECT contract.name,
+                    contract.image,
+                    contract.symbol,
+                    12 AS token_count,
+             FROM contract
+             WHERE contract_address = $1 ",
+            contract_address
+        )
+        .fetch_one(self)
+        .await?;
+
+       let sql_query = r#"
+           SELECT
+               token.contract AS "contract!",
+               token.token_id AS "token_id",
+               token.is_nsfw AS "isNsfw!",
+               token.is_spam AS "isSpam!",
+               collection.id AS "collection.id!",
+               collection.name AS "collection.name!",
+               collection.image AS "collection.image!",
+               collection.symbol AS "collection.symbol!",
+               collection.token_count AS "collection.tokenCount!",
+               token.current_owner AS "owner!",
+               token.minted_at AS "mintedAt!",
+               token.updated_timestamp AS "updatedAt!"
+           FROM token
+           INNER JOIN collection ON token.collection_id = collection.id
+           ORDER BY token.updated_at DESC
+           LIMIT $1 OFFSET $2
+           "#;
+
+       let tokens_data = sqlx::query_as::<_, TokenData>(sql_query)
+           .bind(items_per_page)
+           .bind(offset)
+           .fetch_all(self)
+           .await?;
+
+       Ok(tokens_data)
     }
 }
 
