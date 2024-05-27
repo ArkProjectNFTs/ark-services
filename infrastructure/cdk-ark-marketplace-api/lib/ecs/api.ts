@@ -5,6 +5,7 @@ import * as acm from "aws-cdk-lib/aws-certificatemanager";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { ApplicationLoadBalancer } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export async function deployApi(
   scope: cdk.Stack,
@@ -47,12 +48,15 @@ function deployApiServices(
 ) {
   const logGroup = new LogGroup(
     scope,
-    `/ecs/marketplace-api-${network}-${
+    `/aws/ecs/marketplace-api-${network}-${
       isProductionEnvironment ? "production" : "staging"
     }`,
     {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       retention: cdk.aws_logs.RetentionDays.ONE_WEEK,
+      logGroupName: `/aws/ecs/marketplace-api-${network}-${
+        isProductionEnvironment ? "production" : "staging"
+      }`,
     }
   );
 
@@ -64,6 +68,17 @@ function deployApiServices(
       cpu: 512,
     }
   );
+
+  if (isProductionEnvironment) {
+    taskDefinition.taskRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          "arn:aws:secretsmanager:us-east-1:223605539824:secret:prod/ark-db-credentials-AlF3F1",
+        ],
+      })
+    );
+  }
 
   const ecrRepository = cdk.aws_ecr.Repository.fromRepositoryName(
     scope,
@@ -133,7 +148,7 @@ function deployApiServices(
     {
       vpc,
       description: "Security group for the Load Balancer",
-      allowAllOutbound: false,
+      allowAllOutbound: true,
     }
   );
 
@@ -146,11 +161,6 @@ function deployApiServices(
     lbSecurityGroup,
     cdk.aws_ec2.Port.tcp(8080),
     "Allow inbound HTTP traffic from the load balancer"
-  );
-  lbSecurityGroup.addEgressRule(
-    ecsSecurityGroup,
-    cdk.aws_ec2.Port.tcp(8080),
-    "Allow outbound traffic to ECS security group on port 8080"
   );
 
   const loadBalancer = new ApplicationLoadBalancer(scope, "ApiLoadBalancer", {
