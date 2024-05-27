@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
-use ark_marketplace_api::routes::{collection, default};
+use ark_marketplace_api::routes::{collection, default, token};
 use aws_config::BehaviorVersion;
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
@@ -89,6 +89,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db_pool.clone()))
             .configure(default::config)
             .configure(collection::config)
+            .configure(token::config)
     })
     .bind("0.0.0.0:8080")?
     .run()

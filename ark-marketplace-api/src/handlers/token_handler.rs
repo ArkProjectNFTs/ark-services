@@ -1,25 +1,25 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::db::query::get_collection_data;
+use crate::db::query::{get_collection_data, get_tokens_data};
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-pub struct CollectionQueryParameters {
+pub struct QueryParameters {
     page: Option<i64>,
     items_per_page: Option<i64>,
-    time_range: Option<String>,
 }
 
 pub async fn get_tokens<D: DatabaseAccess + Sync>(
-    query_parameters: web::Query<CollectionQueryParameters>,
+    path: web::Path<String>,
+    query_parameters: web::Query<QueryParameters>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
-    let time_range = query_parameters.time_range.as_deref().unwrap_or("");
+    let contract_address = path.into_inner();
 
     let db_access = db_pool.get_ref();
-    match get_tokens_data(db_access, page, items_per_page, time_range).await {
+    match get_tokens_data(db_access, &contract_address, page, items_per_page).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(_) => HttpResponse::InternalServerError().finish(),

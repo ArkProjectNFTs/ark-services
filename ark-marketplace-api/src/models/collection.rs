@@ -15,9 +15,10 @@ pub struct CollectionData {
     pub listed_percentage: Option<i64>,
 }
 
+#[derive(Serialize, Deserialize, FromRow)]
 pub struct CollectionDataToken {
-    pub name: Option<String>,
-    pub image: Option<String>,
-    pub symbol: Option<String>,
-    pub token_count: i64,
+    pub contract_name: Option<String>,
+    pub contract_image: Option<String>,
+    pub contract_symbol: Option<String>,
+    pub token_count: Option<i32>,
 }
