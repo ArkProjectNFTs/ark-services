@@ -1,109 +1,149 @@
-use crate::models::collection::CollectionData;
+use crate::models::collection::{CollectionData};
+use crate::models::token::TokenData;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
 
 #[async_trait]
 pub trait DatabaseAccess: Send + Sync {
-    async fn get_collection_data(
+    async fn get_tokens_data(
         &self,
+        contract_address: &str,
         page: i64,
         items_per_page: i64,
-        time_range: &str,
-    ) -> Result<Vec<CollectionData>, Error>;
-}
+    ) -> Result<Vec<TokenData>, Error>;
 
-#[async_trait]
-impl DatabaseAccess for PgPool {
     async fn get_collection_data(
             &self,
             page: i64,
             items_per_page: i64,
             time_range: &str,
-        ) -> Result<Vec<CollectionData>, Error> {
+        ) -> Result<Vec<CollectionData>, Error>;
+}
 
-        let interval = match time_range {
-            "10m" => "INTERVAL '10 minutes'",
-            "1h" => "INTERVAL '1 hour'",
-            "6h" => "INTERVAL '6 hours'",
-            "1D" => "INTERVAL '1 day'",
-            "7D" => "INTERVAL '7 days'",
-            "30D" => "INTERVAL '30 days'",
-            _ => "",
-        };
 
-        let where_clause: String = if interval.is_empty() {
-            String::new()
-        } else {
-            format!(" WHERE contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)", interval)
-        };
+#[async_trait]
+impl DatabaseAccess for PgPool {
+    async fn get_collection_data(
+                &self,
+                page: i64,
+                items_per_page: i64,
+                time_range: &str,
+            ) -> Result<Vec<CollectionData>, Error> {
 
-        let sql_query = format!(
-            "SELECT
-                 contract_image AS image,
-                 contract_name AS collection_name,
-                 (
-                     SELECT MIN(listing_start_amount)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
-                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
-                 ) AS floor,
-                 CAST(0 AS INTEGER) AS floor_7d_percentage,
-                 CAST(0 AS INTEGER) AS volume_7d_eth,
-                 (
-                     SELECT MAX(offer_amount)
-                     FROM token_offer
-                     WHERE token_offer.contract_address = contract.contract_address
-                     AND token_offer.chain_id = contract.chain_id
-                 ) AS top_offer,
-                 (
-                     SELECT COUNT(*)
-                     FROM token_event
-                     WHERE token_event.contract_address = contract.contract_address
-                     AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sell'
-                     AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
-                 ) AS sales_7d,
-                 CAST(0 AS INTEGER) AS marketcap,
-                 (
-                     SELECT COUNT(*)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
-                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
-                 ) AS listed_items,
-                (
-                    SELECT COUNT(*)
-                    FROM token
-                    WHERE token.contract_address = contract.contract_address
-                    AND token.chain_id = contract.chain_id
-                    AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
-                    AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
-                ) * 100 / NULLIF(
+            let interval = match time_range {
+                "10m" => "INTERVAL '10 minutes'",
+                "1h" => "INTERVAL '1 hour'",
+                "6h" => "INTERVAL '6 hours'",
+                "1D" => "INTERVAL '1 day'",
+                "7D" => "INTERVAL '7 days'",
+                "30D" => "INTERVAL '30 days'",
+                _ => "",
+            };
+
+            let where_clause: String = if interval.is_empty() {
+                String::new()
+            } else {
+                format!(" WHERE contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)", interval)
+            };
+
+            let sql_query = format!(
+                "SELECT
+                     contract_image AS image,
+                     contract_name AS collection_name,
+                     (
+                         SELECT MIN(listing_start_amount)
+                         FROM token
+                         WHERE token.contract_address = contract.contract_address
+                         AND token.chain_id = contract.chain_id
+                         AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                         AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                     ) AS floor,
+                     CAST(0 AS INTEGER) AS floor_7d_percentage,
+                     CAST(0 AS INTEGER) AS volume_7d_eth,
+                     (
+                         SELECT MAX(offer_amount)
+                         FROM token_offer
+                         WHERE token_offer.contract_address = contract.contract_address
+                         AND token_offer.chain_id = contract.chain_id
+                     ) AS top_offer,
+                     (
+                         SELECT COUNT(*)
+                         FROM token_event
+                         WHERE token_event.contract_address = contract.contract_address
+                         AND token_event.chain_id = contract.chain_id
+                         AND token_event.event_type = 'Sell'
+                         AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
+                     ) AS sales_7d,
+                     CAST(0 AS INTEGER) AS marketcap,
+                     (
+                         SELECT COUNT(*)
+                         FROM token
+                         WHERE token.contract_address = contract.contract_address
+                         AND token.chain_id = contract.chain_id
+                         AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                         AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                     ) AS listed_items,
                     (
                         SELECT COUNT(*)
                         FROM token
                         WHERE token.contract_address = contract.contract_address
                         AND token.chain_id = contract.chain_id
-                    ), 0
-                ) AS listed_percentage
-                FROM
-                 contract
-                 {}
-           LIMIT {} OFFSET {}",
-           where_clause,
+                        AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                        AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                    ) * 100 / NULLIF(
+                        (
+                            SELECT COUNT(*)
+                            FROM token
+                            WHERE token.contract_address = contract.contract_address
+                            AND token.chain_id = contract.chain_id
+                        ), 0
+                    ) AS listed_percentage
+                    FROM
+                     contract
+                     {}
+               LIMIT {} OFFSET {}",
+               where_clause,
+               items_per_page,
+               (page - 1) * items_per_page,
+            );
+
+            let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
+                .fetch_all(self)
+                .await?;
+
+            Ok(collection_data)
+        }
+
+    async fn get_tokens_data(
+            &self,
+            contract_address: &str,
+            page: i64,
+            items_per_page: i64,
+        ) -> Result<Vec<TokenData>, Error> {
+
+       let offset = (page - 1) * items_per_page;
+
+       let tokens_data: Vec<TokenData> = sqlx::query_as!(
+           TokenData,
+           "SELECT
+               token.contract_address as contract,
+               token.token_id,
+               token.current_owner as owner,
+               token.block_timestamp as minted_at,
+               token.updated_timestamp as updated_at
+           FROM token
+           where token.contract_address = $3
+           ORDER BY token.updated_timestamp DESC
+           LIMIT $1 OFFSET $2
+           ",
            items_per_page,
-           (page - 1) * items_per_page,
-        );
+           offset,
+           contract_address)
+           .fetch_all(self)
+           .await?;
 
-        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
-            .fetch_all(self)
-            .await?;
-
-        Ok(collection_data)
+       Ok(tokens_data)
     }
 }
 
