@@ -1,5 +1,5 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::db::query::{get_collection_data, get_tokens_data};
+use crate::db::query::{get_tokens_data};
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
