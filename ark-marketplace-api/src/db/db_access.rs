@@ -9,18 +9,36 @@ pub trait DatabaseAccess: Send + Sync {
         &self,
         page: i64,
         items_per_page: i64,
+        time_range: &str,
     ) -> Result<Vec<CollectionData>, Error>;
 }
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
     async fn get_collection_data(
-        &self,
-        page: i64,
-        items_per_page: i64,
-    ) -> Result<Vec<CollectionData>, Error> {
-        let collection_data = sqlx::query_as!(
-            CollectionData,
+            &self,
+            page: i64,
+            items_per_page: i64,
+            time_range: &str,
+        ) -> Result<Vec<CollectionData>, Error> {
+
+        let interval = match time_range {
+            "10m" => "INTERVAL '10 minutes'",
+            "1h" => "INTERVAL '1 hour'",
+            "6h" => "INTERVAL '6 hours'",
+            "1D" => "INTERVAL '1 day'",
+            "7D" => "INTERVAL '7 days'",
+            "30D" => "INTERVAL '30 days'",
+            _ => "",
+        };
+
+        let where_clause: String = if interval.is_empty() {
+            String::new()
+        } else {
+            format!(" WHERE contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)", interval)
+        };
+
+        let sql_query = format!(
             "SELECT
                  contract_image AS image,
                  contract_name AS collection_name,
@@ -74,11 +92,16 @@ impl DatabaseAccess for PgPool {
                 ) AS listed_percentage
                 FROM
                  contract
-           LIMIT $1 OFFSET $2",
+                 {}
+           LIMIT {} OFFSET {}",
+           where_clause,
            items_per_page,
-           (page - 1) * items_per_page
-        ).fetch_all(self).await?;
-        // @TODO : should we filter by symbol ETH or STRK ?
+           (page - 1) * items_per_page,
+        );
+
+        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
+            .fetch_all(self)
+            .await?;
 
         Ok(collection_data)
     }
@@ -94,6 +117,7 @@ impl DatabaseAccess for MockDb {
         &self,
         _page: i64,
         _items_per_page: i64,
+        _time_range: i64,
     ) -> Result<Vec<CollectionData>, Error> {
         Ok(vec![CollectionData {
             image: Some("https://example.com/image.png".to_string()),
