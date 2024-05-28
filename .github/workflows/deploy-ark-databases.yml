@@ -25,6 +25,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Dependencies
+        run: |
+          cd infrastructure/cdk-arkchain-indexer
+          pnpm install
+
       - name: Bootstrap Databases
         run: |
           cd infrastructure/cdk-ark-databases
