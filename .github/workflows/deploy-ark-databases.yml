@@ -22,6 +22,9 @@ jobs:
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
       - name: Bootstrap Databases
         run: |
           cd infrastructure/cdk-ark-databases
