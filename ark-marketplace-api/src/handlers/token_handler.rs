@@ -9,6 +9,8 @@ pub struct QueryParameters {
     page: Option<i64>,
     items_per_page: Option<i64>,
     buy_now: Option<String>,
+    sort: Option<String>,
+    direction: Option<String>,
 }
 
 pub async fn get_tokens<D: DatabaseAccess + Sync>(
@@ -20,6 +22,8 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let contract_address = path.into_inner();
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
+    let sort = query_parameters.sort.as_deref().unwrap_or("price");
+    let direction = query_parameters.direction.as_deref().unwrap_or("desc");
 
     let db_access = db_pool.get_ref();
 
@@ -29,6 +33,8 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         page as i64,
         items_per_page as i64,
         buy_now,
+        sort,
+        direction,
     )
     .await
     {

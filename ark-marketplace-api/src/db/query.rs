@@ -19,8 +19,17 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     page: i64,
     items_per_page: i64,
     buy_now: bool,
+    sort: &str,
+    direction: &str,
 ) -> Result<(Vec<TokenData>, bool), sqlx::Error> {
     db_access
-        .get_tokens_data(contract_address, page, items_per_page, buy_now)
+        .get_tokens_data(
+            contract_address,
+            page,
+            items_per_page,
+            buy_now,
+            sort,
+            direction,
+        )
         .await
 }

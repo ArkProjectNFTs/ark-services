@@ -12,6 +12,8 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
+        sort: &str,
+        direction: &str,
     ) -> Result<(Vec<TokenData>, bool), Error>;
 
     async fn get_collection_data(
@@ -123,6 +125,8 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
+        sort: &str,
+        direction: &str,
     ) -> Result<(Vec<TokenData>, bool), Error> {
         let offset = (page - 1) * items_per_page;
 
@@ -162,16 +166,30 @@ impl DatabaseAccess for PgPool {
                )
                ORDER BY
                CASE
-                   WHEN EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token.listing_start_date AND token.listing_end_date THEN 1
-                   ELSE 2
+                  WHEN EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token.listing_start_date AND token.listing_end_date THEN 1
+                  ELSE 2
                END,
-               token.listing_start_amount DESC
-               LIMIT $1 OFFSET $2
-               ",
+               CASE
+                   WHEN $5 = 'price' THEN
+                       CASE WHEN $6 = 'asc' THEN token.listing_start_amount
+                            ELSE NULL
+                       END
+                   ELSE NULL
+               END ASC,
+               CASE
+                   WHEN $5 = 'price' THEN
+                       CASE WHEN $6 = 'desc' THEN token.listing_start_amount
+                            ELSE NULL
+                       END
+                   ELSE NULL
+               END DESC
+           LIMIT $1 OFFSET $2",
                items_per_page,
                offset,
                contract_address,
                buy_now,
+               sort,
+               direction,
            )
            .fetch_all(self)
            .await?;
