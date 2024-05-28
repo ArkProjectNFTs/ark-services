@@ -8,7 +8,9 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
     items_per_page: i64,
     time_range: &str,
 ) -> Result<Vec<CollectionData>, sqlx::Error> {
-    db_access.get_collection_data(page, items_per_page, time_range).await
+    db_access
+        .get_collection_data(page, items_per_page, time_range)
+        .await
 }
 
 pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
@@ -16,6 +18,18 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     contract_address: &str,
     page: i64,
     items_per_page: i64,
-) -> Result<Vec<TokenData>, sqlx::Error> {
-    db_access.get_tokens_data(contract_address, page, items_per_page).await
+    buy_now: bool,
+    sort: &str,
+    direction: &str,
+) -> Result<(Vec<TokenData>, bool), sqlx::Error> {
+    db_access
+        .get_tokens_data(
+            contract_address,
+            page,
+            items_per_page,
+            buy_now,
+            sort,
+            direction,
+        )
+        .await
 }

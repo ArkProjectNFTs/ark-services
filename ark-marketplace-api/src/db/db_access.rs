@@ -1,4 +1,4 @@
-use crate::models::collection::{CollectionData};
+use crate::models::collection::CollectionData;
 use crate::models::token::TokenData;
 use async_trait::async_trait;
 use sqlx::Error;
@@ -11,43 +11,47 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         page: i64,
         items_per_page: i64,
-    ) -> Result<Vec<TokenData>, Error>;
+        buy_now: bool,
+        sort: &str,
+        direction: &str,
+    ) -> Result<(Vec<TokenData>, bool), Error>;
 
     async fn get_collection_data(
-            &self,
-            page: i64,
-            items_per_page: i64,
-            time_range: &str,
-        ) -> Result<Vec<CollectionData>, Error>;
+        &self,
+        page: i64,
+        items_per_page: i64,
+        time_range: &str,
+    ) -> Result<Vec<CollectionData>, Error>;
 }
-
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
     async fn get_collection_data(
-                &self,
-                page: i64,
-                items_per_page: i64,
-                time_range: &str,
-            ) -> Result<Vec<CollectionData>, Error> {
+        &self,
+        page: i64,
+        items_per_page: i64,
+        time_range: &str,
+    ) -> Result<Vec<CollectionData>, Error> {
+        let interval = match time_range {
+            "10m" => "INTERVAL '10 minutes'",
+            "1h" => "INTERVAL '1 hour'",
+            "6h" => "INTERVAL '6 hours'",
+            "1D" => "INTERVAL '1 day'",
+            "7D" => "INTERVAL '7 days'",
+            "30D" => "INTERVAL '30 days'",
+            _ => "",
+        };
 
-            let interval = match time_range {
-                "10m" => "INTERVAL '10 minutes'",
-                "1h" => "INTERVAL '1 hour'",
-                "6h" => "INTERVAL '6 hours'",
-                "1D" => "INTERVAL '1 day'",
-                "7D" => "INTERVAL '7 days'",
-                "30D" => "INTERVAL '30 days'",
-                _ => "",
-            };
+        let where_clause: String = if interval.is_empty() {
+            String::new()
+        } else {
+            format!(
+                " WHERE contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)",
+                interval
+            )
+        };
 
-            let where_clause: String = if interval.is_empty() {
-                String::new()
-            } else {
-                format!(" WHERE contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)", interval)
-            };
-
-            let sql_query = format!(
+        let sql_query = format!(
                 "SELECT
                      contract_image AS image,
                      contract_name AS collection_name,
@@ -108,42 +112,93 @@ impl DatabaseAccess for PgPool {
                (page - 1) * items_per_page,
             );
 
-            let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
-                .fetch_all(self)
-                .await?;
+        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
+            .fetch_all(self)
+            .await?;
 
-            Ok(collection_data)
-        }
+        Ok(collection_data)
+    }
 
     async fn get_tokens_data(
-            &self,
-            contract_address: &str,
-            page: i64,
-            items_per_page: i64,
-        ) -> Result<Vec<TokenData>, Error> {
+        &self,
+        contract_address: &str,
+        page: i64,
+        items_per_page: i64,
+        buy_now: bool,
+        sort: &str,
+        direction: &str,
+    ) -> Result<(Vec<TokenData>, bool), Error> {
+        let offset = (page - 1) * items_per_page;
 
-       let offset = (page - 1) * items_per_page;
+        let total_count = sqlx::query!(
+                "
+                SELECT COUNT(*)
+                FROM token
+                WHERE token.contract_address = $1
+                AND (
+                    $2 = false OR
+                    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
+                )
+                ",
+                contract_address,
+                buy_now
+            )
+            .fetch_one(self)
+            .await?;
 
-       let tokens_data: Vec<TokenData> = sqlx::query_as!(
-           TokenData,
-           "SELECT
-               token.contract_address as contract,
-               token.token_id,
-               token.current_owner as owner,
-               token.block_timestamp as minted_at,
-               token.updated_timestamp as updated_at
-           FROM token
-           where token.contract_address = $3
-           ORDER BY token.updated_timestamp DESC
-           LIMIT $1 OFFSET $2
-           ",
-           items_per_page,
-           offset,
-           contract_address)
+        let count = total_count.count.unwrap_or(0);
+
+        let tokens_data: Vec<TokenData> = sqlx::query_as!(
+               TokenData,
+               "
+               SELECT
+                   token.contract_address as contract,
+                   token.token_id,
+                   token.current_owner as owner,
+                   token.block_timestamp as minted_at,
+                   token.updated_timestamp as updated_at,
+                   token.listing_start_amount as price
+               FROM token
+               WHERE token.contract_address = $3
+               AND (
+                   $4 = false OR
+                   (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
+               )
+               ORDER BY
+               CASE
+                  WHEN EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token.listing_start_date AND token.listing_end_date THEN 1
+                  ELSE 2
+               END,
+               CASE
+                   WHEN $5 = 'price' THEN
+                       CASE WHEN $6 = 'asc' THEN token.listing_start_amount
+                            ELSE NULL
+                       END
+                   ELSE NULL
+               END ASC,
+               CASE
+                   WHEN $5 = 'price' THEN
+                       CASE WHEN $6 = 'desc' THEN token.listing_start_amount
+                            ELSE NULL
+                       END
+                   ELSE NULL
+               END DESC
+           LIMIT $1 OFFSET $2",
+               items_per_page,
+               offset,
+               contract_address,
+               buy_now,
+               sort,
+               direction,
+           )
            .fetch_all(self)
            .await?;
 
-       Ok(tokens_data)
+        // Calculate if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((tokens_data, has_next_page))
     }
 }
 

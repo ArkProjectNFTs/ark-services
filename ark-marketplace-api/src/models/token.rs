@@ -7,6 +7,6 @@ pub struct TokenData {
     pub token_id: Option<String>,
     pub owner: Option<String>,
     pub minted_at: i64,
-    pub updated_at: i64
+    pub updated_at: i64,
+    pub price: Option<String>,
 }
-
