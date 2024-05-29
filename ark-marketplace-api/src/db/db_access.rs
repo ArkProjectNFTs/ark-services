@@ -16,17 +16,22 @@ pub trait DatabaseAccess: Send + Sync {
         direction: &str,
     ) -> Result<(Vec<TokenData>, bool), Error>;
 
-    async fn get_collection_data(
+    async fn get_collections_data(
         &self,
         page: i64,
         items_per_page: i64,
         time_range: &str,
     ) -> Result<Vec<CollectionData>, Error>;
+
+    async fn get_collection_data(
+        &self,
+        contract_address: &str,
+    ) -> Result<CollectionData, Error>;
 }
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
-    async fn get_collection_data(
+    async fn get_collections_data(
         &self,
         page: i64,
         items_per_page: i64,
@@ -119,6 +124,75 @@ impl DatabaseAccess for PgPool {
         Ok(collection_data)
     }
 
+    async fn get_collection_data(
+        &self,
+        contract_address: &str,
+    ) -> Result<CollectionData, Error> {
+         let collection_data = sqlx::query_as!(
+             CollectionData,
+             r#"
+             SELECT
+                 contract_image AS image,
+                 contract_name AS collection_name,
+                 (
+                     SELECT MIN(listing_start_amount)
+                     FROM token
+                     WHERE token.contract_address = $1
+                     AND token.chain_id = contract.chain_id
+                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                 ) AS floor,
+                 CAST(0 AS INTEGER) AS floor_7d_percentage,
+                 CAST(0 AS INTEGER) AS volume_7d_eth,
+                 (
+                     SELECT MAX(offer_amount)
+                     FROM token_offer
+                     WHERE token_offer.contract_address = $1
+                     AND token_offer.chain_id = contract.chain_id
+                 ) AS top_offer,
+                 (
+                     SELECT COUNT(*)
+                     FROM token_event
+                     WHERE token_event.contract_address = $1
+                     AND token_event.chain_id = contract.chain_id
+                     AND token_event.event_type = 'Sell'
+                     AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
+                 ) AS sales_7d,
+                 CAST(0 AS INTEGER) AS marketcap,
+                 (
+                     SELECT COUNT(*)
+                     FROM token
+                     WHERE token.contract_address = $1
+                     AND token.chain_id = contract.chain_id
+                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                 ) AS listed_items,
+                 (
+                     SELECT COUNT(*)
+                     FROM token
+                     WHERE token.contract_address = $1
+                     AND token.chain_id = contract.chain_id
+                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                 ) * 100 / NULLIF(
+                     (
+                         SELECT COUNT(*)
+                         FROM token
+                         WHERE token.contract_address = $1
+                         AND token.chain_id = contract.chain_id
+                     ), 0
+                 ) AS listed_percentage
+             FROM contract
+             WHERE contract.contract_address = $1
+             "#,
+             contract_address
+         )
+         .fetch_one(self)
+         .await?;
+
+         Ok(collection_data)
+    }
+
     async fn get_tokens_data(
         &self,
         contract_address: &str,
@@ -208,7 +282,7 @@ pub struct MockDb;
 #[cfg(test)]
 #[async_trait]
 impl DatabaseAccess for MockDb {
-    async fn get_collection_data(
+    async fn get_collections_data(
         &self,
         _page: i64,
         _items_per_page: i64,
