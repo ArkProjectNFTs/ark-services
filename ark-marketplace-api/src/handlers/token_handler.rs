@@ -41,7 +41,6 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok((collection_data, has_next_page)) => HttpResponse::Ok().json(json!({
             "data": collection_data,
-            "has_next_page": has_next_page,
             "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
         Err(_) => HttpResponse::InternalServerError().finish(),
