@@ -1,5 +1,5 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::db::query::{get_collections_data, get_collection_data};
+use crate::db::query::{get_collection_data, get_collections_data};
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
@@ -39,7 +39,6 @@ pub async fn get_collection<D: DatabaseAccess + Sync>(
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
-
 
 #[cfg(test)]
 mod tests {

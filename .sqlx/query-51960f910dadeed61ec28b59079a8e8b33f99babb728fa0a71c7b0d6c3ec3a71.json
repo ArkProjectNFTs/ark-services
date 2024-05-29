@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n             SELECT\n                 contract_image AS image,\n                 contract_name AS collection_name,\n                 (\n                     SELECT MIN(listing_start_amount)\n                     FROM token\n                     WHERE token.contract_address = $1\n                     AND token.chain_id = contract.chain_id\n                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                 ) AS floor,\n                 CAST(0 AS INTEGER) AS floor_7d_percentage,\n                 CAST(0 AS INTEGER) AS volume_7d_eth,\n                 (\n                     SELECT MAX(offer_amount)\n                     FROM token_offer\n                     WHERE token_offer.contract_address = $1\n                     AND token_offer.chain_id = contract.chain_id\n                 ) AS top_offer,\n                 (\n                     SELECT COUNT(*)\n                     FROM token_event\n                     WHERE token_event.contract_address = $1\n                     AND token_event.chain_id = contract.chain_id\n                     AND token_event.event_type = 'Sell'\n                     AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)\n                 ) AS sales_7d,\n                 CAST(0 AS INTEGER) AS marketcap,\n                 (\n                     SELECT COUNT(*)\n                     FROM token\n                     WHERE token.contract_address = $1\n                     AND token.chain_id = contract.chain_id\n                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                 ) AS listed_items,\n                 (\n                     SELECT COUNT(*)\n                     FROM token\n                     WHERE token.contract_address = $1\n                     AND token.chain_id = contract.chain_id\n                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                 ) * 100 / NULLIF(\n                     (\n                         SELECT COUNT(*)\n                         FROM token\n                         WHERE token.contract_address = $1\n                         AND token.chain_id = contract.chain_id\n                     ), 0\n                 ) AS listed_percentage\n             FROM contract\n             WHERE contract.contract_address = $1\n             ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "collection_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "floor",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "floor_7d_percentage",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "volume_7d_eth",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "top_offer",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "sales_7d",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "marketcap",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "listed_items",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "listed_percentage",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "51960f910dadeed61ec28b59079a8e8b33f99babb728fa0a71c7b0d6c3ec3a71"
+}
