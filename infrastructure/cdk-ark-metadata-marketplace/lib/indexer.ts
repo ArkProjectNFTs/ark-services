@@ -90,6 +90,9 @@ function deployMetadataServices(
       IPFS_GATEWAY_URI:
         process.env.IPFS_GATEWAY_URI ?? "https://ipfs.arkproject.dev/ipfs/",
       RUST_LOG: "INFO",
+      AWS_SECRET_NAME: isProductionEnvironment
+        ? "prod/ark-db-credentials"
+        : "staging/ark-db-credentials",
     },
   });
 

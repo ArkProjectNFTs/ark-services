@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - ".github/workflows/deploy-metadata-marketplace-production.yml"
-      - "infrastructure/cdk-metadata-marketplace/**"
+      - "infrastructure/cdk-ark-metadata-marketplace/**"
       - "ark-metadata-marketplace/**"
 
 jobs:
