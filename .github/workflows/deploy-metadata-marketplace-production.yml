@@ -19,7 +19,9 @@ jobs:
         run: |
           curl -H "Content-Type: application/json" \
               -X POST \
-              -d '{"content": "Deploying Metadata Marketplace Indexer on Production environment..."}' \
+              -d '{
+                  "content": "Deploying Metadata Marketplace Indexer on Production environment..."
+              }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
   push-metadata-indexer-image:
@@ -33,7 +35,7 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Install pnpm and aws-cdk
+      - name: Install pnpm
         run: |
           npm install -g pnpm
           npm install -g aws-cdk
@@ -43,7 +45,7 @@ jobs:
           cd infrastructure/cdk-ark-ecr
           pnpm install
           cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
-        env: &aws_env
+        env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
@@ -54,6 +56,7 @@ jobs:
         run: |
           cd infrastructure/cdk-ark-ecr
           ECR_URL=$(jq -r '."ark-ecr".ECRRepositoryURL' ./cdk-outputs.json)
+          echo "ECR Repository URL: $ECR_URL"
           echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
@@ -67,10 +70,15 @@ jobs:
           override: true
 
       - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
         with:
           mask-password: true
-        env: *aws_env
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Build metadata indexer, tag, and push image to Amazon ECR
         run: |
@@ -138,16 +146,25 @@ jobs:
             ${{ runner.os }}-target-
 
       - name: Install Cargo Lambda
-        run: pip install cargo-lambda
+        run: |
+          pip install cargo-lambda
 
       - name: Bootstrap Metadata Indexer Marketplace
         run: |
           cd infrastructure/cdk-ark-indexer-marketplace
           pnpm cdk bootstrap -c isProductionEnvironment=true
-        env: *aws_env
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Deploy Metadata Indexer Marketplace
         run: |
           cd infrastructure/cdk-ark-indexer-marketplace
           pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
-        env: *aws_env
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
