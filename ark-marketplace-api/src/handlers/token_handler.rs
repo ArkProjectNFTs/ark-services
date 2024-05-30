@@ -14,6 +14,17 @@ pub struct QueryParameters {
     collection: Option<String>,
 }
 
+fn extract_query_params(
+    query_parameters: &web::Query<QueryParameters>,
+) -> (i64, i64, bool, &str, &str) {
+    let page = query_parameters.page.unwrap_or(1);
+    let items_per_page = query_parameters.items_per_page.unwrap_or(100);
+    let buy_now = query_parameters.buy_now.as_deref() == Some("true");
+    let sort = query_parameters.sort.as_deref().unwrap_or("price");
+    let direction = query_parameters.direction.as_deref().unwrap_or("desc");
+    (page, items_per_page, buy_now, sort, direction)
+}
+
 pub async fn get_tokens<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
     query_parameters: web::Query<QueryParameters>,

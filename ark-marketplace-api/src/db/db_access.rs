@@ -229,7 +229,6 @@ impl DatabaseAccess for PgPool {
             .await?;
 
         let count = total_count.count.unwrap_or(0);
-    println!("Query executed successfully");
 
         let tokens_data: Vec<TokenData> = sqlx::query_as!(
                TokenData,
@@ -286,7 +285,6 @@ impl DatabaseAccess for PgPool {
            .fetch_all(self)
            .await?;
 
-
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
@@ -302,7 +300,7 @@ impl DatabaseAccess for PgPool {
         buy_now: bool,
         sort: &str,
         direction: &str,
-        collection: &str
+        collection: &str,
     ) -> Result<(Vec<TokenPortfolioData>, bool), Error> {
         let offset = (page - 1) * items_per_page;
 
