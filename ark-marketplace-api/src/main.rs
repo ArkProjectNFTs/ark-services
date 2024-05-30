@@ -37,7 +37,7 @@ struct DatabaseCredentials {
 
 async fn get_database_url() -> Result<String> {
     match std::env::var("DATABASE_URL") {
-        Ok(url) => return Ok(url),
+        Ok(url) => Ok(url),
         Err(_) => {
             let secret_name = std::env::var("AWS_SECRET_NAME").expect("AWS_SECRET_NAME not set");
             let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
@@ -55,7 +55,7 @@ async fn get_database_url() -> Result<String> {
                 creds.username, creds.password, creds.host, creds.port, creds.dbname
             );
 
-            return Ok(database_url);
+            Ok(database_url)
         }
     }
 }

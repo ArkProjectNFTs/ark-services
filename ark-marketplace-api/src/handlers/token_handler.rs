@@ -30,8 +30,8 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     match get_tokens_data(
         db_access,
         &contract_address,
-        page as i64,
-        items_per_page as i64,
+        page,
+        items_per_page,
         buy_now,
         sort,
         direction,
