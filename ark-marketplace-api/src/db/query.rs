@@ -16,8 +16,9 @@ pub async fn get_collections_data<D: DatabaseAccess + Sync>(
 pub async fn get_collection_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     contract_address: &str,
+    chain_id: &str,
 ) -> Result<CollectionData, sqlx::Error> {
-    db_access.get_collection_data(contract_address).await
+    db_access.get_collection_data(contract_address, chain_id).await
 }
 
 pub async fn get_tokens_data<D: DatabaseAccess + Sync>(

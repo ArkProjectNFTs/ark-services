@@ -27,13 +27,13 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
 }
 
 pub async fn get_collection<D: DatabaseAccess + Sync>(
-    path: web::Path<String>,
+    path: web::Path<(String, String)>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
-    let contract_address = path.into_inner();
+    let (contract_address, chain_id) = path.into_inner();
 
     let db_access = db_pool.get_ref();
-    match get_collection_data(db_access, &contract_address).await {
+    match get_collection_data(db_access, &contract_address, &chain_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
