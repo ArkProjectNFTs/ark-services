@@ -229,6 +229,7 @@ impl DatabaseAccess for PgPool {
             .await?;
 
         let count = total_count.count.unwrap_or(0);
+    println!("Query executed successfully");
 
         let tokens_data: Vec<TokenData> = sqlx::query_as!(
                TokenData,
@@ -236,6 +237,15 @@ impl DatabaseAccess for PgPool {
                SELECT
                    token.contract_address as contract,
                    token.token_id,
+                   token.last_price,
+                   (
+                      SELECT (((CAST(token.listing_start_amount AS NUMERIC)) - MIN(CAST(t1.listing_start_amount AS NUMERIC))) / MIN(CAST(t1.listing_start_amount AS NUMERIC))) * 100
+                      FROM token as t1
+                      WHERE t1.contract_address = $3
+                      GROUP BY
+                      t1.listing_start_amount
+                   ) as floor_difference,
+                   token.listing_timestamp as listed_at,
                    token.current_owner as owner,
                    token.block_timestamp as minted_at,
                    token.updated_timestamp as updated_at,
@@ -275,6 +285,7 @@ impl DatabaseAccess for PgPool {
            )
            .fetch_all(self)
            .await?;
+
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
