@@ -1,17 +1,14 @@
 use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 use anyhow::Result;
-use arkproject::{
-    metadata::{
-        storage::Storage,
-        types::{StorageError, TokenMetadata},
-    },
-    starknet::CairoU256,
+use arkproject::metadata::{
+    storage::Storage,
+    types::{StorageError, TokenMetadata},
 };
 use async_trait::async_trait;
 use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
 use aws_sdk_dynamodb::Client;
-use starknet::core::types::FieldElement;
-use std::collections::HashMap;
+use num_bigint::BigUint;
+use std::{collections::HashMap, str::FromStr};
 use tracing::error;
 
 pub struct MetadataStorage {
@@ -44,18 +41,23 @@ impl MetadataStorage {
 impl Storage for MetadataStorage {
     async fn update_token_metadata_status(
         &self,
-        contract_address: FieldElement,
-        token_id: CairoU256,
+        contract_address: &str,
+        token_id: &str,
+        _chain_id: &str,
         metadata_status: &str,
     ) -> Result<(), StorageError> {
-        let token_id_hex = token_id.to_hex();
-        let contract_address_hex = format!("0x{:064x}", contract_address);
+        let token_id_bn = match BigUint::from_str(&token_id) {
+            Ok(b) => b,
+            Err(_) => return Err(StorageError::DatabaseError("Invalid token id".to_string())),
+        };
+
+        let token_id_hex = token_id_bn.to_str_radix(16);
 
         self.provider
             .token
             .update_token_metadata_status(
                 &self.ctx,
-                &contract_address_hex,
+                &contract_address,
                 &token_id_hex,
                 metadata_status,
             )
@@ -70,22 +72,22 @@ impl Storage for MetadataStorage {
 
     async fn register_token_metadata(
         &self,
-        contract_address: &FieldElement,
-        token_id: CairoU256,
+        contract_address: &str,
+        token_id: &str,
+        _chain_id: &str,
         token_metadata: TokenMetadata,
     ) -> Result<(), StorageError> {
-        let token_id_hex = token_id.to_hex();
-        let contract_address_hex = format!("0x{:064x}", contract_address);
+        let token_id_bn = match BigUint::from_str(&token_id) {
+            Ok(b) => b,
+            Err(_) => return Err(StorageError::DatabaseError("Invalid token id".to_string())),
+        };
+
+        let token_id_hex = token_id_bn.to_str_radix(16);
 
         let result = self
             .provider
             .token
-            .update_metadata(
-                &self.ctx,
-                contract_address_hex.as_str(),
-                token_id_hex.clone().as_str(),
-                &token_metadata,
-            )
+            .update_metadata(&self.ctx, contract_address, &token_id_hex, &token_metadata)
             .await;
 
         match result {
@@ -99,27 +101,17 @@ impl Storage for MetadataStorage {
         }
     }
 
-    async fn has_token_metadata(
-        &self,
-        _contract_address: FieldElement,
-        _token_id: CairoU256,
-    ) -> Result<bool, StorageError> {
-        Err(StorageError::DatabaseError("Not implemented".to_string()))
-    }
-
     async fn find_token_ids_without_metadata(
         &self,
-        contract_address_filter: Option<FieldElement>,
-    ) -> Result<Vec<(FieldElement, CairoU256)>, StorageError> {
+        filter: Option<(String, String)>,
+    ) -> Result<Vec<(String, String, String)>, StorageError> {
         match self
             .provider
             .token
-            .get_token_without_metadata(&self.ctx.client, contract_address_filter)
+            .get_token_without_metadata(&self.ctx.client, filter)
             .await
         {
-            Ok(tokens) => {
-                return Ok(tokens);
-            }
+            Ok(tokens) => Ok(tokens),
             Err(e) => Err(StorageError::DatabaseError(format!("{:?}", e.to_string()))),
         }
     }
