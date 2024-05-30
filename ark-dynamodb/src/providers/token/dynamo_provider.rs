@@ -11,7 +11,6 @@ use async_trait::async_trait;
 use aws_sdk_dynamodb::types::{AttributeValue, KeysAndAttributes, ReturnConsumedCapacity, Select};
 use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
-use starknet::core::types::FieldElement;
 use std::collections::HashMap;
 use std::convert::TryInto;
 use tracing::{debug, error, trace};
@@ -120,9 +119,10 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         metadata_status: &str,
     ) -> Result<DynamoDbOutput<()>, ProviderError> {
         trace!(
-            "Updating token metadata status for contract address: {}, token_id: {}",
+            "Updating token metadata status for contract address: {}, token_id: {}, metadata_status={}",
             contract_address,
-            token_id_hex
+            token_id_hex,
+            metadata_status
         );
 
         let pk = self.get_pk(contract_address, token_id_hex);
@@ -295,10 +295,12 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
     async fn get_token_without_metadata(
         &self,
         client: &Self::Client,
-        contract_address_filter: Option<FieldElement>,
-    ) -> Result<Vec<(FieldElement, CairoU256)>, ProviderError> {
-        let sort_key = match contract_address_filter {
-            Some(contract_address) => format!("CONTRACT#0x{:064x}", contract_address),
+        filter: Option<(String, String)>,
+    ) -> Result<Vec<(String, String, String)>, ProviderError> {
+        let sort_key = match filter {
+            Some((contract_address, _chain_id)) => {
+                format!("CONTRACT#{}", contract_address.clone())
+            }
             None => "CONTRACT".to_string(),
         };
         let query_result = client
@@ -321,7 +323,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                     return Ok(vec![]);
                 }
 
-                let mut results: Vec<(FieldElement, CairoU256)> = Vec::new();
+                let mut results: Vec<(String, String, String)> = Vec::new();
                 let items = query_output.items.unwrap();
 
                 for item in items.iter() {
@@ -331,20 +333,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
                             // Extracting contract address
                             match data_m.get("ContractAddress") {
-                                Some(AttributeValue::S(contract_address_attribute_value)) => {
-                                    let contract_address_result =
-                                        FieldElement::from_hex_be(contract_address_attribute_value);
-
-                                    let contract_address = match contract_address_result {
-                                        Ok(address) => address,
-                                        Err(_) => {
-                                            return Err(ProviderError::ParsingError(format!(
-                                                "Failed to parse contract address from: {}",
-                                                contract_address_attribute_value
-                                            )));
-                                        }
-                                    };
-
+                                Some(AttributeValue::S(contract_address)) => {
                                     // Extracting token ID
                                     if let Some(AttributeValue::S(token_id_attribute_value)) =
                                         data_m.get("TokenIdHex")
@@ -354,7 +343,14 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
 
                                         match cairo_u256_result {
                                             Ok(token_id) => {
-                                                results.push((contract_address, token_id));
+                                                let bn = token_id.to_biguint();
+                                                let token_id_str = bn.to_str_radix(10);
+
+                                                results.push((
+                                                    contract_address.to_string(),
+                                                    token_id_str,
+                                                    "SN_MAIN".to_string(),
+                                                ));
                                             }
                                             Err(_) => {
                                                 return Err(ProviderError::DataValueError(

@@ -1,6 +1,7 @@
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
+use num_bigint::BigInt;
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
@@ -168,6 +169,7 @@ struct EventHistoryData {
     token_event_id: String,
     order_hash: String,
     token_id: String,
+    token_id_hex: String,
     contract_address: String,
     chain_id: String,
     event_type: EventType,
@@ -206,8 +208,8 @@ pub struct OfferExecutedInfo {
 #[derive(Debug)]
 pub struct TokenData {
     token_id: String,
-    contract_address: String,
     token_id_hex: String,
+    contract_address: String,
     chain_id: String,
 }
 
@@ -236,8 +238,8 @@ impl OrderProvider {
 
     async fn token_exists(
         client: &SqlxCtx,
-        contract_address: &String,
-        token_id: &i64,
+        contract_address: &str,
+        token_id: &str,
         chain_id: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
@@ -280,17 +282,6 @@ impl OrderProvider {
             .fetch_one(&client.pool)
             .await?;
         Ok(exists != 0)
-    }
-
-    fn convert_token_id_to_decimal(token_hex: &Option<String>) -> Result<i64, &'static str> {
-        let token_id_hex = match token_hex {
-            Some(token_hex) => token_hex,
-            None => return Err("Token ID is missing"),
-        };
-        let token_id_without_prefix = token_id_hex.trim_start_matches("0x");
-        let token_id_decimal = i64::from_str_radix(token_id_without_prefix, 16)
-            .map_err(|_| "Failed to convert hex to decimal")?;
-        Ok(token_id_decimal)
     }
 
     pub async fn get_contract(
@@ -413,12 +404,12 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, contract_address, chain_id, token_id_hex
+            SELECT token_id, token_id_hex, contract_address, chain_id
             FROM token
             WHERE listing_orderhash = $1;
         ";
 
-        if let Some((token_id, contract_address, chain_id, token_id_hex)) =
+        if let Some((token_id, token_id_hex, contract_address, chain_id)) =
             sqlx::query_as::<_, (String, String, String, String)>(query)
                 .bind(order_hash)
                 .fetch_optional(&client.pool)
@@ -600,12 +591,10 @@ impl OrderProvider {
         client: &SqlxCtx,
         event_data: &EventHistoryData,
     ) -> Result<(), ProviderError> {
-        let token_id = Some(event_data.token_id.clone());
-        let token_id_decimal = Self::convert_token_id_to_decimal(&token_id)?;
         if !Self::token_exists(
             client,
             &event_data.contract_address,
-            &token_id_decimal,
+            &event_data.token_id,
             &event_data.chain_id,
         )
         .await?
@@ -615,14 +604,14 @@ impl OrderProvider {
 
         let q = "
             INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
         ";
 
         let _r = sqlx::query(q)
             .bind(&event_data.token_event_id)
             .bind(&event_data.order_hash)
-            .bind(token_id_decimal)
             .bind(&event_data.token_id)
+            .bind(&event_data.token_id_hex)
             .bind(&event_data.contract_address)
             .bind(&event_data.chain_id)
             .bind(event_data.event_type.to_string())
@@ -638,13 +627,10 @@ impl OrderProvider {
     }
 
     async fn insert_offers(client: &SqlxCtx, offer_data: &OfferData) -> Result<(), ProviderError> {
-        let token_id = Some(offer_data.token_id.clone());
-        let token_id_decimal = Self::convert_token_id_to_decimal(&token_id)?;
-
         if !Self::token_exists(
             client,
             &offer_data.contract_address,
-            &token_id_decimal,
+            &offer_data.token_id,
             &offer_data.chain_id,
         )
         .await?
@@ -654,13 +640,13 @@ impl OrderProvider {
 
         let insert_query = "
             INSERT INTO token_offer
-            (token_id, contract_address, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
+            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
         ";
 
         sqlx::query(insert_query)
-            .bind(token_id_decimal)
             .bind(&offer_data.contract_address)
+            .bind(&offer_data.token_id)
             .bind(&offer_data.chain_id)
             .bind(&offer_data.offer_maker)
             .bind(&offer_data.offer_amount)
@@ -684,6 +670,17 @@ impl OrderProvider {
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
 
+        let token_id = match data.token_id {
+            Some(ref token_id_hex) => match BigInt::from_str(token_id_hex) {
+                Ok(token_id) => token_id.to_string(),
+                Err(e) => {
+                    error!("Failed to parse token id: {}", e);
+                    return Err(ProviderError::from("Failed to parse token id"));
+                }
+            },
+            None => return Err(ProviderError::from("Missing token id")),
+        };
+
         let event_type = EventType::from_str(&data.order_type).map_err(ProviderError::from)?;
         let contract_address = Self::get_or_create_contract(
             client,
@@ -692,12 +689,11 @@ impl OrderProvider {
             block_timestamp,
         )
         .await?;
-        let token_id_decimal = Self::convert_token_id_to_decimal(&data.token_id)?;
 
         if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
             // create token without listing information
             let upsert_query = "
-                INSERT INTO token (contract_address, token_id, chain_id, token_id_hex, updated_timestamp, listing_orderhash, block_timestamp, status)
+                INSERT INTO token (contract_address, token_id, token_id_hex, chain_id, updated_timestamp, listing_orderhash, block_timestamp, status)
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (contract_address, token_id, chain_id)
                 DO NOTHING;
@@ -705,9 +701,9 @@ impl OrderProvider {
 
             sqlx::query(upsert_query)
                 .bind(contract_address.clone())
-                .bind(token_id_decimal)
-                .bind(data.token_chain_id.clone())
+                .bind(token_id.clone())
                 .bind(data.token_id.clone())
+                .bind(data.token_chain_id.clone())
                 .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
@@ -755,9 +751,10 @@ impl OrderProvider {
                     listing_currency_chain_id,
                     block_timestamp,
                     status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                 ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
+                token_id_hex = EXCLUDED.token_id_hex,
                 listing_start_amount = EXCLUDED.listing_start_amount,
                 listing_end_amount = EXCLUDED.listing_end_amount,
                 listing_start_date = EXCLUDED.listing_start_date,
@@ -770,7 +767,7 @@ impl OrderProvider {
 
             sqlx::query(upsert_query)
                 .bind(contract_address.clone())
-                .bind(token_id_decimal)
+                .bind(token_id.clone())
                 .bind(data.token_chain_id.clone())
                 .bind(data.token_id.clone())
                 .bind(block_timestamp as i64)
@@ -792,23 +789,26 @@ impl OrderProvider {
                 .await?;
         }
 
-        Self::insert_event_history(
-            client,
-            &EventHistoryData {
-                token_event_id: data.order_hash.clone(),
-                order_hash: data.order_hash.clone(),
-                token_id: data.token_id.clone().expect("Missing token id"),
-                contract_address: contract_address.clone(),
-                chain_id: data.token_chain_id.clone(),
-                event_type,
-                block_timestamp: block_timestamp as i64,
-                from_address: None,
-                to_address: Some(data.offerer.clone()),
-                amount: Some(data.start_amount.clone()),
-                canceled_reason: None,
-            },
-        )
-        .await?;
+        if let Some(token_id_hex) = data.token_id.clone() {
+            Self::insert_event_history(
+                client,
+                &EventHistoryData {
+                    token_event_id: data.order_hash.clone(),
+                    order_hash: data.order_hash.clone(),
+                    token_id: token_id.clone(),
+                    token_id_hex,
+                    contract_address: contract_address.clone(),
+                    chain_id: data.token_chain_id.clone(),
+                    event_type,
+                    block_timestamp: block_timestamp as i64,
+                    from_address: None,
+                    to_address: Some(data.offerer.clone()),
+                    amount: Some(data.start_amount.clone()),
+                    canceled_reason: None,
+                },
+            )
+            .await?;
+        }
 
         Ok(())
     }
@@ -825,12 +825,21 @@ impl OrderProvider {
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
         {
+            let token_id = match BigInt::from_str(&token_data.token_id) {
+                Ok(token_id) => token_id.to_string(),
+                Err(e) => {
+                    error!("Failed to parse token id: {}", e);
+                    return Err(ProviderError::from("Failed to parse token id"));
+                }
+            };
+
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
                     token_event_id: data.order_hash.clone(),
                     order_hash: data.order_hash.clone(),
-                    token_id: token_data.token_id_hex.clone(),
+                    token_id: token_id.clone(),
+                    token_id_hex: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address.clone(),
                     chain_id: token_data.chain_id.clone(),
                     event_type: EventType::Cancelled,
@@ -875,12 +884,21 @@ impl OrderProvider {
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
         {
+            let token_id = match BigInt::from_str(&token_data.token_id) {
+                Ok(token_id) => token_id.to_string(),
+                Err(e) => {
+                    error!("Failed to parse token id: {}", e);
+                    return Err(ProviderError::from("Failed to parse token id"));
+                }
+            };
+
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
                     token_event_id: data.order_hash.clone(),
                     order_hash: data.order_hash.clone(),
-                    token_id: token_data.token_id_hex.clone(),
+                    token_id: token_id.clone(),
+                    token_id_hex: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address.clone(),
                     chain_id: token_data.chain_id.clone(),
                     event_type: EventType::Fulfill,
@@ -963,12 +981,21 @@ impl OrderProvider {
                 }
             }
 
+            let token_id = match BigInt::from_str(&offer_data.token_id) {
+                Ok(token_id) => token_id.to_string(),
+                Err(e) => {
+                    error!("Failed to parse token id: {}", e);
+                    return Err(ProviderError::from("Failed to parse token id"));
+                }
+            };
+
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
                     token_event_id: data.order_hash.clone(),
                     order_hash: data.order_hash.clone(),
-                    token_id: offer_data.token_id.clone(),
+                    token_id: token_id.clone(),
+                    token_id_hex: offer_data.token_id.clone(),
                     contract_address: offer_data.contract_address.clone(),
                     chain_id: offer_data.chain_id.clone(),
                     event_type: EventType::Executed,
@@ -1016,7 +1043,8 @@ impl OrderProvider {
                     token_event_id: data.order_hash.clone(),
                     order_hash: data.order_hash.clone(),
                     block_timestamp: block_timestamp as i64,
-                    token_id: token_data.token_id_hex.clone(),
+                    token_id: token_data.token_id.clone(),
+                    token_id_hex: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address,
                     chain_id: token_data.chain_id,
                     event_type: EventType::Rollback,

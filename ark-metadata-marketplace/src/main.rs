@@ -1,8 +1,8 @@
 mod aws_s3_file_manager;
+mod metadata_storage;
 
 use crate::aws_s3_file_manager::AWSFileManager;
 use anyhow::Result;
-use ark_dynamodb::metadata_storage::MetadataStorage;
 use arkproject::{
     metadata::{
         metadata_manager::{ImageCacheOption, MetadataError, MetadataManager},
@@ -10,14 +10,16 @@ use arkproject::{
     },
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
+use aws_config::BehaviorVersion;
 use dotenv::dotenv;
+use metadata_storage::MetadataSqlStorage;
+use serde::Deserialize;
 use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{debug, error, info, span, trace, warn, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
 
 struct Config {
-    table_name: String,
     bucket_name: String,
     rpc_url: String,
     ipfs_timeout_duration: Duration,
@@ -26,41 +28,69 @@ struct Config {
     filter: Option<(String, String)>,
 }
 
+#[derive(Deserialize)]
+struct DatabaseCredentials {
+    username: String,
+    password: String,
+    dbname: String,
+    port: u16,
+    host: String,
+}
+
+async fn get_database_url() -> Result<String> {
+    match std::env::var("DATABASE_URL") {
+        Ok(url) => Ok(url),
+        Err(_) => {
+            let secret_name = std::env::var("AWS_SECRET_NAME").expect("AWS_SECRET_NAME not set");
+            let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
+            let client = aws_sdk_secretsmanager::Client::new(&config);
+            let secret_value = client
+                .get_secret_value()
+                .secret_id(secret_name)
+                .send()
+                .await?;
+            let result = secret_value.secret_string.unwrap();
+
+            let creds: DatabaseCredentials = serde_json::from_str(&result)?;
+            let database_url = format!(
+                "postgres://{}:{}@{}:{}/{}",
+                creds.username, creds.password, creds.host, creds.port, creds.dbname
+            );
+
+            Ok(database_url)
+        }
+    }
+}
+
 fn get_env_variables() -> Config {
     dotenv().ok();
 
-    let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let bucket_name =
         env::var("AWS_NFT_IMAGE_BUCKET_NAME").expect("AWS_NFT_IMAGE_BUCKET_NAME must be set");
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
-
     let ipfs_timeout_duration = Duration::from_secs(
         env::var("METADATA_IPFS_TIMEOUT_IN_SEC")
             .expect("METADATA_IPFS_TIMEOUT_IN_SEC must be set")
             .parse::<u64>()
             .expect("Invalid METADATA_IPFS_TIMEOUT_IN_SEC"),
     );
-
     let loop_delay_duration = Duration::from_secs(
         env::var("METADATA_LOOP_DELAY_IN_SEC")
             .expect("METADATA_LOOP_DELAY_IN_SEC must be set")
             .parse::<u64>()
             .expect("Invalid METADATA_LOOP_DELAY_IN_SEC"),
     );
-
     let ipfs_gateway_uri = env::var("IPFS_GATEWAY_URI").expect("IPFS_GATEWAY_URI must be set");
 
-    let filter: Option<(String, String)> =
-        env::var("METADATA_CONTRACT_FILTER")
-            .ok()
-            .and_then(|contract_address| {
-                env::var("METADATA_CHAIN_ID_FILTER")
-                    .ok()
-                    .map(|chain_id| (contract_address, chain_id))
-            });
+    let filter = match env::var("METADATA_CONTRACT_FILTER") {
+        Ok(contract_address) => {
+            let chain_id = env::var("CHAIN_ID_FILTER").expect("CHAIN_ID_FILTER must be set");
+            Some((contract_address, chain_id))
+        }
+        Err(_) => None,
+    };
 
     Config {
-        table_name,
         bucket_name,
         rpc_url,
         ipfs_timeout_duration,
@@ -74,7 +104,10 @@ fn get_env_variables() -> Config {
 async fn main() -> Result<()> {
     init_tracing();
     let config = get_env_variables();
-    let metadata_storage = MetadataStorage::new(config.table_name.clone()).await;
+    let database_uri = get_database_url().await?;
+
+    let metadata_storage = MetadataSqlStorage::new_any(database_uri.as_str()).await?;
+
     let starknet_client = StarknetClientHttp::new(&config.rpc_url)?;
     let file_manager = AWSFileManager::new(config.bucket_name);
 
@@ -100,8 +133,8 @@ async fn main() -> Result<()> {
                         let (contract_address, token_id, chain_id) = token;
 
                         info!(
-                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {}",
-                            contract_address, token_id
+                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {} - Chain ID: {}",
+                            contract_address, token_id, chain_id
                         );
 
                         match metadata_manager
