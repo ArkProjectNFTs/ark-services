@@ -41,7 +41,6 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok((collection_data, has_next_page)) => HttpResponse::Ok().json(json!({
             "data": collection_data,
-            "has_next_page": has_next_page,
             "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -51,7 +50,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
 #[cfg(test)]
 mod tests {
     use crate::db::db_access::MockDb;
-    use crate::handlers::collection_handler::get_collection;
+    use crate::handlers::collection_handler::get_collections;
     use crate::models::collection::CollectionData;
     use actix_web::{http, test, web, App};
 
@@ -59,7 +58,7 @@ mod tests {
     async fn test_get_tokens_handler() {
         let app = test::init_service(App::new().app_data(web::Data::new(MockDb)).route(
             "/collection/0x/tokens",
-            web::get().to(get_collection::<MockDb>),
+            web::get().to(get_collections::<MockDb>),
         ))
         .await;
 
