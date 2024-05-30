@@ -46,7 +46,7 @@ impl Storage for MetadataStorage {
         _chain_id: &str,
         metadata_status: &str,
     ) -> Result<(), StorageError> {
-        let token_id_bn = match BigUint::from_str(&token_id) {
+        let token_id_bn = match BigUint::from_str(token_id) {
             Ok(b) => b,
             Err(_) => return Err(StorageError::DatabaseError("Invalid token id".to_string())),
         };
@@ -57,7 +57,7 @@ impl Storage for MetadataStorage {
             .token
             .update_token_metadata_status(
                 &self.ctx,
-                &contract_address,
+                contract_address,
                 &token_id_hex,
                 metadata_status,
             )
@@ -77,7 +77,7 @@ impl Storage for MetadataStorage {
         _chain_id: &str,
         token_metadata: TokenMetadata,
     ) -> Result<(), StorageError> {
-        let token_id_bn = match BigUint::from_str(&token_id) {
+        let token_id_bn = match BigUint::from_str(token_id) {
             Ok(b) => b,
             Err(_) => return Err(StorageError::DatabaseError("Invalid token id".to_string())),
         };
