@@ -12,7 +12,7 @@ const isProductionEnvironment: boolean =
   app.node.tryGetContext("isProductionEnvironment") === "true" ||
   process.env.DEPLOYMENT_ENV === "production";
 
-const networks: string[] = ["mainnet", "sepolia"];
+const networks: string[] = ["mainnet"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
 const stackName = `ark-metadata-marketplace-${environment}`;
