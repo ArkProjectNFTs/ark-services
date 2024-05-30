@@ -98,7 +98,7 @@ impl Storage for MetadataSqlStorage {
         &self,
         filter: Option<(String, String)>,
     ) -> Result<Vec<(String, String, String)>, StorageError> {
-        let base_query = "SELECT contract_address, chain_id, token_id FROM token WHERE metadata_status = 'TO_REFRESH'";
+        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE metadata_status = 'TO_REFRESH' AND c.contract_type = 'ERC721'";
         let (query, params) = if let Some((chain_id, contract_address)) = filter {
             (
                 format!(
