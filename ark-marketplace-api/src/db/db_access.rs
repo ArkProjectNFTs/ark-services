@@ -3,6 +3,7 @@ use crate::models::token::TokenData;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
+use sqlx::Row;
 
 #[async_trait]
 pub trait DatabaseAccess: Send + Sync {
@@ -15,6 +16,17 @@ pub trait DatabaseAccess: Send + Sync {
         sort: &str,
         direction: &str,
     ) -> Result<(Vec<TokenData>, bool), Error>;
+
+    async fn get_tokens_portfolio_data(
+        &self,
+        user_address: &str,
+        page: i64,
+        items_per_page: i64,
+        buy_now: bool,
+        sort: &str,
+        direction: &str,
+        collection: &str,
+    ) -> Result<(Vec<TokenPortfolioData>, bool), Error>;
 
     async fn get_collections_data(
         &self,
@@ -263,6 +275,114 @@ impl DatabaseAccess for PgPool {
            )
            .fetch_all(self)
            .await?;
+
+        // Calculate if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((tokens_data, has_next_page))
+    }
+
+    async fn get_tokens_portfolio_data(
+        &self,
+        user_address: &str,
+        page: i64,
+        items_per_page: i64,
+        buy_now: bool,
+        sort: &str,
+        direction: &str,
+        collection: &str
+    ) -> Result<(Vec<TokenPortfolioData>, bool), Error> {
+        let offset = (page - 1) * items_per_page;
+
+        let collection_filter = if collection.is_empty() {
+            String::from("")
+        } else {
+            format!("AND token.contract_address = '{}'", collection)
+        };
+
+        let total_count_query = format!(
+            "
+            SELECT COUNT(*)
+            FROM token
+            WHERE token.current_owner = $1
+            AND (
+                $2 = false OR
+                (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
+            )
+            {}
+            ",
+            collection_filter
+        );
+        let total_count = sqlx::query(&total_count_query)
+            .bind(user_address)
+            .bind(buy_now)
+            .fetch_one(self)
+            .await?;
+
+        let count: i64 = total_count.try_get(0).unwrap_or(0);
+
+        let tokens_data_query = format!(
+            "
+            SELECT
+                token.contract_address as contract,
+                token.token_id,
+                token.current_owner as owner,
+                token.listing_start_amount as list_price,
+                (
+                    SELECT MAX(CAST(offer_amount AS NUMERIC))
+                    FROM token_offer
+                    WHERE token_offer.token_id = token.token_id
+                    AND (
+                        EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token_offer.start_date AND token_offer.end_date
+                    )
+                ) as best_offer,
+                (
+                    SELECT MIN(CAST(listing_start_amount AS NUMERIC))
+                    FROM token
+                    WHERE token.contract_address = $3
+                ) as floor,
+                token.held_timestamp as received_at
+            FROM token
+            WHERE token.current_owner = $3
+            AND (
+                $4 = false OR
+                (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
+            )
+            {}
+            ORDER BY
+            CASE
+                WHEN EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token.listing_start_date AND token.listing_end_date THEN 1
+                ELSE 2
+            END,
+            CASE
+                WHEN $5 = 'price' THEN
+                    CASE WHEN $6 = 'asc' THEN token.listing_start_amount
+                         ELSE NULL
+                    END
+                ELSE NULL
+            END ASC,
+            CASE
+                WHEN $5 = 'price' THEN
+                    CASE WHEN $6 = 'desc' THEN token.listing_start_amount
+                         ELSE NULL
+                    END
+                ELSE NULL
+            END DESC
+            LIMIT $1 OFFSET $2
+            ",
+            collection_filter
+        );
+
+        let tokens_data: Vec<TokenPortfolioData> = sqlx::query_as(&tokens_data_query)
+            .bind(items_per_page)
+            .bind(offset)
+            .bind(user_address)
+            .bind(buy_now)
+            .bind(sort)
+            .bind(direction)
+            .fetch_all(self)
+            .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

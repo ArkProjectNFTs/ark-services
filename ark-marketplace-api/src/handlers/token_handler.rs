@@ -11,6 +11,7 @@ pub struct QueryParameters {
     buy_now: Option<String>,
     sort: Option<String>,
     direction: Option<String>,
+    collection: Option<String>,
 }
 
 pub async fn get_tokens<D: DatabaseAccess + Sync>(
@@ -30,11 +31,43 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     match get_tokens_data(
         db_access,
         &contract_address,
-        page,
-        items_per_page,
+        page as i64,
+        items_per_page as i64,
         buy_now,
         sort,
         direction,
+    )
+    .await
+    {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok((collection_data, has_next_page)) => HttpResponse::Ok().json(json!({
+            "data": collection_data,
+            "next_page": if has_next_page { Some(page + 1) } else { None }
+        })),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
+    path: web::Path<String>,
+    query_parameters: web::Query<QueryParameters>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let (page, items_per_page, buy_now, sort, direction) = extract_query_params(&query_parameters);
+    let collection = query_parameters.collection.as_deref().unwrap_or("");
+
+    let user_address = path.into_inner();
+    let db_access = db_pool.get_ref();
+
+    match get_tokens_portfolio_data(
+        db_access,
+        &user_address,
+        page as i64,
+        items_per_page as i64,
+        buy_now,
+        sort,
+        direction,
+        collection,
     )
     .await
     {
