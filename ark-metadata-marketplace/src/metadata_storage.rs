@@ -96,10 +96,27 @@ impl Storage for MetadataSqlStorage {
 
     async fn find_token_ids_without_metadata(
         &self,
-        _filter: Option<(String, String)>,
+        filter: Option<(String, String)>,
     ) -> Result<Vec<(String, String, String)>, StorageError> {
-        let query: &str = "SELECT contract_address, chain_id, token_id FROM token WHERE metadata_status = 'TO_REFRESH' AND chain_id = 'SN_MAIN' LIMIT 1000";
-        match sqlx::query(query).fetch_all(&self.pool).await {
+        let base_query = "SELECT contract_address, chain_id, token_id FROM token WHERE metadata_status = 'TO_REFRESH'";
+        let (query, params) = if let Some((chain_id, contract_address)) = filter {
+            (
+                format!(
+                    "{} AND chain_id = $1 AND contract_address = $2 LIMIT 100",
+                    base_query
+                ),
+                vec![chain_id, contract_address],
+            )
+        } else {
+            (format!("{} LIMIT 100", base_query), vec![])
+        };
+
+        let mut query_builder = sqlx::query(&query);
+        for param in params {
+            query_builder = query_builder.bind(param);
+        }
+
+        match query_builder.fetch_all(&self.pool).await {
             Ok(rows) => {
                 if rows.is_empty() {
                     return Ok(vec![]);
