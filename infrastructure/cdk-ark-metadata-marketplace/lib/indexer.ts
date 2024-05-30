@@ -3,8 +3,7 @@ import { IVpc } from "aws-cdk-lib/aws-ec2";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as ssm from "aws-cdk-lib/aws-ssm";
+import * as iam from "aws-cdk-lib/aws-iam";
 
 export async function deployMetadataIndexer(
   scope: cdk.Stack,
@@ -64,6 +63,17 @@ function deployMetadataServices(
       cpu: 512,
     }
   );
+
+  if (isProductionEnvironment) {
+    taskDefinition.taskRole.addToPrincipalPolicy(
+      new iam.PolicyStatement({
+        actions: ["secretsmanager:GetSecretValue"],
+        resources: [
+          "arn:aws:secretsmanager:us-east-1:223605539824:secret:prod/ark-db-credentials-AlF3F1",
+        ],
+      })
+    );
+  }
 
   const rpcProviderUri = network.includes("mainnet")
     ? `https://juno.mainnet.arkproject.dev`
