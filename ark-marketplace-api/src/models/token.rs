@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use bigdecimal::BigDecimal;
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenData {
@@ -12,4 +13,15 @@ pub struct TokenData {
     pub minted_at: i64,
     pub updated_at: i64,
     pub price: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, FromRow)]
+pub struct TokenPortfolioData {
+    pub contract: Option<String>,
+    pub token_id: Option<String>,
+    pub owner: Option<String>,
+    pub list_price: Option<BigDecimal>,
+    pub best_offer: Option<BigDecimal>,
+    pub floor: Option<BigDecimal>,
+    pub received_at: Option<i64>,
 }
