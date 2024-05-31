@@ -1,0 +1,75 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n               SELECT\n                   token.contract_address as contract,\n                   token.token_id,\n                   token.last_price,\n                   (\n                      SELECT (((CAST(token.listing_start_amount AS NUMERIC)) - MIN(CAST(t1.listing_start_amount AS NUMERIC))) / MIN(CAST(t1.listing_start_amount AS NUMERIC))) * 100\n                      FROM token as t1\n                      WHERE t1.contract_address = $3\n                      GROUP BY\n                      t1.listing_start_amount\n                   ) as floor_difference,\n                   token.listing_timestamp as listed_at,\n                   token.current_owner as owner,\n                   token.block_timestamp as minted_at,\n                   token.updated_timestamp as updated_at,\n                   token.listing_start_amount as price\n               FROM token\n               WHERE token.contract_address = $3\n               AND (\n                   $4 = false OR\n                   (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)\n               )\n               ORDER BY\n               CASE\n                  WHEN EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token.listing_start_date AND token.listing_end_date THEN 1\n                  ELSE 2\n               END,\n               CASE\n                   WHEN $5 = 'price' THEN\n                       CASE WHEN $6 = 'asc' THEN token.listing_start_amount\n                            ELSE NULL\n                       END\n                   ELSE NULL\n               END ASC,\n               CASE\n                   WHEN $5 = 'price' THEN\n                       CASE WHEN $6 = 'desc' THEN token.listing_start_amount\n                            ELSE NULL\n                       END\n                   ELSE NULL\n               END DESC\n           LIMIT $1 OFFSET $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contract",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "token_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_price",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "floor_difference",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "listed_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "minted_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "price",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Bool",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      null,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "b9e55d48ac21e6d2b4ddcc5dd1129c1c7cd2508ace4a661af7ee58e8a1f252f3"
+}

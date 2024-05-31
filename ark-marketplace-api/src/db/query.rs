@@ -18,7 +18,9 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
     contract_address: &str,
     chain_id: &str,
 ) -> Result<CollectionData, sqlx::Error> {
-    db_access.get_collection_data(contract_address, chain_id).await
+    db_access
+        .get_collection_data(contract_address, chain_id)
+        .await
 }
 
 pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
@@ -38,6 +40,29 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
             buy_now,
             sort,
             direction,
+        )
+        .await
+}
+
+pub async fn get_tokens_portfolio_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    user_address: &str,
+    page: i64,
+    items_per_page: i64,
+    buy_now: bool,
+    sort: &str,
+    direction: &str,
+    collection: &str,
+) -> Result<(Vec<TokenPortfolioData>, bool), sqlx::Error> {
+    db_access
+        .get_tokens_portfolio_data(
+            user_address,
+            page,
+            items_per_page,
+            buy_now,
+            sort,
+            direction,
+            collection,
         )
         .await
 }
