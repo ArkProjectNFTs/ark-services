@@ -13,12 +13,9 @@ pub struct CollectionData {
     pub marketcap: Option<i32>,
     pub listed_items: Option<i64>,
     pub listed_percentage: Option<i64>,
-}
-
-#[derive(Serialize, Deserialize, FromRow)]
-pub struct CollectionDataToken {
-    pub contract_name: Option<String>,
-    pub contract_image: Option<String>,
     pub contract_symbol: Option<String>,
-    pub token_count: Option<i32>,
+    pub token_count: Option<i64>,
+    pub owner_count: Option<i64>,
+    pub total_volume: Option<i64>,
+    pub total_sales: Option<i64>,
 }

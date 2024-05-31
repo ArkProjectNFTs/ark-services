@@ -147,7 +147,10 @@ impl DatabaseAccess for PgPool {
              CollectionData,
              r#"
              SELECT
-                 contract_image AS image,
+                 CASE
+                     WHEN contract_image = '' THEN NULL
+                     ELSE contract_image
+                 END AS image,
                  contract_name AS collection_name,
                  (
                      SELECT MIN(listing_start_amount)
@@ -196,7 +199,34 @@ impl DatabaseAccess for PgPool {
                          WHERE token.contract_address = $1
                          AND token.chain_id = contract.chain_id
                      ), 0
-                 ) AS listed_percentage
+                 ) AS listed_percentage,
+                 (
+                      SELECT COUNT(*)
+                      FROM token
+                      WHERE token.contract_address = contract.contract_address
+                      AND token.chain_id = contract.chain_id
+                  ) AS token_count,
+                 (
+                   SELECT COUNT(DISTINCT current_owner)
+                   FROM token
+                   WHERE token.contract_address = contract.contract_address
+                   AND token.chain_id = contract.chain_id
+                ) AS owner_count,
+                (
+                     SELECT SUM(CAST(amount AS INTEGER))
+                     FROM token_event
+                     WHERE token_event.contract_address = contract.contract_address
+                     AND token_event.chain_id = contract.chain_id
+                     AND token_event.event_type = 'Sell'
+                ) AS total_volume,
+                (
+                     SELECT COUNT(*)
+                     FROM token_event
+                     WHERE token_event.contract_address = $1
+                     AND token_event.chain_id = contract.chain_id
+                     AND token_event.event_type = 'Sell'
+                 ) AS total_sales,
+             contract_symbol
              FROM contract
              WHERE contract.contract_address = $1
              AND contract.chain_id = $2
