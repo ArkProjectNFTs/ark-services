@@ -1,6 +1,6 @@
+use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use bigdecimal::BigDecimal;
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenData {
