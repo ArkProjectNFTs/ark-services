@@ -1,6 +1,6 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::models::collection::CollectionData;
-use crate::models::token::TokenData;
+use crate::models::token::{TokenData, TokenPortfolioData};
 
 pub async fn get_collections_data<D: DatabaseAccess + Sync>(
     db_access: &D,

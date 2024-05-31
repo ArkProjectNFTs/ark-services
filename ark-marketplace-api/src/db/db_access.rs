@@ -1,5 +1,5 @@
 use crate::models::collection::CollectionData;
-use crate::models::token::TokenData;
+use crate::models::token::{TokenData, TokenPortfolioData};
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
