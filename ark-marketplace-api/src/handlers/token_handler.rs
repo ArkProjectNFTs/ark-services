@@ -26,13 +26,13 @@ fn extract_query_params(
 }
 
 pub async fn get_tokens<D: DatabaseAccess + Sync>(
-    path: web::Path<String>,
+    path: web::Path<(String, String)>,
     query_parameters: web::Query<QueryParameters>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
-    let contract_address = path.into_inner();
+    let (contract_address, chain_id) = path.into_inner();
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
     let direction = query_parameters.direction.as_deref().unwrap_or("desc");
@@ -42,6 +42,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     match get_tokens_data(
         db_access,
         &contract_address,
+        &chain_id,
         page as i64,
         items_per_page as i64,
         buy_now,
