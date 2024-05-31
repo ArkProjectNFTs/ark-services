@@ -10,6 +10,7 @@ pub trait DatabaseAccess: Send + Sync {
     async fn get_tokens_data(
         &self,
         contract_address: &str,
+        chain_id: &str,
         page: i64,
         items_per_page: i64,
         buy_now: bool,
@@ -212,6 +213,7 @@ impl DatabaseAccess for PgPool {
     async fn get_tokens_data(
         &self,
         contract_address: &str,
+        chain_id: &str,
         page: i64,
         items_per_page: i64,
         buy_now: bool,
@@ -259,8 +261,9 @@ impl DatabaseAccess for PgPool {
                    token.listing_start_amount as price
                FROM token
                WHERE token.contract_address = $3
+                 AND token.chain_id = $4
                AND (
-                   $4 = false OR
+                   $5 = false OR
                    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
                )
                ORDER BY
@@ -269,15 +272,15 @@ impl DatabaseAccess for PgPool {
                   ELSE 2
                END,
                CASE
-                   WHEN $5 = 'price' THEN
-                       CASE WHEN $6 = 'asc' THEN token.listing_start_amount
+                   WHEN $6 = 'price' THEN
+                       CASE WHEN $7 = 'asc' THEN token.listing_start_amount
                             ELSE NULL
                        END
                    ELSE NULL
                END ASC,
                CASE
-                   WHEN $5 = 'price' THEN
-                       CASE WHEN $6 = 'desc' THEN token.listing_start_amount
+                   WHEN $6 = 'price' THEN
+                       CASE WHEN $7 = 'desc' THEN token.listing_start_amount
                             ELSE NULL
                        END
                    ELSE NULL
@@ -286,6 +289,7 @@ impl DatabaseAccess for PgPool {
                items_per_page,
                offset,
                contract_address,
+               chain_id,
                buy_now,
                sort,
                direction,

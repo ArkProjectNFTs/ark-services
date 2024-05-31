@@ -26,6 +26,7 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
 pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     contract_address: &str,
+    chain_id: &str,
     page: i64,
     items_per_page: i64,
     buy_now: bool,
@@ -35,6 +36,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     db_access
         .get_tokens_data(
             contract_address,
+            chain_id,
             page,
             items_per_page,
             buy_now,
