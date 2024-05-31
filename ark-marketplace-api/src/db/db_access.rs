@@ -35,7 +35,11 @@ pub trait DatabaseAccess: Send + Sync {
         time_range: &str,
     ) -> Result<Vec<CollectionData>, Error>;
 
-    async fn get_collection_data(&self, contract_address: &str, chain_id: &str) -> Result<CollectionData, Error>;
+    async fn get_collection_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+    ) -> Result<CollectionData, Error>;
 }
 
 #[async_trait]
@@ -133,7 +137,11 @@ impl DatabaseAccess for PgPool {
         Ok(collection_data)
     }
 
-    async fn get_collection_data(&self, contract_address: &str, chain_id: &str) -> Result<CollectionData, Error> {
+    async fn get_collection_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+    ) -> Result<CollectionData, Error> {
         let collection_data = sqlx::query_as!(
              CollectionData,
              r#"

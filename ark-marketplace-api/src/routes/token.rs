@@ -5,7 +5,7 @@ use crate::handlers::token_handler;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.route(
-        "/collection/{address}/tokens",
+        "/collections/{address}/tokens",
         web::get().to(token_handler::get_tokens::<PgPool>),
     );
 }
