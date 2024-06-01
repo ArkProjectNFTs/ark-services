@@ -313,15 +313,15 @@ impl OrderProvider {
             Some(contract_address) => Ok(contract_address),
             None => {
                 let insert_query = "
-                        INSERT INTO contract (contract_address, chain_id, updated_timestamp, contract_type)
-                        VALUES ($1, $2, $3, $4)
+                        INSERT INTO contract (contract_address, chain_id, updated_timestamp, contract_type, deployed_timestamp)
+                        VALUES ($1, $2, EXTRACT(epoch FROM now())::bigint, $3, $4)
                         RETURNING contract_address;
                     ";
                 let result = sqlx::query(insert_query)
                     .bind(contract_address)
                     .bind(chain_id)
-                    .bind(block_timestamp as i64)
                     .bind("ERC721".to_string())
+                    .bind(block_timestamp as i64)
                     .fetch_one(&client.pool)
                     .await?;
                 Ok(result.get::<String, _>("contract_address"))
