@@ -1,4 +1,4 @@
-name: Deploy Indexer Marketplace (Production)
+name: Deploy Metadata Indexer Marketplace (Production)
 
 on:
   workflow_dispatch:
