@@ -153,7 +153,7 @@ impl DatabaseAccess for PgPool {
                  END AS image,
                  contract_name AS collection_name,
                  (
-                     SELECT MIN(listing_start_amount)
+                     SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
                      FROM token
                      WHERE token.contract_address = $1
                      AND token.chain_id = contract.chain_id
@@ -163,7 +163,7 @@ impl DatabaseAccess for PgPool {
                  CAST(0 AS INTEGER) AS floor_7d_percentage,
                  CAST(0 AS INTEGER) AS volume_7d_eth,
                  (
-                     SELECT MAX(offer_amount)
+                     SELECT COALESCE(MAX(CAST(offer_amount AS INTEGER)), 0)
                      FROM token_offer
                      WHERE token_offer.contract_address = $1
                      AND token_offer.chain_id = contract.chain_id
@@ -213,7 +213,7 @@ impl DatabaseAccess for PgPool {
                    AND token.chain_id = contract.chain_id
                 ) AS owner_count,
                 (
-                     SELECT SUM(CAST(amount AS INTEGER))
+                     SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
                      FROM token_event
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
