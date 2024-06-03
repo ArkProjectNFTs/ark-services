@@ -1,5 +1,6 @@
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -13,6 +14,7 @@ pub struct TokenData {
     pub minted_at: i64,
     pub updated_at: i64,
     pub price: Option<String>,
+    pub metadata: Option<JsonValue>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -24,4 +26,5 @@ pub struct TokenPortfolioData {
     pub best_offer: Option<BigDecimal>,
     pub floor: Option<BigDecimal>,
     pub received_at: Option<i64>,
+    pub metadata: Option<JsonValue>,
 }
