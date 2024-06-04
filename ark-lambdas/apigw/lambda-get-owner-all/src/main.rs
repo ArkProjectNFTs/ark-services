@@ -4,6 +4,7 @@ use lambda_http_common::{
     self as common, ArkApiResponse, HttpParamSource, LambdaCtx, LambdaHttpError, LambdaHttpResponse,
 };
 use std::collections::HashMap;
+use tracing::info;
 
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     // 1. Init the context.
@@ -11,6 +12,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     // 2. Get params.
     let owner_address = get_params(&event)?;
+
+    info!("owner_address: {}", owner_address);
 
     // 3. Process the request.
     let r = process_event(&ctx, &owner_address).await;
@@ -35,6 +38,8 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
     let provider = DynamoDbTokenProvider::new(&ctx.table_name, ctx.max_items_limit);
 
     let contracts_with_items = provider.get_owner_all(&ctx.dynamodb, owner_address).await?;
+
+    info!("contracts_with_items: {:?}", contracts_with_items.inner());
 
     let capacity = contracts_with_items
         .consumed_capacity_units
