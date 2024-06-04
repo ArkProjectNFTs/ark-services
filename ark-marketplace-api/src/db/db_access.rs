@@ -289,7 +289,7 @@ impl DatabaseAccess for PgPool {
                    token.block_timestamp as minted_at,
                    token.updated_timestamp as updated_at,
                    token.listing_start_amount as price,
-                   token.metadata->'normalized' as metadata
+                   token.metadata as metadata
                FROM token
                WHERE token.contract_address = $3
                  AND token.chain_id = $4
@@ -395,7 +395,7 @@ impl DatabaseAccess for PgPool {
                     WHERE token.contract_address = $3
                 ) as floor,
                 token.held_timestamp as received_at,
-                token.metadata->'normalized' as metadata
+                token.metadata as metadata
             FROM token
             WHERE token.current_owner = $3
             AND (
