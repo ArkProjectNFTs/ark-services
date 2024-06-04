@@ -9,7 +9,19 @@ pub async fn get_collections_data<D: DatabaseAccess + Sync>(
     time_range: &str,
 ) -> Result<Vec<CollectionData>, sqlx::Error> {
     db_access
-        .get_collections_data(page, items_per_page, time_range)
+        .get_collections_data(page, items_per_page, time_range, None)
+        .await
+}
+
+pub async fn get_portfolio_collections_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    user_address: &str,
+    page: i64,
+    items_per_page: i64,
+    time_range: &str,
+) -> Result<Vec<CollectionData>, sqlx::Error> {
+    db_access
+        .get_collections_data(page, items_per_page, time_range, Some(user_address))
         .await
 }
 

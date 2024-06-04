@@ -1,10 +1,17 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::db::query::{get_collection_data, get_collections_data};
+use crate::db::query::{get_collection_data, get_collections_data, get_portfolio_collections_data};
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParameters {
+    page: Option<i64>,
+    items_per_page: Option<i64>,
+    time_range: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct PortfolioCollectionQueryParameters {
     page: Option<i64>,
     items_per_page: Option<i64>,
     time_range: Option<String>,
@@ -34,6 +41,26 @@ pub async fn get_collection<D: DatabaseAccess + Sync>(
 
     let db_access = db_pool.get_ref();
     match get_collection_data(db_access, &contract_address, &chain_id).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok(collection_data) => HttpResponse::Ok().json(collection_data),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
+    query_parameters: web::Query<PortfolioCollectionQueryParameters>,
+    path: web::Path<String>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let page = query_parameters.page.unwrap_or(1);
+    let items_per_page = query_parameters.items_per_page.unwrap_or(100);
+    let time_range = query_parameters.time_range.as_deref().unwrap_or("");
+    let user_address = path.into_inner();
+
+    let db_access = db_pool.get_ref();
+    match get_portfolio_collections_data(db_access, &user_address, page, items_per_page, time_range)
+        .await
+    {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(_) => HttpResponse::InternalServerError().finish(),

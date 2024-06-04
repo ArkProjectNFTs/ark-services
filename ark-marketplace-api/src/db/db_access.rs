@@ -34,6 +34,7 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         time_range: &str,
+        user_address: Option<&str>,
     ) -> Result<Vec<CollectionData>, Error>;
 
     async fn get_collection_data(
@@ -50,7 +51,13 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         time_range: &str,
+        user_address: Option<&str>,
     ) -> Result<Vec<CollectionData>, Error> {
+        let user_clause = match user_address {
+            Some(address) => format!(" AND token.current_owner = '{}'", address),
+            None => String::new(),
+        };
+
         let interval = match time_range {
             "10m" => "INTERVAL '10 minutes'",
             "1h" => "INTERVAL '1 hour'",
@@ -61,17 +68,18 @@ impl DatabaseAccess for PgPool {
             _ => "",
         };
 
-        let where_clause: String = if interval.is_empty() {
+        let contract_timestamp_clause: String = if interval.is_empty() {
             String::new()
         } else {
             format!(
-                " WHERE contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)",
+                " AND contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)",
                 interval
             )
         };
 
         let sql_query = format!(
                 "SELECT
+                     contract.contract_address as address,
                      contract_image AS image,
                      contract_name AS collection_name,
                      (
@@ -85,7 +93,7 @@ impl DatabaseAccess for PgPool {
                      CAST(0 AS INTEGER) AS floor_7d_percentage,
                      CAST(0 AS INTEGER) AS volume_7d_eth,
                      (
-                         SELECT MAX(offer_amount)
+                         SELECT COALESCE(MAX(CAST(offer_amount AS BIGINT)), 0)
                          FROM token_offer
                          WHERE token_offer.contract_address = contract.contract_address
                          AND token_offer.chain_id = contract.chain_id
@@ -121,19 +129,57 @@ impl DatabaseAccess for PgPool {
                             WHERE token.contract_address = contract.contract_address
                             AND token.chain_id = contract.chain_id
                         ), 0
-                    ) AS listed_percentage
+                    ) AS listed_percentage,
+                    (
+                          SELECT COUNT(*)
+                          FROM token
+                          WHERE token.contract_address = contract.contract_address
+                          AND token.chain_id = contract.chain_id
+                      ) AS token_count,
+                    (
+                       SELECT COUNT(DISTINCT current_owner)
+                       FROM token
+                       WHERE token.contract_address = contract.contract_address
+                       AND token.chain_id = contract.chain_id
+                    ) AS owner_count,
+                    (
+                         SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
+                         FROM token_event
+                         WHERE token_event.contract_address = contract.contract_address
+                         AND token_event.chain_id = contract.chain_id
+                         AND token_event.event_type = 'Sell'
+                    ) AS total_volume,
+                    (
+                         SELECT COUNT(*)
+                         FROM token_event
+                         WHERE token_event.contract_address = contract.contract_address
+                         AND token_event.chain_id = contract.chain_id
+                         AND token_event.event_type = 'Sell'
+                     ) AS total_sales,
+                    contract.contract_symbol
                     FROM
                      contract
-                     {}
-               LIMIT {} OFFSET {}",
-               where_clause,
+                     INNER JOIN token ON contract.contract_address = token.contract_address
+                     WHERE 1=1
+                     {} {}
+               GROUP BY contract.contract_address, contract.chain_id
+               LIMIT {} OFFSET {}
+               ",
+               contract_timestamp_clause,
+               user_clause,
                items_per_page,
                (page - 1) * items_per_page,
             );
-
+        println!(" debug sql_query: {:?}", sql_query);
         let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
             .fetch_all(self)
-            .await?;
+            .await
+            .unwrap_or_else(|err| {
+                eprintln!("Query error : {}", err);
+                std::process::exit(1);
+            });
+
+        println!(" debug collection_data: {:?}", collection_data.len());
 
         Ok(collection_data)
     }
@@ -147,6 +193,7 @@ impl DatabaseAccess for PgPool {
              CollectionData,
              r#"
              SELECT
+                 contract.contract_address as address,
                  CASE
                      WHEN contract_image = '' THEN NULL
                      ELSE contract_image
@@ -163,7 +210,7 @@ impl DatabaseAccess for PgPool {
                  CAST(0 AS INTEGER) AS floor_7d_percentage,
                  CAST(0 AS INTEGER) AS volume_7d_eth,
                  (
-                     SELECT COALESCE(MAX(CAST(offer_amount AS INTEGER)), 0)
+                     SELECT COALESCE(MAX(CAST(offer_amount AS BIGINT)), 0)
                      FROM token_offer
                      WHERE token_offer.contract_address = $1
                      AND token_offer.chain_id = contract.chain_id
