@@ -40,8 +40,10 @@ async fn process_event(ctx: &LambdaCtx, owner_address: &str) -> Result<LambdaHtt
         .consumed_capacity_units
         .unwrap_or_default();
 
+    let cursor = ctx.paginator.store_cursor(&contracts_with_items.lek)?;
+
     let rsp = common::ok_body_rsp(&ArkApiResponse {
-        cursor: None,
+        cursor,
         total_count: None,
         result: contracts_with_items.inner(),
     })?;

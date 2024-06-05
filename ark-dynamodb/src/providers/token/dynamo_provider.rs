@@ -684,49 +684,41 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         );
 
         let mut items_by_contract: HashMap<String, Vec<BasicTokenData>> = HashMap::new();
-        let mut last_evaluated_key = None;
         let mut consumed_capacity_units: f64 = 0.0;
 
-        loop {
-            let tokens_query_output = ctx
-                .client
-                .query()
-                .table_name(&self.table_name)
-                .index_name("GSI2PK-GSI2SK-index")
-                .key_condition_expression("GSI2PK = :owner AND begins_with(GSI2SK, :token)")
-                .set_expression_attribute_values(Some(values.clone()))
-                .set_exclusive_start_key(last_evaluated_key)
-                .return_consumed_capacity(ReturnConsumedCapacity::Total)
-                .send()
-                .await
-                .map_err(|e| ProviderError::DatabaseError(format!("Query failed: {:?}", e)))?;
+        let tokens_query_output = ctx
+            .client
+            .query()
+            .table_name(&self.table_name)
+            .index_name("GSI2PK-GSI2SK-index")
+            .key_condition_expression("GSI2PK = :owner AND begins_with(GSI2SK, :token)")
+            .set_expression_attribute_values(Some(values.clone()))
+            .set_exclusive_start_key(ctx.exclusive_start_key.clone())
+            .return_consumed_capacity(ReturnConsumedCapacity::Total)
+            .send()
+            .await
+            .map_err(|e| ProviderError::DatabaseError(format!("Query failed: {:?}", e)))?;
 
-            if let Some(consumed_capacity) = tokens_query_output.consumed_capacity {
-                consumed_capacity_units += consumed_capacity.capacity_units.unwrap_or(0.0);
-            }
+        if let Some(consumed_capacity) = tokens_query_output.consumed_capacity {
+            consumed_capacity_units += consumed_capacity.capacity_units.unwrap_or(0.0);
+        }
 
-            for item in tokens_query_output.items.unwrap_or_default() {
-                let token_data: TokenData = item.try_into().map_err(|e| {
-                    ProviderError::SerializationError(format!("Deserialization failed: {:?}", e))
-                })?;
-                let basic_token_data = BasicTokenData {
-                    awaiting_metadata_update: token_data.awaiting_metadata_update,
-                    owner: token_data.owner,
-                    token_id: token_data.token_id,
-                    metadata: token_data.metadata,
-                    mint_info: token_data.mint_info,
-                };
+        for item in tokens_query_output.items.unwrap_or_default() {
+            let token_data: TokenData = item.try_into().map_err(|e| {
+                ProviderError::SerializationError(format!("Deserialization failed: {:?}", e))
+            })?;
+            let basic_token_data = BasicTokenData {
+                awaiting_metadata_update: token_data.awaiting_metadata_update,
+                owner: token_data.owner,
+                token_id: token_data.token_id,
+                metadata: token_data.metadata,
+                mint_info: token_data.mint_info,
+            };
 
-                items_by_contract
-                    .entry(token_data.contract_address.clone())
-                    .or_default()
-                    .push(basic_token_data);
-            }
-
-            last_evaluated_key = tokens_query_output.last_evaluated_key;
-            if last_evaluated_key.is_none() {
-                break;
-            }
+            items_by_contract
+                .entry(token_data.contract_address.clone())
+                .or_default()
+                .push(basic_token_data);
         }
 
         let mut results: Vec<ContractWithTokens> = Vec::new();
@@ -794,9 +786,10 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             });
         }
 
-        Ok(DynamoDbOutput::new(
+        Ok(DynamoDbOutput::new_lek(
             results.clone(),
             Some(consumed_capacity_units),
+            tokens_query_output.last_evaluated_key,
             Some(results.clone().len() as i32),
         ))
     }
