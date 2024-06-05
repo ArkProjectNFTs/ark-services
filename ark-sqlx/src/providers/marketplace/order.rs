@@ -2,10 +2,11 @@ use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
 use num_bigint::BigInt;
+use num_traits::Num;
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 
 use crate::providers::{ProviderError, SqlxCtx};
 
@@ -671,13 +672,16 @@ impl OrderProvider {
         trace!("Registering placed order {:?}", data);
 
         let token_id = match data.token_id {
-            Some(ref token_id_hex) => match BigInt::from_str(token_id_hex) {
-                Ok(token_id) => token_id.to_string(),
-                Err(e) => {
-                    error!("Failed to parse token id: {}", e);
-                    return Err(ProviderError::from("Failed to parse token id"));
+            Some(ref token_id_hex) => {
+                let cleaned_token_id = token_id_hex.trim_start_matches("0x");
+                match BigInt::from_str_radix(cleaned_token_id, 16) {
+                    Ok(token_id) => token_id.to_string(),
+                    Err(e) => {
+                        error!("Failed to parse token id: {}", e);
+                        return Err(ProviderError::from("Failed to parse token id"));
+                    }
                 }
-            },
+            }
             None => return Err(ProviderError::from("Missing token id")),
         };
 
