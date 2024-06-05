@@ -755,7 +755,7 @@ impl OrderProvider {
                     listing_currency_chain_id,
                     block_timestamp,
                     status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                 ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 token_id_hex = EXCLUDED.token_id_hex,
@@ -768,6 +768,9 @@ impl OrderProvider {
                 status = EXCLUDED.status,
                 updated_timestamp = EXCLUDED.updated_timestamp;
             ";
+
+            let broker_id_u32 = data.broker_id.clone().parse::<u32>().unwrap_or(0);
+            info!("Broker ID: {}", broker_id_u32);
 
             sqlx::query(upsert_query)
                 .bind(contract_address.clone())
@@ -783,7 +786,7 @@ impl OrderProvider {
                 .bind(data.end_amount.clone())
                 .bind(data.start_date as i64)
                 .bind(data.end_date as i64)
-                .bind(data.broker_id.clone())
+                .bind(broker_id_u32)
                 .bind(data.order_hash.clone())
                 .bind(data.currency_address.clone())
                 .bind(data.currency_chain_id.clone())
