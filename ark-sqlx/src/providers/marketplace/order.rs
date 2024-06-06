@@ -769,9 +769,6 @@ impl OrderProvider {
                 updated_timestamp = EXCLUDED.updated_timestamp;
             ";
 
-            let broker_id_u32 = data.broker_id.clone().parse::<u32>().unwrap_or(0);
-            info!("Broker ID: {}", broker_id_u32);
-
             sqlx::query(upsert_query)
                 .bind(contract_address.clone())
                 .bind(token_id.clone())
@@ -786,7 +783,7 @@ impl OrderProvider {
                 .bind(data.end_amount.clone())
                 .bind(data.start_date as i64)
                 .bind(data.end_date as i64)
-                .bind(broker_id_u32)
+                .bind(data.broker_id.clone())
                 .bind(data.order_hash.clone())
                 .bind(data.currency_address.clone())
                 .bind(data.currency_chain_id.clone())
