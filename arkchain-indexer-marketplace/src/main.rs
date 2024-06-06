@@ -6,7 +6,9 @@ use anyhow::Result;
 use ark_sqlx::providers::SqlxMarketplaceProvider;
 use arkproject::diri::{event_handler::EventHandler, Diri};
 use async_trait::async_trait;
+use aws_config::BehaviorVersion;
 use dotenv::dotenv;
+use serde::Deserialize;
 use starknet::{
     core::types::BlockId,
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
@@ -16,6 +18,40 @@ use tracing::{error, info, trace, warn};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 use url::Url;
+
+#[derive(Deserialize)]
+struct DatabaseCredentials {
+    username: String,
+    password: String,
+    dbname: String,
+    port: u16,
+    host: String,
+}
+
+async fn get_database_url() -> Result<String> {
+    match std::env::var("DATABASE_URL") {
+        Ok(url) => Ok(url),
+        Err(_) => {
+            let secret_name = std::env::var("AWS_SECRET_NAME").expect("AWS_SECRET_NAME not set");
+            let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
+            let client = aws_sdk_secretsmanager::Client::new(&config);
+            let secret_value = client
+                .get_secret_value()
+                .secret_id(secret_name)
+                .send()
+                .await?;
+            let result = secret_value.secret_string.unwrap();
+
+            let creds: DatabaseCredentials = serde_json::from_str(&result)?;
+            let database_url = format!(
+                "postgres://{}:{}@{}:{}/{}",
+                creds.username, creds.password, creds.host, creds.port, creds.dbname
+            );
+
+            Ok(database_url)
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -27,17 +63,17 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("ARKCHAIN_RPC_PROVIDER").expect("ARKCHAIN_RPC_PROVIDER must be set");
     let rpc_url_converted = Url::parse(&rpc_url).unwrap();
 
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let database_uri = get_database_url().await?;
 
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
         HttpTransport::new(rpc_url_converted.clone()),
     )));
 
     // Quick launch locally:
-    // sudo docker run -d --name arkchain-marketplace-db -p 5432:5432 -e POSTGRES_PASSWORD=123 postgres
+    // docker-compose up -d arkchain_postgres
     // cd ark-sqlx
     // sqlx database reset --database-url postgres://postgres:123@localhost:5432/arkchain-marketplace --source marketplace
-    let storage = SqlxMarketplaceProvider::new(&db_url).await?;
+    let storage = SqlxMarketplaceProvider::new(&database_uri).await?;
     let handler = DefaultEventHandler {};
 
     let indexer = Arc::new(Diri::new(

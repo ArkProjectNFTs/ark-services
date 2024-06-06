@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use sqlx::Row;
 
 #[async_trait]
+#[allow(clippy::too_many_arguments)]
 pub trait DatabaseAccess: Send + Sync {
     async fn get_tokens_data(
         &self,

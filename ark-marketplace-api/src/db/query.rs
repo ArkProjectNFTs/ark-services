@@ -35,6 +35,7 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
         .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     contract_address: &str,
@@ -58,6 +59,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
         .await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn get_tokens_portfolio_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     user_address: &str,
