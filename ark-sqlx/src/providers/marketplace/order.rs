@@ -6,7 +6,7 @@ use num_traits::Num;
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 
 use crate::providers::{ProviderError, SqlxCtx};
 
