@@ -1,14 +1,14 @@
 CREATE TABLE broker (
     id TEXT PRIMARY KEY,
     contract_address VARCHAR(66) NOT NULL,
-    chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+    chain_id TEXT NOT NULL,
     name TEXT NOT NULL,
     UNIQUE (contract_address, chain_id)
 );
 
 CREATE TABLE contract (
   contract_address VARCHAR(66) NOT NULL,
-  chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+  chain_id TEXT NOT NULL,
   updated_timestamp BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW())::BIGINT),
   floor_price TEXT,
   top_bid TEXT,
@@ -25,7 +25,7 @@ CREATE TABLE contract (
 
 CREATE TABLE token (
   contract_address VARCHAR(66) NOT NULL,
-  chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+  chain_id TEXT NOT NULL,
   token_id TEXT NOT NULL,
   token_id_hex TEXT NOT NULL,
   current_owner TEXT,
@@ -65,7 +65,7 @@ CREATE TABLE token (
 CREATE TABLE token_event (
   token_event_id TEXT PRIMARY KEY,
   contract_address VARCHAR(66) NOT NULL,
-  chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+  chain_id TEXT NOT NULL,
   broker_id TEXT,
   order_hash TEXT,
   token_id TEXT NOT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE token_event (
 CREATE TABLE token_offer (
   token_offer_id SERIAL PRIMARY KEY,
   contract_address VARCHAR(66) NOT NULL,
-  chain_id TEXT NOT NULL CHECK (chain_id IN ('SN_MAIN', 'SN_SEPOLIA', 'ARKCHAIN')),
+  chain_id TEXT NOT NULL,
   broker_id TEXT,
   token_id TEXT NOT NULL,
   order_hash TEXT NOT NULL DEFAULT '',
