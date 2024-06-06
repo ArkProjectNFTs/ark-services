@@ -605,7 +605,7 @@ impl OrderProvider {
 
         let q = "
             INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT DO NOTHING;
         ";
 
         let _r = sqlx::query(q)
