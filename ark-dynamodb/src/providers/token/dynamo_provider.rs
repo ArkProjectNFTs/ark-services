@@ -13,7 +13,7 @@ use aws_sdk_dynamodb::Client as DynamoClient;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::convert::TryInto;
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 
 /// DynamoDB provider for tokens.
 pub struct DynamoDbTokenProvider {
@@ -696,6 +696,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                 .key_condition_expression("GSI2PK = :owner AND begins_with(GSI2SK, :token)")
                 .set_expression_attribute_values(Some(values.clone()))
                 .set_exclusive_start_key(last_evaluated_key)
+                .limit(10)
                 .return_consumed_capacity(ReturnConsumedCapacity::Total)
                 .send()
                 .await
@@ -706,6 +707,8 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
             }
 
             for item in tokens_query_output.items.unwrap_or_default() {
+                info!("item: {:?}", item);
+
                 let token_data: TokenData = item.try_into().map_err(|e| {
                     ProviderError::SerializationError(format!("Deserialization failed: {:?}", e))
                 })?;
