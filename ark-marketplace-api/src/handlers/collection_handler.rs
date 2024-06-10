@@ -2,6 +2,7 @@ use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{get_collection_data, get_collections_data, get_portfolio_collections_data};
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
+use crate::utils::http_utils::normalize_address;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParameters {
@@ -38,9 +39,10 @@ pub async fn get_collection<D: DatabaseAccess + Sync>(
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let (contract_address, chain_id) = path.into_inner();
+    let normalized_address = normalize_address(&contract_address);
 
     let db_access = db_pool.get_ref();
-    match get_collection_data(db_access, &contract_address, &chain_id).await {
+    match get_collection_data(db_access, &normalized_address, &chain_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(_) => HttpResponse::InternalServerError().finish(),
@@ -56,9 +58,10 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let time_range = query_parameters.time_range.as_deref().unwrap_or("");
     let user_address = path.into_inner();
+    let normalized_address = normalize_address(&user_address);
 
     let db_access = db_pool.get_ref();
-    match get_portfolio_collections_data(db_access, &user_address, page, items_per_page, time_range)
+    match get_portfolio_collections_data(db_access, &normalized_address, page, items_per_page, time_range)
         .await
     {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
