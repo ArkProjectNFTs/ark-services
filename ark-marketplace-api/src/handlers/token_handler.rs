@@ -1,9 +1,9 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{get_tokens_data, get_tokens_portfolio_data};
+use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
-use crate::utils::http_utils::normalize_address;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {

@@ -78,8 +78,8 @@ async fn main() -> Result<()> {
         dynamo_storage,
         Arc::clone(&pontos_observer),
         PontosConfig {
-            indexer_version,
-            indexer_identifier,
+            indexer_version: Some(indexer_version),
+            indexer_identifier: Some(indexer_identifier),
         },
     );
     // If syncing at the head of the chain
