@@ -84,8 +84,8 @@ async fn func(event: LambdaEvent<BlockRange>) -> Result<Response, Error> {
         dynamo_storage,
         pontos_observer,
         PontosConfig {
-            indexer_version: config.indexer_version,
-            indexer_identifier: config.indexer_identifier,
+            indexer_version: Some(config.indexer_version),
+            indexer_identifier: Some(config.indexer_identifier),
         },
     );
 

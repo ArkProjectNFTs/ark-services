@@ -38,26 +38,31 @@ impl DynamoDbBlockProvider {
     pub fn data_to_info(
         data: &HashMap<String, AttributeValue>,
     ) -> Result<BlockInfo, ProviderError> {
+        let status = convert::attr_to_str(data, "Status")?;
         Ok(BlockInfo {
-            status: BlockIndexingStatus::from_str(&convert::attr_to_str(data, "Status")?).map_err(
-                |_| ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string()),
-            )?,
-            indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier")?,
-            indexer_version: convert::attr_to_str(data, "IndexerVersion")?,
+            status: BlockIndexingStatus::from_str(&status).map_err(|_| {
+                ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string())
+            })?,
+            indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier").ok(),
+            indexer_version: convert::attr_to_str(data, "IndexerVersion").ok(),
             block_number: convert::attr_to_u64(data, "BlockNumber").unwrap_or(0),
         })
     }
 
     pub fn info_to_data(data: &BlockInfo) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();
-        map.insert(
-            "IndexerVersion".to_string(),
-            AttributeValue::S(data.indexer_version.clone()),
-        );
-        map.insert(
-            "IndexerIdentifier".to_string(),
-            AttributeValue::S(data.indexer_identifier.clone()),
-        );
+
+        if let Some(iv) = data.indexer_version.clone() {
+            map.insert("IndexerVersion".to_string(), AttributeValue::S(iv.clone()));
+        }
+
+        if let Some(ii) = data.indexer_identifier.clone() {
+            map.insert(
+                "IndexerIdentifier".to_string(),
+                AttributeValue::S(ii.clone()),
+            );
+        }
+
         map.insert(
             "Status".to_string(),
             AttributeValue::S(data.status.to_string()),
