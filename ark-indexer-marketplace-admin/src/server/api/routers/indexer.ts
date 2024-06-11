@@ -86,55 +86,7 @@ export const indexerRouter = createTRPCRouter({
     )
     .query(async ({ input }: { input: { network: Network } }) => {
       const contracts = {};
-      // let lastEvaluatedKey;
       const totalCount = 0;
-
-      // do {
-      //   const results = await dynamodb.query({
-      //     TableName: getTableName(input.network),
-      //     IndexName: "GSI5PK-GSI5SK-index",
-      //     KeyConditionExpression: "#GSI5PK = :GSI5PK",
-      //     ExpressionAttributeNames: { "#GSI5PK": "GSI5PK" },
-      //     ExpressionAttributeValues: {
-      //       ":GSI5PK": { S: "METADATA#TO_REFRESH" },
-      //     },
-      //     ExclusiveStartKey: lastEvaluatedKey,
-      //   });
-
-      //   for (const item of results.Items) {
-      //     const data = item.Data?.M;
-      //     const tokenId = data.TokenId.S;
-
-      //     if (data?.ContractAddress?.S) {
-      //       const contractAddress: string = data.ContractAddress.S;
-      //       const contract = contracts[contractAddress] ?? { items: [] };
-      //       contract.items = [...contract.items, tokenId];
-      //       contracts[contractAddress] = contract;
-      //     }
-
-      //     totalCount += 1;
-      //   }
-
-      //   lastEvaluatedKey = results.LastEvaluatedKey;
-      // } while (!!lastEvaluatedKey);
-
-      // for (const contractAddress of Object.keys(contracts)) {
-      //   const contractResult = await dynamodb.query({
-      //     TableName: "ark_project_mainnet",
-      //     KeyConditionExpression: "#PK = :PK",
-      //     ExpressionAttributeNames: { "#PK": "PK" },
-      //     ExpressionAttributeValues: {
-      //       ":PK": { S: `CONTRACT#${contractAddress}` },
-      //     },
-      //     Limit: 1,
-      //   });
-
-      //   const contractData = contractResult.Items?.[0]?.Data.M;
-      //   contracts[contractAddress].name = contractData?.Name?.S;
-      //   contracts[contractAddress].symbol = contractData?.Symbol?.S;
-      //   contracts[contractAddress].type = contractData?.ContractType?.S;
-      // }
-
       return Promise.resolve({ contracts, totalCount });
     }),
 
