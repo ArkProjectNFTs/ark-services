@@ -31,6 +31,11 @@ async fn main() -> Result<()> {
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
 
+    let is_head_of_chain = match std::env::var("HEAD_OF_CHAIN") {
+        Ok(val) => val == "true",
+        Err(_) => false,
+    };
+
     info!(
         "Starting Indexer. Version={}, Identifier={}",
         indexer_version, indexer_identifier
@@ -54,10 +59,47 @@ async fn main() -> Result<()> {
         storage,
         Arc::clone(&sana_observer),
         SanaConfig {
-            indexer_version,
-            indexer_identifier,
+            indexer_version: Some(indexer_version),
+            indexer_identifier: Some(indexer_identifier),
         },
     );
+
+    if !is_head_of_chain {
+        let from_value = env::var("FROM_BLOCK")
+            .ok()
+            .and_then(|val| val.parse::<u64>().ok());
+
+        let to_value = env::var("TO_BLOCK")
+            .ok()
+            .and_then(|val| val.parse::<u64>().ok());
+
+        if let (Some(from_block), Some(to_block)) = (from_value, to_value) {
+            match sana_task
+                .index_block_range(
+                    BlockId::Number(from_block),
+                    BlockId::Number(to_block),
+                    false,
+                    chain_id.as_str(),
+                )
+                .await
+            {
+                Ok(_) => {
+                    trace!("Blocks successfully indexed");
+                    return Ok(());
+                }
+                Err(e) => {
+                    error!("Blocks indexing error: {}", e);
+                    return Err(e.into());
+                }
+            }
+        } else {
+            error!("FROM_BLOCK or TO_BLOCK environment variable is not set or invalid.");
+            return Err(anyhow::anyhow!(
+                "FROM_BLOCK or TO_BLOCK environment variable is not set or invalid."
+            ));
+        }
+    }
+
     let sleep_secs = 1;
 
     let current_block = match provider.block_number().await {
