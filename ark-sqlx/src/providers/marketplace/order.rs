@@ -193,6 +193,8 @@ pub struct OfferData {
     currency_chain_id: String,
     currency_address: String,
     status: String,
+    start_date: i64,
+    end_date: i64,
 }
 
 pub struct OfferExecutedInfo {
@@ -345,7 +347,9 @@ impl OrderProvider {
                         offer_maker,
                         offer_amount,
                         currency_chain_id,
-                        currency_address
+                        currency_address,
+                        start_date,
+                        end_date
                 FROM token_offer
                 WHERE order_hash = $1;
             ";
@@ -362,6 +366,8 @@ impl OrderProvider {
             offer_amount,
             currency_chain_id,
             currency_address,
+            start_date,
+            end_date,
         )) = sqlx::query_as::<
             _,
             (
@@ -376,6 +382,8 @@ impl OrderProvider {
                 String,
                 String,
                 String,
+                i64,
+                i64,
             ),
         >(query)
         .bind(order_hash)
@@ -394,6 +402,8 @@ impl OrderProvider {
                 offer_amount,
                 currency_chain_id,
                 currency_address,
+                start_date,
+                end_date,
             }))
         } else {
             Ok(None)
@@ -641,8 +651,8 @@ impl OrderProvider {
 
         let insert_query = "
             INSERT INTO token_offer
-            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status, start_date, end_date)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
         ";
 
         sqlx::query(insert_query)
@@ -657,6 +667,8 @@ impl OrderProvider {
             .bind(&offer_data.currency_chain_id)
             .bind(&offer_data.currency_address)
             .bind(&offer_data.status)
+            .bind(offer_data.start_date)
+            .bind(offer_data.end_date)
             .execute(&client.pool)
             .await?;
 
@@ -718,7 +730,7 @@ impl OrderProvider {
             Self::insert_offers(
                 client,
                 &OfferData {
-                    token_id: data.token_id.clone().expect("Missing token id"),
+                    token_id: token_id.clone(),
                     contract_address: contract_address.clone(),
                     chain_id: data.token_chain_id.clone(),
                     timestamp: block_timestamp as i64,
@@ -729,6 +741,8 @@ impl OrderProvider {
                     currency_chain_id: data.currency_chain_id.clone(),
                     currency_address: data.currency_address.clone(),
                     status: OrderStatus::Placed.to_string(),
+                    start_date: data.start_date as i64,
+                    end_date: data.end_date as i64,
                 },
             )
             .await?;

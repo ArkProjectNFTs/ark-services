@@ -51,7 +51,7 @@
       {
         "ordinal": 9,
         "name": "metadata",
-        "type_info": "Json"
+        "type_info": "Jsonb"
       }
     ],
     "parameters": {

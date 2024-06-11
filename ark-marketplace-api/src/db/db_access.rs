@@ -171,7 +171,6 @@ impl DatabaseAccess for PgPool {
                items_per_page,
                (page - 1) * items_per_page,
             );
-        println!(" debug sql_query: {:?}", sql_query);
         let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
             .fetch_all(self)
             .await
@@ -179,8 +178,6 @@ impl DatabaseAccess for PgPool {
                 eprintln!("Query error : {}", err);
                 std::process::exit(1);
             });
-
-        println!(" debug collection_data: {:?}", collection_data.len());
 
         Ok(collection_data)
     }
