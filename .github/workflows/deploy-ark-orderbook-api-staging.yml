@@ -96,7 +96,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
+          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER_STAGING }}
           DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
           DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}
