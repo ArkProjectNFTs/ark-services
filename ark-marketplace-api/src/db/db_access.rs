@@ -197,11 +197,10 @@ impl DatabaseAccess for PgPool {
     ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error> {
         let total_count = sqlx::query!(
             "
-                SELECT COUNT(*)
+                SELECT COUNT(DISTINCT contract.contract_address)
                 FROM contract
                 INNER JOIN token ON contract.contract_address = token.contract_address
                 WHERE token.current_owner = $1 and contract.is_verified = true
-                GROUP BY contract.contract_address, contract.chain_id
                 ",
             user_address
         )
@@ -262,7 +261,6 @@ impl DatabaseAccess for PgPool {
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
-
         Ok((collection_portfolio_data, has_next_page, count, token_count))
     }
 
