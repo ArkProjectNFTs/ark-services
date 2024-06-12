@@ -1,0 +1,48 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                 contract.contract_address as address,\n                 contract_image AS image,\n                 contract_name AS collection_name,\n                 (\n                     SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)\n                     FROM token\n                     WHERE token.contract_address = contract.contract_address\n                     AND token.chain_id = contract.chain_id\n                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)\n                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))\n                 ) AS floor,\n                 (\n                   SELECT COUNT(*)\n                   FROM token\n                   WHERE token.contract_address = contract.contract_address\n                   AND token.chain_id = contract.chain_id\n                 ) AS token_count\n                FROM\n                 contract\n                 INNER JOIN token ON contract.contract_address = token.contract_address\n                 WHERE token.current_owner = $1\n           GROUP BY contract.contract_address, contract.chain_id\n           LIMIT $2 OFFSET $3\n           ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "address",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "collection_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "floor",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "token_count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "915ca7d0281d83e82f621005f0a2bead4b447bf7ee9d697203f928c6e2851a1c"
+}
