@@ -5,9 +5,11 @@ use arkproject::{
     sana::{Sana, SanaConfig},
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
+use aws_config::BehaviorVersion;
 use dotenv::dotenv;
 use regex::Regex;
 use sana_observer::SanaObserver;
+use serde::Deserialize;
 use starknet::{
     core::types::{BlockId, BlockTag},
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
@@ -16,6 +18,40 @@ use std::{env, sync::Arc};
 use tracing::{error, info, trace, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 use url::Url;
+
+#[derive(Deserialize)]
+struct DatabaseCredentials {
+    username: String,
+    password: String,
+    dbname: String,
+    port: u16,
+    host: String,
+}
+
+async fn get_database_url() -> Result<String> {
+    match std::env::var("DATABASE_URL") {
+        Ok(url) => Ok(url),
+        Err(_) => {
+            let secret_name = std::env::var("AWS_SECRET_NAME").expect("AWS_SECRET_NAME not set");
+            let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
+            let client = aws_sdk_secretsmanager::Client::new(&config);
+            let secret_value = client
+                .get_secret_value()
+                .secret_id(secret_name)
+                .send()
+                .await?;
+            let result = secret_value.secret_string.unwrap();
+
+            let creds: DatabaseCredentials = serde_json::from_str(&result)?;
+            let database_url = format!(
+                "postgres://{}:{}@{}:{}/{}",
+                creds.username, creds.password, creds.host, creds.port, creds.dbname
+            );
+
+            Ok(database_url)
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -28,7 +64,7 @@ async fn main() -> Result<()> {
 
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
     let indexer_identifier = get_task_id();
-    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let db_url = get_database_url().await?;
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
 
     let is_head_of_chain = match std::env::var("HEAD_OF_CHAIN") {
