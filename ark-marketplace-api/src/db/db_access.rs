@@ -43,7 +43,7 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         user_address: &str,
-    ) -> Result<Vec<CollectionPortfolioData>, Error>;
+    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error>;
 
     async fn get_collection_data(
         &self,
@@ -194,7 +194,35 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         user_address: &str,
-    ) -> Result<Vec<CollectionPortfolioData>, Error> {
+    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error> {
+        let total_count = sqlx::query!(
+            "
+                SELECT COUNT(*)
+                FROM contract
+                INNER JOIN token ON contract.contract_address = token.contract_address
+                WHERE token.current_owner = $1 and contract.is_verified = true
+                GROUP BY contract.contract_address, contract.chain_id
+                ",
+            user_address
+        )
+        .fetch_one(self)
+        .await?;
+
+        let count = total_count.count.unwrap_or(0);
+
+        let total_token_count = sqlx::query!(
+            "
+                SELECT COUNT(*)
+                FROM token
+                WHERE token.current_owner = $1
+                ",
+            user_address
+        )
+        .fetch_one(self)
+        .await?;
+
+        let token_count = total_token_count.count.unwrap_or(0);
+
         let collection_portfolio_data: Vec<CollectionPortfolioData> = sqlx::query_as!(
             CollectionPortfolioData,
             "
@@ -220,6 +248,7 @@ impl DatabaseAccess for PgPool {
                  contract
                  INNER JOIN token ON contract.contract_address = token.contract_address
                  WHERE token.current_owner = $1
+                 AND   contract.is_verified = true
            GROUP BY contract.contract_address, contract.chain_id
            LIMIT $2 OFFSET $3
            ",
@@ -230,7 +259,11 @@ impl DatabaseAccess for PgPool {
         .fetch_all(self)
         .await?;
 
-        Ok(collection_portfolio_data)
+        // Calculate if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((collection_portfolio_data, has_next_page, count, token_count))
     }
 
     async fn get_collection_data(
@@ -346,8 +379,6 @@ impl DatabaseAccess for PgPool {
         sort: &str,
         direction: &str,
     ) -> Result<(Vec<TokenData>, bool), Error> {
-        let offset = (page - 1) * items_per_page;
-
         let total_count = sqlx::query!(
                 "
                 SELECT COUNT(*)
@@ -414,7 +445,7 @@ impl DatabaseAccess for PgPool {
                END DESC
            LIMIT $1 OFFSET $2",
                items_per_page,
-               offset,
+               (page - 1) * items_per_page,
                contract_address,
                chain_id,
                buy_now,
