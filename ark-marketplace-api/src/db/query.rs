@@ -18,7 +18,7 @@ pub async fn get_portfolio_collections_data<D: DatabaseAccess + Sync>(
     user_address: &str,
     page: i64,
     items_per_page: i64,
-) -> Result<Vec<CollectionPortfolioData>, sqlx::Error> {
+) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), sqlx::Error> {
     db_access
         .get_portfolio_collections_data(page, items_per_page, user_address)
         .await
