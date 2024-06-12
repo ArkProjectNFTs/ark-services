@@ -542,6 +542,7 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-sdk-lambda",
+ "aws-sdk-secretsmanager",
  "chrono",
  "dotenv",
  "regex",
