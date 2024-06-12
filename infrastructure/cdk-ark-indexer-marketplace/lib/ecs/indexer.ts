@@ -93,7 +93,7 @@ function deployIndexerServices(
     ? `https://juno.mainnet.arkproject.dev`
     : `https://sepolia.arkproject.dev`;
 
-  taskDefinition.addContainer("starknet_indexer", {
+  taskDefinition.addContainer("indexer-marketplace", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
       `indexer-marketplace-${environmentName}-latest`
@@ -103,11 +103,13 @@ function deployIndexerServices(
       logGroup: logGroup,
     }),
     environment: {
+      CHAIN_ID: "0x534e5f4d41494e",
       HEAD_OF_CHAIN: "true",
       INDEXER_VERSION: indexerVersion,
-      IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev/ipfs/",
+      IPFS_GATEWAY_URI: "https://ipfs.io/ipfs/",
       RPC_PROVIDER: rpcProviderUri,
       RUST_LOG: "INFO",
+      AWS_SECRET_NAME: "prod/ark-db-credentials",
     },
   });
 
