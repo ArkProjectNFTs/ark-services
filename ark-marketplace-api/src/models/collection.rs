@@ -20,3 +20,11 @@ pub struct CollectionData {
     pub total_volume: Option<i64>,
     pub total_sales: Option<i64>,
 }
+#[derive(Serialize, Deserialize, FromRow)]
+pub struct CollectionPortfolioData {
+    pub address: String,
+    pub image: Option<String>,
+    pub collection_name: Option<String>,
+    pub floor: Option<i32>,
+    pub token_count: Option<i64>,
+}

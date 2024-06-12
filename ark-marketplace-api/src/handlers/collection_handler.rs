@@ -15,7 +15,6 @@ pub struct CollectionQueryParameters {
 pub struct PortfolioCollectionQueryParameters {
     page: Option<i64>,
     items_per_page: Option<i64>,
-    time_range: Option<String>,
 }
 
 pub async fn get_collections<D: DatabaseAccess + Sync>(
@@ -56,19 +55,11 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
-    let time_range = query_parameters.time_range.as_deref().unwrap_or("");
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
 
     let db_access = db_pool.get_ref();
-    match get_portfolio_collections_data(
-        db_access,
-        &normalized_address,
-        page,
-        items_per_page,
-        time_range,
-    )
-    .await
+    match get_portfolio_collections_data(db_access, &normalized_address, page, items_per_page).await
     {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),

@@ -1,4 +1,4 @@
-use crate::models::collection::CollectionData;
+use crate::models::collection::{CollectionData, CollectionPortfolioData};
 use crate::models::token::{TokenData, TokenPortfolioData};
 use async_trait::async_trait;
 use sqlx::Error;
@@ -37,6 +37,13 @@ pub trait DatabaseAccess: Send + Sync {
         time_range: &str,
         user_address: Option<&str>,
     ) -> Result<Vec<CollectionData>, Error>;
+
+    async fn get_portfolio_collections_data(
+        &self,
+        page: i64,
+        items_per_page: i64,
+        user_address: &str,
+    ) -> Result<Vec<CollectionPortfolioData>, Error>;
 
     async fn get_collection_data(
         &self,
@@ -180,7 +187,53 @@ impl DatabaseAccess for PgPool {
                 std::process::exit(1);
             });
 
-        println!(" debug collection_data: {:?}", collection_data.len());
+        Ok(collection_data)
+    }
+
+    async fn get_portfolio_collections_data(
+        &self,
+        page: i64,
+        items_per_page: i64,
+        user_address: &str,
+    ) -> Result<Vec<CollectionPortfolioData>, Error> {
+        let sql_query = format!(
+                "SELECT
+                     contract.contract_address as address,
+                     contract_image AS image,
+                     contract_name AS collection_name,
+                     (
+                         SELECT MIN(listing_start_amount)
+                         FROM token
+                         WHERE token.contract_address = contract.contract_address
+                         AND token.chain_id = contract.chain_id
+                         AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                         AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                     ) AS floor,
+                     (
+                       SELECT COUNT(*)
+                       FROM token
+                       WHERE token.contract_address = contract.contract_address
+                       AND token.chain_id = contract.chain_id
+                     ) AS token_count
+                    FROM
+                     contract
+                     INNER JOIN token ON contract.contract_address = token.contract_address
+                     WHERE token.current_owner = '{}'
+               GROUP BY contract.contract_address, contract.chain_id
+               LIMIT {} OFFSET {}
+               ",
+               user_address,
+               items_per_page,
+               (page - 1) * items_per_page,
+            );
+
+        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionPortfolioData>(&sql_query)
+            .fetch_all(self)
+            .await
+            .unwrap_or_else(|err| {
+                eprintln!("Query error : {}", err);
+                std::process::exit(1);
+            });
 
         Ok(collection_data)
     }
