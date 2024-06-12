@@ -178,7 +178,6 @@ impl DatabaseAccess for PgPool {
                items_per_page,
                (page - 1) * items_per_page,
             );
-        println!(" debug sql_query: {:?}", sql_query);
         let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
             .fetch_all(self)
             .await
@@ -196,46 +195,42 @@ impl DatabaseAccess for PgPool {
         items_per_page: i64,
         user_address: &str,
     ) -> Result<Vec<CollectionPortfolioData>, Error> {
-        let sql_query = format!(
-                "SELECT
-                     contract.contract_address as address,
-                     contract_image AS image,
-                     contract_name AS collection_name,
-                     (
-                         SELECT MIN(listing_start_amount)
-                         FROM token
-                         WHERE token.contract_address = contract.contract_address
-                         AND token.chain_id = contract.chain_id
-                         AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
-                         AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
-                     ) AS floor,
-                     (
-                       SELECT COUNT(*)
-                       FROM token
-                       WHERE token.contract_address = contract.contract_address
-                       AND token.chain_id = contract.chain_id
-                     ) AS token_count
-                    FROM
-                     contract
-                     INNER JOIN token ON contract.contract_address = token.contract_address
-                     WHERE token.current_owner = '{}'
-               GROUP BY contract.contract_address, contract.chain_id
-               LIMIT {} OFFSET {}
-               ",
-               user_address,
-               items_per_page,
-               (page - 1) * items_per_page,
-            );
+        let collection_portfolio_data: Vec<CollectionPortfolioData> = sqlx::query_as!(
+            CollectionPortfolioData,
+            "
+            SELECT
+                 contract.contract_address as address,
+                 contract_image AS image,
+                 contract_name AS collection_name,
+                 (
+                     SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
+                     FROM token
+                     WHERE token.contract_address = contract.contract_address
+                     AND token.chain_id = contract.chain_id
+                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                 ) AS floor,
+                 (
+                   SELECT COUNT(*)
+                   FROM token
+                   WHERE token.contract_address = contract.contract_address
+                   AND token.chain_id = contract.chain_id
+                 ) AS token_count
+                FROM
+                 contract
+                 INNER JOIN token ON contract.contract_address = token.contract_address
+                 WHERE token.current_owner = $1
+           GROUP BY contract.contract_address, contract.chain_id
+           LIMIT $2 OFFSET $3
+           ",
+           user_address,
+           items_per_page,
+           (page - 1) * items_per_page,
+        )
+        .fetch_all(self)
+        .await?;
 
-        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionPortfolioData>(&sql_query)
-            .fetch_all(self)
-            .await
-            .unwrap_or_else(|err| {
-                eprintln!("Query error : {}", err);
-                std::process::exit(1);
-            });
-
-        Ok(collection_data)
+        Ok(collection_portfolio_data)
     }
 
     async fn get_collection_data(
