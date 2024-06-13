@@ -17,7 +17,7 @@ pub trait DatabaseAccess: Send + Sync {
         buy_now: bool,
         sort: &str,
         direction: &str,
-    ) -> Result<(Vec<TokenData>, bool), Error>;
+    ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_tokens_portfolio_data(
         &self,
@@ -376,7 +376,21 @@ impl DatabaseAccess for PgPool {
         buy_now: bool,
         sort: &str,
         direction: &str,
-    ) -> Result<(Vec<TokenData>, bool), Error> {
+    ) -> Result<(Vec<TokenData>, bool, i64), Error> {
+
+        let total_token_count = sqlx::query!(
+            "
+                SELECT COUNT(*)
+                FROM token
+                WHERE token.contract_address = $1
+                ",
+            contract_address
+        )
+        .fetch_one(self)
+        .await?;
+
+        let token_count = total_token_count.count.unwrap_or(0);
+
         let total_count = sqlx::query!(
                 "
                 SELECT COUNT(*)
@@ -405,9 +419,7 @@ impl DatabaseAccess for PgPool {
                    (
                       SELECT (((CAST(token.listing_start_amount AS NUMERIC)) - MIN(CAST(t1.listing_start_amount AS NUMERIC))) / MIN(CAST(t1.listing_start_amount AS NUMERIC))) * 100
                       FROM token as t1
-                      WHERE t1.contract_address = $3
-                      GROUP BY
-                      t1.listing_start_amount
+                      WHERE t1.contract_address = token.contract_address
                    ) as floor_difference,
                    token.listing_timestamp as listed_at,
                    token.current_owner as owner,
@@ -457,7 +469,7 @@ impl DatabaseAccess for PgPool {
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
 
-        Ok((tokens_data, has_next_page))
+        Ok((tokens_data, has_next_page, token_count))
     }
 
     async fn get_tokens_portfolio_data(
