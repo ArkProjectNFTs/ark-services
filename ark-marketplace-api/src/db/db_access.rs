@@ -209,19 +209,6 @@ impl DatabaseAccess for PgPool {
 
         let count = total_count.count.unwrap_or(0);
 
-        let total_token_count = sqlx::query!(
-            "
-                SELECT COUNT(*)
-                FROM token
-                WHERE token.current_owner = $1
-                ",
-            user_address
-        )
-        .fetch_one(self)
-        .await?;
-
-        let token_count = total_token_count.count.unwrap_or(0);
-
         let collection_portfolio_data: Vec<CollectionPortfolioData> = sqlx::query_as!(
             CollectionPortfolioData,
             "
@@ -234,7 +221,7 @@ impl DatabaseAccess for PgPool {
                     WHERE  t1.contract_address = contract.contract_address
                       AND  t1.chain_id = contract.chain_id
                       AND  t1.current_owner = token.current_owner
-                 ) as user_token_count
+                 ) as user_token_count,
                  (
                      SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
                      FROM token
@@ -254,7 +241,7 @@ impl DatabaseAccess for PgPool {
                  INNER JOIN token ON contract.contract_address = token.contract_address
                  WHERE token.current_owner = $1
                  AND   contract.is_verified = true
-           GROUP BY contract.contract_address, contract.chain_id
+           GROUP BY contract.contract_address, contract.chain_id, token.current_owner
            LIMIT $2 OFFSET $3
            ",
            user_address,
