@@ -456,7 +456,8 @@ impl DatabaseAccess for PgPool {
                             ELSE NULL
                        END
                    ELSE NULL
-               END DESC
+               END DESC,
+               token.token_id
            LIMIT $1 OFFSET $2",
                items_per_page,
                (page - 1) * items_per_page,
