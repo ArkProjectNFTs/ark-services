@@ -17,7 +17,7 @@ pub trait DatabaseAccess: Send + Sync {
         buy_now: bool,
         sort: &str,
         direction: &str,
-    ) -> Result<(Vec<TokenData>, bool), Error>;
+    ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_tokens_portfolio_data(
         &self,
@@ -43,7 +43,7 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         user_address: &str,
-    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error>;
+    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64), Error>;
 
     async fn get_collection_data(
         &self,
@@ -95,7 +95,7 @@ impl DatabaseAccess for PgPool {
                          FROM token
                          WHERE token.contract_address = contract.contract_address
                          AND token.chain_id = contract.chain_id
-                         AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                         AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                          AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                      ) AS floor,
                      CAST(0 AS INTEGER) AS floor_7d_percentage,
@@ -120,7 +120,7 @@ impl DatabaseAccess for PgPool {
                          FROM token
                          WHERE token.contract_address = contract.contract_address
                          AND token.chain_id = contract.chain_id
-                         AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                         AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                          AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                      ) AS listed_items,
                     (
@@ -128,7 +128,7 @@ impl DatabaseAccess for PgPool {
                         FROM token
                         WHERE token.contract_address = contract.contract_address
                         AND token.chain_id = contract.chain_id
-                        AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                        AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                         AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                     ) * 100 / NULLIF(
                         (
@@ -194,7 +194,7 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         user_address: &str,
-    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error> {
+    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64), Error> {
         let total_count = sqlx::query!(
             "
                 SELECT COUNT(DISTINCT contract.contract_address)
@@ -209,19 +209,6 @@ impl DatabaseAccess for PgPool {
 
         let count = total_count.count.unwrap_or(0);
 
-        let total_token_count = sqlx::query!(
-            "
-                SELECT COUNT(*)
-                FROM token
-                WHERE token.current_owner = $1
-                ",
-            user_address
-        )
-        .fetch_one(self)
-        .await?;
-
-        let token_count = total_token_count.count.unwrap_or(0);
-
         let collection_portfolio_data: Vec<CollectionPortfolioData> = sqlx::query_as!(
             CollectionPortfolioData,
             "
@@ -229,12 +216,26 @@ impl DatabaseAccess for PgPool {
                  contract.contract_address as address,
                  contract_image AS image,
                  contract_name AS collection_name,
+                 ( SELECT count(*)
+                    FROM   token t1
+                    WHERE  t1.contract_address = contract.contract_address
+                      AND  t1.chain_id = contract.chain_id
+                      AND  t1.current_owner = token.current_owner
+                 ) as user_token_count,
+                 ( SELECT count(*)
+                     FROM   token t1
+                     WHERE  t1.contract_address = contract.contract_address
+                       AND  t1.chain_id = contract.chain_id
+                       AND  t1.current_owner = token.current_owner
+                       AND t1.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                       AND (t1.listing_end_date IS NULL OR t1.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
+                  ) as user_listed_tokens,
                  (
                      SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
                      FROM token
                      WHERE token.contract_address = contract.contract_address
                      AND token.chain_id = contract.chain_id
-                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                  ) AS floor,
                  (
@@ -248,7 +249,7 @@ impl DatabaseAccess for PgPool {
                  INNER JOIN token ON contract.contract_address = token.contract_address
                  WHERE token.current_owner = $1
                  AND   contract.is_verified = true
-           GROUP BY contract.contract_address, contract.chain_id
+           GROUP BY contract.contract_address, contract.chain_id, token.current_owner
            LIMIT $2 OFFSET $3
            ",
            user_address,
@@ -261,7 +262,7 @@ impl DatabaseAccess for PgPool {
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
-        Ok((collection_portfolio_data, has_next_page, count, token_count))
+        Ok((collection_portfolio_data, has_next_page, count))
     }
 
     async fn get_collection_data(
@@ -284,7 +285,7 @@ impl DatabaseAccess for PgPool {
                      FROM token
                      WHERE token.contract_address = $1
                      AND token.chain_id = contract.chain_id
-                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                  ) AS floor,
                  CAST(0 AS INTEGER) AS floor_7d_percentage,
@@ -309,7 +310,7 @@ impl DatabaseAccess for PgPool {
                      FROM token
                      WHERE token.contract_address = $1
                      AND token.chain_id = contract.chain_id
-                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                  ) AS listed_items,
                  (
@@ -317,7 +318,7 @@ impl DatabaseAccess for PgPool {
                      FROM token
                      WHERE token.contract_address = $1
                      AND token.chain_id = contract.chain_id
-                     AND token.listing_timestamp <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
+                     AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                  ) * 100 / NULLIF(
                      (
@@ -376,7 +377,22 @@ impl DatabaseAccess for PgPool {
         buy_now: bool,
         sort: &str,
         direction: &str,
-    ) -> Result<(Vec<TokenData>, bool), Error> {
+    ) -> Result<(Vec<TokenData>, bool, i64), Error> {
+        let total_token_count = sqlx::query!(
+            "
+                SELECT COUNT(*)
+                FROM token
+                WHERE token.contract_address = $1
+                  AND token.chain_id = $2
+                ",
+            contract_address,
+            chain_id
+        )
+        .fetch_one(self)
+        .await?;
+
+        let token_count = total_token_count.count.unwrap_or(0);
+
         let total_count = sqlx::query!(
                 "
                 SELECT COUNT(*)
@@ -386,9 +402,11 @@ impl DatabaseAccess for PgPool {
                     $2 = false OR
                     (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
                 )
+                AND token.chain_id = $3
                 ",
                 contract_address,
-                buy_now
+                buy_now,
+                chain_id
             )
             .fetch_one(self)
             .await?;
@@ -405,9 +423,7 @@ impl DatabaseAccess for PgPool {
                    (
                       SELECT (((CAST(token.listing_start_amount AS NUMERIC)) - MIN(CAST(t1.listing_start_amount AS NUMERIC))) / MIN(CAST(t1.listing_start_amount AS NUMERIC))) * 100
                       FROM token as t1
-                      WHERE t1.contract_address = $3
-                      GROUP BY
-                      t1.listing_start_amount
+                      WHERE t1.contract_address = token.contract_address
                    ) as floor_difference,
                    token.listing_timestamp as listed_at,
                    token.current_owner as owner,
@@ -457,7 +473,7 @@ impl DatabaseAccess for PgPool {
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
 
-        Ok((tokens_data, has_next_page))
+        Ok((tokens_data, has_next_page, token_count))
     }
 
     async fn get_tokens_portfolio_data(
@@ -517,7 +533,6 @@ impl DatabaseAccess for PgPool {
             SELECT
                 token.contract_address as contract,
                 token.token_id,
-                token.current_owner as owner,
                 CAST(token.listing_start_amount AS NUMERIC) as list_price,
                 (
                     SELECT MAX(CAST(offer_amount AS NUMERIC))

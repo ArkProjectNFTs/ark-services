@@ -27,4 +27,6 @@ pub struct CollectionPortfolioData {
     pub collection_name: Option<String>,
     pub floor: Option<i32>,
     pub token_count: Option<i64>,
+    pub user_token_count: Option<i64>,
+    pub user_listed_tokens: Option<i64>,
 }
