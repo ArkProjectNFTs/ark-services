@@ -5,7 +5,7 @@ use crate::aws_s3_file_manager::AWSFileManager;
 use anyhow::Result;
 use arkproject::{
     metadata::{
-        metadata_manager::{ImageCacheOption, MetadataError, MetadataManager},
+        metadata_manager::{MetadataError, MetadataManager},
         storage::Storage,
     },
     starknet::client::{StarknetClient, StarknetClientHttp},
@@ -107,7 +107,6 @@ async fn main() -> Result<()> {
     let database_uri = get_database_url().await?;
 
     let metadata_storage = MetadataSqlStorage::new_any(database_uri.as_str()).await?;
-
     let starknet_client = StarknetClientHttp::new(&config.rpc_url)?;
     let file_manager = AWSFileManager::new(config.bucket_name);
 
@@ -130,19 +129,17 @@ async fn main() -> Result<()> {
                     continue;
                 } else {
                     for token in tokens {
-                        let (contract_address, token_id, chain_id) = token;
-
                         info!(
-                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {} - Chain ID: {}",
-                            contract_address, token_id, chain_id
+                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {} - Chain ID: {} - Is Verified: {}",
+                            token.contract_address, token.token_id, token.chain_id, token.is_verified
                         );
 
                         match metadata_manager
                             .refresh_token_metadata(
-                                &contract_address,
-                                &token_id,
-                                &chain_id,
-                                ImageCacheOption::DoNotSave,
+                                &token.contract_address,
+                                &token.token_id,
+                                &token.chain_id,
+                                token.is_verified,
                                 config.ipfs_gateway_uri.as_str(),
                                 config.ipfs_timeout_duration,
                                 "https://arkproject.dev",
@@ -152,7 +149,7 @@ async fn main() -> Result<()> {
                             Ok(_) => {
                                 info!(
                                     "✅ Metadata for Token ID: {} refreshed successfully",
-                                    token_id
+                                    token.token_id
                                 );
                             }
                             Err(metadata_error) => {
@@ -167,9 +164,9 @@ async fn main() -> Result<()> {
 
                                 let _ = metadata_storage
                                     .update_token_metadata_status(
-                                        &contract_address,
-                                        &token_id,
-                                        &chain_id,
+                                        &token.contract_address,
+                                        &token.token_id,
+                                        &token.chain_id,
                                         "ERROR",
                                     )
                                     .await;
