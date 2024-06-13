@@ -63,12 +63,11 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
     match get_portfolio_collections_data(db_access, &normalized_address, page, items_per_page).await
     {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-        Ok((collection_data, has_next_page, collection_count)) => HttpResponse::Ok()
-            .json(json!({
-                "data": collection_data,
-                "collection_count": collection_count,
-                "next_page": if has_next_page { Some(page + 1) } else { None }
-            })),
+        Ok((collection_data, has_next_page, collection_count)) => HttpResponse::Ok().json(json!({
+            "data": collection_data,
+            "collection_count": collection_count,
+            "next_page": if has_next_page { Some(page + 1) } else { None }
+        })),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
