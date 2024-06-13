@@ -68,7 +68,7 @@ pub async fn get_tokens_portfolio_data<D: DatabaseAccess + Sync>(
     sort: &str,
     direction: &str,
     collection: &str,
-) -> Result<(Vec<TokenPortfolioData>, bool), sqlx::Error> {
+) -> Result<(Vec<TokenPortfolioData>, bool, i64), sqlx::Error> {
     db_access
         .get_tokens_portfolio_data(
             user_address,
