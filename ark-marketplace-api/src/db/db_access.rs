@@ -43,7 +43,7 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         user_address: &str,
-    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error>;
+    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64), Error>;
 
     async fn get_collection_data(
         &self,
@@ -194,7 +194,7 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         user_address: &str,
-    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64, i64), Error> {
+    ) -> Result<(Vec<CollectionPortfolioData>, bool, i64), Error> {
         let total_count = sqlx::query!(
             "
                 SELECT COUNT(DISTINCT contract.contract_address)
@@ -229,6 +229,12 @@ impl DatabaseAccess for PgPool {
                  contract.contract_address as address,
                  contract_image AS image,
                  contract_name AS collection_name,
+                 ( SELECT count(*)
+                    FROM   token t1
+                    WHERE  t1.contract_address = contract.contract_address
+                      AND  t1.chain_id = contract.chain_id
+                      AND  t1.current_owner = token.current_owner
+                 ) as user_token_count
                  (
                      SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
                      FROM token
@@ -261,7 +267,7 @@ impl DatabaseAccess for PgPool {
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
-        Ok((collection_portfolio_data, has_next_page, count, token_count))
+        Ok((collection_portfolio_data, has_next_page, count))
     }
 
     async fn get_collection_data(
