@@ -529,7 +529,6 @@ impl DatabaseAccess for PgPool {
             SELECT
                 token.contract_address as contract,
                 token.token_id,
-                token.current_owner as owner,
                 CAST(token.listing_start_amount AS NUMERIC) as list_price,
                 (
                     SELECT MAX(CAST(offer_amount AS NUMERIC))

@@ -21,7 +21,6 @@ pub struct TokenData {
 pub struct TokenPortfolioData {
     pub contract: Option<String>,
     pub token_id: Option<String>,
-    pub owner: Option<String>,
     pub list_price: Option<BigDecimal>,
     pub best_offer: Option<BigDecimal>,
     pub floor: Option<BigDecimal>,
