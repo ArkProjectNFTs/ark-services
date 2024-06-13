@@ -28,7 +28,7 @@ pub trait DatabaseAccess: Send + Sync {
         sort: &str,
         direction: &str,
         collection: &str,
-    ) -> Result<(Vec<TokenPortfolioData>, bool), Error>;
+    ) -> Result<(Vec<TokenPortfolioData>, bool, i64), Error>;
 
     async fn get_collections_data(
         &self,
@@ -469,8 +469,21 @@ impl DatabaseAccess for PgPool {
         sort: &str,
         direction: &str,
         collection: &str,
-    ) -> Result<(Vec<TokenPortfolioData>, bool), Error> {
+    ) -> Result<(Vec<TokenPortfolioData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
+
+        let total_token_count = sqlx::query!(
+            "
+                SELECT COUNT(*)
+                FROM token
+                WHERE token.current_owner = $1
+                ",
+            user_address
+        )
+        .fetch_one(self)
+        .await?;
+
+        let token_count = total_token_count.count.unwrap_or(0);
 
         let collection_filter = if collection.is_empty() {
             String::from("")
@@ -505,7 +518,7 @@ impl DatabaseAccess for PgPool {
                 token.contract_address as contract,
                 token.token_id,
                 token.current_owner as owner,
-                token.listing_start_amount as list_price,
+                CAST(token.listing_start_amount AS NUMERIC) as list_price,
                 (
                     SELECT MAX(CAST(offer_amount AS NUMERIC))
                     FROM token_offer
@@ -566,7 +579,7 @@ impl DatabaseAccess for PgPool {
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
 
-        Ok((tokens_data, has_next_page))
+        Ok((tokens_data, has_next_page, token_count))
     }
 }
 
