@@ -1,9 +1,9 @@
 use arkproject::{
     metadata::{
         storage::Storage,
-        types::{StorageError, TokenMetadata},
+        types::{StorageError, TokenMetadata, TokenWithoutMetadata},
     },
-    sana::storage::sqlx::types::TokenPrimaryKey,
+    sana,
 };
 use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, FromRow};
@@ -97,12 +97,12 @@ impl Storage for MetadataSqlStorage {
     async fn find_token_ids_without_metadata(
         &self,
         filter: Option<(String, String)>,
-    ) -> Result<Vec<(String, String, String)>, StorageError> {
-        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE metadata_status = 'TO_REFRESH' AND c.contract_type = 'ERC721'";
+    ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
+        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified::text FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE metadata_status = 'TO_REFRESH' AND c.contract_type = 'ERC721'";
         let (query, params) = if let Some((chain_id, contract_address)) = filter {
             (
                 format!(
-                    "{} AND chain_id = $1 AND contract_address = $2 LIMIT 100",
+                    "{} AND t.chain_id = $1 AND t.contract_address = $2 LIMIT 100",
                     base_query
                 ),
                 vec![chain_id, contract_address],
@@ -121,14 +121,23 @@ impl Storage for MetadataSqlStorage {
                 if rows.is_empty() {
                     return Ok(vec![]);
                 } else {
-                    let mut tokens: Vec<(String, String, String)> = vec![];
+                    let mut tokens: Vec<TokenWithoutMetadata> = vec![];
                     for row in rows {
-                        if let Ok(token_primary_key) = TokenPrimaryKey::from_row(&row) {
-                            tokens.push((
-                                token_primary_key.contract_address,
-                                token_primary_key.token_id,
-                                token_primary_key.chain_id,
-                            ));
+                        if let Ok(res) =
+                            sana::storage::sqlx::types::TokenWithoutMetadata::from_row(&row)
+                        {
+                            let is_verified = match res.is_verified.as_str() {
+                                "true" => true,
+                                "false" => false,
+                                _ => false,
+                            };
+
+                            tokens.push(TokenWithoutMetadata {
+                                contract_address: res.contract_address,
+                                token_id: res.token_id,
+                                chain_id: res.chain_id,
+                                is_verified,
+                            });
                         }
                     }
                     return Ok(tokens);
