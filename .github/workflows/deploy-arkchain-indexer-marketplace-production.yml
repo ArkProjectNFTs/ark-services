@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  discord-notification:
+  deploy:
     runs-on: ubuntu-latest
-    name: Discord Notification
+
     steps:
       - name: Send notification to dev-updates channel
         run: |
@@ -17,10 +17,6 @@ jobs:
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -58,23 +54,6 @@ jobs:
       - name: Build the application
         run: cargo build --release -p arkchain-indexer-marketplace
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: arkchain-indexer-marketplace
-          path: target/release/
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: arkchain-indexer-marketplace
-          path: ./deploy/
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -85,7 +64,7 @@ jobs:
 
       - name: Upload binary to Scaleway server
         run: |
-          scp -o StrictHostKeyChecking=no ./deploy/arkchain-indexer-marketplace root@${{ vars.SOLIS_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
+          scp -o StrictHostKeyChecking=no target/release/arkchain-indexer-marketplace root@${{ vars.SOLIS_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
 
       - name: Send success notification to dev-updates channel
         if: success()
