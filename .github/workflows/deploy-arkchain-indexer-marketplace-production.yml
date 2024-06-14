@@ -80,7 +80,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "✔️ Successfully deployed `arkchain-indexer-marketplace` on Production environment."
+                  "content": "✅ Successfully deployed `arkchain-indexer-marketplace` on Production environment."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
