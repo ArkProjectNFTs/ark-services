@@ -62,13 +62,17 @@ jobs:
       - name: Ensure deployment directory exists
         run: ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_SERVER_IP }} "mkdir -p /opt/arkchain-indexer-marketplace"
 
+      - name: Stop the service
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl stop ark-indexer-marketplace.service"
+
       - name: Upload binary to Scaleway server
         run: |
           scp -o StrictHostKeyChecking=no target/release/arkchain-indexer-marketplace root@${{ vars.SOLIS_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
 
       - name: Restart the service
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl restart ark-indexer-marketplace.service"
+          ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl start ark-indexer-marketplace.service"
 
       - name: Send success notification to dev-updates channel
         if: success()
@@ -86,6 +90,6 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "❌ Failed to deploy `arkchain-indexer-marketplace` on Production environment."
+                  "content": "❌ Failed to deploy `arkchain-indexer-marketplace` on Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
