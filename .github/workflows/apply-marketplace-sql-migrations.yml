@@ -49,7 +49,7 @@ jobs:
           fi
           secret=$(aws secretsmanager get-secret-value --secret-id $secret_id --query SecretString --output text)
           username=$(echo $secret | jq -r .username)
-          password=$(echo $secret | jq -r .password | jq -sRr @uri)
+          password=$(echo $secret | jq -r .password)
           host=$(echo $secret | jq -r .host)
           port=$(echo $secret | jq -r .port)
           dbname=$(echo $secret | jq -r .dbname)
