@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
@@ -75,13 +75,34 @@ jobs:
           name: arkchain-indexer-marketplace
           path: ./deploy/
 
-      - name: Set up SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SOLIS_SCALEWAY_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ vars.SOLIS_SERVER_IP }} >> ~/.ssh/known_hosts
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SOLIS_SCALEWAY_SSH_KEY }}
+
+      - name: Ensure deployment directory exists
+        run: ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_SERVER_IP }} "mkdir -p /opt/arkchain-indexer-marketplace"
 
       - name: Upload binary to Scaleway server
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ vars.SOLIS_SERVER_IP }} "echo 'hello!'"
+          scp -o StrictHostKeyChecking=no ./deploy/arkchain-indexer-marketplace root@${{ vars.SOLIS_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
+
+      - name: Send success notification to dev-updates channel
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "Successfully deployed `arkchain-indexer-marketplace` on Production environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send failure notification to dev-updates channel
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "Failed to deploy `arkchain-indexer-marketplace` on Production environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
