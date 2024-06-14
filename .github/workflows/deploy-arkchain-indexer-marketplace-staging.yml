@@ -1,0 +1,95 @@
+name: Deploy Arkchain Indexer Marketplace (Staging)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "Deploying `arkchain-indexer-marketplace` on Staging environment..."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/index
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
+      - name: Cache Cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      - name: Build the application
+        run: cargo build --release -p arkchain-indexer-marketplace
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SOLIS_SCALEWAY_SSH_KEY }}
+
+      - name: Ensure deployment directory exists
+        run: ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_STAGING_SERVER_IP }} "mkdir -p /opt/arkchain-indexer-marketplace"
+
+      - name: Stop the service
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_STAGING_SERVER_IP }} "sudo systemctl stop ark-indexer-marketplace.service"
+
+      - name: Upload binary to Scaleway server
+        run: |
+          scp -o StrictHostKeyChecking=no target/release/arkchain-indexer-marketplace root@${{ vars.SOLIS_STAGING_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
+
+      - name: Restart the service
+        run: |
+          ssh -o StrictHostKeyChecking=no root@${{ vars.SOLIS_STAGING_SERVER_IP }} "sudo systemctl start ark-indexer-marketplace.service"
+
+      - name: Send success notification to dev-updates channel
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "✅ Successfully deployed `arkchain-indexer-marketplace` on Staging environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send failure notification to dev-updates channel
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "❌ Failed to deploy `arkchain-indexer-marketplace` on Staging environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
