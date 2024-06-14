@@ -1,0 +1,87 @@
+name: Deploy Arkchain Indexer Marketplace (Production)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    name: Discord Notification
+    steps:
+      - name: Send notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "Deploying `arkchain-indexer-marketplace` on Production environment..."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo index
+        uses: actions/cache@v2
+        with:
+          path: ~/.cargo/index
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-index-
+
+      - name: Cache Cargo build
+        uses: actions/cache@v2
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      - name: Build the application
+        run: cargo build --release -p arkchain-indexer-marketplace
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: arkchain-indexer-marketplace
+          path: target/release/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: arkchain-indexer-marketplace
+          path: ./deploy/
+
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SOLIS_SCALEWAY_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ vars.SOLIS_SERVER_IP }} >> ~/.ssh/known_hosts
+
+      - name: Upload binary to Scaleway server
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa root@${{ vars.SOLIS_SERVER_IP }} "echo 'hello!'"
