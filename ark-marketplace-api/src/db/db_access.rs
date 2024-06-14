@@ -213,6 +213,7 @@ impl DatabaseAccess for PgPool {
             CollectionPortfolioData,
             "
             SELECT
+                 contract.is_verified,
                  contract.contract_address as address,
                  contract_image AS image,
                  contract_name AS collection_name,
@@ -230,14 +231,7 @@ impl DatabaseAccess for PgPool {
                        AND t1.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                        AND (t1.listing_end_date IS NULL OR t1.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
                   ) as user_listed_tokens,
-                 (
-                     SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
-                     AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
-                 ) AS floor,
+                 0 AS floor,
                  (
                    SELECT COUNT(*)
                    FROM token

@@ -29,4 +29,5 @@ pub struct CollectionPortfolioData {
     pub token_count: Option<i64>,
     pub user_token_count: Option<i64>,
     pub user_listed_tokens: Option<i64>,
+    pub is_verified: Option<bool>,
 }

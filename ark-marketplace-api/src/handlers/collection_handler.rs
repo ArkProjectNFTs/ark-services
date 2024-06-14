@@ -68,7 +68,10 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
             "collection_count": collection_count,
             "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            eprintln!("error query get_portfolio_collections: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
