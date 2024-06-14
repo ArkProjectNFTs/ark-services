@@ -3,6 +3,7 @@ use arkproject::metadata::file_manager::{FileInfo, FileManager};
 use async_trait::async_trait;
 use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
 use aws_sdk_s3::primitives::ByteStream;
+use mime_guess::from_path;
 use tracing::{error, info};
 
 /// An implementation of the FileManager trait that utilizes AWS S3 for storage.
@@ -35,6 +36,11 @@ impl FileManager for AWSFileManager {
             |dir_path| format!("{}/{}.{}", dir_path, hash, file_extension),
         );
 
+        let content_type = from_path(&file.name)
+            .first_or_octet_stream()
+            .as_ref()
+            .to_string();
+
         // Check if the file already exists on S3 using a head_object request.
         if client
             .head_object()
@@ -55,6 +61,8 @@ impl FileManager for AWSFileManager {
             .bucket(&self.bucket_name)
             .key(&key)
             .body(body)
+            .content_disposition("inline")
+            .content_type(content_type)
             .send()
             .await
         {
