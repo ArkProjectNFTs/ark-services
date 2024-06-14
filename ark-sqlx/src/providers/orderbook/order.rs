@@ -1,6 +1,7 @@
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
+use sqlx::Error;
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
@@ -238,7 +239,7 @@ impl OrderProvider {
         client: &SqlxCtx,
         token_address: &str,
         token_id: &str,
-    ) -> Result<String, ProviderError> {
+    ) -> Result<Option<String>, ProviderError> {
         let query = "
             SELECT current_owner
             FROM orderbook_token
@@ -248,11 +249,15 @@ impl OrderProvider {
             .bind(token_address)
             .bind(token_id)
             .fetch_one(&client.pool)
-            .await?;
-
-        let current_owner: String = result.get::<String, _>("current_owner");
-
-        Ok(current_owner)
+            .await;
+        match result {
+            Ok(row) => {
+                let current_owner: Option<String> = row.try_get("current_owner").unwrap_or(None);
+                Ok(current_owner)
+            }
+            Err(Error::RowNotFound) => Ok(None),
+            Err(e) => Err(ProviderError::DatabaseError(e.to_string())),
+        }
     }
 
     pub async fn update_token_status(
@@ -705,7 +710,6 @@ impl OrderProvider {
         data: &FulfilledData,
     ) -> Result<(), ProviderError> {
         trace!("Registering fulfilled order {:?}", data);
-
         let q = "INSERT INTO orderbook_order_fulfilled (block_id, block_timestamp, order_hash, fulfiller, related_order_hash) VALUES ($1, $2, $3, $4, $5);";
 
         let _r = sqlx::query(q)
@@ -713,7 +717,7 @@ impl OrderProvider {
             .bind(block_timestamp as i64)
             .bind(data.order_hash.clone())
             .bind(data.fulfiller.clone())
-            .bind(data.related_order_hash.clone())
+            .bind(data.related_order_hash.as_deref())
             .execute(&client.pool)
             .await?;
 
@@ -811,15 +815,22 @@ impl OrderProvider {
                         currency_address: token_data.currency_address.clone(),
                     };
 
+                    let previous_owner_result = Self::get_current_owner(
+                        client,
+                        &token_data.token_address,
+                        &token_data.token_id,
+                    )
+                    .await;
+
+                    previous_owner = match previous_owner_result {
+                        Ok(previous_owner) => previous_owner,
+                        Err(e) => {
+                            tracing::error!("Error while getting current owner: {:?}", e);
+                            return Err(ProviderError::from("No current owner found"));
+                        }
+                    };
+
                     Self::update_owner_price_on_offer_executed(client, &params).await?;
-                    previous_owner = Some(
-                        Self::get_current_owner(
-                            client,
-                            &token_data.token_address,
-                            &token_data.token_id,
-                        )
-                        .await?,
-                    );
                 }
                 EventType::Listing => {
                     Self::update_token_on_listing_executed(
