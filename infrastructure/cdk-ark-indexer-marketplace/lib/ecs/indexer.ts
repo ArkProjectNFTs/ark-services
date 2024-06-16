@@ -26,15 +26,6 @@ export async function deployIndexers(
   );
 
   networks.forEach((network) => {
-    // deployMetadataServices(
-    //   scope,
-    //   cluster,
-    //   ecrRepository,
-    //   network,
-    //   dynamoTable,
-    //   isProductionEnvironment
-    // );
-
     deployIndexerServices(
       isProductionEnvironment,
       environmentName,
@@ -73,21 +64,6 @@ function deployIndexerServices(
       cpu: 512,
     }
   );
-
-  // const blockIndexerLambdaName = ssm.StringParameter.valueForStringParameter(
-  //   scope,
-  //   `/ark/${
-  //     isProductionEnvironment ? "production" : "staging"
-  //   }/${network}/blockIndexerFunctionName`
-  // );
-
-  // const blockIndexerLambda = lambda.Function.fromFunctionName(
-  //   scope,
-  //   `block-indexer-${network}-${
-  //     isProductionEnvironment ? "production" : "staging"
-  //   }`,
-  //   blockIndexerLambdaName
-  // );
 
   const rpcProviderUri = network.includes("mainnet")
     ? `https://juno.mainnet.arkproject.dev`
@@ -138,6 +114,13 @@ function deployIndexerServices(
     })
   );
 
+  taskDefinition.addToTaskRolePolicy(
+    new PolicyStatement({
+      actions: ["secretsmanager:GetSecretValue"],
+      resources: ["*"],
+    })
+  );
+
   const capitalizedNetwork =
     network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
 
@@ -147,78 +130,3 @@ function deployIndexerServices(
     desiredCount: isProductionEnvironment ? 1 : 0,
   });
 }
-
-// function deployMetadataServices(
-//   scope: cdk.Stack,
-//   cluster: cdk.aws_ecs.ICluster,
-//   ecrRepository: cdk.aws_ecr.IRepository,
-//   network: string,
-//   dynamoTable: cdk.aws_dynamodb.ITable,
-//   isProductionEnvironment: boolean
-// ) {
-//   const capitalizedNetwork =
-//     network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
-
-//   const logGroup = new LogGroup(scope, `/ecs/ark-metadata-indexer-${network}`, {
-//     removalPolicy: cdk.RemovalPolicy.DESTROY,
-//     retention: 7,
-//   });
-
-//   const taskDefinition = new cdk.aws_ecs.FargateTaskDefinition(
-//     scope,
-//     `metadata-${network}-task-definition`,
-//     {
-//       memoryLimitMiB: 2048,
-//       cpu: 512,
-//     }
-//   );
-
-//   const rpcProviderUri = network.includes("mainnet")
-//     ? `https://juno.mainnet.arkproject.dev`
-//     : `https://sepolia.arkproject.dev`;
-
-//   taskDefinition.addContainer(`ark_metadata`, {
-//     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
-//       ecrRepository,
-//       `metadata-${isProductionEnvironment ? "production" : "staging"}-latest`
-//     ),
-//     logging: cdk.aws_ecs.LogDrivers.awsLogs({
-//       streamPrefix: "ecs",
-//       logGroup: logGroup,
-//     }),
-//     environment: {
-//       INDEXER_TABLE_NAME: dynamoTable.tableName,
-//       AWS_NFT_IMAGE_BUCKET_NAME: `ark-nft-images-${network}`,
-//       RPC_PROVIDER: rpcProviderUri,
-//       METADATA_IPFS_TIMEOUT_IN_SEC:
-//         process.env.METADATA_IPFS_TIMEOUT_IN_SEC ?? "5",
-//       METADATA_LOOP_DELAY_IN_SEC:
-//         process.env.METADATA_LOOP_DELAY_IN_SEC ?? "10",
-//       IPFS_GATEWAY_URI:
-//         process.env.IPFS_GATEWAY_URI ?? "https://ipfs.arkproject.dev/ipfs/",
-//       RUST_LOG: "INFO",
-//     },
-//   });
-
-//   taskDefinition.addToTaskRolePolicy(
-//     new PolicyStatement({
-//       actions: ["dynamodb:*"],
-//       resources: ["*"],
-//     })
-//   );
-
-//   taskDefinition.addToTaskRolePolicy(
-//     new PolicyStatement({
-//       actions: ["s3:*"],
-//       resources: ["*"],
-//     })
-//   );
-
-//   dynamoTable.grantFullAccess(taskDefinition.taskRole);
-
-//   new cdk.aws_ecs.FargateService(scope, `metadata-${network}`, {
-//     cluster: cluster,
-//     taskDefinition: taskDefinition,
-//     desiredCount: isProductionEnvironment ? 1 : 0,
-//   });
-// }
