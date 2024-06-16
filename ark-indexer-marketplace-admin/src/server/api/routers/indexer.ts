@@ -1,24 +1,28 @@
-import { DynamoDB, type AttributeValue } from "@aws-sdk/client-dynamodb";
 import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
 import { runTask } from "~/lib/awsTasksSpawner";
-import { fetchBlocks, fetchLatestBlocks } from "~/lib/fetchBlocks";
+import {
+  fetchBlocks,
+  fetchIndexers,
+  fetchLatestBlocks,
+} from "~/lib/fetchBlocks";
 import { fetchLastBlock } from "~/lib/fetchLastBlock";
+import { insertIndexer } from "~/lib/postgres";
 import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 type IndexerTask = {
-  indexationProgress: number;
-  taskId: string;
-  status: string;
-  from: number;
-  to: number;
-  forceMode: boolean;
-  version?: string;
-  updatedAt?: string;
-  createdAt?: string;
-  currentBlockNumber?: string;
+  indexer_identifier: string;
+  indexer_status: string;
+  last_updated_timestamp: number;
+  created_timestamp: number;
+  indexer_version: string;
+  indexation_progress_percentage: number;
+  current_block_number: number;
+  is_force_mode_enabled: boolean;
+  start_block_number: number;
+  end_block_number: number;
 };
 
 const AWS_REGION = "us-east-1";
@@ -31,45 +35,11 @@ const client = new ECSClient({
   },
 });
 
-const dynamodb = new DynamoDB({ region: AWS_REGION });
+const fetchTasks = async (): Promise<IndexerTask[]> => {
+  const indexers = await fetchIndexers();
 
-const fetchTasks = async (
-  network: Network,
-): Promise<Record<string, AttributeValue>[]> => {
-  // const dynamoResult = await dynamodb.query({
-  //   TableName: getTableName(network),
-  //   IndexName: "GSI1PK-GSI1SK-index",
-  //   KeyConditionExpression: "#GSI1PK = :GSI1PK",
-  //   ExpressionAttributeNames: { "#GSI1PK": "GSI1PK" },
-  //   ExpressionAttributeValues: { ":GSI1PK": { S: "INDEXER" } },
-  //   ScanIndexForward: false,
-  // });
-
-  // // const command = new ListTasksCommand({ cluster: ECS_CLUSTER });
-  // // const ecsOutput = await client.send(command);
-  // return dynamoResult.Items ?? [];
-
-  return Promise.resolve([]);
-};
-
-const mapDynamoItem = (item: Record<string, AttributeValue>): IndexerTask => {
-  const regex = /TASK#([a-fA-F0-9]+)/;
-  const match = item.SK?.S?.match(regex);
-  const taskId = match?.[1] ?? "";
-  return {
-    indexationProgress: item.Data?.M?.IndexationProgress?.N
-      ? parseInt(item.Data.M.IndexationProgress.N.toString())
-      : 0,
-    taskId,
-    status: item.Data?.M?.Status?.S ?? "",
-    from: item.Data?.M?.From?.N ? parseInt(item.Data.M.From.N.toString()) : 0,
-    to: item.Data?.M?.To?.N ? parseInt(item.Data.M.To.N.toString()) : 0,
-    version: item?.Data?.M?.Version?.S,
-    updatedAt: item?.Data?.M?.LastUpdate?.N,
-    createdAt: item?.Data?.M?.CreatedAt?.N,
-    forceMode: item?.Data?.M?.ForceMode?.BOOL ?? false,
-    currentBlockNumber: item?.Data?.M?.CurrentBlockNumber?.N,
-  };
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return indexers;
 };
 
 export const indexerRouter = createTRPCRouter({
@@ -155,20 +125,18 @@ export const indexerRouter = createTRPCRouter({
         ]),
       }),
     )
-    .query(async ({ input }: { input: { network: Network } }) => {
+    .query(async () => {
       try {
-        const tasks = await fetchTasks(input.network);
-
-        console.log("=> tasks", tasks, input.network);
-
-        return tasks.reduce<IndexerTask[]>((acc, task) => {
-          if (task.Data?.M) {
-            const item = mapDynamoItem(task);
-
-            return acc.concat(item);
-          }
-          return acc;
-        }, []);
+        const tasks = await fetchTasks();
+        return tasks.map((t) => ({
+          indexationProgress: t.indexation_progress_percentage,
+          taskId: t.indexer_identifier,
+          from: t.start_block_number,
+          to: t.end_block_number,
+          version: t.indexer_version,
+          updatedAt: t.last_updated_timestamp,
+          createdAt: t.created_timestamp,
+        }));
       } catch (error) {
         console.error(error);
         return [];
@@ -255,30 +223,17 @@ export const indexerRouter = createTRPCRouter({
           for (const task of commandOutput.tasks ?? []) {
             if (task.taskArn) {
               const taskId = task.taskArn.split("/").pop();
-              const creationDate = Math.floor(Date.now() / 1000);
-
-              const putRequest = await dynamodb.putItem({
-                TableName: tableName,
-                Item: {
-                  PK: { S: "INDEXER" },
-                  SK: { S: `TASK#${taskId}` },
-                  GSI1PK: { S: "INDEXER" },
-                  GSI1SK: { S: creationDate.toString() },
-                  Data: {
-                    M: {
-                      From: { N: subFrom.toString() },
-                      To: { N: subTo.toString() },
-                      Status: { S: "requested" },
-                      IndexationProgress: { N: "0" },
-                      LastUpdate: { N: creationDate.toString() },
-                      CreatedAt: { N: creationDate.toString() },
-                      ForceMode: { BOOL: input.forceMode ?? false },
-                    },
-                  },
-                },
-              });
-
-              console.log("=> putRequest", putRequest);
+              if (taskId) {
+                await insertIndexer(
+                  taskId,
+                  "LATEST",
+                  0,
+                  subFrom,
+                  input.forceMode ?? false,
+                  subFrom,
+                  subTo,
+                );
+              }
             }
           }
         }

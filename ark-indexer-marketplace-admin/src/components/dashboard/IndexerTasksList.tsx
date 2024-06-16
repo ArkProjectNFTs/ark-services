@@ -11,8 +11,8 @@ export interface TaskData {
   from: number;
   to: number;
   version?: string;
-  updatedAt?: string;
-  createdAt?: string;
+  updatedAt?: number;
+  createdAt?: number;
 }
 
 export default function IndexerTasksList() {

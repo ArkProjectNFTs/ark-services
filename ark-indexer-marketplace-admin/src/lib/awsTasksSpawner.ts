@@ -31,7 +31,7 @@ export const runTask = async (client: ECSClient, options: SpawnTaskOptions) => {
     overrides: {
       containerOverrides: [
         {
-          name: "ark_indexer",
+          name: "indexer-marketplace",
           environment: [
             {
               name: "RPC_PROVIDER",

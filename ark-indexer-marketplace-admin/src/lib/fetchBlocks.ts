@@ -3,19 +3,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-// import type {
-//   AttributeValue,
-//   QueryCommandOutput,
-// } from "@aws-sdk/client-dynamodb";
-
-// import { db } from "~/server/dynamodb";
-import pg from "pg";
-
-import { Block, type Network } from "~/types";
+import { type Block, type Network } from "~/types";
+import { pool } from "./postgres";
 import { type Range } from "./range";
-
-const { Pool } = pg;
-const pool = new Pool();
 
 /**
  * Fetches blocks from the database, calculates ranges and returns them.
@@ -39,6 +29,17 @@ export async function fetchBlocks(network: Network, latest: number) {
   populateRangesWithBlocks(ranges, existingBlocks, rangeSize, latest);
 
   return { ranges, rangeSize, count };
+}
+
+export async function fetchIndexers() {
+  const res = await pool.query(
+    `SELECT indexer_identifier, indexer_status, last_updated_timestamp, created_timestamp, indexer_version, indexation_progress_percentage, current_block_number, is_force_mode_enabled, start_block_number, end_block_number 
+    FROM public.indexer
+    ORDER BY created_timestamp DESC`,
+    [],
+  );
+
+  return res.rows;
 }
 
 export async function fetchLatestBlocks(): Promise<Block[]> {

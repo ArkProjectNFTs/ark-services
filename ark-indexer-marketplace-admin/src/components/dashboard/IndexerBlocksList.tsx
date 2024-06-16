@@ -6,12 +6,12 @@ import { DataTable } from "./DataTable";
 import { useNetwork } from "./NetworkProvider";
 
 export interface BlockData {
-  blockId: string;
+  blockId: number;
+  timestamp: number;
 }
 
 export default function IndexerBlocksList() {
   const { network } = useNetwork();
-
   const [latestBlocks] = api.indexer.latestBlocks.useSuspenseQuery(
     {
       network,
