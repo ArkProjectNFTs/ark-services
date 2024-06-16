@@ -20,7 +20,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "Deploying Indexer Marketplace on Production environment..."
+                "content": "Deploying `ark-indexer-marketplace` on Production environment..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -164,3 +164,23 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Send success notification to dev-updates channel
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "✅ Successfully deployed `ark-indexer-marketplace` on Production environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send failure notification to dev-updates channel
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "❌ Failed to deploy `ark-indexer-marketplace` on Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
