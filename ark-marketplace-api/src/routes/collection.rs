@@ -10,7 +10,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
-        "/collections/{address}/{chain_id}",
+        "/collections/{address}",
         web::get().to(collection_handler::get_collection::<PgPool>),
     );
 

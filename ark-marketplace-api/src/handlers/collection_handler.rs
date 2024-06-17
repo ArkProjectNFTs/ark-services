@@ -1,6 +1,8 @@
+use crate::constants::CHAIN_ID;
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{get_collection_data, get_collections_data, get_portfolio_collections_data};
 use crate::utils::http_utils::normalize_address;
+
 use actix_web::{web, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
@@ -38,14 +40,14 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
 }
 
 pub async fn get_collection<D: DatabaseAccess + Sync>(
-    path: web::Path<(String, String)>,
+    path: web::Path<String>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
-    let (contract_address, chain_id) = path.into_inner();
+    let contract_address = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
     let db_access = db_pool.get_ref();
-    match get_collection_data(db_access, &normalized_address, &chain_id).await {
+    match get_collection_data(db_access, &normalized_address, &CHAIN_ID).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(err) => {
