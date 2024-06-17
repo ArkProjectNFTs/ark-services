@@ -43,7 +43,7 @@ impl DynamoDbBlockProvider {
             status: BlockIndexingStatus::from_str(&status).map_err(|_| {
                 ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string())
             })?,
-            indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier").ok(),
+            indexer_identifier: convert::attr_to_str(data, "IndexerIdentifier")?,
             indexer_version: convert::attr_to_str(data, "IndexerVersion").ok(),
             block_number: convert::attr_to_u64(data, "BlockNumber").unwrap_or(0),
         })
@@ -56,12 +56,10 @@ impl DynamoDbBlockProvider {
             map.insert("IndexerVersion".to_string(), AttributeValue::S(iv.clone()));
         }
 
-        if let Some(ii) = data.indexer_identifier.clone() {
-            map.insert(
-                "IndexerIdentifier".to_string(),
-                AttributeValue::S(ii.clone()),
-            );
-        }
+        map.insert(
+            "IndexerIdentifier".to_string(),
+            AttributeValue::S(data.indexer_identifier.clone()),
+        );
 
         map.insert(
             "Status".to_string(),

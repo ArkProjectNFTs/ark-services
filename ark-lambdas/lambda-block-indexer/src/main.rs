@@ -23,7 +23,7 @@ struct Config {
     rpc_url: String,
     table_name: String,
     force_mode: bool,
-    indexer_version: String,
+    indexer_version: Option<String>,
     indexer_identifier: String,
 }
 
@@ -32,7 +32,7 @@ async fn get_config() -> Result<Config, Error> {
         rpc_url: env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set"),
         table_name: env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set"),
         force_mode: env::var("FORCE_MODE").is_ok(),
-        indexer_version: env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set"),
+        indexer_version: env::var("INDEXER_VERSION").ok(),
         indexer_identifier: "lambda-block-indexer".to_string(),
     })
 }
@@ -84,8 +84,8 @@ async fn func(event: LambdaEvent<BlockRange>) -> Result<Response, Error> {
         dynamo_storage,
         pontos_observer,
         PontosConfig {
-            indexer_version: Some(config.indexer_version),
-            indexer_identifier: Some(config.indexer_identifier),
+            indexer_version: config.indexer_version,
+            indexer_identifier: config.indexer_identifier,
         },
     );
 

@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let force_mode = env::var("FORCE_MODE").is_ok();
-    let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
+    let indexer_version = env::var("INDEXER_VERSION").ok();
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
     let indexer_identifier = get_task_id(is_head_of_chain);
     let block_indexer_function_name = match env::var("BLOCK_INDEXER_FUNCTION_NAME") {
@@ -54,12 +54,12 @@ async fn main() -> Result<()> {
         .map(|value| FieldElement::from_hex_be(&value).expect("Invalid CONTRACT_ADDRESS"));
 
     info!(
-        "🏁 Starting Indexer. Version={}, Identifier={}",
+        "🏁 Starting Indexer. Version={:?}, Identifier={}",
         indexer_version, indexer_identifier
     );
 
     debug!(
-        "from_block={:?}, to_block={:?}, head_of_the_chain={}, rpc_url={}, table_name={}, force_mode={}, indexer_version={}, indexer_identifier={}, block_indexer_function_name={:?}, contract_address={:?}",
+        "from_block={:?}, to_block={:?}, head_of_the_chain={}, rpc_url={}, table_name={}, force_mode={}, indexer_version={:?}, indexer_identifier={}, block_indexer_function_name={:?}, contract_address={:?}",
        from_block, to_block, is_head_of_chain, rpc_url, table_name, force_mode, indexer_version, indexer_identifier, block_indexer_function_name, contract_address
     );
 
@@ -78,8 +78,8 @@ async fn main() -> Result<()> {
         dynamo_storage,
         Arc::clone(&pontos_observer),
         PontosConfig {
-            indexer_version: Some(indexer_version),
-            indexer_identifier: Some(indexer_identifier),
+            indexer_version,
+            indexer_identifier,
         },
     );
     // If syncing at the head of the chain
