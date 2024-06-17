@@ -461,7 +461,7 @@ impl DatabaseAccess for PgPool {
                        END
                    ELSE NULL
                END DESC,
-               CAST(token.token_id AS INTEGER)
+               CAST(token.token_id AS NUMERIC)
            LIMIT $1 OFFSET $2",
                items_per_page,
                (page - 1) * items_per_page,
