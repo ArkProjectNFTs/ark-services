@@ -82,8 +82,8 @@ async fn main() -> Result<()> {
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
     let sana_observer = Arc::new(SanaObserver::new(
-        indexer_version.clone(),
-        indexer_identifier.clone(),
+        Some(indexer_version.clone()),
+        Some(indexer_identifier.clone()),
     ));
 
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
