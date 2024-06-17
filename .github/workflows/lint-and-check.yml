@@ -25,7 +25,7 @@ env:
 jobs:
   check:
     name: Cargo Check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
@@ -47,7 +47,7 @@ jobs:
 
   lints:
     name: Run Lints
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     env:
       SQLX_OFFLINE: true
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
