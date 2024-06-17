@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
@@ -25,7 +26,7 @@ pub struct CollectionPortfolioData {
     pub address: String,
     pub image: Option<String>,
     pub collection_name: Option<String>,
-    pub floor: Option<i32>,
+    pub floor: Option<BigDecimal>,
     pub token_count: Option<i64>,
     pub user_token_count: Option<i64>,
     pub user_listed_tokens: Option<i64>,

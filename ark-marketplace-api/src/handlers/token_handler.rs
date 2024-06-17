@@ -60,7 +60,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
             "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
         Err(err) => {
-            eprintln!("error query get_tokens_data: {}", err);
+            tracing::error!("error query get_tokens_data: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -98,7 +98,7 @@ pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
             "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
         Err(err) => {
-            eprintln!("error query portfolio token: {}", err);
+            tracing::error!("error query portfolio token: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
