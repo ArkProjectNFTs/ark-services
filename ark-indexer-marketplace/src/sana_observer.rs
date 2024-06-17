@@ -17,10 +17,10 @@ struct BlockRange {
 }
 
 impl SanaObserver {
-    pub fn new(indexer_version: String, indexer_identifier: String) -> Self {
+    pub fn new(indexer_version: Option<String>, indexer_identifier: String) -> Self {
         Self {
-            _indexer_version: indexer_identifier,
-            _indexer_identifier: indexer_version,
+            _indexer_version: indexer_version,
+            _indexer_identifier: indexer_identifier,
         }
     }
 }

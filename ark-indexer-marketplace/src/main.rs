@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let rpc_url_converted = Url::parse(&rpc_url).unwrap();
 
-    let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
+    let indexer_version = env::var("INDEXER_VERSION").ok();
     let indexer_identifier = get_task_id();
     let db_url = get_database_url().await?;
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
     };
 
     info!(
-        "Starting Indexer. Version={}, Identifier={}",
+        "Starting Indexer. Version={:?}, Identifier={}",
         indexer_version, indexer_identifier
     );
 
@@ -95,8 +95,8 @@ async fn main() -> Result<()> {
         storage,
         Arc::clone(&sana_observer),
         SanaConfig {
-            indexer_version: Some(indexer_version),
-            indexer_identifier: Some(indexer_identifier),
+            indexer_version,
+            indexer_identifier,
         },
     );
 
