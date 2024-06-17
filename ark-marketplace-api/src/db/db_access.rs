@@ -534,9 +534,9 @@ impl DatabaseAccess for PgPool {
             SELECT
                 token.contract_address as contract,
                 token.token_id,
-                CAST(token.listing_start_amount AS NUMERIC) as list_price,
+                hex_to_decimal(token.listing_start_amount) as list_price,
                 (
-                    SELECT MAX(CAST(offer_amount AS NUMERIC))
+                    SELECT MAX(hex_to_decimal(offer_amount))
                     FROM token_offer
                     WHERE token_offer.token_id = token.token_id
                     AND (
@@ -544,7 +544,7 @@ impl DatabaseAccess for PgPool {
                     )
                 ) as best_offer,
                 (
-                    SELECT MIN(CAST(listing_start_amount AS NUMERIC))
+                    SELECT MIN(hex_to_decimal(listing_start_amount))
                     FROM token
                     WHERE token.contract_address = $3
                 ) as floor,
