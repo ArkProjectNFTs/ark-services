@@ -57,12 +57,12 @@ impl DynamoDbBlockProvider {
         if let Some(iv) = data.indexer_version.clone() {
             map.insert("IndexerVersion".to_string(), AttributeValue::S(iv.clone()));
         }
-        
+
         map.insert(
             "IndexerIdentifier".to_string(),
             AttributeValue::S(data.indexer_identifier.clone()),
         );
-        
+
         map.insert(
             "Status".to_string(),
             AttributeValue::S(data.status.to_string()),
