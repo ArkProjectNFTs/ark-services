@@ -30,7 +30,10 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
     match get_collections_data(db_access, page, items_per_page, time_range).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            tracing::error!("error query get_collections: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
@@ -68,7 +71,10 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
             "collection_count": collection_count,
             "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            tracing::error!("error query get_portfolio_collections_data: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
