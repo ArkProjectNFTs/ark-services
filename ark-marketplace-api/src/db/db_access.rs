@@ -424,11 +424,7 @@ impl DatabaseAccess for PgPool {
                    token.contract_address as contract,
                    token.token_id,
                    hex_to_decimal(token.last_price) as last_price,
-                   (
-                      SELECT (((hex_to_decimal(token.listing_start_amount)) - MIN(hex_to_decimal(t1.listing_start_amount))) / MIN(hex_to_decimal(t1.listing_start_amount))) * 100
-                      FROM token as t1
-                      WHERE t1.contract_address = token.contract_address
-                   ) as floor_difference,
+                   CAST(0 as INTEGER) as floor_difference,
                    token.listing_timestamp as listed_at,
                    token.current_owner as owner,
                    token.block_timestamp as minted_at,
