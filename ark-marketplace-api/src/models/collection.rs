@@ -7,7 +7,7 @@ pub struct CollectionData {
     pub address: String,
     pub image: Option<String>,
     pub collection_name: Option<String>,
-    pub floor: Option<i32>,
+    pub floor: Option<BigDecimal>,
     pub floor_7d_percentage: Option<i32>,
     pub volume_7d_eth: Option<i32>,
     pub top_offer: Option<i64>,

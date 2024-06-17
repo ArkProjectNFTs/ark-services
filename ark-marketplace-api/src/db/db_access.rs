@@ -281,7 +281,7 @@ impl DatabaseAccess for PgPool {
                  END AS image,
                  contract_name AS collection_name,
                  (
-                     SELECT COALESCE(MIN(CAST(listing_start_amount AS INTEGER)), 0)
+                     SELECT COALESCE(MIN(hex_to_decimal(listing_start_amount)), 0)
                      FROM token
                      WHERE token.contract_address = $1
                      AND token.chain_id = contract.chain_id
