@@ -124,7 +124,7 @@ impl AWSDynamoStorage for DynamoStorage {
 
         match response {
             Ok(_) => {
-                debug!("Successfully updated indexer task status for task_id {}: status {}, version {:?}", task_id, status_string, indexer_version);
+                debug!("Successfully updated indexer task status for task_id {:?}: status {:?}, version {:?}", task_id, status_string, indexer_version);
                 Ok(())
             }
             Err(e) => {
