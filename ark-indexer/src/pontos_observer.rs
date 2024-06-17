@@ -12,8 +12,8 @@ use tracing::{debug, error, info};
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
-    pub indexer_version: Option<String>,
     pub indexer_identifier: String,
+    pub indexer_version: Option<String>,
     pub block_indexer_function_name: Option<String>,
 }
 
@@ -54,7 +54,7 @@ where
 
     async fn on_block_processing(&self, block_timestamp: u64, block_number: Option<u64>) {
         info!(
-            "Block processing: block_number={:?}, indexer_identifier={}, indexer_version={:?}, block_timestamp={}",
+            "Block processing: block_number={:?}, indexer_identifier={:?}, indexer_version={:?}, block_timestamp={}",
             block_number, self.indexer_identifier, self.indexer_version, block_timestamp
         );
 
