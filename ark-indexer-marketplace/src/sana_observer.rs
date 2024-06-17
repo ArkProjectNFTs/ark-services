@@ -5,8 +5,8 @@ use arkproject::sana::{
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 pub struct SanaObserver {
-    pub indexer_version: String,
-    pub indexer_identifier: String,
+    pub _indexer_version: Option<String>,
+    pub _indexer_identifier: String,
 }
 use tracing::{error, info};
 
@@ -19,8 +19,8 @@ struct BlockRange {
 impl SanaObserver {
     pub fn new(indexer_version: String, indexer_identifier: String) -> Self {
         Self {
-            indexer_identifier,
-            indexer_version,
+            _indexer_version: indexer_identifier,
+            _indexer_identifier: indexer_version,
         }
     }
 }
