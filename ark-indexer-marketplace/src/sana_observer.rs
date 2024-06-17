@@ -4,11 +4,12 @@ use arkproject::sana::{
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tracing::{error, info};
+
 pub struct SanaObserver {
     pub _indexer_version: Option<String>,
     pub _indexer_identifier: String,
 }
-use tracing::{error, info};
 
 #[derive(Deserialize, Serialize, Debug)]
 struct BlockRange {
