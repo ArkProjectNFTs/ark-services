@@ -48,7 +48,10 @@ pub async fn get_collection<D: DatabaseAccess + Sync>(
     match get_collection_data(db_access, &normalized_address, &chain_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            tracing::error!("error query get_collections: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
