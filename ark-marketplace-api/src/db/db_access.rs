@@ -283,7 +283,7 @@ impl DatabaseAccess for PgPool {
                  (
                      SELECT COALESCE(MIN(hex_to_decimal(listing_start_amount)), 0)
                      FROM token
-                     WHERE token.contract_address = $1
+                     WHERE token.contract_address = contract.contract_address
                      AND token.chain_id = contract.chain_id
                      AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
@@ -293,13 +293,13 @@ impl DatabaseAccess for PgPool {
                  (
                      SELECT COALESCE(MAX(CAST(offer_amount AS BIGINT)), 0)
                      FROM token_offer
-                     WHERE token_offer.contract_address = $1
+                     WHERE token_offer.contract_address = contract.contract_address
                      AND token_offer.chain_id = contract.chain_id
                  ) AS top_offer,
                  (
                      SELECT COUNT(*)
                      FROM token_event
-                     WHERE token_event.contract_address = $1
+                     WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Sell'
                      AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
@@ -308,7 +308,7 @@ impl DatabaseAccess for PgPool {
                  (
                      SELECT COUNT(*)
                      FROM token
-                     WHERE token.contract_address = $1
+                     WHERE token.contract_address = contract.contract_address
                      AND token.chain_id = contract.chain_id
                      AND token.listing_start_date <= (EXTRACT(EPOCH FROM NOW())::BIGINT)
                      AND (token.listing_end_date IS NULL OR token.listing_end_date >= (EXTRACT(EPOCH FROM NOW())::BIGINT))
@@ -335,11 +335,15 @@ impl DatabaseAccess for PgPool {
                       AND token.chain_id = contract.chain_id
                   ) AS token_count,
                  (
-                   SELECT COUNT(DISTINCT current_owner)
-                   FROM token
-                   WHERE token.contract_address = contract.contract_address
-                   AND token.chain_id = contract.chain_id
-                ) AS owner_count,
+                     SELECT COUNT(*)
+                     FROM (
+                         SELECT current_owner
+                         FROM token
+                         WHERE contract_address = contract.contract_address
+                           AND chain_id = contract.chain_id
+                         GROUP BY current_owner
+                     ) AS distinct_owners
+                 ) AS owner_count,
                 (
                      SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
                      FROM token_event
@@ -350,7 +354,7 @@ impl DatabaseAccess for PgPool {
                 (
                      SELECT COUNT(*)
                      FROM token_event
-                     WHERE token_event.contract_address = $1
+                     WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Sell'
                  ) AS total_sales,
@@ -621,7 +625,6 @@ impl DatabaseAccess for MockDb {
             sales_7d: Some(10),
             marketcap: Some(1112),
             listed_items: Some(13),
-            listed_percentage: Some(14),
         }])
     }
 }
