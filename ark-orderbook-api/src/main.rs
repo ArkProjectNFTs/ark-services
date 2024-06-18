@@ -4,7 +4,6 @@ use ark_orderbook_api::routes::{default, token};
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
-
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
 fn init_logging() {
