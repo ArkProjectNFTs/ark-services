@@ -439,7 +439,10 @@ impl DatabaseAccess for PgPool {
                    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
                )
                ORDER BY
-                   token.listing_end_date desc nulls last,
+               CASE
+                  WHEN EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token.listing_start_date AND token.listing_end_date THEN 1
+                  ELSE 2
+               END,
                CASE
                    WHEN $6 = 'price' THEN
                        CASE WHEN $7 = 'asc' THEN token.listing_start_amount
@@ -546,7 +549,8 @@ impl DatabaseAccess for PgPool {
                     WHERE token.contract_address = $3
                 ) as floor,
                 token.held_timestamp as received_at,
-                token.metadata as metadata
+                token.metadata as metadata,
+                contract.contract_name as collection_name
             FROM token
             WHERE token.current_owner = $3
             AND (
