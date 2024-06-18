@@ -418,8 +418,8 @@ impl DatabaseAccess for PgPool {
         let count = total_count.count.unwrap_or(0);
 
         let tokens_data: Vec<TokenData> = sqlx::query_as!(
-               TokenData,
-               "
+            TokenData,
+            "
                SELECT
                    token.contract_address as contract,
                    token.token_id,
@@ -435,8 +435,7 @@ impl DatabaseAccess for PgPool {
                WHERE token.contract_address = $3
                  AND token.chain_id = $4
                AND (
-                   $5 = false OR
-                   (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
+                   $5 = false
                )
                ORDER BY
                CASE
@@ -455,16 +454,16 @@ impl DatabaseAccess for PgPool {
                END DESC,
                CAST(token.token_id AS NUMERIC)
            LIMIT $1 OFFSET $2",
-               items_per_page,
-               (page - 1) * items_per_page,
-               contract_address,
-               chain_id,
-               buy_now,
-               sort,
-               direction,
-           )
-           .fetch_all(self)
-           .await?;
+            items_per_page,
+            (page - 1) * items_per_page,
+            contract_address,
+            chain_id,
+            buy_now,
+            sort,
+            direction,
+        )
+        .fetch_all(self)
+        .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
@@ -546,8 +545,10 @@ impl DatabaseAccess for PgPool {
                 ) as floor,
                 token.held_timestamp as received_at,
                 token.metadata as metadata,
-                contract.contract_name as collection_name
+                c.contract_name as collection_name
             FROM token
+            INNER JOIN contract as c ON c.contract_address = token.contract_address
+                AND c.chain_id = token.chain_id
             WHERE token.current_owner = $3
             AND (
                 $4 = false OR
