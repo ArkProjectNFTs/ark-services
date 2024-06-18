@@ -19,13 +19,13 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
                 Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
                 Err(err) => {
-                    tracing::error!("error get_token_data: {}", err);
+                    eprintln!("error get_token_data: {}", err);
                     HttpResponse::InternalServerError().finish()
                 }
             }
         }
         Err(err) => {
-            tracing::error!("error convert_param_to_hex: {}", err);
+            tracing::eprintln!("error convert_param_to_hex: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
