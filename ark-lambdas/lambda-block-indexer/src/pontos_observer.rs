@@ -8,16 +8,12 @@ use std::sync::Arc;
 
 pub struct PontosObserver<S: AWSDynamoStorage> {
     _storage: Arc<S>,
-    pub _indexer_version: Option<String>,
+    pub _indexer_version: String,
     pub _indexer_identifier: String,
 }
 
 impl<S: AWSDynamoStorage> PontosObserver<S> {
-    pub fn new(
-        _storage: Arc<S>,
-        _indexer_version: Option<String>,
-        _indexer_identifier: String,
-    ) -> Self {
+    pub fn new(_storage: Arc<S>, _indexer_version: String, _indexer_identifier: String) -> Self {
         Self {
             _storage,
             _indexer_identifier,
