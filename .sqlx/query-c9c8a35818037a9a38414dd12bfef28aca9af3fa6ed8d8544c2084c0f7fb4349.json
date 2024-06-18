@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n               SELECT\n                   token.contract_address as contract,\n                   token.token_id,\n                   hex_to_decimal(token.last_price) as last_price,\n                   CAST(0 as INTEGER) as floor_difference,\n                   token.listing_timestamp as listed_at,\n                   token.current_owner as owner,\n                   token.block_timestamp as minted_at,\n                   token.updated_timestamp as updated_at,\n                   hex_to_decimal(token.listing_start_amount) as price,\n                   token.metadata as metadata\n               FROM token\n               WHERE token.contract_address = $3\n                 AND token.chain_id = $4\n               AND (\n                   $5 = false\n               )\n               ORDER BY\n               CASE\n                   WHEN $6 = 'price' THEN\n                       CASE WHEN $7 = 'asc' THEN token.listing_start_amount\n                            ELSE NULL\n                       END\n                   ELSE NULL\n               END ASC,\n               CASE\n                   WHEN $6 = 'price' THEN\n                       CASE WHEN $7 = 'desc' THEN token.listing_start_amount\n                            ELSE NULL\n                       END\n                   ELSE NULL\n               END DESC,\n               CAST(token.token_id AS NUMERIC)\n           LIMIT $1 OFFSET $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contract",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "token_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_price",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "floor_difference",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "listed_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "minted_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "price",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 9,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int8",
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      true,
+      true,
+      false,
+      false,
+      null,
+      true
+    ]
+  },
+  "hash": "c9c8a35818037a9a38414dd12bfef28aca9af3fa6ed8d8544c2084c0f7fb4349"
+}
