@@ -403,8 +403,7 @@ impl DatabaseAccess for PgPool {
                 FROM token
                 WHERE token.contract_address = $1
                 AND (
-                    $2 = false OR
-                    (EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN listing_start_date AND listing_end_date)
+                    $2 = false
                 )
                 AND token.chain_id = $3
                 ",
