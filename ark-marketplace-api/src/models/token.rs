@@ -26,4 +26,5 @@ pub struct TokenPortfolioData {
     pub floor: Option<BigDecimal>,
     pub received_at: Option<i64>,
     pub metadata: Option<JsonValue>,
+    pub collection_name: Option<String>,
 }
