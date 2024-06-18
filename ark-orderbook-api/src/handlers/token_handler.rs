@@ -40,7 +40,10 @@ pub async fn get_tokens_by_collection<D: DatabaseAccess + Sync>(
     match get_token_by_collection_data(db_access, &token_address).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(token_data),
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            eprintln!("error get_tokens_by_collection: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
@@ -55,10 +58,16 @@ pub async fn get_token_history<D: DatabaseAccess + Sync>(
             match get_token_history_data(db_access, &token_address, &token_id_hex).await {
                 Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
-                Err(_) => HttpResponse::InternalServerError().finish(),
+                Err(err) => {
+                    eprintln!("error get_token_history_data: {}", err);
+                    HttpResponse::InternalServerError().finish()
+                }
             }
         }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            eprintln!("error convert_param_to_hex: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
@@ -73,10 +82,16 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
             match get_token_offers_data(db_access, &token_address, &token_id_hex).await {
                 Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
                 Ok(token_data) => HttpResponse::Ok().json(token_data),
-                Err(_) => HttpResponse::InternalServerError().finish(),
+                Err(err) => {
+                    eprintln!("error get_token_offers_data: {}", err);
+                    HttpResponse::InternalServerError().finish()
+                }
             }
         }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+        Err(err) => {
+            eprintln!("error convert_param_to_hex: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
     }
 }
 
