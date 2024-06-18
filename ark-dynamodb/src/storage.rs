@@ -58,7 +58,7 @@ pub trait AWSDynamoStorage: Send + Sync {
     async fn update_indexer_task_status(
         &self,
         task_id: String,
-        indexer_version: Option<String>,
+        indexer_version: String,
         status: IndexerStatus,
     ) -> Result<(), StorageError>;
     async fn update_indexer_progress(
@@ -74,7 +74,7 @@ impl AWSDynamoStorage for DynamoStorage {
     async fn update_indexer_task_status(
         &self,
         task_id: String,
-        indexer_version: Option<String>,
+        indexer_version: String,
         status: IndexerStatus,
     ) -> Result<(), StorageError> {
         let now = Utc::now();
@@ -103,9 +103,10 @@ impl AWSDynamoStorage for DynamoStorage {
             AttributeValue::N(unix_timestamp.to_string()),
         );
 
-        if let Some(ref iv) = indexer_version {
-            values.insert(":Version".to_string(), AttributeValue::S(iv.to_string()));
-        }
+        values.insert(
+            ":Version".to_string(),
+            AttributeValue::S(indexer_version.to_string()),
+        );
 
         let response = self
             .ctx

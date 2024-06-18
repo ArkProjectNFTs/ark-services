@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let table_name = env::var("INDEXER_TABLE_NAME").expect("INDEXER_TABLE_NAME must be set");
     let force_mode = env::var("FORCE_MODE").is_ok();
-    let indexer_version = env::var("INDEXER_VERSION").ok();
+    let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
     let indexer_identifier = get_task_id(is_head_of_chain);
     let block_indexer_function_name = match env::var("BLOCK_INDEXER_FUNCTION_NAME") {

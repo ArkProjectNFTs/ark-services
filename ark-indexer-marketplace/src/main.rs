@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let rpc_url_converted = Url::parse(&rpc_url).unwrap();
 
-    let indexer_version = env::var("INDEXER_VERSION").ok();
+    let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
     let indexer_identifier = get_task_id();
     let db_url = get_database_url().await?;
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
@@ -201,7 +201,7 @@ async fn main() -> Result<()> {
                 .index_block_range(
                     BlockId::Number(start),
                     BlockId::Number(end),
-                    false,
+                    true,
                     chain_id.as_str(),
                 )
                 .await

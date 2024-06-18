@@ -13,7 +13,7 @@ use tracing::{debug, error, info};
 pub struct PontosObserver<S: AWSDynamoStorage> {
     storage: Arc<S>,
     pub indexer_identifier: String,
-    pub indexer_version: Option<String>,
+    pub indexer_version: String,
     pub block_indexer_function_name: Option<String>,
 }
 
@@ -26,7 +26,7 @@ struct BlockRange {
 impl<S: AWSDynamoStorage> PontosObserver<S> {
     pub fn new(
         storage: Arc<S>,
-        indexer_version: Option<String>,
+        indexer_version: String,
         indexer_identifier: String,
         block_indexer_function_name: Option<String>,
     ) -> Self {
