@@ -398,7 +398,7 @@ impl DatabaseAccess for PgPool {
         let token_count = total_token_count.count.unwrap_or(0);
 
         let total_count = sqlx::query!(
-                "
+            "
                 SELECT COUNT(*)
                 FROM token
                 WHERE token.contract_address = $1
@@ -407,12 +407,12 @@ impl DatabaseAccess for PgPool {
                 )
                 AND token.chain_id = $3
                 ",
-                contract_address,
-                buy_now,
-                chain_id
-            )
-            .fetch_one(self)
-            .await?;
+            contract_address,
+            buy_now,
+            chain_id
+        )
+        .fetch_one(self)
+        .await?;
 
         let count = total_count.count.unwrap_or(0);
 
