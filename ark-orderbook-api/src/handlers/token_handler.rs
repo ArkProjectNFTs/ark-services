@@ -25,7 +25,7 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
             }
         }
         Err(err) => {
-            tracing::eprintln!("error convert_param_to_hex: {}", err);
+            eprintln!("error convert_param_to_hex: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
