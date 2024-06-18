@@ -8,18 +8,21 @@ use tracing_subscriber::EnvFilter;
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
 fn init_logging() {
-    const DEFAULT_LOG_FILTER: &str = "trace";
+    // Initialize the LogTracer to convert `log` records to `tracing` events
+    tracing_log::LogTracer::init().expect("Setting log tracer failed.");
 
-    tracing::subscriber::set_global_default(
-        fmt::Subscriber::builder()
-            .with_env_filter(
-                EnvFilter::try_from_default_env()
-                    .or(EnvFilter::try_new(DEFAULT_LOG_FILTER))
-                    .expect("Invalid RUST_LOG filters"),
-            )
-            .finish(),
-    )
-    .expect("Failed to set the global tracing subscriber");
+    // Create the layers
+    let env_filter = EnvFilter::from_default_env();
+    let fmt_layer = fmt::layer();
+
+    // Combine layers and set as global default
+    let subscriber = Registry::default().with(env_filter).with(fmt_layer);
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Setting default subscriber failed.");
+
+    let main_span = span!(Level::TRACE, "main");
+    let _main_guard = main_span.enter();
 }
 
 #[actix_web::main]
