@@ -12,7 +12,7 @@ on:
       - "arkchain-indexer/**"
 
 env:
-  ARKCHAIN_DATABASE_URL_STAGING: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
+  ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
 
 jobs:
 
