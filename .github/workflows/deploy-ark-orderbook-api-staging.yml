@@ -11,6 +11,9 @@ on:
       - "infrastructure/cdk-ark-orderbookapi/**"
       - "ark-orderbook-api/**"
 
+env:
+  ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
+
 jobs:
 
  push-orderbook-api-image:
