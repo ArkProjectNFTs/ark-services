@@ -36,6 +36,7 @@ members = [
   "arkchain-indexer-marketplace",
   "ark-indexer-marketplace",
   "ark-marketplace-api",
+  "ark-marketplace-cron",
 ]
 resolver = "2"
 

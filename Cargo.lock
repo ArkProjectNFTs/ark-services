@@ -583,6 +583,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "ark-marketplace-cron"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "async-trait",
+ "aws-config",
+ "aws-sdk-secretsmanager",
+ "dotenv",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "ark-metadata"
 version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.55.2#5bfc24fc6fe016cd924799ee7ab22e9d1fff5c60"
