@@ -33,6 +33,11 @@ async fn main() -> Result<()> {
         HttpTransport::new(rpc_url_converted.clone()),
     )));
 
+    info!(
+        "ARKCHAIN_DATABASE_URL / ARKCHAIN_RPC_PROVIDER : {} {}",
+        rpc_url_converted, db_url
+    );
+
     // Quick launch locally:
     // sudo docker run -d --name arkchain-db -p 5432:5432 -e POSTGRES_PASSWORD=123 postgres
     // cd ark-sqlx
