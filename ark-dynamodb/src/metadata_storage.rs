@@ -2,7 +2,7 @@ use crate::{providers::ArkTokenProvider, ArkDynamoDbProvider, DynamoDbCtx};
 use anyhow::Result;
 use arkproject::metadata::{
     storage::Storage,
-    types::{StorageError, TokenMetadata},
+    types::{StorageError, TokenMetadata, TokenWithoutMetadata},
 };
 use async_trait::async_trait;
 use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
@@ -104,7 +104,7 @@ impl Storage for MetadataStorage {
     async fn find_token_ids_without_metadata(
         &self,
         filter: Option<(String, String)>,
-    ) -> Result<Vec<(String, String, String)>, StorageError> {
+    ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
         match self
             .provider
             .token

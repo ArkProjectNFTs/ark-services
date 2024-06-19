@@ -98,7 +98,7 @@ impl Storage for MetadataSqlStorage {
         &self,
         filter: Option<(String, String)>,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
-        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified::text FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE metadata_status = 'TO_REFRESH'";
+        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE metadata_status = 'TO_REFRESH'";
         let (query, params) = if let Some((chain_id, contract_address)) = filter {
             (
                 format!(
@@ -126,17 +126,11 @@ impl Storage for MetadataSqlStorage {
                         if let Ok(res) =
                             sana::storage::sqlx::types::TokenWithoutMetadata::from_row(&row)
                         {
-                            let is_verified = match res.is_verified.as_str() {
-                                "true" => true,
-                                "false" => false,
-                                _ => false,
-                            };
-
                             tokens.push(TokenWithoutMetadata {
                                 contract_address: res.contract_address,
                                 token_id: res.token_id,
                                 chain_id: res.chain_id,
-                                is_verified,
+                                is_verified: false,
                             });
                         }
                     }
