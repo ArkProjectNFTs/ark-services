@@ -73,6 +73,7 @@ fn init_logging() {
     )
     .expect("Failed to set the global tracing subscriber");
 }
+<<<<<<< HEAD
 
 async fn get_database_url() -> Result<String> {
     match std::env::var("DATABASE_URL") {
@@ -98,3 +99,5 @@ async fn get_database_url() -> Result<String> {
         }
     }
 }
+=======
+>>>>>>> 02c4a5f (feat(ark-marketplace-cron): start cron for tokens)
