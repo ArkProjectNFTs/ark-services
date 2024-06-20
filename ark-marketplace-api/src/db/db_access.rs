@@ -379,8 +379,8 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        sort: &str,
-        direction: &str,
+        _sort: &str,
+        _direction: &str,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
         let total_token_count = sqlx::query!(
             "
@@ -436,30 +436,14 @@ impl DatabaseAccess for PgPool {
                AND (
                    $5 = false
                )
-               ORDER BY
-               CASE
-                   WHEN $6 = 'price' THEN
-                       CASE WHEN $7 = 'asc' THEN token.listing_start_amount
-                            ELSE NULL
-                       END
-                   ELSE NULL
-               END ASC,
-               CASE
-                   WHEN $6 = 'price' THEN
-                       CASE WHEN $7 = 'desc' THEN token.listing_start_amount
-                            ELSE NULL
-                       END
-                   ELSE NULL
-               END DESC,
-               CAST(token.token_id AS NUMERIC)
            LIMIT $1 OFFSET $2",
             items_per_page,
             (page - 1) * items_per_page,
             contract_address,
             chain_id,
             buy_now,
-            sort,
-            direction,
+            //sort,
+            //direction,
         )
         .fetch_all(self)
         .await?;
