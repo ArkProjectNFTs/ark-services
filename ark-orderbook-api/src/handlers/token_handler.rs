@@ -5,6 +5,7 @@ use crate::db::query::{
 };
 use crate::utils::http_utils::convert_param_to_hex;
 use actix_web::{web, HttpResponse, Responder};
+use tracing::error;
 
 pub async fn get_token<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
@@ -25,7 +26,7 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
             }
         }
         Err(err) => {
-            eprintln!("error convert_param_to_hex: {}", err);
+            error!("error convert_param_to_hex: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }

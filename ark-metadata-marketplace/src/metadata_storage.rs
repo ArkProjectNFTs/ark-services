@@ -1,23 +1,22 @@
 use arkproject::{
     metadata::{
         storage::Storage,
-        types::{StorageError, TokenMetadata},
+        types::{StorageError, TokenMetadata, TokenWithoutMetadata},
     },
-    sana::storage::sqlx::types::TokenPrimaryKey,
+    sana,
 };
 use async_trait::async_trait;
-use sqlx::{any::AnyPoolOptions, AnyPool, FromRow};
+use sqlx::postgres::{PgPool, PgPoolOptions};
+use sqlx::FromRow;
 use tracing::{error, info};
 
 pub struct MetadataSqlStorage {
-    pool: AnyPool,
+    pool: PgPool,
 }
 
 impl MetadataSqlStorage {
-    pub async fn new_any(db_url: &str) -> Result<Self, StorageError> {
-        sqlx::any::install_default_drivers();
-
-        let pool = AnyPoolOptions::new()
+    pub async fn new_pg(db_url: &str) -> Result<Self, StorageError> {
+        let pool = PgPoolOptions::new()
             .max_connections(1)
             .connect(db_url)
             .await
@@ -39,7 +38,7 @@ impl Storage for MetadataSqlStorage {
         info!("Updating token metadata status. Contract address: {} - Token ID: {} - Chain ID: {} - Status: {}", contract_address, token_id, chain_id, metadata_status);
 
         let res = sqlx::query(
-            "UPDATE token SET updated_timestamp=EXTRACT(epoch FROM now())::bigint, metadata_status = $1 
+            "UPDATE token SET updated_timestamp=EXTRACT(epoch FROM now())::bigint, metadata_status = $1
             WHERE contract_address = $2 AND chain_id = $3 AND token_id = $4",
         )
         .bind(metadata_status)
@@ -65,7 +64,7 @@ impl Storage for MetadataSqlStorage {
         token_metadata: TokenMetadata,
     ) -> Result<(), StorageError> {
         let query = "
-        UPDATE token 
+        UPDATE token
         SET updated_timestamp = EXTRACT(epoch FROM now())::bigint, metadata = $4::jsonb, raw_metadata = $5, metadata_status = $6, metadata_updated_at = $7
         WHERE contract_address = $1 AND chain_id = $2 AND token_id = $3";
 
@@ -97,12 +96,12 @@ impl Storage for MetadataSqlStorage {
     async fn find_token_ids_without_metadata(
         &self,
         filter: Option<(String, String)>,
-    ) -> Result<Vec<(String, String, String)>, StorageError> {
-        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE metadata_status = 'TO_REFRESH' AND c.contract_type = 'ERC721'";
+    ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
+        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE t.metadata_status = 'TO_REFRESH' AND c.is_spam = false AND c.is_nsfw  = false";
         let (query, params) = if let Some((chain_id, contract_address)) = filter {
             (
                 format!(
-                    "{} AND chain_id = $1 AND contract_address = $2 LIMIT 100",
+                    "{} AND t.chain_id = $1 AND t.contract_address = $2 LIMIT 100",
                     base_query
                 ),
                 vec![chain_id, contract_address],
@@ -121,14 +120,18 @@ impl Storage for MetadataSqlStorage {
                 if rows.is_empty() {
                     return Ok(vec![]);
                 } else {
-                    let mut tokens: Vec<(String, String, String)> = vec![];
+                    let mut tokens: Vec<TokenWithoutMetadata> = vec![];
                     for row in rows {
-                        if let Ok(token_primary_key) = TokenPrimaryKey::from_row(&row) {
-                            tokens.push((
-                                token_primary_key.contract_address,
-                                token_primary_key.token_id,
-                                token_primary_key.chain_id,
-                            ));
+                        if let Ok(res) =
+                            sana::storage::sqlx::types::TokenWithoutMetadata::from_row(&row)
+                        {
+                            tokens.push(TokenWithoutMetadata {
+                                contract_address: res.contract_address,
+                                token_id: res.token_id,
+                                chain_id: res.chain_id,
+                                is_verified: res.is_verified,
+                                save_images: res.save_images,
+                            });
                         }
                     }
                     return Ok(tokens);

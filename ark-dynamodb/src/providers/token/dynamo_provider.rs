@@ -4,7 +4,7 @@ use super::types::{
 use crate::providers::token::types::TokenData;
 use crate::providers::ArkTokenProvider;
 use crate::{DynamoDbCtx, DynamoDbOutput, EntityType, ProviderError};
-use arkproject::metadata::types::TokenMetadata;
+use arkproject::metadata::types::{TokenMetadata, TokenWithoutMetadata};
 use arkproject::pontos::storage::types::TokenMintInfo;
 use arkproject::starknet::CairoU256;
 use async_trait::async_trait;
@@ -296,7 +296,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
         &self,
         client: &Self::Client,
         filter: Option<(String, String)>,
-    ) -> Result<Vec<(String, String, String)>, ProviderError> {
+    ) -> Result<Vec<TokenWithoutMetadata>, ProviderError> {
         let sort_key = match filter {
             Some((contract_address, _chain_id)) => {
                 format!("CONTRACT#{}", contract_address.clone())
@@ -323,7 +323,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                     return Ok(vec![]);
                 }
 
-                let mut results: Vec<(String, String, String)> = Vec::new();
+                let mut results: Vec<TokenWithoutMetadata> = Vec::new();
                 let items = query_output.items.unwrap();
 
                 for item in items.iter() {
@@ -346,11 +346,13 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                                                 let bn = token_id.to_biguint();
                                                 let token_id_str = bn.to_str_radix(10);
 
-                                                results.push((
-                                                    contract_address.to_string(),
-                                                    token_id_str,
-                                                    "SN_MAIN".to_string(),
-                                                ));
+                                                results.push(TokenWithoutMetadata {
+                                                    contract_address: contract_address.to_string(),
+                                                    token_id: token_id_str,
+                                                    chain_id: "0x534e5f4d41494e".to_string(),
+                                                    is_verified: false,
+                                                    save_images: false,
+                                                });
                                             }
                                             Err(_) => {
                                                 return Err(ProviderError::DataValueError(

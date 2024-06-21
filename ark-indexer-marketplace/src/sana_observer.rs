@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
 pub struct SanaObserver {
-    pub _indexer_version: Option<String>,
+    pub _indexer_version: String,
     pub _indexer_identifier: String,
 }
 
@@ -18,7 +18,7 @@ struct BlockRange {
 }
 
 impl SanaObserver {
-    pub fn new(indexer_version: Option<String>, indexer_identifier: String) -> Self {
+    pub fn new(indexer_version: String, indexer_identifier: String) -> Self {
         Self {
             _indexer_version: indexer_version,
             _indexer_identifier: indexer_identifier,

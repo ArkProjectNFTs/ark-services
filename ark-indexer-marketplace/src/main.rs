@@ -62,10 +62,11 @@ async fn main() -> Result<()> {
     let rpc_url = env::var("RPC_PROVIDER").expect("RPC_PROVIDER must be set");
     let rpc_url_converted = Url::parse(&rpc_url).unwrap();
 
-    let indexer_version = env::var("INDEXER_VERSION").ok();
+    let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
     let indexer_identifier = get_task_id();
     let db_url = get_database_url().await?;
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
+    let force_mode = env::var("FORCE_MODE").is_ok();
 
     let is_head_of_chain = match std::env::var("HEAD_OF_CHAIN") {
         Ok(val) => val == "true",
@@ -73,8 +74,8 @@ async fn main() -> Result<()> {
     };
 
     info!(
-        "Starting Indexer. Version={:?}, Identifier={}",
-        indexer_version, indexer_identifier
+        "Starting Indexer. Version={:?}, Identifier={}, Force Mode={}",
+        indexer_version, indexer_identifier, force_mode
     );
 
     let storage = Arc::new(MarketplaceSqlxStorage::new_any(&db_url).await?);
@@ -201,7 +202,7 @@ async fn main() -> Result<()> {
                 .index_block_range(
                     BlockId::Number(start),
                     BlockId::Number(end),
-                    false,
+                    force_mode,
                     chain_id.as_str(),
                 )
                 .await

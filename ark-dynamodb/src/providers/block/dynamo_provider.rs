@@ -40,13 +40,13 @@ impl DynamoDbBlockProvider {
     ) -> Result<BlockInfo, ProviderError> {
         let status = convert::attr_to_str(data, "Status")?;
         let indexer_identifier = convert::attr_to_str(data, "IndexerIdentifier")?;
-
+        let indexer_version = convert::attr_to_str(data, "IndexerVersion")?;
         Ok(BlockInfo {
             status: BlockIndexingStatus::from_str(&status).map_err(|_| {
                 ProviderError::DataValueError("BlockIndexingStatus parse failed".to_string())
             })?,
             indexer_identifier,
-            indexer_version: convert::attr_to_str(data, "IndexerVersion").ok(),
+            indexer_version,
             block_number: convert::attr_to_u64(data, "BlockNumber").unwrap_or(0),
         })
     }
@@ -54,9 +54,10 @@ impl DynamoDbBlockProvider {
     pub fn info_to_data(data: &BlockInfo) -> HashMap<String, AttributeValue> {
         let mut map = HashMap::new();
 
-        if let Some(iv) = data.indexer_version.clone() {
-            map.insert("IndexerVersion".to_string(), AttributeValue::S(iv.clone()));
-        }
+        map.insert(
+            "IndexerVersion".to_string(),
+            AttributeValue::S(data.indexer_version.clone()),
+        );
 
         map.insert(
             "IndexerIdentifier".to_string(),

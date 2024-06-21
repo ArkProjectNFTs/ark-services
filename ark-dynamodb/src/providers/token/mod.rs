@@ -3,16 +3,16 @@
 mod dynamo_provider;
 pub mod types;
 
+use self::types::BatchTokenData;
 use crate::providers::token::types::TokenData;
 use crate::{DynamoDbCtx, DynamoDbOutput, ProviderError};
-use arkproject::metadata::types::TokenMetadata;
+use arkproject::metadata::types::{TokenMetadata, TokenWithoutMetadata};
 use arkproject::pontos::storage::types::TokenMintInfo;
 use async_trait::async_trait;
 pub use dynamo_provider::DynamoDbTokenProvider;
+
 #[cfg(any(test, feature = "mock"))]
 use mockall::automock;
-
-use self::types::BatchTokenData;
 
 /// Trait defining the requests that can be done to dynamoDB for ark-services
 /// at the token level.
@@ -71,7 +71,7 @@ pub trait ArkTokenProvider {
         &self,
         client: &Self::Client,
         filter: Option<(String, String)>,
-    ) -> Result<Vec<(String, String, String)>, ProviderError>;
+    ) -> Result<Vec<TokenWithoutMetadata>, ProviderError>;
 
     async fn register_token(
         &self,
