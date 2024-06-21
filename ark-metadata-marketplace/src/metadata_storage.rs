@@ -130,6 +130,7 @@ impl Storage for MetadataSqlStorage {
                                 token_id: res.token_id,
                                 chain_id: res.chain_id,
                                 is_verified: res.is_verified,
+                                save_images: res.save_images,
                             });
                         }
                     }
