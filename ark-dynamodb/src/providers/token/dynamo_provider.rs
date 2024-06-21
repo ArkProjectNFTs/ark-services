@@ -351,7 +351,7 @@ impl ArkTokenProvider for DynamoDbTokenProvider {
                                                     token_id: token_id_str,
                                                     chain_id: "0x534e5f4d41494e".to_string(),
                                                     is_verified: false,
-                                                    save_images: false
+                                                    save_images: false,
                                                 });
                                             }
                                             Err(_) => {
