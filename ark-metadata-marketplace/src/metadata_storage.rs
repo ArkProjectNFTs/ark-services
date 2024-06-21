@@ -7,7 +7,7 @@ use arkproject::{
 };
 use async_trait::async_trait;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use sqlx::{any::AnyPoolOptions, AnyPool, FromRow};
+use sqlx::FromRow;
 use tracing::{error, info};
 
 pub struct MetadataSqlStorage {
