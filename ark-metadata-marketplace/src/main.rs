@@ -106,7 +106,7 @@ async fn main() -> Result<()> {
     let config = get_env_variables();
     let database_uri = get_database_url().await?;
 
-    let metadata_storage = MetadataSqlStorage::new_any(database_uri.as_str()).await?;
+    let metadata_storage = MetadataSqlStorage::new_pg(database_uri.as_str()).await?;
     let starknet_client = StarknetClientHttp::new(&config.rpc_url)?;
     let file_manager = AWSFileManager::new(config.bucket_name);
 

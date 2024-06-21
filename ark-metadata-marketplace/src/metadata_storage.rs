@@ -6,18 +6,17 @@ use arkproject::{
     sana,
 };
 use async_trait::async_trait;
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::{any::AnyPoolOptions, AnyPool, FromRow};
 use tracing::{error, info};
 
 pub struct MetadataSqlStorage {
-    pool: AnyPool,
+    pool: PgPool,
 }
 
 impl MetadataSqlStorage {
-    pub async fn new_any(db_url: &str) -> Result<Self, StorageError> {
-        sqlx::any::install_default_drivers();
-
-        let pool = AnyPoolOptions::new()
+    pub async fn new_pg(db_url: &str) -> Result<Self, StorageError> {
+        let pool = PgPoolOptions::new()
             .max_connections(1)
             .connect(db_url)
             .await
@@ -39,7 +38,7 @@ impl Storage for MetadataSqlStorage {
         info!("Updating token metadata status. Contract address: {} - Token ID: {} - Chain ID: {} - Status: {}", contract_address, token_id, chain_id, metadata_status);
 
         let res = sqlx::query(
-            "UPDATE token SET updated_timestamp=EXTRACT(epoch FROM now())::bigint, metadata_status = $1 
+            "UPDATE token SET updated_timestamp=EXTRACT(epoch FROM now())::bigint, metadata_status = $1
             WHERE contract_address = $2 AND chain_id = $3 AND token_id = $4",
         )
         .bind(metadata_status)
@@ -65,7 +64,7 @@ impl Storage for MetadataSqlStorage {
         token_metadata: TokenMetadata,
     ) -> Result<(), StorageError> {
         let query = "
-        UPDATE token 
+        UPDATE token
         SET updated_timestamp = EXTRACT(epoch FROM now())::bigint, metadata = $4::jsonb, raw_metadata = $5, metadata_status = $6, metadata_updated_at = $7
         WHERE contract_address = $1 AND chain_id = $2 AND token_id = $3";
 
@@ -130,7 +129,7 @@ impl Storage for MetadataSqlStorage {
                                 contract_address: res.contract_address,
                                 token_id: res.token_id,
                                 chain_id: res.chain_id,
-                                is_verified: false,
+                                is_verified: res.is_verified,
                             });
                         }
                     }
