@@ -3,4 +3,5 @@ pub struct TokenWithoutMetadata {
     pub token_id: String,
     pub chain_id: String,
     pub is_verified: bool,
+    pub save_images: bool,
 }
