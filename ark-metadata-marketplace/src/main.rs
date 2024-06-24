@@ -130,8 +130,8 @@ async fn main() -> Result<()> {
                 } else {
                     for token in tokens {
                         info!(
-                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {} - Chain ID: {} - Is Verified: {}",
-                            token.contract_address, token.token_id, token.chain_id, token.is_verified
+                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {} - Chain ID: {} - Is Verified: {} - Save Images: {}",
+                            token.contract_address, token.token_id, token.chain_id, token.is_verified, token.save_images
                         );
 
                         match metadata_manager
@@ -139,7 +139,7 @@ async fn main() -> Result<()> {
                                 &token.contract_address,
                                 &token.token_id,
                                 &token.chain_id,
-                                token.is_verified,
+                                token.save_images,
                                 config.ipfs_gateway_uri.as_str(),
                                 config.ipfs_timeout_duration,
                                 "https://arkproject.dev",
