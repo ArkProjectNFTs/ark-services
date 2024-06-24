@@ -2,8 +2,12 @@ use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{get_tokens_data, get_tokens_portfolio_data};
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpResponse, Responder};
+use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tracing::info;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -30,7 +34,10 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
     query_parameters: web::Query<QueryParameters>,
     db_pool: web::Data<D>,
+    redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
 ) -> impl Responder {
+    info!("get_tokens: contract_address");
+
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let (contract_address, chain_id) = path.into_inner();
@@ -40,9 +47,10 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let direction = query_parameters.direction.as_deref().unwrap_or("desc");
 
     let db_access = db_pool.get_ref();
-
+    let mut redis_con_ref = redis_con.get_ref().lock().await;
     match get_tokens_data(
         db_access,
+        &mut redis_con_ref,
         &normalized_address,
         &chain_id,
         page,

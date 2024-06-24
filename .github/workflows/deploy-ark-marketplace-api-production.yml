@@ -128,3 +128,6 @@ jobs:
           DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
           API_USER: ${{ secrets.API_USER }}
           API_PASSWORD: ${{ secrets.API_PASSWORD }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          REDIS_USERNAME: ${{ secrets.REDIS_USERNAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}

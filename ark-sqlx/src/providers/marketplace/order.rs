@@ -768,8 +768,14 @@ impl OrderProvider {
                     listing_currency_address,
                     listing_currency_chain_id,
                     block_timestamp,
-                    status)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+                    status,
+                    is_listed)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+                    CASE
+                        WHEN EXTRACT(epoch FROM now()) BETWEEN $12 AND $13 THEN true
+                        ELSE false
+                    END)
+                    )
                 ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 token_id_hex = EXCLUDED.token_id_hex,
@@ -780,7 +786,11 @@ impl OrderProvider {
                 listing_broker_id = EXCLUDED.listing_broker_id,
                 listing_orderhash = EXCLUDED.listing_orderhash,
                 status = EXCLUDED.status,
-                updated_timestamp = EXCLUDED.updated_timestamp;
+                updated_timestamp = EXCLUDED.updated_timestamp,
+                is_listed = CASE
+                WHEN EXTRACT(epoch FROM now()) BETWEEN EXCLUDED.listing_start_date AND EXCLUDED.listing_end_date THEN true
+                ELSE false
+                ;
             ";
 
             sqlx::query(upsert_query)
