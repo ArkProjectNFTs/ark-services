@@ -66,12 +66,8 @@ async fn main() -> Result<()> {
     let indexer_identifier = get_task_id();
     let db_url = get_database_url().await?;
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
-    let force_mode = env::var("FORCE_MODE").is_ok();
-
-    let is_head_of_chain = match std::env::var("HEAD_OF_CHAIN") {
-        Ok(val) => val == "true",
-        Err(_) => false,
-    };
+    let force_mode = std::env::var("FORCE_MODE").map_or(false, |val| val == "true");
+    let is_head_of_chain = std::env::var("HEAD_OF_CHAIN").map_or(false, |val| val == "true");
 
     info!(
         "Starting Indexer. Version={:?}, Identifier={}, Force Mode={}",
@@ -115,7 +111,7 @@ async fn main() -> Result<()> {
                 .index_block_range(
                     BlockId::Number(from_block),
                     BlockId::Number(to_block),
-                    false,
+                    force_mode,
                     chain_id.as_str(),
                 )
                 .await

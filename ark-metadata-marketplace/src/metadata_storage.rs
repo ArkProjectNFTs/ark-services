@@ -97,7 +97,7 @@ impl Storage for MetadataSqlStorage {
         &self,
         filter: Option<(String, String)>,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
-        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE t.metadata_status = 'TO_REFRESH' AND c.is_spam = false AND c.is_nsfw  = false";
+        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE t.metadata_status = 'TO_REFRESH' AND c.is_spam = false AND c.is_nsfw  = false AND c.contract_type = 'ERC721'";
         let (query, params) = if let Some((chain_id, contract_address)) = filter {
             (
                 format!(
