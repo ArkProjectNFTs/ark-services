@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT COUNT(*)\n                FROM token\n                WHERE token.contract_address = $1\n                AND token.chain_id = $2\n                AND (\n                    $3 = false\n                    OR token.is_listed = true\n                )\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "342c801e89735f353d479ca4ea35072e3524ced19185a2d7de01f7f2ce792553"
+}

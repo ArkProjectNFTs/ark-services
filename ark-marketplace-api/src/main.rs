@@ -3,8 +3,12 @@ use actix_web::{web, App, HttpServer};
 use anyhow::Result;
 use ark_marketplace_api::routes::{collection, default, token};
 use aws_config::BehaviorVersion;
+use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
+use std::error::Error;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::info;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
@@ -64,6 +68,7 @@ async fn get_database_url() -> Result<String> {
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     init_logging();
+
     let database_url = get_database_url()
         .await
         .expect("Could not get the database URL");
@@ -74,6 +79,17 @@ async fn main() -> std::io::Result<()> {
         .connect(&database_url)
         .await
         .expect("Could not connect to the database");
+
+    let redis_conn = match connect_redis().await {
+        Ok(con) => con,
+        Err(e) => {
+            tracing::error!("Failed to connect to Redis: {}", e);
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Failed to connect to Redis",
+            ));
+        }
+    };
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -86,6 +102,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .app_data(web::Data::new(db_pool.clone()))
+            .app_data(web::Data::new(redis_conn.clone()))
             .configure(default::config)
             .configure(collection::config)
             .configure(token::config)
@@ -93,4 +110,17 @@ async fn main() -> std::io::Result<()> {
     .bind("0.0.0.0:8080")?
     .run()
     .await
+}
+
+async fn connect_redis() -> Result<Arc<Mutex<MultiplexedConnection>>, Box<dyn Error>> {
+    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL not set");
+    let redis_username = std::env::var("REDIS_USERNAME").expect("REDIS_USERNAME not set");
+    let redis_password = std::env::var("REDIS_PASSWORD").expect("REDIS_PASSWORD not set");
+
+    let client = Client::open(format!(
+        "redis://{}:{}@{}",
+        redis_username, redis_password, redis_url
+    ))?;
+    let connection = client.get_multiplexed_tokio_connection().await?;
+    Ok(Arc::new(Mutex::new(connection)))
 }
