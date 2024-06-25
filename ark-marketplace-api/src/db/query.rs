@@ -1,6 +1,6 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::models::collection::{CollectionData, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenPortfolioData};
+use crate::models::token::{TokenData, TokenOneData, TokenPortfolioData};
 use redis::AsyncCommands;
 
 pub async fn get_collections_data<D: DatabaseAccess + Sync>(
@@ -95,10 +95,6 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     };
     // Try to get the data from Redis
     let cached_data: Option<String> = redis_conn.get(&cache_key).await.unwrap_or(None);
-    match &cached_data {
-        Some(data) => println!("Cached data: {}", data),
-        None => println!("No cached data found"),
-    }
 
     match cached_data {
         Some(data) => {
@@ -141,6 +137,18 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
             Ok(tokens_data)
         }
     }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn get_token_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    contract_address: &str,
+    chain_id: &str,
+    token_id: &str,
+) -> Result<TokenOneData, sqlx::Error> {
+    db_access
+        .get_token_data(contract_address, chain_id, token_id)
+        .await
 }
 
 #[allow(clippy::too_many_arguments)]
