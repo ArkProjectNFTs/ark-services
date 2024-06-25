@@ -1,5 +1,5 @@
 use crate::models::collection::{CollectionData, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenPortfolioData};
+use crate::models::token::{TokenData, TokenOneData, TokenPortfolioData};
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
@@ -18,6 +18,13 @@ pub trait DatabaseAccess: Send + Sync {
         sort: &str,
         direction: &str,
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
+
+    async fn get_token_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenOneData, Error>;
 
     async fn get_tokens_portfolio_data(
         &self,
@@ -360,6 +367,46 @@ impl DatabaseAccess for PgPool {
         .await?;
 
         Ok(collection_data)
+    }
+
+    async fn get_token_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenOneData, Error> {
+        let token_data: TokenOneData = sqlx::query_as!(
+                        TokenOneData,
+                "
+                    SELECT
+                        hex_to_decimal(token.listing_start_amount) as price,
+                        hex_to_decimal(token.last_price) as last_price,
+                        (
+                            SELECT MAX(hex_to_decimal(offer_amount))
+                            FROM token_offer
+                            WHERE token_offer.token_id = token.token_id
+                            AND (
+                                EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token_offer.start_date AND token_offer.end_date
+                            )
+                        ) as top_offer,
+                        token.current_owner as owner,
+                        c.contract_name as collection_name,
+                        token.metadata as metadata
+                    FROM token
+                    INNER JOIN contract as c ON c.contract_address = token.contract_address
+                        AND c.chain_id = token.chain_id
+                    WHERE token.contract_address = $1
+                      AND token.chain_id = $2
+                      AND token.token_id = $3
+                    ",
+                contract_address,
+                chain_id,
+                token_id
+            )
+            .fetch_one(self)
+            .await?;
+
+        Ok(token_data)
     }
 
     async fn get_tokens_data(
