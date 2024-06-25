@@ -27,12 +27,48 @@ pub async fn get_portfolio_collections_data<D: DatabaseAccess + Sync>(
 
 pub async fn get_collection_data<D: DatabaseAccess + Sync>(
     db_access: &D,
+    redis_conn: &mut redis::aio::MultiplexedConnection,
     contract_address: &str,
     chain_id: &str,
 ) -> Result<CollectionData, sqlx::Error> {
-    db_access
-        .get_collection_data(contract_address, chain_id)
-        .await
+    // Generate a unique key for this query based on buy_now value
+    let cache_key = format!("collection_{}", contract_address);
+    // Try to get the data from Redis
+    let cached_data: Option<String> = redis_conn.get(&cache_key).await.unwrap_or(None);
+
+    match cached_data {
+        Some(data) => {
+            // If the data is in the cache, deserialize it and return it
+            match serde_json::from_str::<CollectionData>(&data) {
+                Ok(collection_data) => Ok(collection_data),
+                Err(e) => {
+                    tracing::error!("Failed to deserialize data from Redis: {}", e);
+                    Err(sqlx::Error::Configuration(e.into()))
+                }
+            }
+        }
+        None => {
+            // If the data is not in the cache, get it from the database
+            let collection_data = db_access
+                .get_collection_data(contract_address, chain_id)
+                .await?;
+
+            // Cache the data in Redis for future requests
+            let collection_data_string = match serde_json::to_string(&collection_data) {
+                Ok(string) => string,
+                Err(e) => {
+                    tracing::error!("Failed to serialize data to Redis: {}", e);
+                    return Err(sqlx::Error::Configuration(e.into()));
+                }
+            };
+            let _: () = redis_conn
+                .set_ex(&cache_key, collection_data_string, 60 * 60 * 2)
+                .await
+                .unwrap_or(()); // Cache for 2 hours
+
+            Ok(collection_data)
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

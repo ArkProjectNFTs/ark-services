@@ -7,7 +7,6 @@ use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -36,8 +35,6 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     db_pool: web::Data<D>,
     redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
 ) -> impl Responder {
-    info!("get_tokens: contract_address");
-
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let (contract_address, chain_id) = path.into_inner();
