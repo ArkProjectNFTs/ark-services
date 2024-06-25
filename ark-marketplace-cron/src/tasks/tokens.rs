@@ -37,6 +37,44 @@ pub async fn update_listed_tokens(pool: &PgPool) {
     }
 }
 
+pub async fn update_top_bid_tokens(pool: &PgPool) {
+    let update_top_bid_query = r#"
+            UPDATE token
+            SET top_bid = (
+                SELECT MAX(bid_amount)
+                FROM token_bid
+                WHERE
+                    token_bid.contract_address = token.contract_address
+                    token_bid.chain_id = token.chain_id
+                    token_bid.token_id = token.token_id
+                  AND EXTRACT(EPOCH FROM NOW()) BETWEEN start_date AND end_date
+            );
+            top_bid_order_hash = (
+                SELECT order_hash
+                FROM token_bid
+                WHERE
+                    token_bid.contract_address = token.contract_address
+                    AND token_bid.chain_id = token.chain_id
+                    AND token_bid.token_id = token.token_id
+                    AND bid_amount = (
+                        SELECT MAX(bid_amount)
+                        FROM token_bid
+                        WHERE
+                            token_bid.contract_address = token.contract_address
+                            AND token_bid.chain_id = token.chain_id
+                            AND token_bid.token_id = token.token_id
+                            AND EXTRACT(EPOCH FROM NOW()) BETWEEN start_date AND end_date
+                    )
+            );
+        "#;
+
+        match sqlx::query(update_top_bid_query).execute(pool).await {
+            Ok(_) => info!("Update of top_bid field successful."),
+            Err(e) => tracing::error!("Failed to update top_bid field: {}", e),
+        }
+}
+
+
 pub async fn cache_collection_pages(
     pool: &PgPool,
     mut con: MultiplexedConnection,

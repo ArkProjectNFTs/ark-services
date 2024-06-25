@@ -5,7 +5,7 @@ use anyhow::Result;
 use aws_config::BehaviorVersion;
 use redis::aio::MultiplexedConnection;
 use redis::Client;
-use tasks::tokens::{cache_collection_pages, update_listed_tokens};
+use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 
@@ -56,7 +56,8 @@ async fn main() -> std::io::Result<()> {
         Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
     }
     // @todo when adding new calculation add spawn & try_join!
-    update_listed_tokens(&db_pool).await;
+    //update_listed_tokens(&db_pool).await;
+    //update_top_bid_tokens(&db_pool).await;
     Ok(())
 }
 

@@ -518,7 +518,8 @@ impl OrderProvider {
                 listing_start_amount = null,
                 listing_end_amount = null,
                 listing_start_date = null,
-                listing_end_date = null
+                listing_end_date = null,
+                is_listed = false
             WHERE contract_address = $1 AND token_id = $2;
             ";
 
@@ -543,6 +544,7 @@ impl OrderProvider {
                 currency_chain_id = $7, currency_address = $8,
                 listing_start_date = null, listing_end_date = null,
                 listing_start_amount = null, listing_end_amount = null,
+                is_listed = false,
                 held_timestamp = $9
             WHERE contract_address = $1 AND token_id = $2;
         ";
@@ -582,6 +584,7 @@ impl OrderProvider {
             SET
                 listing_start_date = null, listing_end_date = null,
                 listing_start_amount = null, listing_end_amount = null,
+                is_listed = false,
                 updated_timestamp = $3,
                 last_price = $4
             WHERE token_address = $1 AND token_id = $2;
