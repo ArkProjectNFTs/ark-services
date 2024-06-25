@@ -2,8 +2,11 @@ use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{get_collection_data, get_collections_data, get_portfolio_collections_data};
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpResponse, Responder};
+use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParameters {
@@ -40,12 +43,21 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
 pub async fn get_collection<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
     db_pool: web::Data<D>,
+    redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
 ) -> impl Responder {
     let (contract_address, chain_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
     let db_access = db_pool.get_ref();
-    match get_collection_data(db_access, &normalized_address, &chain_id).await {
+    let mut redis_con_ref = redis_con.get_ref().lock().await;
+    match get_collection_data(
+        db_access,
+        &mut redis_con_ref,
+        &normalized_address,
+        &chain_id,
+    )
+    .await
+    {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
         Err(err) => {
