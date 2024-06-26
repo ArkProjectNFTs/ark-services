@@ -50,7 +50,7 @@ export default function BlocksOverview() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href={`https://testnet.starkscan.co/block/${latest}`}
+                  href={`https://starkscan.co/block/${latest}`}
                   target="_blank"
                   className="flex items-center space-x-1 py-1"
                 >
