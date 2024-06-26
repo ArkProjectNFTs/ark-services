@@ -476,6 +476,7 @@ impl DatabaseAccess for PgPool {
                     token.is_listed = true
               )
               ORDER BY
+              CASE WHEN token.is_listed = true THEN 1 ELSE 2 END,
               CASE
                   WHEN $6 = 'price' THEN
                       CASE WHEN $7 = 'asc' THEN token.listing_start_amount

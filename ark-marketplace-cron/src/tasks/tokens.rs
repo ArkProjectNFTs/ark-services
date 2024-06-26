@@ -40,40 +40,41 @@ pub async fn update_listed_tokens(pool: &PgPool) {
 pub async fn update_top_bid_tokens(pool: &PgPool) {
     let update_top_bid_query = r#"
             UPDATE token
-            SET top_bid = (
-                SELECT MAX(bid_amount)
-                FROM token_bid
+            SET top_bid_amount = (
+                SELECT MAX(offer_amount)
+                FROM token_offer
                 WHERE
-                    token_bid.contract_address = token.contract_address
-                    token_bid.chain_id = token.chain_id
-                    token_bid.token_id = token.token_id
+                    token_offer.contract_address = token.contract_address
+                    AND token_offer.chain_id = token.chain_id
+                    AND token_offer.token_id = token.token_id
                   AND EXTRACT(EPOCH FROM NOW()) BETWEEN start_date AND end_date
-            );
+            ),
             top_bid_order_hash = (
                 SELECT order_hash
-                FROM token_bid
+                FROM token_offer
                 WHERE
-                    token_bid.contract_address = token.contract_address
-                    AND token_bid.chain_id = token.chain_id
-                    AND token_bid.token_id = token.token_id
-                    AND bid_amount = (
-                        SELECT MAX(bid_amount)
-                        FROM token_bid
+                    token_offer.contract_address = token.contract_address
+                    AND token_offer.chain_id = token.chain_id
+                    AND token_offer.token_id = token.token_id
+                    AND offer_amount = (
+                        SELECT MAX(offer_amount)
+                        FROM token_offer
                         WHERE
-                            token_bid.contract_address = token.contract_address
-                            AND token_bid.chain_id = token.chain_id
-                            AND token_bid.token_id = token.token_id
+                            token_offer.contract_address = token.contract_address
+                            AND token_offer.chain_id = token.chain_id
+                            AND token_offer.token_id = token.token_id
                             AND EXTRACT(EPOCH FROM NOW()) BETWEEN start_date AND end_date
                     )
+                ORDER BY offer_timestamp ASC
+                LIMIT 1
             );
         "#;
 
-        match sqlx::query(update_top_bid_query).execute(pool).await {
-            Ok(_) => info!("Update of top_bid field successful."),
-            Err(e) => tracing::error!("Failed to update top_bid field: {}", e),
-        }
+    match sqlx::query(update_top_bid_query).execute(pool).await {
+        Ok(_) => info!("Update of top_bid field successful."),
+        Err(e) => tracing::error!("Failed to update top_bid field: {}", e),
+    }
 }
-
 
 pub async fn cache_collection_pages(
     pool: &PgPool,
@@ -82,6 +83,7 @@ pub async fn cache_collection_pages(
     let collections_to_cache = vec![
         "0x05dbdedc203e92749e2e746e2d40a768d966bd243df04a6b712e222bc040a9af",
         "0x076503062d78f4481be03c9145022d6a4a71ec0719aa07756f79a2384dc7ef16",
+        "0x0169e971d146ccf8f5e88f2b12e2e6099663fb56e42573479f2aee93309982f8",
     ];
 
     for contract_address in collections_to_cache {
@@ -130,7 +132,8 @@ pub async fn cache_collection_pages(
                    WHERE token.contract_address = $3
                      AND token.chain_id = $4
                    ORDER BY
-                   token.listing_start_amount ASC,
+                       CASE WHEN token.is_listed = true THEN 1 ELSE 2 END,
+                       token.listing_start_amount ASC,
                    CAST(token.token_id AS NUMERIC)
                LIMIT $1 OFFSET $2",
                 ITEMS_PER_PAGE,
