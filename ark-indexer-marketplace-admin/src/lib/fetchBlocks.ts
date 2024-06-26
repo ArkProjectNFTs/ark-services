@@ -17,13 +17,9 @@ import { type Range } from "./range";
  */
 export async function fetchBlocks(network: Network, latest: number) {
   const existingBlocks = await fetchAllBlocks();
-  console.log("=> existingBlocks", existingBlocks);
-
   const count = latest - existingBlocks.length;
   const rangeCount = 120;
   const rangeSize = Math.ceil(latest / rangeCount);
-
-  console.log("Blocks ranges:", { count, rangeCount, rangeSize });
 
   const ranges: Range[] = createEmptyRanges(latest, rangeCount, rangeSize);
   populateRangesWithBlocks(ranges, existingBlocks, rangeSize, latest);
