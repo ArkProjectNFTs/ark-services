@@ -19,9 +19,11 @@ export async function fetchLastBlock(network: NetworkType): Promise<number> {
     method: "starknet_blockNumber",
     params: [],
   };
-  const url = network.includes("mainnet")
-    ? `https://juno.mainnet.arkproject.dev`
-    : `https://sepolia.arkproject.dev`;
+  const url =
+    (network.includes("mainnet")
+      ? process.env.STARKNET_MAINNET_RPC_PROVIDER
+      : process.env.STARKNET_TESTNET_RPC_PROVIDER) ?? "";
+
   const response: AxiosResponse<BlockNumberResponse> = await axios.post(
     url,
     payload,

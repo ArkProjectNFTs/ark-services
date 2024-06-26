@@ -23,8 +23,6 @@ export async function fetchBlocks(network: Network, latest: number) {
   const rangeCount = 120;
   const rangeSize = Math.ceil(latest / rangeCount);
 
-  console.log("Blocks ranges:", { count, rangeCount, rangeSize });
-
   const ranges: Range[] = createEmptyRanges(latest, rangeCount, rangeSize);
   populateRangesWithBlocks(ranges, items, rangeSize, latest);
 
