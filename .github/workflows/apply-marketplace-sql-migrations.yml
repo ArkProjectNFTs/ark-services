@@ -19,7 +19,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet & Testnet databases..."
+                  "content": "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [mainnet, testnet]
+        environment: [mainnet]
     name: Run SQL Migrations on ${{ matrix.environment }}
     steps:
       - name: Checkout Repository
