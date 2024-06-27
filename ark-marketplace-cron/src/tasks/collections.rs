@@ -5,7 +5,7 @@ pub async fn update_top_bid_collections(pool: &PgPool) {
     let update_top_bid_query = r#"
         UPDATE contract
         SET top_bid = (
-            SELECT MAX(offer_amount)
+            SELECT MAX(hex_to_decimal(offer_amount))
             FROM token_offer
             WHERE
                 token_offer.contract_address = contract.contract_address
@@ -19,7 +19,7 @@ pub async fn update_top_bid_collections(pool: &PgPool) {
                 token_offer.contract_address = contract.contract_address
                 AND token_offer.chain_id = contract.chain_id
                 AND offer_amount = (
-                    SELECT MAX(offer_amount)
+                    SELECT MAX(hex_to_decimal(offer_amount))
                     FROM token_offer
                     WHERE
                         token_offer.contract_address = contract.contract_address
@@ -46,7 +46,7 @@ pub async fn update_collections_floor(pool: &PgPool) {
     let update_top_bid_query = r#"
         UPDATE contract
         SET floor_price = (
-            SELECT MIN(listing_start_amount)
+            SELECT MIN(hex_to_decimal(listing_start_amount))
             FROM token
             WHERE
                 token.contract_address = contract.contract_address
