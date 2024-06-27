@@ -74,7 +74,7 @@ function deployApiServices(
       new iam.PolicyStatement({
         actions: ["secretsmanager:GetSecretValue"],
         resources: [
-          "arn:aws:secretsmanager:us-east-1:223605539824:secret:prod/ark-db-credentials-AlF3F1",
+          "arn:aws:secretsmanager:us-east-1:223605539824:secret:prod/ark-db-credentials-read-7lC6CI",
         ],
       })
     );
