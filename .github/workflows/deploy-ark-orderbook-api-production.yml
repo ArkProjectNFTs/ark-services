@@ -1,4 +1,4 @@
-name: Deploy Ark Orderbook Api to AWS (Production)
+name: Deploy ArkProject Orderbook Api to AWS (Production)
 
 on:
   workflow_dispatch:

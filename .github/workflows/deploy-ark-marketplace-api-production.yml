@@ -1,4 +1,4 @@
-name: Deploy Marketplace API to AWS (Production)
+name: Deploy ArkProject Marketplace API to AWS (Production)
 
 on:
   workflow_dispatch:
