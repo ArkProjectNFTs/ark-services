@@ -1,5 +1,6 @@
-use crate::models::collection::{CollectionData, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenOneData, TokenPortfolioData};
+use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
+use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData};
+
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
@@ -37,6 +38,13 @@ pub trait DatabaseAccess: Send + Sync {
         collection: &str,
     ) -> Result<(Vec<TokenPortfolioData>, bool, i64), Error>;
 
+    async fn get_token_offers_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<Vec<TokenOfferOneDataDB>, Error>;
+
     async fn get_collections_data(
         &self,
         page: i64,
@@ -57,6 +65,13 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         chain_id: &str,
     ) -> Result<CollectionData, Error>;
+
+    async fn get_collection_floor_price(
+        &self,
+        contract_address: &str,
+        chain_id: &str
+    ) -> Result<CollectionFloorPrice, Error>;
+
 }
 
 #[async_trait]
@@ -346,6 +361,18 @@ impl DatabaseAccess for PgPool {
         Ok(collection_data)
     }
 
+    async fn get_collection_floor_price(
+        &self,
+        contract_address: &str,
+        chain_id: &str
+    ) -> Result<CollectionFloorPrice, Error> {
+        let floor_price_query = "SELECT floor_price AS value FROM contract WHERE contract_address = $1 AND chain_id = $2";
+        let floor_price = sqlx::query_as(
+            &floor_price_query).bind(contract_address).bind(chain_id).fetch_one(self).await?;
+
+        Ok(floor_price)
+    }
+
     async fn get_token_data(
         &self,
         contract_address: &str,
@@ -582,7 +609,37 @@ impl DatabaseAccess for PgPool {
 
         Ok((tokens_data, has_next_page, token_count))
     }
+
+    async fn get_token_offers_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<Vec<TokenOfferOneDataDB>, Error> {
+
+        let token_offers_data = sqlx::query_as!(
+            TokenOfferOneDataDB,
+            "SELECT 
+                token_offer_id AS offer_id,
+                hex_to_decimal(offer_amount) AS amount,
+                offer_maker AS source,
+                end_date AS expire_at,
+                order_hash as hash,
+                currency_address
+            FROM token_offer
+            WHERE token_offer.contract_address = $1
+                AND token_offer.chain_id = $2
+                AND token_offer.token_id = $3
+            ",
+            contract_address, chain_id, token_id
+        )
+        .fetch_all(self)
+        .await?;
+    Ok(token_offers_data)
+    }
 }
+
+
 
 #[cfg(test)]
 pub struct MockDb;

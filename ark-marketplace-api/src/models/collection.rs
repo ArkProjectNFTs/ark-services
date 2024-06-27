@@ -32,3 +32,8 @@ pub struct CollectionPortfolioData {
     pub user_token_count: Option<i64>,
     pub user_listed_tokens: Option<i64>,
 }
+
+#[derive(FromRow)]
+pub struct CollectionFloorPrice {
+    pub value: Option<BigDecimal>
+}

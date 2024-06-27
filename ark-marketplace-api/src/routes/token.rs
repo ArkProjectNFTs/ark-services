@@ -1,4 +1,4 @@
-use crate::handlers::token_handler::{get_token, get_tokens};
+use crate::handlers::token_handler::{get_token, get_tokens, get_token_offers};
 use actix_web::web;
 use sqlx::PgPool;
 
@@ -18,5 +18,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.route(
         "/tokens/{address}/{chain_id}/{token_id}",
         web::get().to(get_token::<PgPool>),
+    );
+
+    cfg.route(
+        "/tokens/{address}/{chain_id}/{token_id}/offers",
+        web::get().to(get_token_offers::<PgPool>),
     );
 }

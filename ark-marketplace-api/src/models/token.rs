@@ -38,3 +38,23 @@ pub struct TokenPortfolioData {
     pub metadata: Option<JsonValue>,
     pub collection_name: Option<String>,
 }
+
+#[derive(FromRow)]
+pub struct TokenOfferOneDataDB {
+    pub offer_id: i32,
+    pub amount: Option<BigDecimal>,
+    pub currency_address: String,
+    pub source: Option<String>,
+    pub expire_at: i64,
+    pub hash: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct TokenOfferOneData {
+    pub offer_id: i32,
+    pub price: Option<BigDecimal>,
+    pub floor_difference: Option<BigDecimal>,
+    pub source: Option<String>,
+    pub expire_at: i64,
+    pub hash: Option<String>,
+}
