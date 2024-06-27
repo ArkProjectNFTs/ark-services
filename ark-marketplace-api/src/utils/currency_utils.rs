@@ -10,7 +10,8 @@ pub fn compute_floor_difference(
         None
     } else {
         let floor_price = floor_price.unwrap();
-        let diff = currency_amount.unwrap() - floor_price.clone();
+        let price = currency_amount.unwrap(); // TODO: handle currency conversion
+        let diff = price - floor_price.clone();
         if floor_price.is_zero() {
             None
         } else {
