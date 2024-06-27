@@ -32,7 +32,7 @@ pub struct TokenPortfolioData {
     pub contract: Option<String>,
     pub token_id: Option<String>,
     pub list_price: Option<BigDecimal>,
-    pub best_offer: Option<BigDecimal>,
+    pub best_offer: Option<i64>,
     pub floor: Option<BigDecimal>,
     pub received_at: Option<i64>,
     pub metadata: Option<JsonValue>,
