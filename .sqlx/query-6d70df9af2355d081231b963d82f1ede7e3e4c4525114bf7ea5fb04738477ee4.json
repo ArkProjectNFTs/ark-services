@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                 contract.contract_address as address,\n                 contract_image AS image,\n                 contract_name AS collection_name,\n                 ( SELECT count(*)\n                    FROM   token t1\n                    WHERE  t1.contract_address = contract.contract_address\n                      AND  t1.chain_id = contract.chain_id\n                      AND  t1.current_owner = token.current_owner\n                 ) as user_token_count,\n                 ( SELECT count(*)\n                     FROM   token t1\n                     WHERE  t1.contract_address = contract.contract_address\n                       AND  t1.chain_id = contract.chain_id\n                       AND  t1.current_owner = token.current_owner\n                       AND  t1.is_listed = true\n                  ) as user_listed_tokens,\n                 contract.floor_price AS floor,\n                 (\n                   SELECT COUNT(*)\n                   FROM token\n                   WHERE token.contract_address = contract.contract_address\n                   AND token.chain_id = contract.chain_id\n                 ) AS token_count\n                FROM\n                 contract\n                 INNER JOIN token ON contract.contract_address = token.contract_address\n                 WHERE token.current_owner = $1\n                 AND   contract.is_verified = true\n           GROUP BY contract.contract_address, contract.chain_id, token.current_owner, token.is_listed\n           LIMIT $2 OFFSET $3\n           ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "address",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 1,
+        "name": "image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "collection_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_token_count",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_listed_tokens",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "floor",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 6,
+        "name": "token_count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      null,
+      null,
+      true,
+      null
+    ]
+  },
+  "hash": "6d70df9af2355d081231b963d82f1ede7e3e4c4525114bf7ea5fb04738477ee4"
+}

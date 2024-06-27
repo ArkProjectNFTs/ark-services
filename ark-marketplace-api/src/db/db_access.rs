@@ -227,7 +227,7 @@ impl DatabaseAccess for PgPool {
                        AND  t1.current_owner = token.current_owner
                        AND  t1.is_listed = true
                   ) as user_listed_tokens,
-                 hex_to_decimal(contract.floor_price) AS floor,
+                 contract.floor_price AS floor,
                  (
                    SELECT COUNT(*)
                    FROM token
@@ -270,10 +270,10 @@ impl DatabaseAccess for PgPool {
                      ELSE contract_image
                  END AS image,
                  contract_name AS collection_name,
-                 hex_to_decimal(contract.floor_price) AS floor,
+                 contract.floor_price AS floor,
                  CAST(0 AS INTEGER) AS floor_7d_percentage,
                  CAST(0 AS INTEGER) AS volume_7d_eth,
-                 hex_to_decimal(contract.top_bid) AS top_offer,
+                 contract.top_bid AS top_offer,
                  (
                      SELECT COUNT(*)
                      FROM token_event
@@ -358,7 +358,7 @@ impl DatabaseAccess for PgPool {
                     SELECT
                         hex_to_decimal(token.listing_start_amount) as price,
                         hex_to_decimal(token.last_price) as last_price,
-                        hex_to_decimal(top_bid_amount) as top_offer,
+                        top_bid_amount as top_offer,
                         token.current_owner as owner,
                         c.contract_name as collection_name,
                         token.metadata as metadata

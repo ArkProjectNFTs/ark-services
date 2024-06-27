@@ -21,6 +21,7 @@ pub struct CollectionData {
     pub total_volume: Option<i64>,
     pub total_sales: Option<i64>,
 }
+
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct CollectionPortfolioData {
     pub address: String,

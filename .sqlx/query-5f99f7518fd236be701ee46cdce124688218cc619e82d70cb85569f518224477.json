@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    SELECT\n                        hex_to_decimal(token.listing_start_amount) as price,\n                        hex_to_decimal(token.last_price) as last_price,\n                        top_bid_amount as top_offer,\n                        token.current_owner as owner,\n                        c.contract_name as collection_name,\n                        token.metadata as metadata\n                    FROM token\n                    INNER JOIN contract as c ON c.contract_address = token.contract_address\n                        AND c.chain_id = token.chain_id\n                    WHERE token.contract_address = $1\n                      AND token.chain_id = $2\n                      AND token.token_id = $3\n                    ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "price",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 1,
+        "name": "last_price",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "top_offer",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "collection_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "5f99f7518fd236be701ee46cdce124688218cc619e82d70cb85569f518224477"
+}

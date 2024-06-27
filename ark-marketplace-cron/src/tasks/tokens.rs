@@ -56,7 +56,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool) {
                     token_offer.contract_address = token.contract_address
                     AND token_offer.chain_id = token.chain_id
                     AND token_offer.token_id = token.token_id
-                    AND offer_amount = (
+                    AND hex_to_decimal(offer_amount) = (
                         SELECT MAX(hex_to_decimal(offer_amount))
                         FROM token_offer
                         WHERE
