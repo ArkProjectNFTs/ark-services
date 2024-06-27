@@ -6,7 +6,6 @@ use num_traits::Num;
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
-use tracing::info;
 use tracing::{error, trace};
 
 use crate::providers::{ProviderError, SqlxCtx};
@@ -420,7 +419,6 @@ impl OrderProvider {
             FROM token
             WHERE listing_orderhash = $1;
         ";
-        info!("okkkk avant");
 
         if let Some((token_id, token_id_hex, contract_address, chain_id, listing_start_amount)) =
             sqlx::query_as::<_, (String, String, String, String, Option<String>)>(query)
@@ -428,8 +426,6 @@ impl OrderProvider {
                 .fetch_optional(&client.pool)
                 .await?
         {
-            info!("okkkk avant 2");
-
             Ok(Some(TokenData {
                 token_id,
                 contract_address,
@@ -438,7 +434,6 @@ impl OrderProvider {
                 listing_start_amount,
             }))
         } else {
-            info!("okkkk");
             Ok(None)
         }
     }
@@ -622,12 +617,15 @@ impl OrderProvider {
             return Err(ProviderError::from("Token does not exist"));
         }
 
+        let token_event_id = format!("{}_{}", &event_data.order_hash, event_data.block_timestamp);
+
         let q = "
-            INSERT INTO token_event (order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         ";
 
         let _r = sqlx::query(q)
+            .bind(&token_event_id)
             .bind(&event_data.order_hash)
             .bind(&event_data.token_id)
             .bind(&event_data.token_id_hex)
@@ -690,7 +688,6 @@ impl OrderProvider {
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
-        info!("Registering placed order {:?}", data);
 
         let token_id = match data.token_id {
             Some(ref token_id_hex) => {
@@ -852,7 +849,6 @@ impl OrderProvider {
         data: &CancelledData,
     ) -> Result<(), ProviderError> {
         trace!("Registering cancelled order {:?}", data);
-        info!("Registering cancelled order {:?}", data);
 
         /* @TODO: maybe we have to check in offer ? */
         if let Some(token_data) =
