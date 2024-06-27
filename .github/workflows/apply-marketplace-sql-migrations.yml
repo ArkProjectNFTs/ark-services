@@ -54,6 +54,7 @@ jobs:
           port=$(echo $secret | jq -r .port)
           dbname=$(echo $secret | jq -r .dbname)
           DATABASE_URL="postgresql://$username:$password@$host:$port/$dbname"
+          echo "::add-mask::$DATABASE_URL"
           echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
