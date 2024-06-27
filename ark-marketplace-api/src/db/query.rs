@@ -53,18 +53,23 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
                 .get_collection_data(contract_address, chain_id)
                 .await?;
 
-            // Cache the data in Redis for future requests
-            let collection_data_string = match serde_json::to_string(&collection_data) {
-                Ok(string) => string,
-                Err(e) => {
-                    tracing::error!("Failed to serialize data to Redis: {}", e);
-                    return Err(sqlx::Error::Configuration(e.into()));
-                }
-            };
-            let _: () = redis_conn
-                .set_ex(&cache_key, collection_data_string, 60 * 60 * 2)
-                .await
-                .unwrap_or(()); // Cache for 2 hours
+            // Spawn a new task to cache the data in Redis for future requests
+            let collection_data_clone = collection_data.clone();
+            let cache_key_clone = cache_key.clone();
+            let mut redis_conn_clone = redis_conn.clone();
+            tokio::spawn(async move {
+                let collection_data_string = match serde_json::to_string(&collection_data_clone) {
+                    Ok(string) => string,
+                    Err(e) => {
+                        tracing::error!("Failed to serialize data to Redis: {}", e);
+                        return;
+                    }
+                };
+                let _: () = redis_conn_clone
+                    .set_ex(&cache_key_clone, collection_data_string, 60 * 60 * 2)
+                    .await
+                    .unwrap_or(()); // Cache for 2 hours
+            });
 
             Ok(collection_data)
         }
@@ -121,18 +126,23 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                 )
                 .await?;
 
-            // Cache the data in Redis for future requests
-            let tokens_data_string = match serde_json::to_string(&tokens_data) {
-                Ok(string) => string,
-                Err(e) => {
-                    tracing::error!("Failed to serialize data to Redis: {}", e);
-                    return Err(sqlx::Error::Configuration(e.into())); // Convert serde_json::Error into sqlx::Error
-                }
-            };
-            let _: () = redis_conn
-                .set_ex(&cache_key, tokens_data_string, 60 * 60 * 2)
-                .await
-                .unwrap_or(()); // Cache for 2 hours
+            // Spawn a new task to cache the data in Redis for future requests
+            let tokens_data_clone = tokens_data.clone();
+            let cache_key_clone = cache_key.clone();
+            let mut redis_conn_clone = redis_conn.clone();
+            tokio::spawn(async move {
+                let tokens_data_string = match serde_json::to_string(&tokens_data_clone) {
+                    Ok(string) => string,
+                    Err(e) => {
+                        tracing::error!("Failed to serialize data to Redis: {}", e);
+                        return;
+                    }
+                };
+                let _: () = redis_conn_clone
+                    .set_ex(&cache_key_clone, tokens_data_string, 60 * 60 * 2)
+                    .await
+                    .unwrap_or(()); // Cache for 2 hours
+            });
 
             Ok(tokens_data)
         }
