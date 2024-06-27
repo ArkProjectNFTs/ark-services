@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
-import { percentageString } from "~/lib/percentageString";
+import { percentageString } from "~/lib/string";
 import { api } from "~/trpc/react";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";

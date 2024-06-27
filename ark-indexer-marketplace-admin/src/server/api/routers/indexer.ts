@@ -1,14 +1,14 @@
 import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
-import { runTask } from "~/lib/awsTasksSpawner";
+import { runTask } from "~/lib/aws";
 import {
   fetchBlocks,
   fetchIndexers,
   fetchLatestBlocks,
-} from "~/lib/fetchBlocks";
-import { fetchLastBlock } from "~/lib/fetchLastBlock";
-import { insertIndexer } from "~/lib/postgres";
+  insertIndexer,
+} from "~/lib/queries/indexer";
+import { fetchLastBlock } from "~/lib/starknet";
 import { type Network } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
