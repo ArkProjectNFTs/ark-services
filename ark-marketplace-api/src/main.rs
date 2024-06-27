@@ -73,8 +73,6 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Could not get the database URL");
 
-    info!("database_url: {}", database_url);
-
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)
         .await
