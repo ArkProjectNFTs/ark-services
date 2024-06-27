@@ -97,13 +97,7 @@ impl DatabaseAccess for PgPool {
                      contract.contract_address as address,
                      contract_image AS image,
                      contract_name AS collection_name,
-                     (
-                         SELECT MIN(listing_start_amount)
-                         FROM token
-                         WHERE token.contract_address = contract.contract_address
-                         AND token.chain_id = contract.chain_id
-                         AND token.is_listed = true
-                     ) AS floor,
+                     hex_to_decimal(contract.floor_price) AS floor,
                      CAST(0 AS INTEGER) AS floor_7d_percentage,
                      CAST(0 AS INTEGER) AS volume_7d_eth,
                      (
@@ -233,13 +227,7 @@ impl DatabaseAccess for PgPool {
                        AND  t1.current_owner = token.current_owner
                        AND  t1.is_listed = true
                   ) as user_listed_tokens,
-                 (
-                     SELECT COALESCE(MIN(hex_to_decimal(listing_start_amount)), 0)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.is_listed = true
-                 ) AS floor,
+                 hex_to_decimal(contract.floor_price) AS floor,
                  (
                    SELECT COUNT(*)
                    FROM token
@@ -282,21 +270,10 @@ impl DatabaseAccess for PgPool {
                      ELSE contract_image
                  END AS image,
                  contract_name AS collection_name,
-                 (
-                     SELECT COALESCE(MIN(hex_to_decimal(listing_start_amount)), 0)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.is_listed = true
-                 ) AS floor,
+                 hex_to_decimal(contract.floor_price) AS floor,
                  CAST(0 AS INTEGER) AS floor_7d_percentage,
                  CAST(0 AS INTEGER) AS volume_7d_eth,
-                 (
-                     SELECT COALESCE(MAX(CAST(offer_amount AS BIGINT)), 0)
-                     FROM token_offer
-                     WHERE token_offer.contract_address = contract.contract_address
-                     AND token_offer.chain_id = contract.chain_id
-                 ) AS top_offer,
+                 hex_to_decimal(contract.top_bid) AS top_offer,
                  (
                      SELECT COUNT(*)
                      FROM token_event
@@ -376,19 +353,12 @@ impl DatabaseAccess for PgPool {
         token_id: &str,
     ) -> Result<TokenOneData, Error> {
         let token_data: TokenOneData = sqlx::query_as!(
-                        TokenOneData,
-                "
+            TokenOneData,
+            "
                     SELECT
                         hex_to_decimal(token.listing_start_amount) as price,
                         hex_to_decimal(token.last_price) as last_price,
-                        (
-                            SELECT MAX(hex_to_decimal(offer_amount))
-                            FROM token_offer
-                            WHERE token_offer.token_id = token.token_id
-                            AND (
-                                EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token_offer.start_date AND token_offer.end_date
-                            )
-                        ) as top_offer,
+                        hex_to_decimal(top_bid_amount) as top_offer,
                         token.current_owner as owner,
                         c.contract_name as collection_name,
                         token.metadata as metadata
@@ -399,12 +369,12 @@ impl DatabaseAccess for PgPool {
                       AND token.chain_id = $2
                       AND token.token_id = $3
                     ",
-                contract_address,
-                chain_id,
-                token_id
-            )
-            .fetch_one(self)
-            .await?;
+            contract_address,
+            chain_id,
+            token_id
+        )
+        .fetch_one(self)
+        .await?;
 
         Ok(token_data)
     }
@@ -476,6 +446,7 @@ impl DatabaseAccess for PgPool {
                     token.is_listed = true
               )
               ORDER BY
+              CASE WHEN token.is_listed = true THEN 1 ELSE 2 END,
               CASE
                   WHEN $6 = 'price' THEN
                       CASE WHEN $7 = 'asc' THEN token.listing_start_amount
@@ -568,19 +539,8 @@ impl DatabaseAccess for PgPool {
                 token.contract_address as contract,
                 token.token_id,
                 hex_to_decimal(token.listing_start_amount) as list_price,
-                (
-                    SELECT MAX(hex_to_decimal(offer_amount))
-                    FROM token_offer
-                    WHERE token_offer.token_id = token.token_id
-                    AND (
-                        EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN token_offer.start_date AND token_offer.end_date
-                    )
-                ) as best_offer,
-                (
-                    SELECT MIN(hex_to_decimal(listing_start_amount))
-                    FROM token
-                    WHERE token.contract_address = $3
-                ) as floor,
+                hex_to_decimal(top_bid_amount) as best_offer,
+                hex_to_decimal(c.floor_price) as floor,
                 token.held_timestamp as received_at,
                 token.metadata as metadata,
                 c.contract_name as collection_name

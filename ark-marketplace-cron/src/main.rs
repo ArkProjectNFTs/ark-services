@@ -5,7 +5,8 @@ use anyhow::Result;
 use aws_config::BehaviorVersion;
 use redis::aio::MultiplexedConnection;
 use redis::Client;
-use tasks::tokens::{cache_collection_pages, update_listed_tokens};
+use tasks::collections::{update_collections_floor, update_top_bid_collections};
+use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 
@@ -57,6 +58,9 @@ async fn main() -> std::io::Result<()> {
     }
     // @todo when adding new calculation add spawn & try_join!
     update_listed_tokens(&db_pool).await;
+    update_top_bid_tokens(&db_pool).await;
+    update_top_bid_collections(&db_pool).await;
+    update_collections_floor(&db_pool).await;
     Ok(())
 }
 

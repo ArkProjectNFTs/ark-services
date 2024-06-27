@@ -10,7 +10,7 @@ pub struct CollectionData {
     pub floor: Option<BigDecimal>,
     pub floor_7d_percentage: Option<i32>,
     pub volume_7d_eth: Option<i32>,
-    pub top_offer: Option<i64>,
+    pub top_offer: Option<BigDecimal>,
     pub sales_7d: Option<i64>,
     pub marketcap: Option<i32>,
     pub listed_items: Option<i64>,
