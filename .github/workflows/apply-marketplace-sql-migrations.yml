@@ -42,11 +42,7 @@ jobs:
       - name: Retrieve DATABASE_URL from Secrets Manager
         id: get_secret
         run: |
-          if [ "${{ matrix.environment }}" == "mainnet" ]; then
-            secret_id="prod/ark-db-credentials"
-          else
-            secret_id="prod/testnet/ark-db-credentials"
-          fi
+          secret_id="prod/ark-db-credentials"
           secret=$(aws secretsmanager get-secret-value --secret-id $secret_id --query SecretString --output text)
           username=$(echo $secret | jq -r .username)
           password=$(echo $secret | jq -r .password)
