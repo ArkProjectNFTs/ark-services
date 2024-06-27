@@ -35,5 +35,5 @@ pub struct CollectionPortfolioData {
 
 #[derive(FromRow)]
 pub struct CollectionFloorPrice {
-    pub value: Option<BigDecimal>
+    pub value: Option<BigDecimal>,
 }

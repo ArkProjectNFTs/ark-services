@@ -1,7 +1,11 @@
 use bigdecimal::BigDecimal;
 use bigdecimal::Zero;
 
-pub fn compute_floor_difference(currency_amount: Option<BigDecimal>, _currency_address: String, floor_price: Option<BigDecimal>) -> Option<BigDecimal> {
+pub fn compute_floor_difference(
+    currency_amount: Option<BigDecimal>,
+    _currency_address: String,
+    floor_price: Option<BigDecimal>,
+) -> Option<BigDecimal> {
     if currency_amount.is_none() || floor_price.is_none() {
         None
     } else {

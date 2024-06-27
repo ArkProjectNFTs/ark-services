@@ -69,9 +69,8 @@ pub trait DatabaseAccess: Send + Sync {
     async fn get_collection_floor_price(
         &self,
         contract_address: &str,
-        chain_id: &str
+        chain_id: &str,
     ) -> Result<CollectionFloorPrice, Error>;
-
 }
 
 #[async_trait]
@@ -364,11 +363,14 @@ impl DatabaseAccess for PgPool {
     async fn get_collection_floor_price(
         &self,
         contract_address: &str,
-        chain_id: &str
+        chain_id: &str,
     ) -> Result<CollectionFloorPrice, Error> {
         let floor_price_query = "SELECT floor_price AS value FROM contract WHERE contract_address = $1 AND chain_id = $2";
-        let floor_price = sqlx::query_as(
-            &floor_price_query).bind(contract_address).bind(chain_id).fetch_one(self).await?;
+        let floor_price = sqlx::query_as(floor_price_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .fetch_one(self)
+            .await?;
 
         Ok(floor_price)
     }
@@ -616,7 +618,6 @@ impl DatabaseAccess for PgPool {
         chain_id: &str,
         token_id: &str,
     ) -> Result<Vec<TokenOfferOneDataDB>, Error> {
-
         let token_offers_data = sqlx::query_as!(
             TokenOfferOneDataDB,
             "SELECT 
@@ -631,15 +632,15 @@ impl DatabaseAccess for PgPool {
                 AND token_offer.chain_id = $2
                 AND token_offer.token_id = $3
             ",
-            contract_address, chain_id, token_id
+            contract_address,
+            chain_id,
+            token_id
         )
         .fetch_all(self)
         .await?;
-    Ok(token_offers_data)
+        Ok(token_offers_data)
     }
 }
-
-
 
 #[cfg(test)]
 pub struct MockDb;

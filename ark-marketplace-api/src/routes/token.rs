@@ -1,4 +1,4 @@
-use crate::handlers::token_handler::{get_token, get_tokens, get_token_offers};
+use crate::handlers::token_handler::{get_token, get_token_offers, get_tokens};
 use actix_web::web;
 use sqlx::PgPool;
 

@@ -79,9 +79,11 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
 pub async fn get_collection_floor_price<D: DatabaseAccess + Sync>(
     db_access: &D,
     contract_address: &str,
-    chain_id: &str
+    chain_id: &str,
 ) -> Result<CollectionFloorPrice, sqlx::Error> {
-    db_access.get_collection_floor_price(contract_address, chain_id).await
+    db_access
+        .get_collection_floor_price(contract_address, chain_id)
+        .await
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -197,7 +199,9 @@ pub async fn get_token_offers_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     contract_address: &str,
     chain_id: &str,
-    token_id: &str
+    token_id: &str,
 ) -> Result<Vec<TokenOfferOneDataDB>, sqlx::Error> {
-    db_access.get_token_offers_data(contract_address, chain_id, token_id).await
+    db_access
+        .get_token_offers_data(contract_address, chain_id, token_id)
+        .await
 }
