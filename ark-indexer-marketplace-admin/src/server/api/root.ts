@@ -1,4 +1,6 @@
+import { contractRouter } from "~/server/api/routers/contract";
 import { indexerRouter } from "~/server/api/routers/indexer";
+import { mediaRouter } from "~/server/api/routers/media";
 import { createTRPCRouter } from "~/server/api/trpc";
 
 /**
@@ -8,6 +10,8 @@ import { createTRPCRouter } from "~/server/api/trpc";
  */
 export const appRouter = createTRPCRouter({
   indexer: indexerRouter,
+  contract: contractRouter,
+  media: mediaRouter,
 });
 
 // export type definition of API
