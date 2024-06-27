@@ -26,16 +26,32 @@ export default async function CollectionPage({
       <div className="flex h-screen items-center justify-center">
         <Card>
           <CardHeader>
-            <CardTitle>Edit Collection</CardTitle>
-            <CardDescription>
-              <Link
-                className="hover:underline"
-                target="_blank"
-                href={`https://market.arkproject.dev/collection/${params.address}`}
-              >
-                View Marketplace Collection
-              </Link>
-            </CardDescription>
+            <div className="flex items-center">
+              <div>
+                <CardTitle>Edit Collection</CardTitle>
+                <CardDescription>Edit the collection details.</CardDescription>
+              </div>
+              <div className="ml-auto gap-2 text-xs text-foreground">
+                <div>
+                  <Link
+                    className="hover:underline"
+                    target="_blank"
+                    href={`https://market.arkproject.dev/collection/${params.address}`}
+                  >
+                    Ark Market
+                  </Link>
+                </div>
+                <div>
+                  <Link
+                    className="hover:underline"
+                    target="_blank"
+                    href={`https://starkscan.co/nft-contract/${params.address}#items`}
+                  >
+                    Starkscan
+                  </Link>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <EditCollectionForm contract={contract} />

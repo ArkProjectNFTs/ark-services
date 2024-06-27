@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   fetchContract,
+  fetchRefreshingContracts,
   searchContracts,
   updateContract,
 } from "~/lib/queries/contract";
@@ -21,6 +22,14 @@ export const contractRouter = createTRPCRouter({
         input.contractName,
         "0x534e5f4d41494e",
       );
+
+      return contracts;
+    }),
+
+  getRefreshingContracts: protectedProcedure
+    .input(z.object({}))
+    .query(async () => {
+      const contracts = await fetchRefreshingContracts("0x534e5f4d41494e");
 
       return contracts;
     }),
