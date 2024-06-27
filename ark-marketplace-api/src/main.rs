@@ -9,7 +9,6 @@ use sqlx::postgres::PgPoolOptions;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 
