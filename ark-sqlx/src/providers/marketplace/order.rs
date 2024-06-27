@@ -779,8 +779,9 @@ impl OrderProvider {
                     listing_currency_chain_id,
                     block_timestamp,
                     status,
-                    is_listed)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                    is_listed,
+                    listing_type)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
                 ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 token_id_hex = EXCLUDED.token_id_hex,
@@ -793,6 +794,7 @@ impl OrderProvider {
                 listing_orderhash = EXCLUDED.listing_orderhash,
                 status = EXCLUDED.status,
                 updated_timestamp = EXCLUDED.updated_timestamp,
+                listing_type = EXCLUDED.listing_type,
                 is_listed = EXCLUDED.is_listed;
             ";
 
@@ -817,6 +819,7 @@ impl OrderProvider {
                 .bind(block_timestamp as i64)
                 .bind(OrderStatus::Placed.to_string())
                 .bind(is_listed)
+                .bind(event_type.to_string())
                 .execute(&client.pool)
                 .await?;
         }
