@@ -386,10 +386,10 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        sort: &str,
-        direction: &str,
+        _sort: &str,
+        _direction: &str,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
-        let total_token_count = sqlx::query!(
+        /*let total_token_count = sqlx::query!(
             "
                 SELECT COUNT(*)
                 FROM token
@@ -400,11 +400,12 @@ impl DatabaseAccess for PgPool {
             chain_id
         )
         .fetch_one(self)
-        .await?;
+        .await?;*/
 
-        let token_count = total_token_count.count.unwrap_or(0);
+        //let token_count = total_token_count.count.unwrap_or(0);
+        let token_count = 0;
 
-        let total_count = sqlx::query!(
+        /*let total_count = sqlx::query!(
             "
                 SELECT COUNT(*)
                 FROM token
@@ -420,9 +421,10 @@ impl DatabaseAccess for PgPool {
             buy_now
         )
         .fetch_one(self)
-        .await?;
+        .await?;*/
 
-        let count = total_count.count.unwrap_or(0);
+        //let count = total_count.count.unwrap_or(0);
+        let count = 0;
 
         let tokens_data: Vec<TokenData> = sqlx::query_as!(
             TokenData,
@@ -446,21 +448,8 @@ impl DatabaseAccess for PgPool {
                     token.is_listed = true
               )
               ORDER BY
-              CASE WHEN token.is_listed = true THEN 1 ELSE 2 END,
-              CASE
-                  WHEN $6 = 'price' THEN
-                      CASE WHEN $7 = 'asc' THEN token.listing_start_amount
-                           ELSE NULL
-                      END
-                  ELSE NULL
-              END ASC,
-              CASE
-                  WHEN $6 = 'price' THEN
-                      CASE WHEN $7 = 'desc' THEN token.listing_start_amount
-                           ELSE NULL
-                      END
-                  ELSE NULL
-              END DESC,
+              token.is_listed desc,
+              token.listing_start_amount,
               CAST(token.token_id AS NUMERIC)
            LIMIT $1 OFFSET $2",
             items_per_page,
@@ -468,8 +457,8 @@ impl DatabaseAccess for PgPool {
             contract_address,
             chain_id,
             buy_now,
-            sort,
-            direction,
+            //sort,
+            //direction,
         )
         .fetch_all(self)
         .await?;

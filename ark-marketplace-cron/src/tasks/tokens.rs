@@ -131,9 +131,9 @@ pub async fn cache_collection_pages(
                    WHERE token.contract_address = $3
                      AND token.chain_id = $4
                    ORDER BY
-                       CASE WHEN token.is_listed = true THEN 1 ELSE 2 END,
+                       token.is_listed desc,
                        token.listing_start_amount ASC,
-                   CAST(token.token_id AS NUMERIC)
+                       CAST(token.token_id AS NUMERIC)
                LIMIT $1 OFFSET $2",
                 ITEMS_PER_PAGE,
                 (page - 1) * ITEMS_PER_PAGE,
