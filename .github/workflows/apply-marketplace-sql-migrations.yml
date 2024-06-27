@@ -19,7 +19,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet & Testnet databases..."
+                  "content": "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [mainnet, testnet]
+        environment: [mainnet]
     name: Run SQL Migrations on ${{ matrix.environment }}
     steps:
       - name: Checkout Repository
@@ -42,11 +42,7 @@ jobs:
       - name: Retrieve DATABASE_URL from Secrets Manager
         id: get_secret
         run: |
-          if [ "${{ matrix.environment }}" == "mainnet" ]; then
-            secret_id="prod/ark-db-credentials"
-          else
-            secret_id="prod/testnet/ark-db-credentials"
-          fi
+          secret_id="prod/ark-db-credentials"
           secret=$(aws secretsmanager get-secret-value --secret-id $secret_id --query SecretString --output text)
           username=$(echo $secret | jq -r .username)
           password=$(echo $secret | jq -r .password)
