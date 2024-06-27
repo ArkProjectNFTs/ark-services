@@ -97,9 +97,6 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
-          DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
-          DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
-          VPC_ID: ${{ secrets.VPC_ID }}
 
       - name: Deploy Orderbook API
         run: |
@@ -114,7 +111,3 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
           VPC_ID: ${{ secrets.VPC_ID }}
-          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
-          API_USER: ${{ secrets.API_USER }}
-          API_PASSWORD: ${{ secrets.API_PASSWORD }}
-

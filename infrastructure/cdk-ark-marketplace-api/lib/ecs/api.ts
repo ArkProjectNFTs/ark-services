@@ -100,17 +100,14 @@ function deployApiServices(
     environment: {
       RUST_LOG: "INFO",
       AWS_SECRET_NAME: isProductionEnvironment
-        ? "prod/ark-db-credentials"
-        : "staging/ark-db-credentials",
+        ? "prod/ark-db-credentials-read"
+        : "staging/ark-db-credentials-read",
       REDIS_URL:
         process.env.REDIS_URL || "defaultUrl",
       REDIS_USERNAME:
         process.env.REDIS_USERNAME || "defaultRedisUsername",
       REDIS_PASSWORD:
         process.env.REDIS_PASSWORD || "defaultRedisPassword",
-      // DATABASE_URL: process.env.DATABASE_URL || "defaultUrl",
-      // API_USER: process.env.API_USER || "",
-      // API_PASSWORD: process.env.API_PASSWORD || "",
     },
   });
 
