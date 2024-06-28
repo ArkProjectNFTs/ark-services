@@ -16,6 +16,7 @@ pub struct QueryParameters {
     sort: Option<String>,
     direction: Option<String>,
     collection: Option<String>,
+    disable_cache: Option<String>,
 }
 
 fn extract_query_params(
@@ -42,6 +43,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
     let direction = query_parameters.direction.as_deref().unwrap_or("desc");
+    let disable_cache = query_parameters.disable_cache.as_deref() == Some("true");
 
     let db_access = db_pool.get_ref();
     let mut redis_con_ref = redis_con.get_ref().lock().await;
@@ -55,6 +57,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         buy_now,
         sort,
         direction,
+        disable_cache,
     )
     .await
     {

@@ -87,6 +87,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     buy_now: bool,
     sort: &str,
     direction: &str,
+    disable_cache: bool,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
     // Generate a unique key for this query based on buy_now value
     let cache_key = if buy_now {
@@ -101,9 +102,9 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     // Try to get the data from Redis
     let cached_data: Option<String> = redis_conn.get(&cache_key).await.unwrap_or(None);
 
-    match cached_data {
-        Some(data) => {
-            // If the data is in the cache, deserialize it and return it
+    match (cached_data, disable_cache) {
+        (Some(data), false) => {
+            // If the data is in the cache and caching is not disabled, deserialize it and return it
             match serde_json::from_str::<(Vec<TokenData>, bool, i64)>(&data) {
                 Ok(tokens_data) => Ok(tokens_data),
                 Err(e) => {
@@ -112,8 +113,8 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                 }
             }
         }
-        None => {
-            // If the data is not in the cache, get it from the database
+        _ => {
+            // If the data is not in the cache or caching is disabled, get it from the database
             let tokens_data = db_access
                 .get_tokens_data(
                     contract_address,
@@ -127,22 +128,24 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                 .await?;
 
             // Spawn a new task to cache the data in Redis for future requests
-            let tokens_data_clone = tokens_data.clone();
-            let cache_key_clone = cache_key.clone();
-            let mut redis_conn_clone = redis_conn.clone();
-            tokio::spawn(async move {
-                let tokens_data_string = match serde_json::to_string(&tokens_data_clone) {
-                    Ok(string) => string,
-                    Err(e) => {
-                        tracing::error!("Failed to serialize data to Redis: {}", e);
-                        return;
-                    }
-                };
-                let _: () = redis_conn_clone
-                    .set_ex(&cache_key_clone, tokens_data_string, 60 * 60 * 2)
-                    .await
-                    .unwrap_or(()); // Cache for 2 hours
-            });
+            if !disable_cache {
+                let tokens_data_clone = tokens_data.clone();
+                let cache_key_clone = cache_key.clone();
+                let mut redis_conn_clone = redis_conn.clone();
+                tokio::spawn(async move {
+                    let tokens_data_string = match serde_json::to_string(&tokens_data_clone) {
+                        Ok(string) => string,
+                        Err(e) => {
+                            tracing::error!("Failed to serialize data to Redis: {}", e);
+                            return;
+                        }
+                    };
+                    let _: () = redis_conn_clone
+                        .set_ex(&cache_key_clone, tokens_data_string, 60 * 60 * 2)
+                        .await
+                        .unwrap_or(()); // Cache for 2 hours
+                });
+            }
 
             Ok(tokens_data)
         }
