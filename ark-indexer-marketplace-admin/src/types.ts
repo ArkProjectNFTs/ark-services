@@ -34,10 +34,5 @@ export type RefreshingContract = {
   contract_name?: string;
   contract_symbol?: string;
   contract_image?: string;
-  metadata_ok: boolean;
-  is_spam: boolean;
-  is_nsfw: boolean;
-  deployed_timestamp?: number;
-  is_verified: boolean;
-  save_images: boolean;
+  token_count: number;
 };

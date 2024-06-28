@@ -3,13 +3,34 @@ import { pool } from "../postgres";
 
 export async function fetchRefreshingContracts(chainId: string) {
   const res = await pool.query<RefreshingContract>(
-    `SELECT c.contract_address, c.chain_id, c.updated_timestamp, c.contract_type, c.contract_name, c.contract_symbol, c.contract_image, c.metadata_ok, c.is_spam, c.is_nsfw, c.deployed_timestamp, c.is_verified, c.save_images, COUNT(t.*) AS token_count
-     FROM contract c
-     INNER JOIN token AS t ON c.contract_address = t.contract_address AND c.chain_id = t.chain_id
-     WHERE c.chain_id = $1
-     AND c.is_spam = false
-     AND c.contract_name IS NOT NULL
-     LIMIT 20`,
+    `SELECT 
+    c.contract_address, 
+    c.chain_id, 
+    c.updated_timestamp, 
+    c.contract_type, 
+    c.contract_name, 
+    c.contract_symbol, 
+    c.contract_image, 
+    COUNT(t.token_id) AS token_count
+    FROM 
+        contract AS c
+    INNER JOIN 
+        token AS t 
+        ON c.contract_address = t.contract_address 
+        AND c.chain_id = t.chain_id
+    WHERE 
+        c.is_spam = false
+        AND c.contract_name IS NOT NULL
+        AND c.chain_id = $1
+    GROUP BY 
+    c.contract_address, 
+    c.chain_id, 
+    c.updated_timestamp, 
+    c.contract_type, 
+    c.contract_name, 
+    c.contract_symbol, 
+    c.contract_image
+    LIMIT 20`,
     [chainId],
   );
 
