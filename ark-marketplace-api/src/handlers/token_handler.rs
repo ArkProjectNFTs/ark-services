@@ -67,10 +67,10 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         Ok((ref collection_data, _, _)) if collection_data.is_empty() => {
             HttpResponse::NotFound().body("data not found")
         }
-        Ok((collection_data, has_next_page, token_count)) => HttpResponse::Ok().json(json!({
+        Ok((collection_data, _has_next_page, token_count)) => HttpResponse::Ok().json(json!({
             "data": collection_data,
             "token_count": token_count,
-            "next_page": if has_next_page { Some(page + 1) } else { None }
+            "next_page": /*if has_next_page { Some(page + 1) } else { None }*/ page + 1
         })),
         Err(err) => {
             tracing::error!("error query get_tokens_data: {}", err);
