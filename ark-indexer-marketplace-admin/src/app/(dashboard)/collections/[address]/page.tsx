@@ -6,6 +6,7 @@ import EditCollectionForm from "~/components/dashboard/EditCollectionForm";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { api } from "~/trpc/server";
+import FlushCacheButton from "./components/flush-cache-button";
 
 export default async function CollectionPage({
   params,
@@ -47,6 +48,10 @@ export default async function CollectionPage({
             <RotateCcw className="mr-2 h-4 w-4" />
             Refresh Metadata
           </Button>
+
+          {contract?.contract_address && (
+            <FlushCacheButton contractAddress={contract.contract_address} />
+          )}
         </nav>
       </div>
 

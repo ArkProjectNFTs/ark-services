@@ -29,7 +29,7 @@ const editCollectionFormSchema = z.object({
   isSpam: z.boolean(),
   isNSFW: z.boolean(),
   isVerified: z.boolean(),
-  image: z.string().optional(),
+  image: z.string().nullable(),
 });
 
 type EditCollectionFormValues = z.infer<typeof editCollectionFormSchema>;
@@ -79,30 +79,39 @@ export default function CollectionForm(props: { contract?: Contract }) {
       },
     );
 
+  console.log("=> avatarPresignedUri", avatarPresignedUri);
+
   const { mutateAsync, isLoading } = api.contract.updateContract.useMutation(
     {},
   );
 
+  async function onSubmit(data: EditCollectionFormValues) {
+    if (props.contract?.contract_address) {
+      if (file && avatarPresignedUri) {
+        await uploadFileToS3(file, avatarPresignedUri);
+      }
+
+      const data = form.getValues();
+      await mutateAsync({
+        contractAddress: props.contract.contract_address,
+        image: avatarMediaKey
+          ? `https://media.arkproject.dev/${avatarMediaKey}`
+          : undefined,
+        isNSFW: data.isNSFW,
+        isSpam: data.isSpam,
+        isVerified: data.isVerified,
+        name: data.name,
+        saveImages: data.saveImages,
+        symbol: data.symbol,
+      });
+    }
+  }
+
+  console.log(form.formState.errors);
+
   return (
     <Form {...form}>
-      <form
-        // onSubmit={async () => {
-        //   if (file && avatarPresignedUri) {
-        //     try {
-        //       await uploadFileToS3(file, avatarPresignedUri);
-        //       form.setValue(
-        //         "image",
-        //         `https://media.arkproject.dev/${avatarMediaKey}`,
-        //       );
-        //     } catch {}
-
-        //     console.log("File uploaded to S3");
-        //   }
-
-        //   return form.handleSubmit(onSubmit);
-        // }}
-        className="space-y-8"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {props.contract?.contract_image && (
           <div>
             <img
@@ -256,28 +265,28 @@ export default function CollectionForm(props: { contract?: Contract }) {
 
         <div>
           <Button
-            type="button"
-            onClick={async () => {
-              if (props.contract?.contract_address) {
-                if (file && avatarPresignedUri) {
-                  await uploadFileToS3(file, avatarPresignedUri);
-                }
+            type="submit"
+            // onClick={async () => {
+            //   if (props.contract?.contract_address) {
+            //     if (file && avatarPresignedUri) {
+            //       await uploadFileToS3(file, avatarPresignedUri);
+            //     }
 
-                const data = form.getValues();
-                await mutateAsync({
-                  contractAddress: props.contract.contract_address,
-                  image: avatarMediaKey
-                    ? `https://media.arkproject.dev/${avatarMediaKey}`
-                    : undefined,
-                  isNSFW: data.isNSFW,
-                  isSpam: data.isSpam,
-                  isVerified: data.isVerified,
-                  name: data.name,
-                  saveImages: data.saveImages,
-                  symbol: data.symbol,
-                });
-              }
-            }}
+            //     const data = form.getValues();
+            //     await mutateAsync({
+            //       contractAddress: props.contract.contract_address,
+            //       image: avatarMediaKey
+            //         ? `https://media.arkproject.dev/${avatarMediaKey}`
+            //         : undefined,
+            //       isNSFW: data.isNSFW,
+            //       isSpam: data.isSpam,
+            //       isVerified: data.isVerified,
+            //       name: data.name,
+            //       saveImages: data.saveImages,
+            //       symbol: data.symbol,
+            //     });
+            //   }
+            // }}
           >
             Update Collection
           </Button>

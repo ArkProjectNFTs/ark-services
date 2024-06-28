@@ -19,27 +19,26 @@ export default async function CollectionSearch({
           Explore the contracts that match your search query.
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
         {contracts.map((contract) => (
-          <div
-            key={contract.contract_address}
-            className="group overflow-hidden rounded-lg bg-background shadow-lg"
-          >
+          <div key={contract.contract_address} className="space-y-3">
             <Link
               href={`/collections/${contract.contract_address}`}
-              className="relative block"
+              className="relative block overflow-hidden rounded-md"
               prefetch={false}
             >
               {contract.contract_image ? (
-                <img
-                  src={contract.contract_image}
-                  alt={contract.contract_name ?? ""}
-                  width={400}
-                  height={300}
-                  className="h-60 w-full object-cover transition-opacity group-hover:opacity-80"
-                />
+                <div>
+                  <img
+                    src={contract.contract_image}
+                    alt={contract.contract_name ?? ""}
+                    width={400}
+                    height={300}
+                    className="aspect-square h-auto w-auto object-cover transition-all hover:scale-105"
+                  />
+                </div>
               ) : (
-                <div className="h-60 w-full object-cover transition-opacity group-hover:opacity-80" />
+                <div className="h-[202px] w-full object-cover transition-opacity group-hover:opacity-80" />
               )}
 
               <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/70 to-transparent p-4">
@@ -47,8 +46,8 @@ export default async function CollectionSearch({
                   <h3 className="text-lg font-semibold text-white">
                     {contract.contract_name}
                   </h3>
-                  <p className="text-sm text-white/80">
-                    {contract.contract_address}
+                  <p className="w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-white/80">
+                    {/* {contract.contract_address} */}
                   </p>
                   <div className="mt-2">
                     {contract.is_spam && (
@@ -76,22 +75,3 @@ export default async function CollectionSearch({
     </div>
   );
 }
-
-//     <div className="flex w-full space-x-4 pb-4">
-//       {contracts.map((contract) => (
-//         <div className="space-y-3" key={contract.contract_address}>
-//           <div>
-//             {contract.contract_image && (
-//               <img
-//                 alt={contract.contract_name ?? ""}
-//                 src={contract.contract_image}
-//                 className="h-auto w-auto object-cover transition-all hover:scale-105"
-//               />
-//             )}
-//           </div>
-//           {contract.contract_name}
-//         </div>
-//       ))}
-//     </div>
-//   );
-// }

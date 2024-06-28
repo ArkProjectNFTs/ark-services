@@ -6,9 +6,20 @@ import {
   searchContracts,
   updateContract,
 } from "~/lib/queries/contract";
+import { clearListedTokensCache } from "~/lib/redis";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const contractRouter = createTRPCRouter({
+  flushCache: protectedProcedure
+    .input(
+      z.object({
+        contractAddress: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await clearListedTokensCache(input.contractAddress);
+    }),
+
   searchContracts: protectedProcedure
     .input(
       z.object({
