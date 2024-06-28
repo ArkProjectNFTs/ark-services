@@ -523,8 +523,8 @@ impl DatabaseAccess for PgPool {
                 token.contract_address as contract,
                 token.token_id,
                 hex_to_decimal(token.listing_start_amount) as list_price,
-                hex_to_decimal(top_bid_amount) as best_offer,
-                hex_to_decimal(c.floor_price) as floor,
+                top_bid_amount as best_offer,
+                c.floor_price as floor,
                 token.held_timestamp as received_at,
                 token.metadata as metadata,
                 c.contract_name as collection_name
