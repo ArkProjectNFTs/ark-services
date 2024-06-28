@@ -435,9 +435,6 @@ impl DatabaseAccess for PgPool {
                    hex_to_decimal(token.last_price) as last_price,
                    CAST(0 as INTEGER) as floor_difference,
                    token.listing_timestamp as listed_at,
-                   token.current_owner as owner,
-                   token.block_timestamp as minted_at,
-                   token.updated_timestamp as updated_at,
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata
                FROM token
@@ -447,9 +444,7 @@ impl DatabaseAccess for PgPool {
                   $5 = false OR
                     token.is_listed = true
               )
-              ORDER BY
-              token.is_listed desc,
-              token.listing_start_amount,
+              ORDER BY token.listing_start_amount NULLS LAST,
               CAST(token.token_id AS NUMERIC)
            LIMIT $1 OFFSET $2",
             items_per_page,
