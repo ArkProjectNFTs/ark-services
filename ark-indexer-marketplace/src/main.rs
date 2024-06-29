@@ -1,11 +1,12 @@
 mod sana_observer;
 use anyhow::Result;
 use arkproject::{
-    sana::storage::sqlx::MarketplaceSqlxStorage,
+    sana::storage::sqlx::PostgresStorage,
     sana::{Sana, SanaConfig},
     starknet::client::{StarknetClient, StarknetClientHttp},
 };
 use aws_config::BehaviorVersion;
+use chrono::Utc;
 use dotenv::dotenv;
 use regex::Regex;
 use sana_observer::SanaObserver;
@@ -63,7 +64,7 @@ async fn main() -> Result<()> {
     let rpc_url_converted = Url::parse(&rpc_url).unwrap();
 
     let indexer_version = env::var("INDEXER_VERSION").expect("INDEXER_VERSION must be set");
-    let indexer_identifier = get_task_id();
+    let indexer_identifier = get_indexer_identifier();
     let db_url = get_database_url().await?;
     let chain_id = env::var("CHAIN_ID").expect("CHAIN_ID must be set");
     let force_mode = std::env::var("FORCE_MODE").map_or(false, |val| val == "true");
@@ -74,13 +75,13 @@ async fn main() -> Result<()> {
         indexer_version, indexer_identifier, force_mode
     );
 
-    let storage = Arc::new(MarketplaceSqlxStorage::new_any(&db_url).await?);
-
+    let storage = Arc::new(PostgresStorage::new(&db_url).await?);
     let starknet_client = Arc::new(StarknetClientHttp::new(rpc_url.as_str())?);
 
     let sana_observer = Arc::new(SanaObserver::new(
-        indexer_version.clone(),
+        storage.clone(),
         indexer_identifier.clone(),
+        indexer_version.clone(),
     ));
 
     let provider = Arc::new(AnyProvider::JsonRpcHttp(JsonRpcClient::new(
@@ -232,7 +233,7 @@ async fn main() -> Result<()> {
     }
 }
 
-fn get_task_id() -> String {
+fn get_indexer_identifier() -> String {
     match env::var("ECS_CONTAINER_METADATA_URI") {
         Ok(container_metadata_uri) => {
             let pattern = Regex::new(r"/v3/([a-f0-9]{32})-").unwrap();
@@ -243,7 +244,14 @@ fn get_task_id() -> String {
 
             task_id.to_string()
         }
-        Err(_) => String::from("LATEST"),
+        Err(_) => match env::var("INDEXER_IDENTIFIER") {
+            Ok(identifier) => {
+                let timestamp = Utc::now().timestamp();
+                format!("{identifier}-{timestamp}")
+            }
+
+            Err(_) => String::from("LATEST"),
+        },
     }
 }
 

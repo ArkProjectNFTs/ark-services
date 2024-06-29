@@ -1,14 +1,20 @@
+use std::sync::Arc;
+
 use arkproject::sana::{
     event_handler::EventHandler,
-    storage::types::{TokenEvent, TokenInfo},
+    storage::{
+        types::{TokenEvent, TokenInfo},
+        PostgresStorage,
+    },
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
 pub struct SanaObserver {
-    pub _indexer_version: String,
-    pub _indexer_identifier: String,
+    pub storage: Arc<PostgresStorage>,
+    pub indexer_identifier: String,
+    pub indexer_version: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -18,10 +24,15 @@ struct BlockRange {
 }
 
 impl SanaObserver {
-    pub fn new(indexer_version: String, indexer_identifier: String) -> Self {
+    pub fn new(
+        storage: Arc<PostgresStorage>,
+        indexer_identifier: String,
+        indexer_version: String,
+    ) -> Self {
         Self {
-            _indexer_version: indexer_version,
-            _indexer_identifier: indexer_identifier,
+            storage,
+            indexer_identifier,
+            indexer_version,
         }
     }
 }
@@ -53,5 +64,32 @@ impl EventHandler for SanaObserver {
         }
 
         info!("on_new_latest_block (end)");
+    }
+
+    async fn on_block_processed(
+        &self,
+        block_number: u64,
+        indexation_progress: f64,
+        force_mode: bool,
+        start_block_number: u64,
+        end_block_number: u64,
+    ) {
+        info!(
+            "Block processed: block_number={}, indexation_progress={}",
+            block_number, indexation_progress
+        );
+
+        let _ = self
+            .storage
+            .update_indexer_progression(
+                self.indexer_identifier.as_str(),
+                self.indexer_version.as_str(),
+                indexation_progress,
+                block_number as i64,
+                force_mode,
+                start_block_number as i64,
+                end_block_number as i64,
+            )
+            .await;
     }
 }
