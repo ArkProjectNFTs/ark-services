@@ -82,7 +82,7 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SOLIS_SCALEWAY_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SCALEWAY_MARKETPLACE_API_SSH_KEY }}
 
       - name: Deploy to Scaleway
         run: |
