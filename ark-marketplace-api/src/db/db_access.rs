@@ -5,6 +5,12 @@ use sqlx::Error;
 use sqlx::PgPool;
 use sqlx::Row;
 
+fn hex_to_decimal_rust(hex: &str) -> Option<String> {
+    let hex = hex.trim_start_matches("0x");
+    let decimal = u128::from_str_radix(hex, 16).ok()?;
+    Some(decimal.to_string())
+}
+
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
 pub trait DatabaseAccess: Send + Sync {
@@ -15,9 +21,9 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        sort: &str,
-        direction: &str,
-    ) -> Result<(Vec<TokenData>, bool, i64), Error>;
+        sort: Option<String>,
+        direction: Option<String>,
+    ) -> Result<(Vec<TokenData>, bool), Error>;
 
     async fn get_token_data(
         &self,
@@ -61,6 +67,50 @@ pub trait DatabaseAccess: Send + Sync {
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
+    async fn get_token_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenOneData, Error> {
+        let row = sqlx::query(
+            r#"
+            SELECT
+                token.listing_start_amount as price,
+                token.last_price,
+                token.top_bid_amount as top_offer,
+                token.current_owner as owner,
+                contract.contract_name as collection_name,
+                token.metadata
+            FROM token
+            JOIN contract ON token.contract_address = contract.contract_address AND token.chain_id = contract.chain_id
+            WHERE token.contract_address = $1
+            AND token.chain_id = $2
+            AND token.token_id = $3
+            "#
+        )
+        .bind(contract_address)
+        .bind(chain_id)
+        .bind(token_id)
+        .fetch_one(self)
+        .await?;
+
+        Ok(TokenOneData {
+            price: row
+                .get::<Option<String>, _>("price")
+                .and_then(|s| s.parse().ok()),
+            last_price: row
+                .get::<Option<String>, _>("last_price")
+                .and_then(|s| s.parse().ok()),
+            top_offer: row
+                .get::<Option<String>, _>("top_offer")
+                .and_then(|s| s.parse().ok()),
+            owner: row.get("owner"),
+            collection_name: row.get("collection_name"),
+            metadata: row.get("metadata"),
+        })
+    }
+
     async fn get_collections_data(
         &self,
         page: i64,
@@ -346,39 +396,6 @@ impl DatabaseAccess for PgPool {
         Ok(collection_data)
     }
 
-    async fn get_token_data(
-        &self,
-        contract_address: &str,
-        chain_id: &str,
-        token_id: &str,
-    ) -> Result<TokenOneData, Error> {
-        let token_data: TokenOneData = sqlx::query_as!(
-            TokenOneData,
-            "
-                    SELECT
-                        hex_to_decimal(token.listing_start_amount) as price,
-                        hex_to_decimal(token.last_price) as last_price,
-                        top_bid_amount as top_offer,
-                        token.current_owner as owner,
-                        c.contract_name as collection_name,
-                        token.metadata as metadata
-                    FROM token
-                    INNER JOIN contract as c ON c.contract_address = token.contract_address
-                        AND c.chain_id = token.chain_id
-                    WHERE token.contract_address = $1
-                      AND token.chain_id = $2
-                      AND token.token_id = $3
-                    ",
-            contract_address,
-            chain_id,
-            token_id
-        )
-        .fetch_one(self)
-        .await?;
-
-        Ok(token_data)
-    }
-
     async fn get_tokens_data(
         &self,
         contract_address: &str,
@@ -386,83 +403,72 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        _sort: &str,
-        _direction: &str,
-    ) -> Result<(Vec<TokenData>, bool, i64), Error> {
-        /*let total_token_count = sqlx::query!(
-            "
-                SELECT COUNT(*)
-                FROM token
-                WHERE token.contract_address = $1
-                  AND token.chain_id = $2
-                ",
-            contract_address,
-            chain_id
-        )
-        .fetch_one(self)
-        .await?;*/
+        sort: Option<String>,
+        direction: Option<String>,
+    ) -> Result<(Vec<TokenData>, bool), Error> {
+        let sort_field = sort.as_deref().unwrap_or("price");
+        let sort_direction = direction.as_deref().unwrap_or("asc");
 
-        //let token_count = total_token_count.count.unwrap_or(0);
-        let token_count = 0;
+        let order_by = match (sort_field, sort_direction) {
+            ("price", "asc") => {
+                "token.listing_start_amount ASC NULLS LAST, CAST(token.token_id AS NUMERIC)"
+            }
+            ("price", "desc") => {
+                "token.listing_start_amount DESC NULLS FIRST, CAST(token.token_id AS NUMERIC)"
+            }
+            (_, "asc") => "CAST(token.token_id AS NUMERIC) ASC",
+            (_, "desc") => "CAST(token.token_id AS NUMERIC) DESC",
+            _ => "CAST(token.token_id AS NUMERIC) ASC", // Default case
+        };
 
-        /*let total_count = sqlx::query!(
-            "
-                SELECT COUNT(*)
-                FROM token
-                WHERE token.contract_address = $1
-                AND token.chain_id = $2
-                AND (
-                    $3 = false
-                    OR token.is_listed = true
-                )
-                ",
-            contract_address,
-            chain_id,
-            buy_now
-        )
-        .fetch_one(self)
-        .await?;*/
+        let query = format!(
+            r#"
+            SELECT
+                token.contract_address as contract,
+                token.token_id,
+                hex_to_decimal(token.last_price) as last_price,
+                hex_to_decimal(token.listing_start_amount) as price,
+                CAST(0 as INTEGER) as floor_difference,
+                token.listing_timestamp as listed_at,
+                token.metadata as metadata,
+                token.listing_start_amount as raw_price
+            FROM token
+            WHERE token.contract_address = $1
+              AND token.chain_id = $2
+              AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+            ORDER BY {0}
+            LIMIT $4 OFFSET $5
+            "#,
+            order_by
+        );
 
-        //let count = total_count.count.unwrap_or(0);
-        let count = 0;
+        let rows = sqlx::query(&query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(buy_now)
+            .bind(items_per_page + 1) // Fetch one extra to check for next page
+            .bind((page - 1) * items_per_page)
+            .fetch_all(self)
+            .await?;
 
-        let tokens_data: Vec<TokenData> = sqlx::query_as!(
-            TokenData,
-            "
-               SELECT
-                   token.contract_address as contract,
-                   token.token_id,
-                   hex_to_decimal(token.last_price) as last_price,
-                   CAST(0 as INTEGER) as floor_difference,
-                   token.listing_timestamp as listed_at,
-                   hex_to_decimal(token.listing_start_amount) as price,
-                   token.metadata as metadata
-               FROM token
-               WHERE token.contract_address = $3
-                 AND token.chain_id = $4
-               AND (
-                  $5 = false OR
-                    token.is_listed = true
-              )
-              ORDER BY token.listing_start_amount NULLS LAST,
-              CAST(token.token_id AS NUMERIC)
-           LIMIT $1 OFFSET $2",
-            items_per_page,
-            (page - 1) * items_per_page,
-            contract_address,
-            chain_id,
-            buy_now,
-            //sort,
-            //direction,
-        )
-        .fetch_all(self)
-        .await?;
+        let has_next_page = rows.len() > items_per_page as usize;
+        let tokens_data: Vec<TokenData> = rows.into_iter().take(items_per_page as usize).map(|r| {
+            let raw_price: Option<String> = r.try_get("raw_price").ok();
+            let converted_price: Option<String> = r.try_get("price").ok();
+            
+            TokenData {
+                contract: r.try_get("contract").unwrap_or_default(),
+                token_id: r.try_get("token_id").unwrap_or_default(),
+                last_price: r.try_get("last_price").ok(),
+                price: converted_price.or_else(|| raw_price.as_ref().and_then(|rp| hex_to_decimal_rust(&rp))),
+                raw_price,
+                floor_difference: r.try_get("floor_difference").unwrap_or_default(),
+                listed_at: r.try_get("listed_at").ok(),
+                metadata: r.try_get("metadata").ok(),
+            }
+        }).collect();
 
-        // Calculate if there is another page
-        let total_pages = (count + items_per_page - 1) / items_per_page;
-        let has_next_page = page < total_pages;
-
-        Ok((tokens_data, has_next_page, token_count))
+        Ok((tokens_data, has_next_page))
     }
 
     async fn get_tokens_portfolio_data(

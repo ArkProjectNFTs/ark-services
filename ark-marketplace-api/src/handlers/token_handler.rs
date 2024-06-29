@@ -2,11 +2,8 @@ use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{get_token_data, get_tokens_data, get_tokens_portfolio_data};
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpResponse, Responder};
-use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -16,7 +13,6 @@ pub struct QueryParameters {
     sort: Option<String>,
     direction: Option<String>,
     collection: Option<String>,
-    disable_cache: Option<String>,
 }
 
 fn extract_query_params(
@@ -34,7 +30,6 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
     query_parameters: web::Query<QueryParameters>,
     db_pool: web::Data<D>,
-    redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
@@ -43,13 +38,10 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
     let direction = query_parameters.direction.as_deref().unwrap_or("desc");
-    let disable_cache = query_parameters.disable_cache.as_deref() == Some("true");
 
     let db_access = db_pool.get_ref();
-    let mut redis_con_ref = redis_con.get_ref().lock().await;
     match get_tokens_data(
         db_access,
-        &mut redis_con_ref,
         &normalized_address,
         &chain_id,
         page,
@@ -57,20 +49,18 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         buy_now,
         sort,
         direction,
-        disable_cache,
     )
     .await
     {
         Err(sqlx::Error::RowNotFound) => {
             HttpResponse::NotFound().body("data not found")
         }
-        Ok((ref collection_data, _, _)) if collection_data.is_empty() => {
+        Ok((ref collection_data, _)) if collection_data.is_empty() => {
             HttpResponse::NotFound().body("data not found")
         }
-        Ok((collection_data, _has_next_page, token_count)) => HttpResponse::Ok().json(json!({
+        Ok((collection_data, has_next_page)) => HttpResponse::Ok().json(json!({
             "data": collection_data,
-            "token_count": token_count,
-            "next_page": /*if has_next_page { Some(page + 1) } else { None }*/ page + 1
+            "next_page": if has_next_page { Some(page + 1) } else { None }
         })),
         Err(err) => {
             tracing::error!("error query get_tokens_data: {}", err);

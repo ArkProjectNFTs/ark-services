@@ -5,13 +5,14 @@ use sqlx::FromRow;
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
 pub struct TokenData {
-    pub contract: Option<String>,
-    pub token_id: Option<String>,
-    pub last_price: Option<BigDecimal>,
-    pub floor_difference: Option<i32>,
-    pub listed_at: Option<i64>,
-    pub price: Option<BigDecimal>,
-    pub metadata: Option<JsonValue>,
+    pub contract: String,
+    pub token_id: String,
+    pub last_price: Option<String>,
+    pub floor_difference: i32,
+    pub listed_at: Option<String>, // Changed from chrono::NaiveDateTime
+    pub price: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub raw_price: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
