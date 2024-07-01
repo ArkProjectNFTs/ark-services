@@ -52,7 +52,7 @@ export async function searchContracts(contractName: string, chainId: string) {
   const res = await pool.query<Contract>(
     `SELECT contract_address, chain_id, updated_timestamp, contract_type, contract_name, contract_symbol, contract_image, metadata_ok, is_spam, is_nsfw, deployed_timestamp, is_verified, save_images
      FROM contract
-     WHERE contract_name ILIKE $1 AND chain_id = $2 ORDER BY contract_image ASC LIMIT 50`,
+     WHERE contract_type = 'ERC721' AND contract_name ILIKE $1 AND chain_id = $2 ORDER BY contract_image ASC LIMIT 50`,
     ["%" + contractName + "%", chainId],
   );
 
