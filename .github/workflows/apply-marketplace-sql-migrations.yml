@@ -2,27 +2,8 @@ name: Apply Marketplace SQL Migrations
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/apply-marketplace-sql-migrations.yml"
-      - "ark-sqlx/**"
 
 jobs:
-  discord-notification:
-    runs-on: ubuntu-latest
-    name: Discord Notification
-    steps:
-      - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
-
   run-migrations:
     runs-on: ubuntu-latest
     strategy:
@@ -30,14 +11,14 @@ jobs:
         environment: [mainnet]
     name: Run SQL Migrations on ${{ matrix.environment }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Notify start of migrations
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database..."
 
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y awscli jq
-          cargo install sqlx-cli --no-default-features --features rustls,postgres
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
       - name: Run SQL Migrations
         run: |

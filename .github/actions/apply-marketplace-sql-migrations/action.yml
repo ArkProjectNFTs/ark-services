@@ -1,0 +1,74 @@
+name: "Apply Marketplace SQL Migrations"
+description: "Run SQL migrations on Mainnet database"
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key ID for accessing Secrets Manager"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key for accessing Secrets Manager"
+    required: true
+  aws-region:
+    description: "AWS Region for accessing Secrets Manager"
+    required: true
+  secret-id:
+    description: "Secret ID for retrieving DATABASE_URL from Secrets Manager"
+    required: true
+  discord-webhook-url:
+    description: "Discord webhook URL for notifications"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Notify start of migrations
+      run: |
+        curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database...\"}" \
+            ${{ inputs.discord-webhook-url }}
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y awscli jq
+        cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+    - name: Retrieve DATABASE_URL from Secrets Manager
+      id: get_secret
+      run: |
+        secret_id="${{ inputs.secret-id }}"
+        secret=$(aws secretsmanager get-secret-value --secret-id $secret_id --query SecretString --output text)
+        username=$(echo $secret | jq -r .username)
+        password=$(echo $secret | jq -r .password)
+        host=$(echo $secret | jq -r .host)
+        port=$(echo $secret | jq -r .port)
+        dbname=$(echo $secret | jq -r .dbname)
+        DATABASE_URL="postgresql://$username:$password@$host:$port/$dbname"
+        echo "::add-mask::$DATABASE_URL"
+        echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        AWS_REGION: ${{ inputs.aws-region }}
+
+    - name: Run SQL Migrations
+      run: |
+        cd ark-sqlx
+        sqlx migrate run --source ./migrations/marketplace
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+
+    - name: Notify success of migrations
+      if: success()
+      run: |
+        curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"✅ SQL migrations `/migrations/marketplace` on Mainnet database were successful.\"}" \
+            ${{ inputs.discord-webhook-url }}
+
+    - name: Notify failure of migrations
+      if: failure()
+      run: |
+        curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"❌ SQL migrations `/migrations/marketplace` on Mainnet database failed.\"}" \
+            ${{ inputs.discord-webhook-url }}

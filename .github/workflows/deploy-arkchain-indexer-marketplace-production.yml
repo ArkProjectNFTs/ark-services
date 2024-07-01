@@ -14,17 +14,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "Deploying `arkchain-indexer-marketplace` on Production environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -34,6 +24,21 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
+
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/apply-marketplace-sql-migrations
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          secret-id: ${{ vars.AWS_ARKPROJECT_DATABASE_PROD_SECRET_NAME }}
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send notification to dev-updates channel
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "Deploying `arkchain-indexer-marketplace` on Production environment..."
 
       - name: Cache Cargo registry
         uses: actions/cache@v2
@@ -71,33 +76,24 @@ jobs:
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.SOLIS_SERVER_IP }} "mkdir -p /opt/arkchain-indexer-marketplace"
 
       - name: Stop the service
-        run: |
-          ssh -o StrictHostKeyChecking=no github@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl stop arkchain-indexer-marketplace.service"
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl stop arkchain-indexer-marketplace.service"
 
       - name: Upload binary to Scaleway server
-        run: |
-          scp -o StrictHostKeyChecking=no target/release/arkchain-indexer-marketplace github@${{ vars.SOLIS_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
+        run: scp -o StrictHostKeyChecking=no target/release/arkchain-indexer-marketplace github@${{ vars.SOLIS_SERVER_IP }}:/opt/arkchain-indexer-marketplace/
 
       - name: Restart the service
-        run: |
-          ssh -o StrictHostKeyChecking=no github@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl start arkchain-indexer-marketplace.service"
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.SOLIS_SERVER_IP }} "sudo systemctl start arkchain-indexer-marketplace.service"
 
       - name: Send success notification to dev-updates channel
         if: success()
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "✅ Successfully deployed `arkchain-indexer-marketplace` on Production environment."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "✅ Successfully deployed `arkchain-indexer-marketplace` on Production environment."
 
       - name: Send failure notification to dev-updates channel
         if: failure()
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "❌ Failed to deploy `arkchain-indexer-marketplace` on Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "❌ Failed to deploy `arkchain-indexer-marketplace` on Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
