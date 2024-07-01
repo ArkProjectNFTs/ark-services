@@ -26,7 +26,7 @@ fn extract_query_params(
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
-    let direction = query_parameters.direction.as_deref().unwrap_or("desc");
+    let direction = query_parameters.direction.as_deref().unwrap_or("asc");
     (page, items_per_page, buy_now, sort, direction)
 }
 
@@ -42,7 +42,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let normalized_address = normalize_address(&contract_address);
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
-    let direction = query_parameters.direction.as_deref().unwrap_or("desc");
+    let direction = query_parameters.direction.as_deref().unwrap_or("asc");
     let disable_cache = query_parameters.disable_cache.as_deref() == Some("true");
 
     let db_access = db_pool.get_ref();
@@ -61,9 +61,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     )
     .await
     {
-        Err(sqlx::Error::RowNotFound) => {
-            HttpResponse::NotFound().body("data not found")
-        }
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok((ref collection_data, _, _)) if collection_data.is_empty() => {
             HttpResponse::NotFound().body("data not found")
         }
