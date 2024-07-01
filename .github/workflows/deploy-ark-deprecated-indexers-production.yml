@@ -9,13 +9,10 @@ jobs:
     name: Discord Notification
     steps:
       - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "🚢 Deploying Indexers to Production environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "🚢 Deploying Indexers to Production environment..."
 
   push-indexer-image:
     runs-on: ubuntu-latest

@@ -11,24 +11,17 @@ on:
       - "ark-indexer-marketplace/**"
 
 jobs:
-  discord-notification:
-    runs-on: ubuntu-latest
-    name: Discord Notification
-    steps:
-      - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                "content": "Deploying `ark-indexer-marketplace` on Production environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
-
   push-indexer-image:
     runs-on: ubuntu-latest
     steps:
+      - name: Send notification to dev-updates channel
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "Deploying `ark-indexer-marketplace` on Production environment..."
+
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -104,6 +97,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
@@ -111,13 +111,6 @@ jobs:
 
       - name: Install pnpm
         run: npm install -g pnpm
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
 
       - name: Install Dependencies
         run: |
@@ -154,6 +147,15 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/apply-marketplace-sql-migrations
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          secret-id: ${{ vars.AWS_ARKPROJECT_DATABASE_PROD_SECRET_NAME }}
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
       - name: Deploy Indexer Marketplace
         run: |

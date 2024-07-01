@@ -13,16 +13,12 @@ on:
 jobs:
   discord-notification:
     runs-on: ubuntu-latest
-    name: Discord Notification
     steps:
       - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "Deploying Metadata Marketplace Indexer on Production environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "🚀 Deploying Metadata Marketplace Indexer on Production environment..."
 
   push-metadata-indexer-image:
     runs-on: ubuntu-latest

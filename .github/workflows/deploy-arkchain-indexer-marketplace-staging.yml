@@ -8,15 +8,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "Deploying `arkchain-indexer-marketplace` on Staging environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -26,6 +17,12 @@ jobs:
           toolchain: stable
           profile: minimal
           override: true
+
+      - name: Send notification to dev-updates channel
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "Deploying `arkchain-indexer-marketplace` on Staging environment..."
 
       - name: Cache Cargo registry
         uses: actions/cache@v2
