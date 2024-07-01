@@ -533,7 +533,7 @@ impl OrderProvider {
         Ok(())
     }
 
-    pub async fn update_owner_price_on_offer_executed(
+    pub async fn update_token_data_on_offer_executed(
         client: &SqlxCtx,
         info: &OfferExecutedInfo,
     ) -> Result<(), ProviderError> {
@@ -583,6 +583,7 @@ impl OrderProvider {
         let query = "
             UPDATE token
             SET
+                listing_timestamp = null,
                 listing_start_date = null, listing_end_date = null,
                 listing_start_amount = null, listing_end_amount = null,
                 is_listed = false,
@@ -783,6 +784,7 @@ impl OrderProvider {
                 ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
                 current_owner = EXCLUDED.current_owner,
                 token_id_hex = EXCLUDED.token_id_hex,
+                listing_timestamp = EXCLUDED.listing_timestamp,
                 listing_start_amount = EXCLUDED.listing_start_amount,
                 listing_end_amount = EXCLUDED.listing_end_amount,
                 listing_start_date = EXCLUDED.listing_start_date,
@@ -982,7 +984,7 @@ impl OrderProvider {
                     currency_chain_id: offer_data.currency_chain_id.clone(),
                     currency_address: offer_data.currency_address.clone(),
                 };
-                Self::update_owner_price_on_offer_executed(client, &params).await?;
+                Self::update_token_data_on_offer_executed(client, &params).await?;
 
                 /*_from_address = Some(
                     Self::get_current_owner(
