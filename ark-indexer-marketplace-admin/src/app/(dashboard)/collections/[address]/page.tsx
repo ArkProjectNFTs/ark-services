@@ -33,7 +33,7 @@ export default async function CollectionPage({
             prefetch={false}
           >
             <LinkIcon className="mr-2 h-4 w-4" />
-            Starkscan
+            View on Starkscan
           </Link>
           <Link
             target="_blank"
@@ -42,7 +42,7 @@ export default async function CollectionPage({
             prefetch={false}
           >
             <LinkIcon className="mr-2 h-4 w-4" />
-            Ark Market
+            View on ArkProject
           </Link>
           <Button variant="secondary">
             <RotateCcw className="mr-2 h-4 w-4" />

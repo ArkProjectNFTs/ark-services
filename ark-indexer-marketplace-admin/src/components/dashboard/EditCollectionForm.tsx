@@ -112,21 +112,21 @@ export default function CollectionForm(props: { contract?: Contract }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        {props.contract?.contract_image && (
-          <div>
-            <img
-              className="rounded-md border-2 border-muted p-1"
-              src={props.contract?.contract_image}
-              alt="Image Preview"
-              width={200}
-            />
-            {/* <Button variant="secondary" className="mt-2 w-[200px]">
+        <FormItem>
+          <FormLabel htmlFor="avatar-image">Collection Image</FormLabel>
+          {props.contract?.contract_image && (
+            <div>
+              <img
+                className="rounded-md border-2 border-muted p-1"
+                src={props.contract?.contract_image}
+                alt="Image Preview"
+                width={200}
+              />
+              {/* <Button variant="secondary" className="mt-2 w-[200px]">
               Delete
             </Button> */}
-          </div>
-        )}
-        <FormItem>
-          <FormLabel htmlFor="avatar-image">Image</FormLabel>
+            </div>
+          )}
           <Input
             onChange={(event) => {
               if (event.target?.files && event.target.files.length > 0) {

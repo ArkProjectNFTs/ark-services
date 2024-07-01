@@ -12,8 +12,7 @@ export async function fetchRefreshingContracts(chainId: string) {
     c.contract_symbol, 
     c.contract_image, 
     COUNT(t.token_id) AS token_count
-    FROM 
-        contract AS c
+    FROM contract AS c
     INNER JOIN 
         token AS t 
         ON c.contract_address = t.contract_address 
@@ -22,6 +21,8 @@ export async function fetchRefreshingContracts(chainId: string) {
         c.is_spam = false
         AND c.contract_name IS NOT NULL
         AND c.chain_id = $1
+        AND c.contract_type = 'ERC721'
+        AND t.metadata_status = 'TO_REFRESH'
     GROUP BY 
     c.contract_address, 
     c.chain_id, 
@@ -30,6 +31,7 @@ export async function fetchRefreshingContracts(chainId: string) {
     c.contract_name, 
     c.contract_symbol, 
     c.contract_image
+    ORDER BY token_count DESC
     LIMIT 20`,
     [chainId],
   );
