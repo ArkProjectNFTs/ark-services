@@ -86,11 +86,11 @@ jobs:
 
       - name: Deploy to Scaleway
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.SCALEWAY_MARKETPLACE_API_IP }} "sudo systemctl restart ark-marketplace-api-docker.service && sleep 10"
+          ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_MARKETPLACE_API_IP }} "sudo systemctl restart ark-marketplace-api-docker.service && sleep 10"
 
       - name: Verify Deployment
         run: |
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.SCALEWAY_MARKETPLACE_API_IP }} << EOF
+          ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_MARKETPLACE_API_IP }} << EOF
             sudo systemctl status ark-marketplace-api-docker.service
             docker logs marketplace-api --tail 50
           EOF
