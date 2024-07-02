@@ -1,6 +1,6 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
-    get_collection_floor_price, get_token_data, get_token_offers_data, get_tokens_data,
+    get_collection_floor_price, get_token_data, get_token_marketdata, get_token_offers_data, get_tokens_data,
     get_tokens_portfolio_data,
 };
 use crate::models::token::TokenOfferOneData;
@@ -91,6 +91,26 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
 
     let db_access = db_pool.get_ref();
     match get_token_data(db_access, &normalized_address, &chain_id, &token_id).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok(token_data) => HttpResponse::Ok().json(json!({
+            "data": token_data,
+        })),
+        Err(err) => {
+            tracing::error!("error query get_tokens_data: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn get_token_market<D: DatabaseAccess + Sync>(
+    path: web::Path<(String, String, String)>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let (contract_address, chain_id, token_id) = path.into_inner();
+    let normalized_address = normalize_address(&contract_address);
+
+    let db_access = db_pool.get_ref();
+    match get_token_marketdata(db_access, &normalized_address, &chain_id, &token_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(json!({
             "data": token_data,

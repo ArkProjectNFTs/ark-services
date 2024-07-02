@@ -1,5 +1,6 @@
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, Listing, TopOffer, TokenMarketData};
+use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, Listing, TopOffer, TokenMarketData, TokenInformationData};
+
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
@@ -20,6 +21,13 @@ pub trait DatabaseAccess: Send + Sync {
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_token_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenInformationData, Error>;
+
+    async fn get_token_marketdata(
         &self,
         contract_address: &str,
         chain_id: &str,
@@ -374,7 +382,7 @@ impl DatabaseAccess for PgPool {
         Ok(floor_price)
     }
 
-    async fn get_token_data(
+    async fn get_token_marketdata(
         &self,
         contract_address: &str,
         chain_id: &str,
@@ -407,7 +415,7 @@ impl DatabaseAccess for PgPool {
         .await?;
 
         // Fetch TopOffer
-    let top_offer: TopOffer = sqlx::query_as!(
+        let top_offer: TopOffer = sqlx::query_as!(
             TopOffer,
             "
                 SELECT
@@ -426,7 +434,8 @@ impl DatabaseAccess for PgPool {
             contract_address
         )
         .fetch_one(self)
-        .await.unwrap_or(TopOffer {
+        .await
+        .unwrap_or(TopOffer {
             order_hash: "".to_string(),
             amount: "".to_string(),
             start_date: None,
@@ -455,7 +464,8 @@ impl DatabaseAccess for PgPool {
             contract_address
         )
         .fetch_one(self)
-        .await.unwrap_or(Listing {
+        .await
+        .unwrap_or(Listing {
             is_auction: Some(false),
             order_hash: Some("".to_string()),
             start_amount: None,
@@ -470,6 +480,39 @@ impl DatabaseAccess for PgPool {
             top_offer: Some(top_offer),
             listing: Some(listing),
         })
+    }
+
+    async fn get_token_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenInformationData, Error> {
+        let token_data: TokenInformationData = sqlx::query_as!(
+            TokenInformationData,
+            "
+                    SELECT
+                        hex_to_decimal(token.listing_start_amount) as price,
+                        hex_to_decimal(token.last_price) as last_price,
+                        top_bid_amount as top_offer,
+                        token.current_owner as owner,
+                        c.contract_name as collection_name,
+                        token.metadata as metadata
+                    FROM token
+                    INNER JOIN contract as c ON c.contract_address = token.contract_address
+                        AND c.chain_id = token.chain_id
+                    WHERE token.contract_address = $1
+                      AND token.chain_id = $2
+                      AND token.token_id = $3
+                    ",
+            contract_address,
+            chain_id,
+            token_id
+        )
+        .fetch_one(self)
+        .await?;
+
+        Ok(token_data)
     }
 
     async fn get_tokens_data(
@@ -533,9 +576,8 @@ impl DatabaseAccess for PgPool {
         //let count = total_count.count.unwrap_or(0);
         let count = 0;
 
-       let tokens_data: Vec<TokenData> = sqlx::query_as::<sqlx::Postgres, TokenData>(
-           &format!(
-               "
+        let tokens_data: Vec<TokenData> = sqlx::query_as::<sqlx::Postgres, TokenData>(&format!(
+            "
                SELECT
                    token.contract_address as contract,
                    token.token_id,
@@ -550,16 +592,15 @@ impl DatabaseAccess for PgPool {
                    AND ($3 = false OR token.listing_start_amount IS NOT NULL)
                ORDER BY {}
                LIMIT $4 OFFSET $5",
-               order_by
-           ),
-       )
-       .bind(items_per_page)
-       .bind((page - 1) * items_per_page)
-       .bind(contract_address)
-       .bind(chain_id)
-       .bind(buy_now)
-       .fetch_all(self)
-       .await?;
+            order_by
+        ))
+        .bind(items_per_page)
+        .bind((page - 1) * items_per_page)
+        .bind(contract_address)
+        .bind(chain_id)
+        .bind(buy_now)
+        .fetch_all(self)
+        .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

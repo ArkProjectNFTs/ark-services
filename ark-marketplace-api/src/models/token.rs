@@ -22,6 +22,16 @@ pub struct TokenMarketData {
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
+pub struct TokenInformationData {
+    pub price: Option<BigDecimal>,
+    pub last_price: Option<BigDecimal>,
+    pub top_offer: Option<BigDecimal>,
+    pub owner: Option<String>,
+    pub collection_name: Option<String>,
+    pub metadata: Option<JsonValue>,
+}
+
+#[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenOneData {
     pub owner: Option<String>,
     pub floor: Option<BigDecimal>,

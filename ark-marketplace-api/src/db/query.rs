@@ -1,6 +1,6 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenMarketData, TokenPortfolioData};
+use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenInformationData, TokenMarketData, TokenPortfolioData};
 use redis::AsyncCommands;
 
 pub async fn get_collections_data<D: DatabaseAccess + Sync>(
@@ -87,6 +87,18 @@ pub async fn get_collection_floor_price<D: DatabaseAccess + Sync>(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub async fn get_token_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    contract_address: &str,
+    chain_id: &str,
+    token_id: &str,
+) -> Result<TokenInformationData, sqlx::Error> {
+    db_access
+        .get_token_data(contract_address, chain_id, token_id)
+        .await
+}
+
+#[allow(clippy::too_many_arguments)]
 pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     redis_conn: &mut redis::aio::MultiplexedConnection,
@@ -163,14 +175,14 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn get_token_data<D: DatabaseAccess + Sync>(
+pub async fn get_token_marketdata<D: DatabaseAccess + Sync>(
     db_access: &D,
     contract_address: &str,
     chain_id: &str,
     token_id: &str,
 ) -> Result<TokenMarketData, sqlx::Error> {
     db_access
-        .get_token_data(contract_address, chain_id, token_id)
+        .get_token_marketdata(contract_address, chain_id, token_id)
         .await
 }
 
