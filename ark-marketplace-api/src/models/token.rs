@@ -16,7 +16,13 @@ pub struct TokenData {
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenMarketData {
-    pub token_data: TokenOneData,
+    pub owner: Option<String>,
+    pub floor: Option<BigDecimal>,
+    pub created_timestamp: Option<i64>,
+    pub updated_timestamp: Option<i64>,
+    pub is_listed: Option<bool>,
+    pub has_offer: Option<bool>,
+    pub buy_in_progress: Option<bool>,
     pub top_offer: Option<TopOffer>,
     pub listing: Option<Listing>,
 }

@@ -479,9 +479,15 @@ impl DatabaseAccess for PgPool {
         });
 
         Ok(TokenMarketData {
-            token_data,
-            top_offer: Some(top_offer),
-            listing: Some(listing),
+           owner: token_data.owner,
+           floor: token_data.floor,
+           created_timestamp: token_data.created_timestamp,
+           updated_timestamp: token_data.updated_timestamp,
+           is_listed: token_data.is_listed,
+           has_offer: token_data.has_offer,
+           buy_in_progress: token_data.buy_in_progress,
+           top_offer: Some(top_offer),
+           listing: Some(listing),
         })
     }
 
