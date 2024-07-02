@@ -138,6 +138,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-target-
 
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
       - name: Bootstrap Indexer Marketplace
         run: |
           cd infrastructure/cdk-ark-indexer-marketplace
@@ -147,15 +152,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Apply Marketplace SQL Migrations
-        uses: ./.github/actions/marketplace-sql-migrations
-        with:
-          aws-access-key-id: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          secret-id: ${{ vars.AWS_ARKPROJECT_DATABASE_PROD_SECRET_NAME }}
-          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
       - name: Deploy Indexer Marketplace
         run: |

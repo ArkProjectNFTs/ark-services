@@ -145,6 +145,11 @@ jobs:
         run: |
           pip install cargo-lambda
 
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
       - name: Bootstrap Metadata Indexer Marketplace
         run: |
           cd infrastructure/cdk-ark-metadata-marketplace
