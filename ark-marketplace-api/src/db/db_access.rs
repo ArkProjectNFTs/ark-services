@@ -1,5 +1,5 @@
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData};
+use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, Listing, TopOffer, TokenMarketData, TokenInformationData};
 
 use async_trait::async_trait;
 use sqlx::Error;
@@ -16,8 +16,8 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        sort: &str,
-        direction: &str,
+        sort: Option<String>,
+        direction: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_token_data(
@@ -25,7 +25,14 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         chain_id: &str,
         token_id: &str,
-    ) -> Result<TokenOneData, Error>;
+    ) -> Result<TokenInformationData, Error>;
+
+    async fn get_token_marketdata(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenMarketData, Error>;
 
     async fn get_tokens_portfolio_data(
         &self,
@@ -375,14 +382,114 @@ impl DatabaseAccess for PgPool {
         Ok(floor_price)
     }
 
+    async fn get_token_marketdata(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<TokenMarketData, Error> {
+        // Fetch TokenOneData
+        let token_data: TokenOneData = sqlx::query_as!(
+            TokenOneData,
+            "
+                SELECT
+                    token.current_owner as owner,
+                    hex_to_decimal(token.last_price) as floor,
+                    token.listing_timestamp as created_timestamp,
+                    token.updated_timestamp as updated_timestamp,
+                    (token.listing_start_amount IS NOT NULL) as is_listed,
+                    EXISTS(SELECT 1 FROM token_offer WHERE token_offer.token_id = token.token_id) as has_offer,
+                    token.buy_in_progress as buy_in_progress
+                FROM token
+                INNER JOIN contract as c ON c.contract_address = token.contract_address
+                    AND c.chain_id = token.chain_id
+                WHERE token.contract_address = $1
+                  AND token.chain_id = $2
+                  AND token.token_id = $3
+            ",
+            contract_address,
+            chain_id,
+            token_id
+        )
+        .fetch_one(self)
+        .await?;
+
+        // Fetch TopOffer
+        let top_offer: TopOffer = sqlx::query_as!(
+            TopOffer,
+            "
+                SELECT
+                    order_hash,
+                    offer_amount as amount,
+                    start_date,
+                    end_date,
+                    currency_address
+                FROM token_offer
+                WHERE token_offer.token_id = $1
+                AND token_offer.contract_address = $2
+                ORDER BY offer_amount DESC
+                LIMIT 1
+            ",
+            token_id,
+            contract_address
+        )
+        .fetch_one(self)
+        .await
+        .unwrap_or(TopOffer {
+            order_hash: "".to_string(),
+            amount: "".to_string(),
+            start_date: None,
+            end_date: None,
+            currency_address: "".to_string(),
+        });
+
+        // Fetch Listing
+        let listing: Listing = sqlx::query_as!(
+            Listing,
+            "
+                SELECT
+                    (t.listing_type = 'Auction') as is_auction,
+                    listing_orderhash as order_hash,
+                    listing_start_amount as start_amount,
+                    listing_end_amount as end_amount,
+                    listing_start_date as start_date,
+                    listing_end_date as end_date,
+                    listing_currency_address as currency_address
+                FROM token t
+                WHERE t.token_id = $1
+                AND t.contract_address = $2
+                LIMIT 1
+            ",
+            token_id,
+            contract_address
+        )
+        .fetch_one(self)
+        .await
+        .unwrap_or(Listing {
+            is_auction: Some(false),
+            order_hash: Some("".to_string()),
+            start_amount: None,
+            end_amount: None,
+            start_date: None,
+            end_date: None,
+            currency_address: Some("".to_string()),
+        });
+
+        Ok(TokenMarketData {
+            token_data,
+            top_offer: Some(top_offer),
+            listing: Some(listing),
+        })
+    }
+
     async fn get_token_data(
         &self,
         contract_address: &str,
         chain_id: &str,
         token_id: &str,
-    ) -> Result<TokenOneData, Error> {
-        let token_data: TokenOneData = sqlx::query_as!(
-            TokenOneData,
+    ) -> Result<TokenInformationData, Error> {
+        let token_data: TokenInformationData = sqlx::query_as!(
+            TokenInformationData,
             "
                     SELECT
                         hex_to_decimal(token.listing_start_amount) as price,
@@ -415,9 +522,23 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        _sort: &str,
-        _direction: &str,
+        sort: Option<String>,
+        direction: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
+        let sort_field = sort.as_deref().unwrap_or("price");
+        let sort_direction = direction.as_deref().unwrap_or("asc");
+
+        let order_by = match (sort_field, sort_direction) {
+            ("price", "asc") => {
+                "token.listing_start_amount ASC NULLS LAST, CAST(token.token_id AS NUMERIC)"
+            }
+            ("price", "desc") => {
+                "token.listing_start_amount DESC NULLS FIRST, CAST(token.token_id AS NUMERIC)"
+            }
+            (_, "asc") => "CAST(token.token_id AS NUMERIC) ASC",
+            (_, "desc") => "CAST(token.token_id AS NUMERIC) DESC",
+            _ => "CAST(token.token_id AS NUMERIC) ASC", // Default case
+        };
         /*let total_token_count = sqlx::query!(
             "
                 SELECT COUNT(*)
@@ -455,8 +576,7 @@ impl DatabaseAccess for PgPool {
         //let count = total_count.count.unwrap_or(0);
         let count = 0;
 
-        let tokens_data: Vec<TokenData> = sqlx::query_as!(
-            TokenData,
+        let tokens_data: Vec<TokenData> = sqlx::query_as::<sqlx::Postgres, TokenData>(&format!(
             "
                SELECT
                    token.contract_address as contract,
@@ -467,23 +587,18 @@ impl DatabaseAccess for PgPool {
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata
                FROM token
-               WHERE token.contract_address = $3
-                 AND token.chain_id = $4
-               AND (
-                  $5 = false OR
-                    token.is_listed = true
-              )
-              ORDER BY token.listing_start_amount NULLS LAST,
-              CAST(token.token_id AS NUMERIC)
-           LIMIT $1 OFFSET $2",
-            items_per_page,
-            (page - 1) * items_per_page,
-            contract_address,
-            chain_id,
-            buy_now,
-            //sort,
-            //direction,
-        )
+               WHERE token.contract_address = $1
+                   AND token.chain_id = $2
+                   AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+               ORDER BY {}
+               LIMIT $4 OFFSET $5",
+            order_by
+        ))
+        .bind(items_per_page)
+        .bind((page - 1) * items_per_page)
+        .bind(contract_address)
+        .bind(chain_id)
+        .bind(buy_now)
         .fetch_all(self)
         .await?;
 
@@ -615,7 +730,7 @@ impl DatabaseAccess for PgPool {
     ) -> Result<Vec<TokenOfferOneDataDB>, Error> {
         let token_offers_data = sqlx::query_as!(
             TokenOfferOneDataDB,
-            "SELECT 
+            "SELECT
                 token_offer_id AS offer_id,
                 hex_to_decimal(offer_amount) AS amount,
                 offer_maker AS source,
