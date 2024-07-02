@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import Link from "next/link";
-import { LinkIcon, RotateCcw } from "lucide-react";
+import { LinkIcon } from "lucide-react";
 
 import EditCollectionForm from "~/components/dashboard/EditCollectionForm";
-import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { api } from "~/trpc/server";
 import FlushCacheButton from "./components/flush-cache-button";
+import RefreshContractMetadataButton from "./components/refresh-contract-metadata-button";
 
 export default async function CollectionPage({
   params,
@@ -44,11 +44,7 @@ export default async function CollectionPage({
             <LinkIcon className="mr-2 h-4 w-4" />
             View on ArkProject
           </Link>
-          <Button variant="secondary">
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Refresh Metadata
-          </Button>
-
+          <RefreshContractMetadataButton />
           {contract?.contract_address && (
             <FlushCacheButton contractAddress={contract.contract_address} />
           )}

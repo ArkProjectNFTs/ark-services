@@ -1,6 +1,16 @@
 import type { Contract, RefreshingContract } from "~/types";
 import { pool } from "../postgres";
 
+export async function updateIsRefreshingContract(
+  contractAddress: string,
+  chainId: string,
+  isRefreshing: boolean,
+) {
+  const query = `UPDATE contract SET is_refreshing = $1, updated_timestamp=EXTRACT(epoch FROM now())::bigint 
+                 WHERE contract_address=$2 AND chain_id=$3`;
+  await pool.query(query, [isRefreshing, contractAddress, chainId]);
+}
+
 export async function fetchRefreshingContracts(chainId: string) {
   const res = await pool.query<RefreshingContract>(
     `SELECT 

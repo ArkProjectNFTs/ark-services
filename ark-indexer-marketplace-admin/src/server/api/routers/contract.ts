@@ -5,9 +5,12 @@ import {
   fetchRefreshingContracts,
   searchContracts,
   updateContract,
+  updateIsRefreshingContract,
 } from "~/lib/queries/contract";
 import { clearListedTokensCache } from "~/lib/redis";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
+
+const MAINNET_CHAIN_ID = "0x534e5f4d41494e"; // Hardcoded value
 
 export const contractRouter = createTRPCRouter({
   flushCache: protectedProcedure
@@ -31,7 +34,7 @@ export const contractRouter = createTRPCRouter({
 
       const contracts = await searchContracts(
         input.contractName,
-        "0x534e5f4d41494e",
+        MAINNET_CHAIN_ID,
       );
 
       return contracts;
@@ -40,7 +43,7 @@ export const contractRouter = createTRPCRouter({
   getRefreshingContracts: protectedProcedure
     .input(z.object({}))
     .query(async () => {
-      const contracts = await fetchRefreshingContracts("0x534e5f4d41494e");
+      const contracts = await fetchRefreshingContracts(MAINNET_CHAIN_ID);
 
       return contracts;
     }),
@@ -54,10 +57,24 @@ export const contractRouter = createTRPCRouter({
     .query(async ({ input }: { input: { contractAddress: string } }) => {
       const contract = await fetchContract(
         input.contractAddress,
-        "0x534e5f4d41494e",
+        MAINNET_CHAIN_ID,
       );
 
       return contract;
+    }),
+
+  refreshContractMetadata: protectedProcedure
+    .input(
+      z.object({
+        contractAddress: z.string(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await updateIsRefreshingContract(
+        input.contractAddress,
+        MAINNET_CHAIN_ID,
+        true,
+      );
     }),
 
   updateContract: protectedProcedure
@@ -82,7 +99,7 @@ export const contractRouter = createTRPCRouter({
         input.isVerified,
         input.saveImages,
         input.contractAddress,
-        "0x534e5f4d41494e",
+        MAINNET_CHAIN_ID,
         input.image,
       );
 
