@@ -68,7 +68,7 @@ pub async fn get_collection_data<D: DatabaseAccess + Sync>(
                     }
                 };
                 let _: () = redis_conn_clone
-                    .set_ex(&cache_key_clone, collection_data_string, 60 * 60 * 2)
+                    .set_ex(&cache_key_clone, collection_data_string, 60)
                     .await
                     .unwrap_or(()); // Cache for 2 hours
             });
@@ -165,7 +165,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                         }
                     };
                     let _: () = redis_conn_clone
-                        .set_ex(&cache_key_clone, tokens_data_string, 60 * 60 * 2)
+                        .set_ex(&cache_key_clone, tokens_data_string, 60)
                         .await
                         .unwrap_or(()); // Cache for 2 hours
                 });
