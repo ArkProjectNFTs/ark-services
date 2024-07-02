@@ -1,5 +1,10 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::db::query::{get_token_data, get_tokens_data, get_tokens_portfolio_data};
+use crate::db::query::{
+    get_collection_floor_price, get_token_data, get_token_offers_data, get_tokens_data,
+    get_tokens_portfolio_data,
+};
+use crate::models::token::TokenOfferOneData;
+use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
@@ -133,6 +138,56 @@ pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
             HttpResponse::InternalServerError().finish()
         }
     }
+}
+
+pub async fn get_token_offers<D: DatabaseAccess + Sync>(
+    path: web::Path<(String, String, String)>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let (contract_address, chain_id, token_id) = path.into_inner();
+    let normalized_address = normalize_address(&contract_address);
+
+    let db_access = db_pool.get_ref();
+    let floor_price = match get_collection_floor_price(db_access, &normalized_address, &chain_id)
+        .await
+    {
+        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("data not found"),
+        Ok(floor_price) => floor_price,
+        Err(err) => {
+            tracing::error!("error query get_collection_floor_price: {}", err);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    let token_offers_data =
+        match get_token_offers_data(db_access, &normalized_address, &chain_id, &token_id).await {
+            Err(sqlx::Error::RowNotFound) => {
+                return HttpResponse::NotFound().body("data not found")
+            }
+            Ok(token_offers_data) => token_offers_data,
+            Err(err) => {
+                tracing::error!("error query get_token_offers_data: {}", err);
+                return HttpResponse::InternalServerError().finish();
+            }
+        };
+    let token_offers_data: Vec<TokenOfferOneData> = token_offers_data
+        .iter()
+        .map(|data| TokenOfferOneData {
+            offer_id: data.offer_id,
+            price: data.amount.clone(),
+            source: data.source.clone(),
+            expire_at: data.expire_at,
+            hash: data.hash.clone(),
+            floor_difference: compute_floor_difference(
+                data.amount.clone(),
+                data.currency_address.clone(),
+                floor_price.value.clone(),
+            ),
+        })
+        .collect();
+    HttpResponse::Ok().json(json!({
+        "data": token_offers_data,
+    }))
 }
 
 #[cfg(test)]
