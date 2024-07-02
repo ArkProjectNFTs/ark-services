@@ -44,9 +44,14 @@ export default async function CollectionPage({
             <LinkIcon className="mr-2 h-4 w-4" />
             View on ArkProject
           </Link>
-          <RefreshContractMetadataButton />
+
           {contract?.contract_address && (
-            <FlushCacheButton contractAddress={contract.contract_address} />
+            <>
+              <RefreshContractMetadataButton
+                contractAddress={contract.contract_address}
+              />
+              <FlushCacheButton contractAddress={contract.contract_address} />
+            </>
           )}
         </nav>
       </div>

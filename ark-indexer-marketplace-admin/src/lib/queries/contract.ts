@@ -12,39 +12,58 @@ export async function updateIsRefreshingContract(
 }
 
 export async function fetchRefreshingContracts(chainId: string) {
-  const res = await pool.query<RefreshingContract>(
-    `SELECT 
-    c.contract_address, 
-    c.chain_id, 
-    c.updated_timestamp, 
-    c.contract_type, 
-    c.contract_name, 
-    c.contract_symbol, 
-    c.contract_image, 
-    COUNT(t.token_id) AS token_count
-    FROM contract AS c
-    INNER JOIN 
-        token AS t 
-        ON c.contract_address = t.contract_address 
-        AND c.chain_id = t.chain_id
-    WHERE 
-        c.is_spam = false
-        AND c.contract_name IS NOT NULL
-        AND c.chain_id = $1
-        AND c.contract_type = 'ERC721'
-        AND t.metadata_status = 'TO_REFRESH'
-    GROUP BY 
-    c.contract_address, 
-    c.chain_id, 
-    c.updated_timestamp, 
-    c.contract_type, 
-    c.contract_name, 
-    c.contract_symbol, 
-    c.contract_image
-    ORDER BY token_count DESC
-    LIMIT 20`,
-    [chainId],
-  );
+  const query = `WITH refreshed_tokens AS (
+      SELECT
+          t.contract_address,
+          t.chain_id,
+          COUNT(t.token_id) AS refreshed_token_count
+      FROM
+          token AS t
+      WHERE t.metadata_status = 'OK'
+      AND t.chain_id = $1
+      GROUP BY
+          t.contract_address,
+          t.chain_id
+  )
+  SELECT
+      c.contract_address,
+      c.chain_id,
+      c.updated_timestamp,
+      c.contract_type,
+      c.contract_name,
+      c.contract_symbol,
+      c.contract_image,
+      COALESCE(rt.refreshed_token_count, 0) AS refreshed_token_count,
+      COUNT(t.token_id) AS token_count,
+      ROUND((COALESCE(rt.refreshed_token_count, 0) * 100.0 / COUNT(t.token_id)), 2) AS progress_percentage
+  FROM
+      contract AS c
+  INNER JOIN
+      token AS t
+      ON c.contract_address = t.contract_address
+      AND c.chain_id = t.chain_id
+  LEFT JOIN
+      refreshed_tokens AS rt
+      ON c.contract_address = rt.contract_address
+      AND c.chain_id = rt.chain_id
+  WHERE
+      c.is_spam = false
+      AND c.is_refreshing = true
+      AND c.chain_id = $1
+      AND c.contract_type = 'ERC721'
+  GROUP BY
+      c.contract_address,
+      c.chain_id,
+      c.updated_timestamp,
+      c.contract_type,
+      c.contract_name,
+      c.contract_symbol,
+      c.contract_image,
+      rt.refreshed_token_count
+  ORDER BY
+      token_count DESC
+  LIMIT 20`;
+  const res = await pool.query<RefreshingContract>(query, [chainId]);
 
   return res.rows;
 }

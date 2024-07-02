@@ -5,7 +5,11 @@ import { RotateCcw } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { api } from "~/trpc/react";
 
-export default function RefreshContractMetadataButton() {
+export default function RefreshContractMetadataButton({
+  contractAddress,
+}: {
+  contractAddress: string;
+}) {
   const refreshContractMetadata =
     api.contract.refreshContractMetadata.useMutation();
 
