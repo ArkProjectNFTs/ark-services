@@ -15,13 +15,41 @@ pub struct TokenData {
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
+pub struct TokenMarketData {
+    pub token_data: TokenOneData,
+    pub top_offer: Option<TopOffer>,
+    pub listing: Option<Listing>,
+}
+
+#[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenOneData {
-    pub price: Option<BigDecimal>,
-    pub last_price: Option<BigDecimal>,
-    pub top_offer: Option<BigDecimal>,
     pub owner: Option<String>,
-    pub collection_name: Option<String>,
-    pub metadata: Option<JsonValue>,
+    pub floor: Option<BigDecimal>,
+    pub created_timestamp: Option<i64>,
+    pub updated_timestamp: Option<i64>,
+    pub is_listed: Option<bool>,
+    pub has_offer: Option<bool>,
+    pub buy_in_progress: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, FromRow)]
+pub struct TopOffer {
+    pub order_hash: String,
+    pub amount: String,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
+    pub currency_address: String,
+}
+
+#[derive(Serialize, Deserialize, FromRow)]
+pub struct Listing {
+    pub is_auction: Option<bool>,
+    pub order_hash: Option<String>,
+    pub start_amount: Option<String>,
+    pub end_amount: Option<String>,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
+    pub currency_address: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]

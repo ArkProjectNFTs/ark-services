@@ -2,7 +2,7 @@ FROM rust:latest
 
 WORKDIR /app
 
-COPY . .
+COPY ark-marketplace-cron/ .
 
 RUN cargo build -p ark-marketplace-cron --release
 
