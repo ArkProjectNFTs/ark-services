@@ -41,8 +41,8 @@ jobs:
 
       - name: Run SQL Migrations
         run: |
-          echo "::add-mask::$DATABASE_URL"
+          echo "::add-mask::${{ secrets.DATABASE_URL }}"
           cd ark-sqlx
           sqlx migrate run --source ./migrations/marketplace
         env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
