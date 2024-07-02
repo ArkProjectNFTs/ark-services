@@ -1,4 +1,4 @@
-name: Deploy Arkchain Indexer Marketplace (Production)
+name: MKT Orderbook Indexer (Production) (Mainnet) (Scaleway)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-arkchain-indexer-marketplace-production.yml"
+      - ".github/workflows/marketplace-orderbook-indexer-production.yml"
       - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-ark-indexer-marketplace/**"
       - "arkchain-indexer-marketplace/**"

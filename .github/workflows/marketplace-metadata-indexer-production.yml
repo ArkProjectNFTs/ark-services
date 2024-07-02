@@ -1,96 +1,24 @@
-name: Deploy Deprecated NFT Indexers (Production)
+name: MKT Metadata Indexer (Production) (Mainnet) (AWS)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-metadata-marketplace-production.yml"
+      - "infrastructure/cdk-ark-metadata-marketplace/**"
+      - "ark-metadata-marketplace/**"
 
 jobs:
   discord-notification:
     runs-on: ubuntu-latest
-    name: Discord Notification
     steps:
       - name: Send notification to dev-updates channel
         uses: ./.github/actions/discord-notification
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message: "🚢 Deploying Indexers to Production environment..."
-
-  push-indexer-image:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
-      - name: Install pnpm
-        run: |
-          npm install -g pnpm
-          npm install -g aws-cdk
-
-      - name: Deploy ECR Repository
-        run: |
-          cd infrastructure/cdk-ark-ecr
-          pnpm install
-          cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Output ECR Repository URL
-        id: set_ecr_url
-        run: |
-          cd infrastructure/cdk-ark-ecr
-          ECR_URL=$(jq -r '."ark-ecr".ECRRepositoryURL' ./cdk-outputs.json)
-          echo "ECR Repository URL: $ECR_URL"
-          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Build indexer, tag, and push image to Amazon ECR
-        run: |
-          docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-production-latest --file docker/indexer/Dockerfile . --load
-          docker push $ECR_URL:indexer-production-latest
-        env:
-          ECR_URL: ${{ env.ECR_URL }}
-          AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
-          RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
-          METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
-          METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
-          IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          message: "🚀 Deploying Metadata Marketplace Indexer on Production environment..."
 
   push-metadata-indexer-image:
     runs-on: ubuntu-latest
@@ -103,11 +31,6 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
       - name: Install pnpm
         run: |
           npm install -g pnpm
@@ -153,11 +76,11 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Build metadata, tag, and push image to Amazon ECR
+      - name: Build metadata indexer, tag, and push image to Amazon ECR
         run: |
-          docker buildx create --use --name ecr-deploy-builder-metadata
-          docker buildx build --tag $ECR_URL:metadata-production-latest --file docker/metadata/Dockerfile . --load
-          docker push $ECR_URL:metadata-production-latest
+          docker buildx create --use --name ecr-deploy-builder-indexer
+          docker buildx build --tag $ECR_URL:metadata-marketplace-production-latest --file docker/metadata-marketplace/Dockerfile . --load
+          docker push $ECR_URL:metadata-marketplace-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
@@ -172,7 +95,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [push-indexer-image, push-metadata-indexer-image]
+    needs: [push-metadata-indexer-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -194,7 +117,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-indexers
+          cd infrastructure/cdk-ark-metadata-marketplace
           pnpm install
 
       - name: Cache Cargo registry
@@ -222,9 +145,9 @@ jobs:
         run: |
           pip install cargo-lambda
 
-      - name: Bootstrap Indexers
+      - name: Bootstrap Metadata Indexer Marketplace
         run: |
-          cd infrastructure/cdk-ark-indexers
+          cd infrastructure/cdk-ark-metadata-marketplace
           pnpm cdk bootstrap -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
@@ -232,9 +155,9 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy Indexers
+      - name: Deploy Metadata Indexer Marketplace
         run: |
-          cd infrastructure/cdk-ark-indexers
+          cd infrastructure/cdk-ark-metadata-marketplace
           pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}

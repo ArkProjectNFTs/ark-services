@@ -1,4 +1,4 @@
-name: Deploy Arkchain Indexer to AWS (Production)
+name: Deploy Arkchain Indexer (Production) (AWS)
 
 on:
   workflow_dispatch:
@@ -15,7 +15,6 @@ env:
   ARKCHAIN_DATABASE_URL_PROD: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
 
 jobs:
-
   push-indexer-image:
     runs-on: ubuntu-latest
 
@@ -76,7 +75,6 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
-
 
   deploy:
     runs-on: ubuntu-latest
