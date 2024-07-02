@@ -1,4 +1,4 @@
-name: Deploy Arkchain Indexer (Production) (AWS)
+name: Arkchain Indexer (Staging) (AWS)
 
 on:
   workflow_dispatch:
@@ -6,13 +6,13 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-arkchain-indexer-production.yml"
+      - ".github/workflows/arkchain-indexer-staging.yml"
       - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-arkchain-indexer/**"
       - "arkchain-indexer/**"
 
 env:
-  ARKCHAIN_DATABASE_URL_PROD: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
+  ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
 
 jobs:
   push-indexer-image:
@@ -64,9 +64,9 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-arkchain-indexer
-          docker buildx build --tag $ECR_URL:arkchain-indexer-production-latest --file docker/arkchain-indexer/Dockerfile . --load \
+          docker buildx build --tag $ECR_URL:arkchain-indexer-staging-latest --file docker/arkchain-indexer/Dockerfile . --load \
                         --build-arg DATABASE_URL=${DATABASE_URL}
-          docker push $ECR_URL:arkchain-indexer-production-latest
+          docker push $ECR_URL:arkchain-indexer-staging-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
@@ -74,11 +74,11 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
+          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
 
   deploy:
     runs-on: ubuntu-latest
-    #needs: [push-indexer-image]
+    needs: [push-indexer-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -107,7 +107,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
+          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER_STAGING }}
           DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
           DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}
@@ -117,13 +117,13 @@ jobs:
           cd infrastructure/cdk-arkchain-indexer
           pnpm build
           pnpm cdk context --clear
-          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=false
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
+          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER_STAGING }}
           DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
           DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}

@@ -1,4 +1,4 @@
-name: Orderbook API (Staging) (AWS)
+name: Arkchain Indexer (Production) (AWS)
 
 on:
   workflow_dispatch:
@@ -6,16 +6,16 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-ark-orderbook-api-staging.yml"
+      - ".github/workflows/arkchain-indexer-production.yml"
       - "infrastructure/cdk-ark-ecr/**"
-      - "infrastructure/cdk-ark-orderbookapi/**"
-      - "ark-orderbook-api/**"
+      - "infrastructure/cdk-arkchain-indexer/**"
+      - "arkchain-indexer/**"
 
 env:
-  ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
+  ARKCHAIN_DATABASE_URL_PROD: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
 
 jobs:
-  push-orderbook-api-image:
+  push-indexer-image:
     runs-on: ubuntu-latest
 
     steps:
@@ -63,13 +63,22 @@ jobs:
 
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
-          docker buildx create --use --name ecr-deploy-builder-ark-orderbook-api
-          docker buildx build --tag $ECR_URL:ark-orderbook-api-staging-latest --file docker/ark-orderbook-api/Dockerfile . --load
-          docker push $ECR_URL:ark-orderbook-api-staging-latest
+          docker buildx create --use --name ecr-deploy-builder-arkchain-indexer
+          docker buildx build --tag $ECR_URL:arkchain-indexer-production-latest --file docker/arkchain-indexer/Dockerfile . --load \
+                        --build-arg DATABASE_URL=${DATABASE_URL}
+          docker push $ECR_URL:arkchain-indexer-production-latest
+        env:
+          ECR_URL: ${{ env.ECR_URL }}
+          RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [push-orderbook-api-image]
+    #needs: [push-indexer-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
@@ -84,12 +93,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-orderbookapi
+          cd infrastructure/cdk-arkchain-indexer
           pnpm install
 
-      - name: Bootstrap Orderbook API
+      - name: Bootstrap Indexer
         run: |
-          cd infrastructure/cdk-ark-orderbookapi
+          cd infrastructure/cdk-arkchain-indexer
           pnpm build
           pnpm cdk context --clear
           pnpm cdk bootstrap
@@ -98,22 +107,23 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER_STAGING }}
+          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
           DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
           DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}
 
-      - name: Deploy Orderbook API
+      - name: Deploy Indexer
         run: |
-          cd infrastructure/cdk-ark-orderbookapi
+          cd infrastructure/cdk-arkchain-indexer
           pnpm build
           pnpm cdk context --clear
-          pnpm cdk deploy --require-approval never
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
+          DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
+          DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}
-          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}

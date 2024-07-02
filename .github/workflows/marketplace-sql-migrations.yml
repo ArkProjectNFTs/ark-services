@@ -1,4 +1,4 @@
-name: Apply Marketplace SQL Migrations
+name: MKT SQL Migrations (Scaleway)
 
 on:
   workflow_dispatch:
