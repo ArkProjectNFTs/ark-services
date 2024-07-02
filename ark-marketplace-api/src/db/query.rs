@@ -1,6 +1,8 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenInformationData, TokenMarketData, TokenPortfolioData};
+use crate::models::token::{
+    TokenData, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenPortfolioData,
+};
 use redis::AsyncCommands;
 
 pub async fn get_collections_data<D: DatabaseAccess + Sync>(

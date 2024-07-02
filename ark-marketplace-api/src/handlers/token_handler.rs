@@ -1,7 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
-    get_collection_floor_price, get_token_data, get_token_marketdata, get_token_offers_data, get_tokens_data,
-    get_tokens_portfolio_data,
+    get_collection_floor_price, get_token_data, get_token_marketdata, get_token_offers_data,
+    get_tokens_data, get_tokens_portfolio_data,
 };
 use crate::models::token::TokenOfferOneData;
 use crate::utils::currency_utils::compute_floor_difference;
