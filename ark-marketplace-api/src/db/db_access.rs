@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
 use sqlx::Row;
-use bigdecimal::BigDecimal;
 
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
@@ -16,8 +15,8 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        sort: &str,
-        direction: &str,
+        sort: Option<String>,
+        direction: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_token_data(
@@ -480,9 +479,23 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         buy_now: bool,
-        _sort: &str,
-        _direction: &str,
+        sort: Option<String>,
+        direction: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
+        let sort_field = sort.as_deref().unwrap_or("price");
+        let sort_direction = direction.as_deref().unwrap_or("asc");
+
+        let order_by = match (sort_field, sort_direction) {
+            ("price", "asc") => {
+                "token.listing_start_amount ASC NULLS LAST, CAST(token.token_id AS NUMERIC)"
+            }
+            ("price", "desc") => {
+                "token.listing_start_amount DESC NULLS FIRST, CAST(token.token_id AS NUMERIC)"
+            }
+            (_, "asc") => "CAST(token.token_id AS NUMERIC) ASC",
+            (_, "desc") => "CAST(token.token_id AS NUMERIC) DESC",
+            _ => "CAST(token.token_id AS NUMERIC) ASC", // Default case
+        };
         /*let total_token_count = sqlx::query!(
             "
                 SELECT COUNT(*)
@@ -520,9 +533,9 @@ impl DatabaseAccess for PgPool {
         //let count = total_count.count.unwrap_or(0);
         let count = 0;
 
-        let tokens_data: Vec<TokenData> = sqlx::query_as!(
-            TokenData,
-            "
+       let tokens_data: Vec<TokenData> = sqlx::query_as::<sqlx::Postgres, TokenData>(
+           &format!(
+               "
                SELECT
                    token.contract_address as contract,
                    token.token_id,
@@ -532,25 +545,21 @@ impl DatabaseAccess for PgPool {
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata
                FROM token
-               WHERE token.contract_address = $3
-                 AND token.chain_id = $4
-               AND (
-                  $5 = false OR
-                    token.is_listed = true
-              )
-              ORDER BY token.listing_start_amount NULLS LAST,
-              CAST(token.token_id AS NUMERIC)
-           LIMIT $1 OFFSET $2",
-            items_per_page,
-            (page - 1) * items_per_page,
-            contract_address,
-            chain_id,
-            buy_now,
-            //sort,
-            //direction,
-        )
-        .fetch_all(self)
-        .await?;
+               WHERE token.contract_address = $1
+                   AND token.chain_id = $2
+                   AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+               ORDER BY {}
+               LIMIT $4 OFFSET $5",
+               order_by
+           ),
+       )
+       .bind(items_per_page)
+       .bind((page - 1) * items_per_page)
+       .bind(contract_address)
+       .bind(chain_id)
+       .bind(buy_now)
+       .fetch_all(self)
+       .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

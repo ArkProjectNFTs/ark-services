@@ -132,8 +132,8 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                     page,
                     items_per_page,
                     buy_now,
-                    sort,
-                    direction,
+                    Some(sort.to_string()),
+                    Some(direction.to_string()),
                 )
                 .await?;
 
