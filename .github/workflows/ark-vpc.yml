@@ -1,4 +1,4 @@
-name: NFT APIs (Staging) (Mainnet)
+name: Deploy VPC (AWS)
 
 on:
   workflow_dispatch:
@@ -6,20 +6,10 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-ark-api-staging.yml"
-      - "infrastructure/cdk-ark-api/**"
+      - ".github/workflows/ark-vpc.yml"
+      - "infrastructure/cdk-ark-vpc/**"
 
 jobs:
-  discord-notification:
-    runs-on: ubuntu-latest
-    name: Discord Notification
-    steps:
-      - name: Send notification to dev-updates channel
-        uses: ./.github/actions/discord-notification
-        with:
-          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message: "🧪 Deploying NFT APIs on Staging environment..."
-
   deploy:
     runs-on: ubuntu-latest
     steps:
@@ -31,13 +21,6 @@ jobs:
         with:
           node-version: "18"
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
       - name: Install pnpm
         run: |
           npm install -g pnpm
@@ -45,16 +28,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-api
+          cd infrastructure/cdk-ark-vpc
           pnpm install
 
-      - name: Install Cargo Lambda
+      - name: Bootstrap VPC
         run: |
-          pip install cargo-lambda
-
-      - name: Bootstrap NFT APIs
-        run: |
-          cd infrastructure/cdk-ark-api
+          cd infrastructure/cdk-ark-vpc
           pnpm cdk bootstrap
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
@@ -62,9 +41,9 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy NFT APIs
+      - name: Deploy VPC
         run: |
-          cd infrastructure/cdk-ark-api
+          cd infrastructure/cdk-ark-vpc
           pnpm cdk deploy --require-approval never
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}

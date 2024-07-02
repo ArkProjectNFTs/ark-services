@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-ark-redis.yml"
+      - ".github/workflows/ark-redis.yml"
       - "infrastructure/cdk-ark-redis/**"
 
 jobs:

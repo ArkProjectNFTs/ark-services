@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-metadata-marketplace-production.yml"
+      - ".github/workflows/marketplace-metadata-indexer-production.yml"
       - "infrastructure/cdk-ark-metadata-marketplace/**"
       - "ark-metadata-marketplace/**"
 
