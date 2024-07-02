@@ -1,4 +1,4 @@
-name: Deploy AWS Redis (Production)
+name: Redis (Staging) (AWS)
 
 on:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: Deploy ArkProject Marketplace API to Scaleway (Mainnet)
+name: MKT API (Production) (Mainnet) (Scaleway)
 
 on:
   workflow_dispatch:

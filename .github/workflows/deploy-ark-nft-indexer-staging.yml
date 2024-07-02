@@ -1,4 +1,4 @@
-name: Deploy Deprecated NFT Indexers (Staging)
+name: NFT Indexer (Staging) (AWS)
 
 on:
   workflow_dispatch:

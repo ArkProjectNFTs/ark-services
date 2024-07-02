@@ -1,4 +1,4 @@
-name: Deploy NFT APIs (Staging)
+name: NFT APIs (Staging) (Mainnet)
 
 on:
   workflow_dispatch:

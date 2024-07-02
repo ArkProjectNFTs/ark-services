@@ -1,4 +1,4 @@
-name: Deploy NFT APIs (Production)
+name: NFT APIs (Production) (Mainnet)
 
 on:
   workflow_dispatch:
