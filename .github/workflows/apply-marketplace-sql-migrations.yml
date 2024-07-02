@@ -41,6 +41,7 @@ jobs:
 
       - name: Retrieve DATABASE_URL from Secrets Manager
         id: get_secret
+        if: env.DATABASE_URL == ''
         run: |
           secret_id="prod/ark-db-credentials"
           secret=$(aws secretsmanager get-secret-value --secret-id $secret_id --query SecretString --output text)
