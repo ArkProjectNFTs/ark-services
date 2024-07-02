@@ -1,18 +1,6 @@
 name: "Apply Marketplace SQL Migrations"
 description: "Run SQL migrations on Mainnet database"
 inputs:
-  aws-access-key-id:
-    description: "AWS Access Key ID for accessing Secrets Manager"
-    required: true
-  aws-secret-access-key:
-    description: "AWS Secret Access Key for accessing Secrets Manager"
-    required: true
-  aws-region:
-    description: "AWS Region for accessing Secrets Manager"
-    required: true
-  secret-id:
-    description: "Secret ID for retrieving DATABASE_URL from Secrets Manager"
-    required: true
   discord-webhook-url:
     description: "Discord webhook URL for notifications"
     required: true
