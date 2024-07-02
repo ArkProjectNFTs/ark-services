@@ -9,20 +9,16 @@ jobs:
     strategy:
       matrix:
         environment: [mainnet]
+
     name: Run SQL Migrations on ${{ matrix.environment }}
     steps:
-      - name: Notify start of migrations
-        uses: ./.github/actions/discord-notification
-        with:
-          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message: "🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database..."
-
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Run SQL Migrations
-        run: |
-          cd ark-sqlx
-          sqlx migrate run --source ./migrations/marketplace
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          aws-access-key-id: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          secret-id: "prod/ark-db-credentials"

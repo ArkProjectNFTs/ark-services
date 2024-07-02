@@ -32,24 +32,6 @@ runs:
         sudo apt-get install -y awscli jq
         cargo install sqlx-cli --no-default-features --features rustls,postgres
 
-    - name: Retrieve DATABASE_URL from Secrets Manager
-      id: get_secret
-      run: |
-        secret_id="${{ inputs.secret-id }}"
-        secret=$(aws secretsmanager get-secret-value --secret-id $secret_id --query SecretString --output text)
-        username=$(echo $secret | jq -r .username)
-        password=$(echo $secret | jq -r .password)
-        host=$(echo $secret | jq -r .host)
-        port=$(echo $secret | jq -r .port)
-        dbname=$(echo $secret | jq -r .dbname)
-        DATABASE_URL="postgresql://$username:$password@$host:$port/$dbname"
-        echo "::add-mask::$DATABASE_URL"
-        echo "DATABASE_URL=$DATABASE_URL" >> $GITHUB_ENV
-      env:
-        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
-        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
-        AWS_REGION: ${{ inputs.aws-region }}
-
     - name: Run SQL Migrations
       run: |
         cd ark-sqlx
