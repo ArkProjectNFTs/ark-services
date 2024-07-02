@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/arkchain-indexer-staging.yml"
+      - ".github/workflows/orderbook-indexer-staging.yml"
       - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-arkchain-indexer/**"
       - "arkchain-indexer/**"

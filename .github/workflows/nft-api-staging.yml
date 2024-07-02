@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/ark-api-staging.yml"
+      - ".github/workflows/nft-api-staging.yml"
       - "infrastructure/cdk-ark-api/**"
 
 jobs:
