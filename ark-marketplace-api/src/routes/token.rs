@@ -21,13 +21,12 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
-            "/tokens/{address}/{chain_id}/{token_id}/marketdata",
-            web::get().to(get_token_market::<PgPool>),
+        "/tokens/{address}/{chain_id}/{token_id}/marketdata",
+        web::get().to(get_token_market::<PgPool>),
     );
 
     cfg.route(
         "/tokens/{address}/{chain_id}/{token_id}/offers",
         web::get().to(get_token_offers::<PgPool>),
     );
-
 }

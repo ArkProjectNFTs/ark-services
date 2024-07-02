@@ -1,5 +1,8 @@
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
-use crate::models::token::{TokenData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, Listing, TopOffer, TokenMarketData, TokenInformationData};
+use crate::models::token::{
+    Listing, TokenData, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData,
+    TokenPortfolioData, TopOffer,
+};
 
 use async_trait::async_trait;
 use sqlx::Error;
@@ -529,14 +532,6 @@ impl DatabaseAccess for PgPool {
         let sort_direction = direction.as_deref().unwrap_or("asc");
 
         let order_by = match (sort_field, sort_direction) {
-            ("price", "asc") => {
-                "token.listing_start_amount ASC NULLS LAST, CAST(token.token_id AS NUMERIC)"
-            }
-            ("price", "desc") => {
-                "token.listing_start_amount DESC NULLS FIRST, CAST(token.token_id AS NUMERIC)"
-            }
-            (_, "asc") => "CAST(token.token_id AS NUMERIC) ASC",
-            (_, "desc") => "CAST(token.token_id AS NUMERIC) DESC",
             _ => "CAST(token.token_id AS NUMERIC) ASC", // Default case
         };
         /*let total_token_count = sqlx::query!(
@@ -576,7 +571,7 @@ impl DatabaseAccess for PgPool {
         //let count = total_count.count.unwrap_or(0);
         let count = 0;
 
-        let tokens_data: Vec<TokenData> = sqlx::query_as::<sqlx::Postgres, TokenData>(&format!(
+        let tokens_data_query = format!(
             "
                SELECT
                    token.contract_address as contract,
@@ -593,14 +588,16 @@ impl DatabaseAccess for PgPool {
                ORDER BY {}
                LIMIT $4 OFFSET $5",
             order_by
-        ))
-        .bind(items_per_page)
-        .bind((page - 1) * items_per_page)
-        .bind(contract_address)
-        .bind(chain_id)
-        .bind(buy_now)
-        .fetch_all(self)
-        .await?;
+        );
+
+        let tokens_data: Vec<TokenData> = sqlx::query_as(&tokens_data_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(buy_now)
+            .bind(items_per_page)
+            .bind((page - 1) * items_per_page)
+            .fetch_all(self)
+            .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

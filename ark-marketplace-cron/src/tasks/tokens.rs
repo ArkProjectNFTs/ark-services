@@ -117,22 +117,18 @@ pub async fn cache_collection_pages(
                 TokenData,
                 "
                    SELECT
-                       token.contract_address as contract,
-                       token.token_id,
-                       hex_to_decimal(token.last_price) as last_price,
-                       CAST(0 as INTEGER) as floor_difference,
-                       token.listing_timestamp as listed_at,
-                       token.current_owner as owner,
-                       token.block_timestamp as minted_at,
-                       token.updated_timestamp as updated_at,
-                       hex_to_decimal(token.listing_start_amount) as price,
-                       token.metadata as metadata
+                      token.contract_address as contract,
+                      token.token_id,
+                      hex_to_decimal(token.last_price) as last_price,
+                      CAST(0 as INTEGER) as floor_difference,
+                      token.listing_timestamp as listed_at,
+                      hex_to_decimal(token.listing_start_amount) as price,
+                      token.metadata as metadata
                    FROM token
                    WHERE token.contract_address = $3
                      AND token.chain_id = $4
                    ORDER BY
-                       token.is_listed desc,
-                       token.listing_start_amount ASC,
+                       token.listing_start_amount ASC NULLS LAST,
                        CAST(token.token_id AS NUMERIC)
                LIMIT $1 OFFSET $2",
                 ITEMS_PER_PAGE,
@@ -147,7 +143,6 @@ pub async fn cache_collection_pages(
                 Vec::new()
             });
             let json_data = json!((tokens_data, has_next_page, token_count));
-
             let key = format!("all_tokens_{}_page_{}", contract_address, page);
             // Store the JSON data in Redis
             match con.set::<_, _, ()>(&key, json_data.to_string()).await {
