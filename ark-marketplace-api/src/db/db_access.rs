@@ -538,6 +538,14 @@ impl DatabaseAccess for PgPool {
         let sort_direction = direction.as_deref().unwrap_or("asc");
 
         let order_by = match (sort_field, sort_direction) {
+            ("price", "asc") => {
+                "token.listing_start_amount ASC NULLS LAST, CAST(token.token_id AS NUMERIC)"
+            }
+            ("price", "desc") => {
+                "token.listing_start_amount DESC NULLS FIRST, CAST(token.token_id AS NUMERIC)"
+            }
+            (_, "asc") => "CAST(token.token_id AS NUMERIC) ASC",
+            (_, "desc") => "CAST(token.token_id AS NUMERIC) DESC",
             _ => "CAST(token.token_id AS NUMERIC) ASC", // Default case
         };
         /*let total_token_count = sqlx::query!(
