@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/ark-nft-indexer-staging.yml"
+      - ".github/workflows/nft-indexer-staging.yml"
       - "infrastructure/cdk-ark-indexers/**"
       - "ark-indexer/**"
       - "ark-lambdas/**"

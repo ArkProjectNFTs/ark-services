@@ -1,4 +1,4 @@
-name: Orderbook API (Staging) (AWS)
+name: Orderbook API (Production) (AWS)
 
 on:
   workflow_dispatch:
@@ -6,13 +6,10 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/ark-orderbook-api-staging.yml"
+      - ".github/workflows/orderbook-api-production.yml"
       - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-ark-orderbookapi/**"
       - "ark-orderbook-api/**"
-
-env:
-  ARKCHAIN_DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
 
 jobs:
   push-orderbook-api-image:
@@ -64,8 +61,8 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-ark-orderbook-api
-          docker buildx build --tag $ECR_URL:ark-orderbook-api-staging-latest --file docker/ark-orderbook-api/Dockerfile . --load
-          docker push $ECR_URL:ark-orderbook-api-staging-latest
+          docker buildx build --tag $ECR_URL:ark-orderbook-api-production-latest --file docker/ark-orderbook-api/Dockerfile . --load
+          docker push $ECR_URL:ark-orderbook-api-production-latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -98,7 +95,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
-          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER_STAGING }}
+          ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
+          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
           DB_PASSWORD: ${{ secrets.ARKCHAIN_DB_PASSWORD }}
           DB_USERNAME: ${{ secrets.ARKCHAIN_DB_USERNAME }}
           VPC_ID: ${{ secrets.VPC_ID }}
@@ -108,7 +106,7 @@ jobs:
           cd infrastructure/cdk-ark-orderbookapi
           pnpm build
           pnpm cdk context --clear
-          pnpm cdk deploy --require-approval never
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -116,4 +114,6 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ARKCHAIN_RPC_PROVIDER: ${{ secrets.ARKCHAIN_RPC_PROVIDER }}
           VPC_ID: ${{ secrets.VPC_ID }}
-          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_STAGING }}
+          DATABASE_URL: ${{ secrets.ARKCHAIN_DATABASE_URL_PROD }}
+          API_USER: ${{ secrets.API_USER }}
+          API_PASSWORD: ${{ secrets.API_PASSWORD }}

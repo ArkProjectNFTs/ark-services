@@ -1,4 +1,4 @@
-name: Arkchain Indexer (Production) (AWS)
+name: Orderbook Indexer (Production) (AWS)
 
 on:
   workflow_dispatch:

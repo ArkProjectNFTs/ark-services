@@ -1,4 +1,4 @@
-name: Deploy VPC (AWS)
+name: Redis (Staging) (AWS)
 
 on:
   workflow_dispatch:
@@ -6,8 +6,8 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/ark-vpc.yml"
-      - "infrastructure/cdk-ark-vpc/**"
+      - ".github/workflows/redis.yml"
+      - "infrastructure/cdk-ark-redis/**"
 
 jobs:
   deploy:
@@ -28,22 +28,12 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-vpc
+          cd infrastructure/cdk-ark-redis
           pnpm install
 
-      - name: Bootstrap VPC
+      - name: Deploy Redis
         run: |
-          cd infrastructure/cdk-ark-vpc
-          pnpm cdk bootstrap
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy VPC
-        run: |
-          cd infrastructure/cdk-ark-vpc
+          cd infrastructure/cdk-ark-redis
           pnpm cdk deploy --require-approval never
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
