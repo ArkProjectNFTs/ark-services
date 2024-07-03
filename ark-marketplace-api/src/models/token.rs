@@ -50,11 +50,11 @@ pub struct TokenOneData {
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct TopOffer {
-    pub order_hash: String,
-    pub amount: String,
+    pub order_hash: Option<String>,
+    pub amount: Option<BigDecimal>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
-    pub currency_address: String,
+    pub currency_address: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]

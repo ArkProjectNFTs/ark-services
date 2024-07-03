@@ -3,7 +3,13 @@ use arkproject::diri::storage::types::{
 };
 use arkproject::diri::storage::{Storage, StorageError, StorageResult};
 use async_trait::async_trait;
+use redis::{aio::MultiplexedConnection, Client};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::PgPool;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
+use std::error::Error;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
 use crate::providers::orderbook::OrderProvider;
@@ -11,6 +17,19 @@ use crate::providers::orderbook::OrderProvider;
 pub mod marketplace;
 pub mod metrics;
 pub mod orderbook;
+
+async fn connect_redis() -> Result<Arc<Mutex<MultiplexedConnection>>, Box<dyn Error>> {
+    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL not set");
+    let redis_username = std::env::var("REDIS_USERNAME").expect("REDIS_USERNAME not set");
+    let redis_password = std::env::var("REDIS_PASSWORD").expect("REDIS_PASSWORD not set");
+
+    let client = Client::open(format!(
+        "redis://{}:{}@{}",
+        redis_username, redis_password, redis_url
+    ))?;
+    let connection = client.get_multiplexed_tokio_connection().await?;
+    Ok(Arc::new(Mutex::new(connection)))
+}
 
 /// A context for SQLx database.
 #[derive(Debug)]
@@ -24,6 +43,21 @@ impl SqlxCtx {
 
         Ok(Self {
             pool: AnyPoolOptions::new().connect(db_url).await?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct SqlxCtxPg {
+    pub pool: PgPool,
+}
+
+impl SqlxCtxPg {
+    pub async fn new(db_url: &str) -> Result<Self, ProviderError> {
+        sqlx::any::install_default_drivers();
+
+        Ok(Self {
+            pool: PgPoolOptions::new().connect(db_url).await?,
         })
     }
 }
@@ -131,14 +165,28 @@ impl Storage for SqlxArkchainProvider {
 }
 
 pub struct SqlxMarketplaceProvider {
-    client: SqlxCtx,
+    client: SqlxCtxPg,
+    redis_conn: Arc<Mutex<MultiplexedConnection>>,
 }
 
 impl SqlxMarketplaceProvider {
     pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
-        let sqlx = SqlxCtx::new(sqlx_conn_str).await?;
+        let redis_conn = match connect_redis().await {
+            Ok(con) => con,
+            Err(e) => {
+                tracing::error!("Failed to connect to Redis: {}", e);
+                return Err(ProviderError::DatabaseError(
+                    "Failed to connect to Redis".to_string(),
+                ));
+            }
+        };
 
-        Ok(Self { client: sqlx })
+        let sqlx = SqlxCtxPg::new(sqlx_conn_str).await?;
+
+        Ok(Self {
+            client: sqlx,
+            redis_conn,
+        })
     }
 }
 
@@ -150,15 +198,14 @@ impl Storage for SqlxMarketplaceProvider {
         block_timestamp: u64,
         data: &PlacedData,
     ) -> StorageResult<()> {
-        Ok(
-            MarketplaceOrderProvider::register_placed(
-                &self.client,
-                block_id,
-                block_timestamp,
-                data,
-            )
-            .await?,
+        Ok(MarketplaceOrderProvider::register_placed(
+            &self.client,
+            self.redis_conn.clone(),
+            block_id,
+            block_timestamp,
+            data,
         )
+        .await?)
     }
 
     async fn register_cancelled(
@@ -169,6 +216,7 @@ impl Storage for SqlxMarketplaceProvider {
     ) -> StorageResult<()> {
         Ok(MarketplaceOrderProvider::register_cancelled(
             &self.client,
+            self.redis_conn.clone(),
             block_id,
             block_timestamp,
             data,
@@ -184,6 +232,7 @@ impl Storage for SqlxMarketplaceProvider {
     ) -> StorageResult<()> {
         Ok(MarketplaceOrderProvider::register_fulfilled(
             &self.client,
+            self.redis_conn.clone(),
             block_id,
             block_timestamp,
             data,
@@ -199,6 +248,7 @@ impl Storage for SqlxMarketplaceProvider {
     ) -> StorageResult<()> {
         Ok(MarketplaceOrderProvider::register_executed(
             &self.client,
+            self.redis_conn.clone(),
             block_id,
             block_timestamp,
             data,

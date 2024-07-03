@@ -145,7 +145,10 @@ pub async fn cache_collection_pages(
             let json_data = json!((tokens_data, has_next_page, token_count));
             let key = format!("all_tokens_{}_page_{}", contract_address, page);
             // Store the JSON data in Redis
-            match con.set_ex::<_, _, ()>(&key, json_data.to_string(), 60).await {
+            match con
+                .set_ex::<_, _, ()>(&key, json_data.to_string(), 60)
+                .await
+            {
                 Ok(_) => info!("Successfully set key"),
                 Err(e) => tracing::error!("Failed to set key: {}", e),
             }
