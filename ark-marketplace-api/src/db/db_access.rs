@@ -802,7 +802,7 @@ impl DatabaseAccess for PgPool {
         let types_filter = match types {
             None => String::from(""),
             Some(values) => {
-                format!("AND event_type IN ({})", event_type_list(values))
+                format!("AND te.event_type IN ({})", event_type_list(values))
             }
         };
         let common_sql_query = format!(
