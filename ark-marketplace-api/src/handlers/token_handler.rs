@@ -241,7 +241,7 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     let page = params.page.unwrap_or(1);
     let items_per_page = params.items_per_page.unwrap_or(100);
     let direction = params.direction.as_deref().unwrap_or("desc");
-    let token_activity_data = match get_token_activity_data(
+    let (token_activity_data, has_next_page, count) = match get_token_activity_data(
         db_access,
         &normalized_address,
         &chain_id,
@@ -254,7 +254,9 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     .await
     {
         Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("data not found"),
-        Ok(token_activity_data) => token_activity_data,
+        Ok((token_activity_data, has_next_page, count)) => {
+            (token_activity_data, has_next_page, count)
+        }
         Err(err) => {
             tracing::error!("error query get_token_activity_data: {}", err);
             return HttpResponse::InternalServerError().finish();
@@ -262,6 +264,8 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     };
     HttpResponse::Ok().json(json!({
         "data": token_activity_data,
+        "next_page": if has_next_page { Some(page + 1)} else { None },
+        "count": count,
     }))
 }
 
