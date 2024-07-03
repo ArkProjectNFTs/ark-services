@@ -1,7 +1,7 @@
-import { ECSClient } from "@aws-sdk/client-ecs";
 import { z } from "zod";
 
-import { runTask } from "~/lib/aws";
+import { env } from "~/env.mjs";
+import { spawnNFTIndexerTask } from "~/lib/aws";
 import {
   fetchBlocks,
   fetchIndexers,
@@ -24,16 +24,6 @@ type IndexerTask = {
   start_block_number: number;
   end_block_number: number;
 };
-
-const AWS_REGION = "us-east-1";
-
-const client = new ECSClient({
-  region: AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
 
 const fetchTasks = async (): Promise<IndexerTask[]> => {
   const indexers = await fetchIndexers();
@@ -193,10 +183,9 @@ export const indexerRouter = createTRPCRouter({
         (input.to - input.from + 1) / input.numberOfTasks,
       );
 
-      const INDEXER_ECS_CLUSTER = process.env.ARN_ECS_INDEXER_CLUSTER ?? "";
-      const INDEXER_TASK_DEF = process.env.INDEXER_TASK_DEFINITION ?? "";
-
-      const subnetsStr = process.env.INDEXER_SUBNETS ?? "";
+      const INDEXER_ECS_CLUSTER = env.ARN_ECS_INDEXER_CLUSTER ?? "";
+      const INDEXER_TASK_DEF = env.INDEXER_TASK_DEFINITION ?? "";
+      const subnetsStr = env.INDEXER_SUBNETS ?? "";
       const INDEXER_SUBNETS = subnetsStr.includes(",")
         ? [...subnetsStr.split(",")]
         : [subnetsStr];
@@ -208,7 +197,7 @@ export const indexerRouter = createTRPCRouter({
           const subFrom = input.from + rangeSize * i;
           const subTo = Math.min(subFrom + rangeSize - 1, input.to);
 
-          const commandOutput = await runTask(client, {
+          const commandOutput = await spawnNFTIndexerTask({
             cluster: INDEXER_ECS_CLUSTER,
             network: input.network,
             from: subFrom,

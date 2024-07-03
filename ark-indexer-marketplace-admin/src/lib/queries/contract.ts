@@ -8,6 +8,7 @@ export async function updateIsRefreshingContract(
 ) {
   const query = `UPDATE contract SET is_refreshing = $1, updated_timestamp=EXTRACT(epoch FROM now())::bigint 
                  WHERE contract_address=$2 AND chain_id=$3`;
+
   await pool.query(query, [isRefreshing, contractAddress, chainId]);
 }
 

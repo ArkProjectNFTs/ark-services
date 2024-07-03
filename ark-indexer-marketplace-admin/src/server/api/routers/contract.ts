@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { env } from "~/env.mjs";
+import { spawnMetadataIndexerTask } from "~/lib/aws";
 import {
   fetchContract,
   fetchRefreshingContracts,
@@ -75,6 +77,24 @@ export const contractRouter = createTRPCRouter({
         MAINNET_CHAIN_ID,
         true,
       );
+
+      const subnets = env.MARKETPLACE_INDEXER_SUBNETS.includes(",")
+        ? [...env.MARKETPLACE_INDEXER_SUBNETS.split(",")]
+        : [env.MARKETPLACE_INDEXER_SUBNETS];
+
+      const securityGroups = env.MARKETPLACE_INDEXER_SECURITY_GROUPS.includes(
+        ",",
+      )
+        ? [...env.MARKETPLACE_INDEXER_SECURITY_GROUPS.split(",")]
+        : [env.MARKETPLACE_INDEXER_SECURITY_GROUPS];
+
+      await spawnMetadataIndexerTask({
+        cluster: env.MARKETPLACE_INDEXER_CLUSTER,
+        securityGroups,
+        subnets,
+        taskDefinition: env.MARKETPLACE_INDEXER_TASK_DEFINITION,
+        contractAddress: input.contractAddress,
+      });
     }),
 
   updateContract: protectedProcedure
