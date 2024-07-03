@@ -79,7 +79,7 @@ function deployMetadataServices(
     ? `https://juno.mainnet.arkproject.dev`
     : `https://sepolia.arkproject.dev`;
 
-  taskDefinition.addContainer(`ark_metadata_metadata`, {
+  taskDefinition.addContainer(`indexer-metadata-marketplace`, {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
       `metadata-marketplace-${
@@ -107,6 +107,13 @@ function deployMetadataServices(
   });
 
   taskDefinition.addToTaskRolePolicy(
+    new PolicyStatement({
+      actions: ["s3:*"],
+      resources: ["*"],
+    })
+  );
+
+  taskDefinition.addToExecutionRolePolicy(
     new PolicyStatement({
       actions: ["s3:*"],
       resources: ["*"],
