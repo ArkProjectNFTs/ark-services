@@ -791,25 +791,27 @@ impl DatabaseAccess for PgPool {
     ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
 
+        fn event_type_list(values: &[TokenEventType]) -> String {
+            values
+                .iter()
+                .map(|v| format!("'{}'", v.to_db_string()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        }
+
         let types_filter = match types {
             None => String::from(""),
             Some(values) => {
-                format!(
-                    "AND event_type IN ({})",
-                    values
-                        .iter()
-                        .map(|v| format!("'{}'", v.to_db_string()))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )
+                format!("AND event_type IN ({})", event_type_list(values))
             }
         };
         let common_sql_query = format!(
             "
-                FROM token_event
-                WHERE contract_address = $1
-                    AND chain_id = $2
-                    AND token_id = $3
+                FROM token_event te
+                LEFT JOIN token_offer ON te.order_hash = token_offer.order_hash
+                WHERE te.contract_address = $1
+                    AND te.chain_id = $2
+                    AND te.token_id = $3
                     {}
             ",
             types_filter
@@ -831,20 +833,56 @@ impl DatabaseAccess for PgPool {
             .await?;
         let count = total_count.total;
 
+        let price_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN hex_to_decimal(token_offer.offer_amount)
+                ELSE hex_to_decimal(te.amount)
+            END AS price
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let from_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN token_offer.from_address
+                ELSE te.from_address
+            END AS from
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let to_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN token_offer.to_address
+                ELSE te.to_address
+            END AS to
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
         let activity_sql_query = format!(
             "
             SELECT 
-                event_type AS activity_type,
-                hex_to_decimal(amount) AS price,
-                from_address AS from,
-                to_address AS to,
-                block_timestamp AS time_stamp,
-                transaction_hash
+                te.event_type AS activity_type,
+                te.block_timestamp AS time_stamp,
+                te.transaction_hash,
+                {},
+                {},
+                {}
             {}
-            ORDER BY block_timestamp {}
+            ORDER BY te.block_timestamp {}
             LIMIT {} OFFSET {}
             ",
-            common_sql_query, direction, items_per_page, offset,
+            price_select_part,
+            from_select_part,
+            to_select_part,
+            common_sql_query,
+            direction,
+            items_per_page,
+            offset,
         );
         let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
             .bind(contract_address)
