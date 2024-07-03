@@ -1,18 +1,19 @@
+use crate::providers::{ProviderError, SqlxCtxPg};
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
+use async_std::stream::StreamExt;
 use num_bigint::BigInt;
 use num_traits::Num;
+use redis::aio::MultiplexedConnection;
+use redis::AsyncCommands;
+use sqlx::types::BigDecimal;
 use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::{error, trace};
-use sqlx::types::BigDecimal;
-use redis::{AsyncCommands};
-use tokio::stream::StreamExt;
-use redis::{aio::MultiplexedConnection, Client};
-
-use crate::providers::{ProviderError, SqlxCtxPg};
 
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -221,30 +222,29 @@ pub struct TokenData {
 }
 
 impl OrderProvider {
-
-    async fn clear_listed_tokens_cache(redis_conn, contract_address: &str) -> redis::RedisResult<()> {
+    async fn clear_tokens_cache(
+        redis_conn: Arc<Mutex<MultiplexedConnection>>,
+        contract_address: &str,
+    ) -> redis::RedisResult<()> {
         // Create a pattern for matching keys
-        let pattern = format!("*_{contract_address}_*");
+        let pattern = format!("*{}_*", contract_address);
 
         // Collect keys matching the pattern
-        let mut keys = vec![];
         let mut cmd = redis::cmd("SCAN");
         cmd.cursor_arg(0);
         cmd.arg("MATCH").arg(pattern);
-        let mut iter = cmd.iter_async::<_, String>(&mut redis_conn).await?;
-
-        while let Some(key) = iter.next().await {
-            keys.push(key);
+        let mut conn = redis_conn.lock().await;
+        let mut keys: Vec<String> = vec![];
+        {
+            let mut iter = cmd.iter_async::<_>(&mut *conn).await?;
+            while let Some(key) = iter.next().await {
+                keys.push(key);
+            }
         }
 
         // Delete keys and log the results
         if !keys.is_empty() {
-            let deleted_count: usize = redis_conn.del(keys.clone()).await?;
-            for key in keys {
-                println!("Deleted key: {}", key);
-            }
-        } else {
-            println!("No keys found matching the pattern.");
+            conn.del(keys.clone()).await?;
         }
 
         Ok(())
@@ -614,14 +614,17 @@ impl OrderProvider {
             ORDER BY offer_amount DESC
             LIMIT 1
         ";
-        let best_offer: Option<(BigDecimal, String, i64, i64, String)> = sqlx::query_as(select_query)
-            .bind(&info.contract_address)
-            .bind(&info.token_id)
-            .bind(now)
-            .fetch_optional(&client.pool)
-            .await?;
+        let best_offer: Option<(BigDecimal, String, i64, i64, String)> =
+            sqlx::query_as(select_query)
+                .bind(&info.contract_address)
+                .bind(&info.token_id)
+                .bind(now)
+                .fetch_optional(&client.pool)
+                .await?;
 
-        if let Some((offer_amount, currency_address, start_date, end_date, top_bid_order_hash)) = best_offer {
+        if let Some((offer_amount, currency_address, start_date, end_date, top_bid_order_hash)) =
+            best_offer
+        {
             let update_query = "
                 UPDATE token
                 SET top_bid_amount = $3, top_bid_start_date = $4, top_bid_end_date = $5, top_bid_currency_address = $6, top_bid_order_hash = $7
@@ -713,7 +716,10 @@ impl OrderProvider {
         Ok(())
     }
 
-    async fn insert_offers(client: &SqlxCtxPg, offer_data: &OfferData) -> Result<(), ProviderError> {
+    async fn insert_offers(
+        client: &SqlxCtxPg,
+        offer_data: &OfferData,
+    ) -> Result<(), ProviderError> {
         if !Self::token_exists(
             client,
             &offer_data.contract_address,
@@ -725,55 +731,51 @@ impl OrderProvider {
             return Err(ProviderError::from("Token does not exist"));
         }
 
-
-       // Check if topbid_amount is filled in token
-       let topbid_query = "
+        // Check if topbid_amount is filled in token
+        let topbid_query = "
            SELECT COALESCE(top_bid_amount, 0)
            FROM token
            WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
        ";
 
         let topbid_amount: Option<BigDecimal> = sqlx::query_scalar(topbid_query)
-                .bind(&offer_data.contract_address)
-                .bind(&offer_data.token_id)
-                .bind(&offer_data.chain_id)
-                .fetch_optional(&client.pool)
-                .await?;
+            .bind(&offer_data.contract_address)
+            .bind(&offer_data.token_id)
+            .bind(&offer_data.chain_id)
+            .fetch_optional(&client.pool)
+            .await?;
 
-       // If topbid_amount is filled and the offer is better, update topbid fields
+        // If topbid_amount is filled and the offer is better, update topbid fields
         if let Some(topbid_amount) = topbid_amount {
-
             let offer_amount_hex = offer_data.offer_amount.trim_start_matches("0x");
-            let offer_amount_bigint = BigInt::from_str_radix(offer_amount_hex, 16)
-                .unwrap_or_else(|_| BigInt::from(0));
+            let offer_amount_bigint =
+                BigInt::from_str_radix(offer_amount_hex, 16).unwrap_or_else(|_| BigInt::from(0));
             let offer_amount = BigDecimal::from(offer_amount_bigint);
 
             if offer_amount > topbid_amount {
-
                 let update_query = "
                     UPDATE token
                     SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8
                     WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
                 ";
-               let result = sqlx::query(update_query)
-                   .bind(&offer_data.contract_address)
-                   .bind(&offer_data.token_id)
-                   .bind(&offer_data.chain_id)
-                   .bind(offer_amount)
-                   .bind(offer_data.start_date)
-                   .bind(offer_data.end_date)
-                   .bind(&offer_data.currency_address)
-                   .bind(&offer_data.order_hash)
-                   .execute(&client.pool)
-                   .await;
+                let result = sqlx::query(update_query)
+                    .bind(&offer_data.contract_address)
+                    .bind(&offer_data.token_id)
+                    .bind(&offer_data.chain_id)
+                    .bind(offer_amount)
+                    .bind(offer_data.start_date)
+                    .bind(offer_data.end_date)
+                    .bind(&offer_data.currency_address)
+                    .bind(&offer_data.order_hash)
+                    .execute(&client.pool)
+                    .await;
 
-               match result {
-                   Ok(_) => println!("Update query executed successfully."),
-                   Err(e) => eprintln!("Error executing update query: {:?}", e),
-               }
+                match result {
+                    Ok(_) => println!("Update query executed successfully."),
+                    Err(e) => eprintln!("Error executing update query: {:?}", e),
+                }
             }
         }
-
 
         let insert_query = "
             INSERT INTO token_offer
@@ -809,7 +811,6 @@ impl OrderProvider {
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
-
         let token_id = match data.token_id {
             Some(ref token_id_hex) => {
                 let cleaned_token_id = token_id_hex.trim_start_matches("0x");
@@ -832,6 +833,13 @@ impl OrderProvider {
             block_timestamp,
         )
         .await?;
+
+        match Self::clear_tokens_cache(redis_conn.clone(), &contract_address).await {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Error when deleting cache : {}", e);
+            }
+        }
 
         if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
             // create token without listing information
@@ -969,6 +977,7 @@ impl OrderProvider {
 
     pub async fn register_cancelled(
         client: &SqlxCtxPg,
+        redis_conn: Arc<Mutex<MultiplexedConnection>>,
         _block_id: u64,
         block_timestamp: u64,
         data: &CancelledData,
@@ -979,6 +988,13 @@ impl OrderProvider {
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
         {
+            match Self::clear_tokens_cache(redis_conn.clone(), &token_data.contract_address).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error when deleting cache : {}", e);
+                }
+            }
+
             let token_id = match BigInt::from_str(&token_data.token_id) {
                 Ok(token_id) => token_id.to_string(),
                 Err(e) => {
@@ -1029,6 +1045,7 @@ impl OrderProvider {
 
     pub async fn register_fulfilled(
         client: &SqlxCtxPg,
+        redis_conn: Arc<Mutex<MultiplexedConnection>>,
         _block_id: u64,
         block_timestamp: u64,
         data: &FulfilledData,
@@ -1044,6 +1061,13 @@ impl OrderProvider {
                     return Err(ProviderError::from("Failed to parse token id"));
                 }
             };
+
+            match Self::clear_tokens_cache(redis_conn.clone(), &token_data.contract_address).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error when deleting cache : {}", e);
+                }
+            }
 
             Self::insert_event_history(
                 client,
@@ -1078,6 +1102,7 @@ impl OrderProvider {
 
     pub async fn register_executed(
         client: &SqlxCtxPg,
+        redis_conn: Arc<Mutex<MultiplexedConnection>>,
         _block_id: u64,
         block_timestamp: u64,
         data: &ExecutedData,
@@ -1086,6 +1111,12 @@ impl OrderProvider {
         if let Some(offer_data) =
             Self::get_offer_data_by_order_hash(client, &data.order_hash).await?
         {
+            match Self::clear_tokens_cache(redis_conn.clone(), &offer_data.contract_address).await {
+                Ok(_) => {}
+                Err(e) => {
+                    println!("Error when deleting cache : {}", e);
+                }
+            }
             let to_address = None;
             let from_address = None;
             let order_in_token_offers =
@@ -1160,6 +1191,14 @@ impl OrderProvider {
                 if let Some(token_data) =
                     Self::get_token_data_by_order_hash(client, &data.order_hash).await?
                 {
+                    match Self::clear_tokens_cache(redis_conn.clone(), &token_data.contract_address)
+                        .await
+                    {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Error when deleting cache : {}", e);
+                        }
+                    }
                     /* EventType::Listing | EventType::Auction */
                     Self::update_token_on_listing_executed(
                         client,

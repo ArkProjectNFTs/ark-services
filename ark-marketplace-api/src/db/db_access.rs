@@ -422,16 +422,14 @@ impl DatabaseAccess for PgPool {
             TopOffer,
             "
                 SELECT
-                    order_hash,
-                    offer_amount as amount,
-                    start_date,
-                    end_date,
-                    currency_address
-                FROM token_offer
-                WHERE token_offer.token_id = $1
-                AND token_offer.contract_address = $2
-                ORDER BY offer_amount DESC
-                LIMIT 1
+                    top_bid_order_hash as order_hash,
+                    top_bid_amount as amount,
+                    top_bid_start_date as start_date,
+                    top_bid_end_date as end_date,
+                    top_bid_currency_address as currency_address
+                FROM token
+                WHERE token.token_id = $1
+                AND token.contract_address = $2
             ",
             token_id,
             contract_address
@@ -439,11 +437,11 @@ impl DatabaseAccess for PgPool {
         .fetch_one(self)
         .await
         .unwrap_or(TopOffer {
-            order_hash: "".to_string(),
-            amount: "".to_string(),
+            order_hash: Some("".to_string()),
+            amount: None,
             start_date: None,
             end_date: None,
-            currency_address: "".to_string(),
+            currency_address: Some("".to_string()),
         });
 
         // Fetch Listing
@@ -479,15 +477,15 @@ impl DatabaseAccess for PgPool {
         });
 
         Ok(TokenMarketData {
-           owner: token_data.owner,
-           floor: token_data.floor,
-           created_timestamp: token_data.created_timestamp,
-           updated_timestamp: token_data.updated_timestamp,
-           is_listed: token_data.is_listed,
-           has_offer: token_data.has_offer,
-           buy_in_progress: token_data.buy_in_progress,
-           top_offer: Some(top_offer),
-           listing: Some(listing),
+            owner: token_data.owner,
+            floor: token_data.floor,
+            created_timestamp: token_data.created_timestamp,
+            updated_timestamp: token_data.updated_timestamp,
+            is_listed: token_data.is_listed,
+            has_offer: token_data.has_offer,
+            buy_in_progress: token_data.buy_in_progress,
+            top_offer: Some(top_offer),
+            listing: Some(listing),
         })
     }
 
