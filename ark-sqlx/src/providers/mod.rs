@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
 use sqlx::{PgPool};
 use sqlx::postgres::PgPoolOptions;
+use redis::{aio::MultiplexedConnection, Client};
 
 
 use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
@@ -14,6 +15,20 @@ use crate::providers::orderbook::OrderProvider;
 pub mod marketplace;
 pub mod metrics;
 pub mod orderbook;
+
+
+async fn connect_redis() -> Result<Arc<Mutex<MultiplexedConnection>>, Box<dyn Error>> {
+    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL not set");
+    let redis_username = std::env::var("REDIS_USERNAME").expect("REDIS_USERNAME not set");
+    let redis_password = std::env::var("REDIS_PASSWORD").expect("REDIS_PASSWORD not set");
+
+    let client = Client::open(format!(
+        "redis://{}:{}@{}",
+        redis_username, redis_password, redis_url
+    ))?;
+    let connection = client.get_multiplexed_tokio_connection().await?;
+    Ok(Arc::new(Mutex::new(connection)))
+}
 
 /// A context for SQLx database.
 #[derive(Debug)]
@@ -154,9 +169,11 @@ pub struct SqlxMarketplaceProvider {
 
 impl SqlxMarketplaceProvider {
     pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
+        let redis_conn = connect_redis().await.map_err(|e| ProviderError::DatabaseError(e.to_string()))?;
+
         let sqlx = SqlxCtxPg::new(sqlx_conn_str).await?;
 
-        Ok(Self { client: sqlx })
+        Ok(Self { client: sqlx, redis_conn })
     }
 }
 

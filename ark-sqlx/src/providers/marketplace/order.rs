@@ -8,6 +8,9 @@ use std::fmt;
 use std::str::FromStr;
 use tracing::{error, trace};
 use sqlx::types::BigDecimal;
+use redis::{AsyncCommands};
+use tokio::stream::StreamExt;
+use redis::{aio::MultiplexedConnection, Client};
 
 use crate::providers::{ProviderError, SqlxCtxPg};
 
@@ -218,6 +221,34 @@ pub struct TokenData {
 }
 
 impl OrderProvider {
+
+    async fn clear_listed_tokens_cache(redis_conn, contract_address: &str) -> redis::RedisResult<()> {
+        // Create a pattern for matching keys
+        let pattern = format!("*_{contract_address}_*");
+
+        // Collect keys matching the pattern
+        let mut keys = vec![];
+        let mut cmd = redis::cmd("SCAN");
+        cmd.cursor_arg(0);
+        cmd.arg("MATCH").arg(pattern);
+        let mut iter = cmd.iter_async::<_, String>(&mut redis_conn).await?;
+
+        while let Some(key) = iter.next().await {
+            keys.push(key);
+        }
+
+        // Delete keys and log the results
+        if !keys.is_empty() {
+            let deleted_count: usize = redis_conn.del(keys.clone()).await?;
+            for key in keys {
+                println!("Deleted key: {}", key);
+            }
+        } else {
+            println!("No keys found matching the pattern.");
+        }
+
+        Ok(())
+    }
     async fn order_hash_exists_in_token_offers(
         client: &SqlxCtxPg,
         order_hash: &str,
@@ -546,6 +577,8 @@ impl OrderProvider {
                 currency_chain_id = $7, currency_address = $8,
                 listing_start_date = null, listing_end_date = null,
                 listing_start_amount = null, listing_end_amount = null,
+                top_bid_amount = null, top_bid_start_date = null, top_bid_end_date = null, top_bid_currency_address = null,
+                top_bid_order_hash = null,
                 is_listed = false,
                 held_timestamp = $9
             WHERE contract_address = $1 AND token_id = $2;
@@ -564,13 +597,48 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
-        // to hide offers belonging to old owner
-        sqlx::query("update token_offer set start_date = 0, end_date = 0 WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3 and status != 'EXECUTED'")
+        // remove offers belonging to old owner
+        let delete_query = "DELETE FROM token_offer WHERE offer_maker = $1 AND contract_address = $2 AND token_id = $3";
+        sqlx::query(delete_query)
             .bind(&info.to_address)
             .bind(&info.contract_address)
             .bind(&info.token_id)
             .execute(&client.pool)
             .await?;
+
+        let now = chrono::Utc::now().timestamp();
+        let select_query = "
+            SELECT hex_to_decimal(offer_amount), currency_address, start_date, end_date, order_hash
+            FROM token_offer
+            WHERE contract_address = $1 AND token_id = $2 AND start_date <= $3 AND end_date >= $3
+            ORDER BY offer_amount DESC
+            LIMIT 1
+        ";
+        let best_offer: Option<(BigDecimal, String, i64, i64, String)> = sqlx::query_as(select_query)
+            .bind(&info.contract_address)
+            .bind(&info.token_id)
+            .bind(now)
+            .fetch_optional(&client.pool)
+            .await?;
+
+        if let Some((offer_amount, currency_address, start_date, end_date, top_bid_order_hash)) = best_offer {
+            let update_query = "
+                UPDATE token
+                SET top_bid_amount = $3, top_bid_start_date = $4, top_bid_end_date = $5, top_bid_currency_address = $6, top_bid_order_hash = $7
+                WHERE contract_address = $1 AND token_id = $2
+            ";
+            sqlx::query(update_query)
+                .bind(&info.contract_address)
+                .bind(&info.token_id)
+                .bind(offer_amount)
+                .bind(start_date)
+                .bind(end_date)
+                .bind(currency_address)
+                .bind(top_bid_order_hash)
+                .execute(&client.pool)
+                .await?;
+        }
+
         Ok(())
     }
 
@@ -684,7 +752,7 @@ impl OrderProvider {
 
                 let update_query = "
                     UPDATE token
-                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7
+                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8
                     WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
                 ";
                let result = sqlx::query(update_query)
@@ -695,6 +763,7 @@ impl OrderProvider {
                    .bind(offer_data.start_date)
                    .bind(offer_data.end_date)
                    .bind(&offer_data.currency_address)
+                   .bind(&offer_data.order_hash)
                    .execute(&client.pool)
                    .await;
 
@@ -734,6 +803,7 @@ impl OrderProvider {
 
     pub async fn register_placed(
         client: &SqlxCtxPg,
+        redis_conn: Arc<Mutex<MultiplexedConnection>>,
         _block_id: u64,
         block_timestamp: u64,
         data: &PlacedData,
