@@ -10,8 +10,6 @@ use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
 
-
-
 #[derive(FromRow)]
 struct Count {
     total: i64,
@@ -498,15 +496,15 @@ impl DatabaseAccess for PgPool {
         });
 
         Ok(TokenMarketData {
-           owner: token_data.owner,
-           floor: token_data.floor,
-           created_timestamp: token_data.created_timestamp,
-           updated_timestamp: token_data.updated_timestamp,
-           is_listed: token_data.is_listed,
-           has_offer: token_data.has_offer,
-           buy_in_progress: token_data.buy_in_progress,
-           top_offer: Some(top_offer),
-           listing: Some(listing),
+            owner: token_data.owner,
+            floor: token_data.floor,
+            created_timestamp: token_data.created_timestamp,
+            updated_timestamp: token_data.updated_timestamp,
+            is_listed: token_data.is_listed,
+            has_offer: token_data.has_offer,
+            buy_in_progress: token_data.buy_in_progress,
+            top_offer: Some(top_offer),
+            listing: Some(listing),
         })
     }
 
@@ -790,7 +788,6 @@ impl DatabaseAccess for PgPool {
         items_per_page: i64,
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
-        // time_range ?
     ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
 
@@ -801,7 +798,7 @@ impl DatabaseAccess for PgPool {
                     "AND event_type IN ({})",
                     values
                         .iter()
-                        .map(|v| format!("'{}'", v.to_string()))
+                        .map(|v| format!("'{}'", v.to_db_string()))
                         .collect::<Vec<_>>()
                         .join(", ")
                 )
@@ -833,7 +830,6 @@ impl DatabaseAccess for PgPool {
             .fetch_one(self)
             .await?;
         let count = total_count.total;
-        tracing::info!("Count {}", count);
 
         let activity_sql_query = format!(
             "
@@ -842,7 +838,8 @@ impl DatabaseAccess for PgPool {
                 hex_to_decimal(amount) AS price,
                 from_address AS from,
                 to_address AS to,
-                block_timestamp AS time_stamp
+                block_timestamp AS time_stamp,
+                transaction_hash
             {}
             ORDER BY block_timestamp {}
             LIMIT {} OFFSET {}
@@ -855,13 +852,80 @@ impl DatabaseAccess for PgPool {
             .bind(token_id)
             .fetch_all(self)
             .await?;
-        tracing::info!("{:?}", token_activity_data);
-        tracing::info!("AFTER");
-        // Calculte if there is another page
+
+        // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
 
         Ok((token_activity_data, has_next_page, count))
+    }
+}
+
+/// DB conversion for TokenEventType
+const TOKEN_EVENT_LISTING_STR: &str = "Listing";
+const TOKEN_EVENT_COLLECTION_OFFER_STR: &str = "CollectionOffer";
+const TOKEN_EVENT_OFFER_STR: &str = "Offer";
+const TOKEN_EVENT_AUCTION_STR: &str = "Auction";
+const TOKEN_EVENT_FULFILL_STR: &str = "Fulfill";
+const TOKEN_EVENT_CANCELLED_STR: &str = "Cancelled";
+const TOKEN_EVENT_EXECUTED_STR: &str = "Executed";
+const TOKEN_EVENT_SALE_STR: &str = "Sale";
+const TOKEN_EVENT_MINT_STR: &str = "Mint";
+const TOKEN_EVENT_BURN_STR: &str = "Burn";
+const TOKEN_EVENT_TRANSFER_STR: &str = "Transfer";
+
+impl<DB> sqlx::Type<DB> for TokenEventType
+where
+    DB: sqlx::Database,
+    String: sqlx::Type<DB>,
+{
+    fn type_info() -> <DB as sqlx::Database>::TypeInfo {
+        <String as sqlx::Type<DB>>::type_info()
+    }
+}
+
+impl<'r, DB> sqlx::Decode<'r, DB> for TokenEventType
+where
+    DB: sqlx::Database,
+    &'r str: sqlx::Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as sqlx::database::HasValueRef<'r>>::ValueRef,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <&str as sqlx::Decode<DB>>::decode(value)?;
+        match s {
+            TOKEN_EVENT_LISTING_STR => Ok(TokenEventType::Listing),
+            TOKEN_EVENT_COLLECTION_OFFER_STR => Ok(TokenEventType::CollectionOffer),
+            TOKEN_EVENT_OFFER_STR => Ok(TokenEventType::Offer),
+            TOKEN_EVENT_AUCTION_STR => Ok(TokenEventType::Auction),
+            TOKEN_EVENT_FULFILL_STR => Ok(TokenEventType::Fulfill),
+            TOKEN_EVENT_CANCELLED_STR => Ok(TokenEventType::Cancelled),
+            TOKEN_EVENT_EXECUTED_STR => Ok(TokenEventType::Executed),
+            TOKEN_EVENT_SALE_STR => Ok(TokenEventType::Sale),
+            TOKEN_EVENT_MINT_STR => Ok(TokenEventType::Mint),
+            TOKEN_EVENT_BURN_STR => Ok(TokenEventType::Burn),
+            TOKEN_EVENT_TRANSFER_STR => Ok(TokenEventType::Transfer),
+            _ => Err("Invalid event type".into()),
+        }
+    }
+}
+
+/// Convert TokenEventType to matching keys in DB
+impl TokenEventType {
+    fn to_db_string(&self) -> String {
+        match self {
+            Self::Listing => TOKEN_EVENT_LISTING_STR.to_string(),
+            Self::CollectionOffer => TOKEN_EVENT_COLLECTION_OFFER_STR.to_string(),
+            Self::Offer => TOKEN_EVENT_OFFER_STR.to_string(),
+            Self::Auction => TOKEN_EVENT_AUCTION_STR.to_string(),
+            Self::Fulfill => TOKEN_EVENT_FULFILL_STR.to_string(),
+            Self::Cancelled => TOKEN_EVENT_CANCELLED_STR.to_string(),
+            Self::Executed => TOKEN_EVENT_EXECUTED_STR.to_string(),
+            Self::Sale => TOKEN_EVENT_SALE_STR.to_string(),
+            Self::Mint => TOKEN_EVENT_MINT_STR.to_string(),
+            Self::Burn => TOKEN_EVENT_BURN_STR.to_string(),
+            Self::Transfer => TOKEN_EVENT_TRANSFER_STR.to_string(),
+        }
     }
 }
 

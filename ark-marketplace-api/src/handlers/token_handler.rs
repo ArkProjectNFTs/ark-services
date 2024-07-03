@@ -14,7 +14,6 @@ use serde_json::json;
 use serde_qs;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -231,7 +230,7 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     let normalized_address = normalize_address(&contract_address);
     let db_access = db_pool.get_ref();
 
-    let params = serde_qs::from_str::<ActivityQueryParameters>(&req.query_string());
+    let params = serde_qs::from_str::<ActivityQueryParameters>(req.query_string());
     if let Err(e) = params {
         let msg = format!("Error when parsing query parameters: {}", e);
         tracing::error!(msg);
@@ -241,10 +240,7 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
 
     let page = params.page.unwrap_or(1);
     let items_per_page = params.items_per_page.unwrap_or(100);
-    let direction = params.direction.as_deref().unwrap_or("asc");
-    let filters = &params.types;
-    info!("Filters: {:?}", filters);
-
+    let direction = params.direction.as_deref().unwrap_or("desc");
     let token_activity_data = match get_token_activity_data(
         db_access,
         &normalized_address,

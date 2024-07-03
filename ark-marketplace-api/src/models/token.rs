@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -100,8 +102,7 @@ pub struct TokenOfferOneData {
     pub hash: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, sqlx::Type)]
-#[sqlx(type_name = "text")]
+#[derive(Debug)]
 pub enum TokenEventType {
     Listing,
     CollectionOffer,
@@ -116,17 +117,31 @@ pub enum TokenEventType {
     Transfer,
 }
 
-const LISTING_STR: &str = "Listing";
-const COLLECTION_OFFER_STR: &str = "CollectionOffer";
-const OFFER_STR: &str = "Offer";
-const AUCTION_STR: &str = "Auction";
-const FULFILL_STR: &str = "Fulfill";
-const CANCELLED_STR: &str = "Cancelled";
-const EXECUTED_STR: &str = "Executed";
-const SALE_STR: &str = "Sale";
-const MINT_STR: &str = "Mint";
-const BURN_STR: &str = "Burn";
-const TRANSFER_STR: &str = "Transfer";
+const LISTING_STR: &str = "LISTING";
+const COLLECTION_OFFER_STR: &str = "COLLECTION_OFFER";
+const OFFER_STR: &str = "OFFER";
+const AUCTION_STR: &str = "AUCTION";
+const FULFILL_STR: &str = "FULFILL";
+const CANCELLED_STR: &str = "CANCELLED";
+const EXECUTED_STR: &str = "EXECUTED";
+const SALE_STR: &str = "SALE";
+const MINT_STR: &str = "MINT";
+const BURN_STR: &str = "BURN";
+const TRANSFER_STR: &str = "TRANSFER";
+
+const VARIANTS: [&str; 11] = [
+    LISTING_STR,
+    COLLECTION_OFFER_STR,
+    OFFER_STR,
+    AUCTION_STR,
+    FULFILL_STR,
+    CANCELLED_STR,
+    EXECUTED_STR,
+    SALE_STR,
+    MINT_STR,
+    BURN_STR,
+    TRANSFER_STR,
+];
 
 impl std::fmt::Display for TokenEventType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -146,7 +161,7 @@ impl std::fmt::Display for TokenEventType {
     }
 }
 
-impl std::str::FromStr for TokenEventType {
+impl FromStr for TokenEventType {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -162,8 +177,27 @@ impl std::str::FromStr for TokenEventType {
             MINT_STR => Ok(Self::Mint),
             BURN_STR => Ok(Self::Burn),
             TRANSFER_STR => Ok(Self::Transfer),
-            _ => Err(format!("Invalid variant: {}", s)),
+            _ => Err(format!("Invalid variant: {} ({})", s, VARIANTS.join(", "))),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for TokenEventType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        TokenEventType::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for TokenEventType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -174,4 +208,5 @@ pub struct TokenActivityData {
     pub from: Option<String>,
     pub to: Option<String>,
     pub time_stamp: i64,
+    pub transaction_hash: Option<String>,
 }
