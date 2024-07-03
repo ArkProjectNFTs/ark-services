@@ -26,6 +26,7 @@ struct Config {
     loop_delay_duration: Duration,
     ipfs_gateway_uri: String,
     filter: Option<(String, String)>,
+    refresh_contract_metadata: bool,
 }
 
 #[derive(Deserialize)]
@@ -82,6 +83,10 @@ fn get_env_variables() -> Config {
     );
     let ipfs_gateway_uri = env::var("IPFS_GATEWAY_URI").expect("IPFS_GATEWAY_URI must be set");
 
+    let refresh_contract_metadata = env::var("REFRESH_CONTRACT_METADATA")
+        .map(|value| value == "true")
+        .unwrap_or(false);
+
     let filter = match env::var("METADATA_CONTRACT_FILTER") {
         Ok(contract_address) => {
             let chain_id = env::var("CHAIN_ID_FILTER").expect("CHAIN_ID_FILTER must be set");
@@ -97,6 +102,7 @@ fn get_env_variables() -> Config {
         loop_delay_duration,
         ipfs_gateway_uri,
         filter,
+        refresh_contract_metadata,
     }
 }
 
@@ -106,32 +112,74 @@ async fn main() -> Result<()> {
     let config = get_env_variables();
     let database_uri = get_database_url().await?;
 
-    let metadata_storage = MetadataSqlStorage::new_pg(database_uri.as_str()).await?;
+    let storage = MetadataSqlStorage::new_pg(database_uri.as_str()).await?;
     let starknet_client = StarknetClientHttp::new(&config.rpc_url)?;
     let file_manager = AWSFileManager::new(config.bucket_name);
 
     trace!("Initialized AWSFileManager, StarknetClientHttp, and MetadataStorage");
 
-    let mut metadata_manager =
-        MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
+    let mut metadata_manager = MetadataManager::new(&storage, &starknet_client, &file_manager);
 
     debug!("Starting main loop to check and refresh token metadata");
 
+    if let Some((contract_address, chain_id)) = &config.filter {
+        if config.refresh_contract_metadata {
+            info!(
+                "♻️ Forcing Refresh for NFT collection: {{ contract_address: \"{}\", chain_id: \"{}\" }}",
+                contract_address, chain_id
+            );
+
+            storage
+                .update_all_token_metadata_status(
+                    contract_address,
+                    chain_id,
+                    "COLLECTION_TO_REFRESH",
+                )
+                .await?;
+        }
+    }
+
+    let target_metadata_status = if config.refresh_contract_metadata {
+        "COLLECTION_TO_REFRESH"
+    } else {
+        "TO_REFRESH"
+    };
+
+    let mut total_tokens: u64 = 0;
     loop {
-        match metadata_storage
-            .find_token_ids_without_metadata(config.filter.clone())
+        match storage
+            .find_tokens_without_metadata(
+                config.filter.clone(),
+                Some(target_metadata_status.to_string()),
+            )
             .await
         {
             Ok(tokens) => {
                 if tokens.is_empty() {
-                    info!("No tokens found that require metadata refresh");
+                    if config.refresh_contract_metadata {
+                        info!("All collections metadata refreshed successfully");
+
+                        if let Some((contract_address, chain_id)) = &config.filter {
+                            storage
+                                .set_contract_refreshing_status(contract_address, chain_id, false)
+                                .await?;
+                        }
+
+                        return Ok(());
+                    }
+
+                    info!(
+                        "No tokens found that require metadata refresh (status: {})",
+                        target_metadata_status
+                    );
                     sleep(config.loop_delay_duration).await;
-                    continue;
                 } else {
                     for token in tokens {
+                        total_tokens += 1;
+
                         info!(
-                            "🔄 Refreshing metadata. Contract address: {} - Token ID: {} - Chain ID: {} - Is Verified: {} - Save Images: {}",
-                            token.contract_address, token.token_id, token.chain_id, token.is_verified, token.save_images
+                            "🔄 Refreshing Token Metadata [{}]: Token: {:?} - Metadata Status: {}",
+                            total_tokens, token, target_metadata_status
                         );
 
                         match metadata_manager
@@ -162,7 +210,7 @@ async fn main() -> Result<()> {
                                     }
                                 }
 
-                                let _ = metadata_storage
+                                let _ = storage
                                     .update_token_metadata_status(
                                         &token.contract_address,
                                         &token.token_id,
@@ -173,15 +221,13 @@ async fn main() -> Result<()> {
                             }
                         }
                     }
-                    continue;
                 }
             }
             Err(e) => {
                 error!("Error: {:?}", e);
                 sleep(config.loop_delay_duration).await;
-                continue;
             }
-        };
+        }
     }
 }
 

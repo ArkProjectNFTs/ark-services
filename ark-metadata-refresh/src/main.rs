@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
 
     loop {
         match metadata_storage
-            .find_token_ids_without_metadata(config.filter.clone())
+            .find_tokens_without_metadata(config.filter.clone(), None)
             .await
         {
             Ok(tokens) => {

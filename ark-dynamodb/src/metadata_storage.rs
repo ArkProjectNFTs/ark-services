@@ -39,6 +39,24 @@ impl MetadataStorage {
 
 #[async_trait]
 impl Storage for MetadataStorage {
+    async fn update_all_token_metadata_status(
+        &self,
+        _contract_address: &str,
+        _chain_id: &str,
+        _metadata_status: &str,
+    ) -> Result<(), StorageError> {
+        Err(StorageError::DatabaseError("Not implemented".to_string()))
+    }
+
+    async fn set_contract_refreshing_status(
+        &self,
+        _contract_address: &str,
+        _chain_id: &str,
+        _is_refreshing: bool,
+    ) -> Result<(), StorageError> {
+        Err(StorageError::DatabaseError("Not implemented".to_string()))
+    }
+
     async fn update_token_metadata_status(
         &self,
         contract_address: &str,
@@ -101,9 +119,10 @@ impl Storage for MetadataStorage {
         }
     }
 
-    async fn find_token_ids_without_metadata(
+    async fn find_tokens_without_metadata(
         &self,
         filter: Option<(String, String)>,
+        _target_metadata_status: Option<String>,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
         match self
             .provider

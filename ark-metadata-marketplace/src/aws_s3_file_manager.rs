@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use aws_config::{meta::region::RegionProviderChain, BehaviorVersion};
 use aws_sdk_s3::primitives::ByteStream;
 use mime_guess::from_path;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 /// An implementation of the FileManager trait that utilizes AWS S3 for storage.
 /// Requires a specified bucket name to interface with AWS S3.
@@ -19,7 +19,7 @@ impl FileManager for AWSFileManager {
     /// If the file already exists (determined by the hash of the contents),
     /// it returns the URL to the existing file instead of re-uploading it.
     async fn save(&self, file: &FileInfo) -> Result<String> {
-        info!("Checking if '{}' exists on AWS S3...", file.name);
+        trace!("Saving Media File on AWS S3...");
 
         let region_provider = RegionProviderChain::default_provider().or_else("us-east-1");
         let config = aws_config::defaults(BehaviorVersion::latest())
@@ -50,7 +50,10 @@ impl FileManager for AWSFileManager {
             .await
             .is_ok()
         {
-            info!("File '{}' already exists on AWS S3: {}", file.name, key);
+            info!(
+                "File already exists on AWS S3: {{ file_name: \"{}\", key: \"{}\" }}",
+                file.name, key
+            );
             return Ok(key);
         }
 
