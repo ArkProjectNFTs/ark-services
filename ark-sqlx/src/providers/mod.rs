@@ -4,6 +4,9 @@ use arkproject::diri::storage::types::{
 use arkproject::diri::storage::{Storage, StorageError, StorageResult};
 use async_trait::async_trait;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
+use sqlx::{PgPool};
+use sqlx::postgres::PgPoolOptions;
+
 
 use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
 use crate::providers::orderbook::OrderProvider;
@@ -24,6 +27,21 @@ impl SqlxCtx {
 
         Ok(Self {
             pool: AnyPoolOptions::new().connect(db_url).await?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct SqlxCtxPg {
+    pub pool: PgPool,
+}
+
+impl SqlxCtxPg {
+    pub async fn new(db_url: &str) -> Result<Self, ProviderError> {
+        sqlx::any::install_default_drivers();
+
+        Ok(Self {
+            pool: PgPoolOptions::new().connect(db_url).await?,
         })
     }
 }
@@ -131,12 +149,12 @@ impl Storage for SqlxArkchainProvider {
 }
 
 pub struct SqlxMarketplaceProvider {
-    client: SqlxCtx,
+    client: SqlxCtxPg,
 }
 
 impl SqlxMarketplaceProvider {
     pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
-        let sqlx = SqlxCtx::new(sqlx_conn_str).await?;
+        let sqlx = SqlxCtxPg::new(sqlx_conn_str).await?;
 
         Ok(Self { client: sqlx })
     }

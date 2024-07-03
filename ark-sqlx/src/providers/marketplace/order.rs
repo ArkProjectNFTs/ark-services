@@ -7,8 +7,9 @@ use sqlx::Row;
 use std::fmt;
 use std::str::FromStr;
 use tracing::{error, trace};
+use sqlx::types::BigDecimal;
 
-use crate::providers::{ProviderError, SqlxCtx};
+use crate::providers::{ProviderError, SqlxCtxPg};
 
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -218,7 +219,7 @@ pub struct TokenData {
 
 impl OrderProvider {
     async fn order_hash_exists_in_token_offers(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         order_hash: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
@@ -240,7 +241,7 @@ impl OrderProvider {
     }
 
     async fn token_exists(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &str,
         token_id: &str,
         chain_id: &str,
@@ -266,7 +267,7 @@ impl OrderProvider {
     }
 
     async fn order_hash_exists_in_token(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         order_hash: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
@@ -288,7 +289,7 @@ impl OrderProvider {
     }
 
     pub async fn get_contract(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &str,
         chain_id: &str,
     ) -> Result<Option<String>, ProviderError> {
@@ -307,7 +308,7 @@ impl OrderProvider {
     }
 
     pub async fn get_or_create_contract(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &str,
         chain_id: &str,
         block_timestamp: u64,
@@ -333,7 +334,7 @@ impl OrderProvider {
     }
 
     pub async fn get_offer_data_by_order_hash(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         order_hash: &str,
     ) -> Result<Option<OfferData>, sqlx::Error> {
         let query = "
@@ -411,7 +412,7 @@ impl OrderProvider {
     }
 
     pub async fn get_token_data_by_order_hash(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
@@ -439,7 +440,7 @@ impl OrderProvider {
     }
 
     pub async fn get_current_owner(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &String,
         token_id: &str,
         chain_id: &str,
@@ -462,7 +463,7 @@ impl OrderProvider {
     }
 
     pub async fn update_token_status(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &String,
         token_id: &str,
         status: OrderStatus,
@@ -490,7 +491,7 @@ impl OrderProvider {
     }
 
     pub async fn update_offer_status(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         order_hash: &str,
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
@@ -506,7 +507,7 @@ impl OrderProvider {
     }
 
     pub async fn clear_token_data_if_listing(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &String,
         token_id: &str,
         order_hash: &str,
@@ -534,7 +535,7 @@ impl OrderProvider {
     }
 
     pub async fn update_token_data_on_offer_executed(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         info: &OfferExecutedInfo,
     ) -> Result<(), ProviderError> {
         let query = "
@@ -574,7 +575,7 @@ impl OrderProvider {
     }
 
     pub async fn update_token_on_listing_executed(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         contract_address: &String,
         token_id: &str,
         block_timestamp: i64,
@@ -604,7 +605,7 @@ impl OrderProvider {
     }
 
     async fn insert_event_history(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         event_data: &EventHistoryData,
     ) -> Result<(), ProviderError> {
         if !Self::token_exists(
@@ -644,7 +645,7 @@ impl OrderProvider {
         Ok(())
     }
 
-    async fn insert_offers(client: &SqlxCtx, offer_data: &OfferData) -> Result<(), ProviderError> {
+    async fn insert_offers(client: &SqlxCtxPg, offer_data: &OfferData) -> Result<(), ProviderError> {
         if !Self::token_exists(
             client,
             &offer_data.contract_address,
@@ -655,6 +656,55 @@ impl OrderProvider {
         {
             return Err(ProviderError::from("Token does not exist"));
         }
+
+
+       // Check if topbid_amount is filled in token
+       let topbid_query = "
+           SELECT COALESCE(top_bid_amount, 0)
+           FROM token
+           WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
+       ";
+
+        let topbid_amount: Option<BigDecimal> = sqlx::query_scalar(topbid_query)
+                .bind(&offer_data.contract_address)
+                .bind(&offer_data.token_id)
+                .bind(&offer_data.chain_id)
+                .fetch_optional(&client.pool)
+                .await?;
+
+       // If topbid_amount is filled and the offer is better, update topbid fields
+        if let Some(topbid_amount) = topbid_amount {
+
+            let offer_amount_hex = offer_data.offer_amount.trim_start_matches("0x");
+            let offer_amount_bigint = BigInt::from_str_radix(offer_amount_hex, 16)
+                .unwrap_or_else(|_| BigInt::from(0));
+            let offer_amount = BigDecimal::from(offer_amount_bigint);
+
+            if offer_amount > topbid_amount {
+
+                let update_query = "
+                    UPDATE token
+                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7
+                    WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
+                ";
+               let result = sqlx::query(update_query)
+                   .bind(&offer_data.contract_address)
+                   .bind(&offer_data.token_id)
+                   .bind(&offer_data.chain_id)
+                   .bind(offer_amount)
+                   .bind(offer_data.start_date)
+                   .bind(offer_data.end_date)
+                   .bind(&offer_data.currency_address)
+                   .execute(&client.pool)
+                   .await;
+
+               match result {
+                   Ok(_) => println!("Update query executed successfully."),
+                   Err(e) => eprintln!("Error executing update query: {:?}", e),
+               }
+            }
+        }
+
 
         let insert_query = "
             INSERT INTO token_offer
@@ -683,7 +733,7 @@ impl OrderProvider {
     }
 
     pub async fn register_placed(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         _block_id: u64,
         block_timestamp: u64,
         data: &PlacedData,
@@ -848,7 +898,7 @@ impl OrderProvider {
     }
 
     pub async fn register_cancelled(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         _block_id: u64,
         block_timestamp: u64,
         data: &CancelledData,
@@ -908,7 +958,7 @@ impl OrderProvider {
     }
 
     pub async fn register_fulfilled(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         _block_id: u64,
         block_timestamp: u64,
         data: &FulfilledData,
@@ -957,7 +1007,7 @@ impl OrderProvider {
     }
 
     pub async fn register_executed(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         _block_id: u64,
         block_timestamp: u64,
         data: &ExecutedData,
@@ -1081,7 +1131,7 @@ impl OrderProvider {
     }
 
     pub async fn status_back_to_open(
-        client: &SqlxCtx,
+        client: &SqlxCtxPg,
         _block_id: u64,
         block_timestamp: u64,
         data: &RollbackStatusData,
