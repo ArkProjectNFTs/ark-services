@@ -1,6 +1,4 @@
-use crate::models::collection::{
-    CollectionData, CollectionFloorPrice, CollectionPortfolioData,
-};
+use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
 use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
     TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
@@ -12,18 +10,7 @@ use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
 
-// text entry in DB
-const TOKEN_EVENT_TYPE_LISTING: &str = "Listing";
-const TOKEN_EVENT_TYPE_COLLECTION_OFFER: &str = "CollectionOffer";
-const TOKEN_EVENT_TYPE_OFFER: &str = "Offer";
-const TOKEN_EVENT_TYPE_AUCTION: &str = "Auction";
-const TOKEN_EVENT_TYPE_FULFILL: &str = "Fulfill";
-const TOKEN_EVENT_TYPE_CANCELLED: &str = "Cancelled";
-const TOKEN_EVENT_TYPE_EXECUTED: &str = "Executed";
-const TOKEN_EVENT_TYPE_SALE: &str = "Sale";
-const TOKEN_EVENT_TYPE_MINT: &str = "Mint";
-const TOKEN_EVENT_TYPE_BURN: &str = "Burn";
-const TOKEN_EVENT_TYPE_TRANSFER: &str = "Transfer";
+
 
 #[derive(FromRow)]
 struct Count {
@@ -112,7 +99,7 @@ pub trait DatabaseAccess: Send + Sync {
         items_per_page: i64,
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
-    ) -> Result<Vec<TokenActivityData>, Error>;
+    ) -> Result<(Vec<TokenActivityData>, bool, i64), Error>;
 }
 
 #[async_trait]
@@ -804,7 +791,7 @@ impl DatabaseAccess for PgPool {
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
         // time_range ?
-    ) -> Result<Vec<TokenActivityData>, Error> {
+    ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
 
         let types_filter = match types {
@@ -857,23 +844,24 @@ impl DatabaseAccess for PgPool {
                 to_address AS to,
                 block_timestamp AS time_stamp
             {}
+            ORDER BY block_timestamp {}
+            LIMIT {} OFFSET {}
             ",
-            common_sql_query
+            common_sql_query, direction, items_per_page, offset,
         );
-        let token_activity_data: Result<Vec<TokenActivityData>, Error> =
-            sqlx::query_as(&activity_sql_query)
-                .bind(contract_address)
-                .bind(chain_id)
-                .bind(token_id)
-                .fetch_all(self)
-                .await;
+        let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .fetch_all(self)
+            .await?;
         tracing::info!("{:?}", token_activity_data);
         tracing::info!("AFTER");
         // Calculte if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
 
-        Ok(token_activity_data.expect("Yep"))
+        Ok((token_activity_data, has_next_page, count))
     }
 }
 

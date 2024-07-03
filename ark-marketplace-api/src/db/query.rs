@@ -233,7 +233,7 @@ pub async fn get_token_activity_data<D: DatabaseAccess + Sync>(
     items_per_page: i64,
     direction: &str,
     types: &Option<Vec<TokenEventType>>,
-) -> Result<Vec<TokenActivityData>, sqlx::Error> {
+) -> Result<(Vec<TokenActivityData>, bool, i64), sqlx::Error> {
     db_access
         .get_token_activity_data(
             contract_address,
