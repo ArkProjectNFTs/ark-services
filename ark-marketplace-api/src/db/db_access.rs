@@ -1,13 +1,34 @@
-use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
+use crate::models::collection::{
+    CollectionData, CollectionFloorPrice, CollectionPortfolioData,
+};
 use crate::models::token::{
-    Listing, TokenData, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData,
-    TokenPortfolioData, TopOffer,
+    Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
+    TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 
 use async_trait::async_trait;
 use sqlx::Error;
+use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
+
+// text entry in DB
+const TOKEN_EVENT_TYPE_LISTING: &str = "Listing";
+const TOKEN_EVENT_TYPE_COLLECTION_OFFER: &str = "CollectionOffer";
+const TOKEN_EVENT_TYPE_OFFER: &str = "Offer";
+const TOKEN_EVENT_TYPE_AUCTION: &str = "Auction";
+const TOKEN_EVENT_TYPE_FULFILL: &str = "Fulfill";
+const TOKEN_EVENT_TYPE_CANCELLED: &str = "Cancelled";
+const TOKEN_EVENT_TYPE_EXECUTED: &str = "Executed";
+const TOKEN_EVENT_TYPE_SALE: &str = "Sale";
+const TOKEN_EVENT_TYPE_MINT: &str = "Mint";
+const TOKEN_EVENT_TYPE_BURN: &str = "Burn";
+const TOKEN_EVENT_TYPE_TRANSFER: &str = "Transfer";
+
+#[derive(FromRow)]
+struct Count {
+    total: i64,
+}
 
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
@@ -81,6 +102,17 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         chain_id: &str,
     ) -> Result<CollectionFloorPrice, Error>;
+
+    async fn get_token_activity_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+        page: i64,
+        items_per_page: i64,
+        direction: &str,
+        types: &Option<Vec<TokenEventType>>,
+    ) -> Result<Vec<TokenActivityData>, Error>;
 }
 
 #[async_trait]
@@ -760,6 +792,88 @@ impl DatabaseAccess for PgPool {
         .fetch_all(self)
         .await?;
         Ok(token_offers_data)
+    }
+
+    async fn get_token_activity_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+        page: i64,
+        items_per_page: i64,
+        direction: &str,
+        types: &Option<Vec<TokenEventType>>,
+        // time_range ?
+    ) -> Result<Vec<TokenActivityData>, Error> {
+        let offset = (page - 1) * items_per_page;
+
+        let types_filter = match types {
+            None => String::from(""),
+            Some(values) => {
+                format!(
+                    "AND event_type IN ({})",
+                    values
+                        .iter()
+                        .map(|v| format!("'{}'", v.to_string()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        };
+        let common_sql_query = format!(
+            "
+                FROM token_event
+                WHERE contract_address = $1
+                    AND chain_id = $2
+                    AND token_id = $3
+                    {}
+            ",
+            types_filter
+        );
+
+        let count_sql_query = format!(
+            "
+            SELECT COUNT(*) AS total
+            {}
+            ",
+            common_sql_query
+        );
+
+        let total_count: Count = sqlx::query_as(&count_sql_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .fetch_one(self)
+            .await?;
+        let count = total_count.total;
+        tracing::info!("Count {}", count);
+
+        let activity_sql_query = format!(
+            "
+            SELECT 
+                event_type AS activity_type,
+                hex_to_decimal(amount) AS price,
+                from_address AS from,
+                to_address AS to,
+                block_timestamp AS time_stamp
+            {}
+            ",
+            common_sql_query
+        );
+        let token_activity_data: Result<Vec<TokenActivityData>, Error> =
+            sqlx::query_as(&activity_sql_query)
+                .bind(contract_address)
+                .bind(chain_id)
+                .bind(token_id)
+                .fetch_all(self)
+                .await;
+        tracing::info!("{:?}", token_activity_data);
+        tracing::info!("AFTER");
+        // Calculte if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok(token_activity_data.expect("Yep"))
     }
 }
 

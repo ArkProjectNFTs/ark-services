@@ -99,3 +99,79 @@ pub struct TokenOfferOneData {
     pub expire_at: i64,
     pub hash: Option<String>,
 }
+
+#[derive(Debug, Deserialize, Serialize, sqlx::Type)]
+#[sqlx(type_name = "text")]
+pub enum TokenEventType {
+    Listing,
+    CollectionOffer,
+    Offer,
+    Auction,
+    Fulfill,
+    Cancelled,
+    Executed,
+    Sale,
+    Mint,
+    Burn,
+    Transfer,
+}
+
+const LISTING_STR: &str = "Listing";
+const COLLECTION_OFFER_STR: &str = "CollectionOffer";
+const OFFER_STR: &str = "Offer";
+const AUCTION_STR: &str = "Auction";
+const FULFILL_STR: &str = "Fulfill";
+const CANCELLED_STR: &str = "Cancelled";
+const EXECUTED_STR: &str = "Executed";
+const SALE_STR: &str = "Sale";
+const MINT_STR: &str = "Mint";
+const BURN_STR: &str = "Burn";
+const TRANSFER_STR: &str = "Transfer";
+
+impl std::fmt::Display for TokenEventType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Listing => write!(f, "{}", LISTING_STR),
+            Self::CollectionOffer => write!(f, "{}", COLLECTION_OFFER_STR),
+            Self::Offer => write!(f, "{}", OFFER_STR),
+            Self::Auction => write!(f, "{}", AUCTION_STR),
+            Self::Fulfill => write!(f, "{}", FULFILL_STR),
+            Self::Cancelled => write!(f, "{}", CANCELLED_STR),
+            Self::Executed => write!(f, "{}", EXECUTED_STR),
+            Self::Sale => write!(f, "{}", SALE_STR),
+            Self::Mint => write!(f, "{}", MINT_STR),
+            Self::Burn => write!(f, "{}", BURN_STR),
+            Self::Transfer => write!(f, "{}", TRANSFER_STR),
+        }
+    }
+}
+
+impl std::str::FromStr for TokenEventType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            LISTING_STR => Ok(Self::Listing),
+            COLLECTION_OFFER_STR => Ok(Self::CollectionOffer),
+            OFFER_STR => Ok(Self::Offer),
+            AUCTION_STR => Ok(Self::Auction),
+            FULFILL_STR => Ok(Self::Fulfill),
+            CANCELLED_STR => Ok(Self::Cancelled),
+            EXECUTED_STR => Ok(Self::Executed),
+            SALE_STR => Ok(Self::Sale),
+            MINT_STR => Ok(Self::Mint),
+            BURN_STR => Ok(Self::Burn),
+            TRANSFER_STR => Ok(Self::Transfer),
+            _ => Err(format!("Invalid variant: {}", s)),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct TokenActivityData {
+    pub activity_type: TokenEventType,
+    pub price: Option<BigDecimal>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub time_stamp: i64,
+}

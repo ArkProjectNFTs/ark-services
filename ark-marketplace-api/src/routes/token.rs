@@ -29,4 +29,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/tokens/{address}/{chain_id}/{token_id}/offers",
         web::get().to(get_token_offers::<PgPool>),
     );
+
+    cfg.route(
+        "/tokens/{address}/{chain_id}/{token_id}/activity",
+        web::get().to(token_handler::get_token_activity::<PgPool>),
+    );
 }
