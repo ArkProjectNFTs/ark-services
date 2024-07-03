@@ -8,7 +8,7 @@ use arkproject::{
 use async_trait::async_trait;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use sqlx::FromRow;
-use tracing::{error, info};
+use tracing::{error, trace};
 
 pub struct MetadataSqlStorage {
     pool: PgPool,
@@ -28,6 +28,64 @@ impl MetadataSqlStorage {
 
 #[async_trait]
 impl Storage for MetadataSqlStorage {
+    async fn update_all_token_metadata_status(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        metadata_status: &str,
+    ) -> Result<(), StorageError> {
+        trace!(
+            "Updating token metadata status. Contract address: {} - - Chain ID: {} - Status: {}",
+            contract_address,
+            chain_id,
+            metadata_status
+        );
+
+        let res = sqlx::query(
+            "UPDATE token SET updated_timestamp=EXTRACT(epoch FROM now())::bigint, metadata_status = $1
+            WHERE contract_address = $2 AND chain_id = $3",
+        )
+        .bind(metadata_status)
+        .bind(contract_address)
+        .bind(chain_id)
+        .execute(&self.pool)
+        .await;
+
+        if res.is_err() {
+            error!("Failed to update token metadata status. Error: {:?}", res);
+            return Err(StorageError::DatabaseError(res.unwrap_err().to_string()));
+        }
+
+        Ok(())
+    }
+
+    async fn set_contract_refreshing_status(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        is_refreshing: bool,
+    ) -> Result<(), StorageError> {
+        let query = "
+            UPDATE contract 
+            SET is_refreshing = $1, updated_timestamp = EXTRACT(epoch FROM now())::bigint 
+            WHERE contract_address = $2 AND chain_id = $3";
+
+        let res = sqlx::query(query)
+            .bind(is_refreshing)
+            .bind(contract_address)
+            .bind(chain_id)
+            .execute(&self.pool)
+            .await;
+
+        match res {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                error!("Failed to update contract is refreshing. Error: {:?}", e);
+                Err(StorageError::DatabaseError(e.to_string()))
+            }
+        }
+    }
+
     async fn update_token_metadata_status(
         &self,
         contract_address: &str,
@@ -35,7 +93,7 @@ impl Storage for MetadataSqlStorage {
         chain_id: &str,
         metadata_status: &str,
     ) -> Result<(), StorageError> {
-        info!("Updating token metadata status. Contract address: {} - Token ID: {} - Chain ID: {} - Status: {}", contract_address, token_id, chain_id, metadata_status);
+        trace!("Updating token metadata status. Contract address: {} - Token ID: {} - Chain ID: {} - Status: {}", contract_address, token_id, chain_id, metadata_status);
 
         let res = sqlx::query(
             "UPDATE token SET updated_timestamp=EXTRACT(epoch FROM now())::bigint, metadata_status = $1
@@ -93,21 +151,30 @@ impl Storage for MetadataSqlStorage {
         }
     }
 
-    async fn find_token_ids_without_metadata(
+    async fn find_tokens_without_metadata(
         &self,
         filter: Option<(String, String)>,
+        target_metadata_status: Option<String>,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
-        let base_query = "SELECT t.contract_address, t.chain_id, t.token_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE t.metadata_status = 'TO_REFRESH' AND c.is_spam = false AND c.is_nsfw  = false AND c.contract_type = 'ERC721'";
-        let (query, params) = if let Some((chain_id, contract_address)) = filter {
+        let metadata_status = match target_metadata_status {
+            Some(status) => status,
+            None => "TO_REFRESH".to_string(),
+        };
+
+        let base_query = "SELECT t.contract_address, t.token_id, t.chain_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE c.is_spam = false AND c.is_nsfw  = false AND c.contract_type = 'ERC721'";
+        let (query, params) = if let Some((contract_address, chain_id)) = filter {
             (
                 format!(
-                    "{} AND t.chain_id = $1 AND t.contract_address = $2 LIMIT 100",
+                    "{} AND t.metadata_status = $1 AND t.chain_id = $2 AND t.contract_address = $3 LIMIT 100",
                     base_query
                 ),
-                vec![chain_id, contract_address],
+                vec![metadata_status, chain_id, contract_address],
             )
         } else {
-            (format!("{} LIMIT 100", base_query), vec![])
+            (
+                format!("{} AND t.metadata_status = $1 LIMIT 100", base_query),
+                vec![metadata_status],
+            )
         };
 
         let mut query_builder = sqlx::query(&query);
