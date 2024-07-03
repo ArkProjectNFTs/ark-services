@@ -217,8 +217,10 @@ pub async fn get_token_offers_data<D: DatabaseAccess + Sync>(
     contract_address: &str,
     chain_id: &str,
     token_id: &str,
-) -> Result<Vec<TokenOfferOneDataDB>, sqlx::Error> {
+    page: i64,
+    items_per_page: i64,
+) -> Result<(Vec<TokenOfferOneDataDB>, bool, i64), sqlx::Error> {
     db_access
-        .get_token_offers_data(contract_address, chain_id, token_id)
+        .get_token_offers_data(contract_address, chain_id, token_id, page, items_per_page)
         .await
 }

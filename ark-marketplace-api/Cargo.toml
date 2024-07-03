@@ -25,3 +25,4 @@ aws-config = "1.5.0"
 aws-sdk-secretsmanager = "1.30.0"
 anyhow = "1.0.86"
 redis = { version = "0.25.4", features = ["aio", "tokio-comp"] }
+serde_qs = "0.13.0"
