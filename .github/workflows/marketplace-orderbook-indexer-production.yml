@@ -10,6 +10,7 @@ on:
       - "infrastructure/cdk-ark-ecr/**"
       - "infrastructure/cdk-ark-indexer-marketplace/**"
       - "arkchain-indexer-marketplace/**"
+      - "ark-sqlx/providers/marketplace/**"
 
 jobs:
   deploy:
