@@ -7,8 +7,6 @@ on:
       - main
     paths:
       - ".github/workflows/marketplace-orderbook-indexer-production.yml"
-      - "infrastructure/cdk-ark-ecr/**"
-      - "infrastructure/cdk-ark-indexer-marketplace/**"
       - "arkchain-indexer-marketplace/**"
       - "ark-sqlx/providers/marketplace/**"
 
