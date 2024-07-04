@@ -6,12 +6,14 @@ use crate::db::query::{
 use crate::models::token::TokenOfferOneData;
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+
+use super::utils::extract_page_params;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -161,11 +163,17 @@ pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
 }
 
 pub async fn get_token_offers<D: DatabaseAccess + Sync>(
+    req: HttpRequest,
     path: web::Path<(String, String, String)>,
     db_pool: web::Data<D>,
 ) -> impl Responder {
     let (contract_address, chain_id, token_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
+
+    let (page, items_per_page) = match extract_page_params(req.query_string(), 1, 100) {
+        Err(msg) => return HttpResponse::BadRequest().json(msg),
+        Ok((page, items_per_page)) => (page, items_per_page),
+    };
 
     let db_access = db_pool.get_ref();
     let floor_price = match get_collection_floor_price(db_access, &normalized_address, &chain_id)
@@ -179,22 +187,28 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
         }
     };
 
-    let token_offers_data =
-        match get_token_offers_data(db_access, &normalized_address, &chain_id, &token_id).await {
-            Err(sqlx::Error::RowNotFound) => {
-                return HttpResponse::NotFound().body("data not found")
-            }
-            Ok(token_offers_data) => token_offers_data,
-            Err(err) => {
-                tracing::error!("error query get_token_offers_data: {}", err);
-                return HttpResponse::InternalServerError().finish();
-            }
-        };
+    let (token_offers_data, has_next_page, count) = match get_token_offers_data(
+        db_access,
+        &normalized_address,
+        &chain_id,
+        &token_id,
+        page,
+        items_per_page,
+    )
+    .await
+    {
+        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("data not found"),
+        Ok((token_offers_data, has_next_page, count)) => (token_offers_data, has_next_page, count),
+        Err(err) => {
+            tracing::error!("error query get_token_offers_data: {}", err);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
     let token_offers_data: Vec<TokenOfferOneData> = token_offers_data
         .iter()
         .map(|data| TokenOfferOneData {
             offer_id: data.offer_id,
-            price: data.amount.clone(),
+            price: data.amount.clone(), // TODO: handle currency conversion
             source: data.source.clone(),
             expire_at: data.expire_at,
             hash: data.hash.clone(),
@@ -207,6 +221,8 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
         .collect();
     HttpResponse::Ok().json(json!({
         "data": token_offers_data,
+        "count": count,
+        "next_page": if has_next_page { Some(page + 1)} else { None}
     }))
 }
 

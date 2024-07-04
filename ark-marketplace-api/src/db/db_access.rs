@@ -53,7 +53,9 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         chain_id: &str,
         token_id: &str,
-    ) -> Result<Vec<TokenOfferOneDataDB>, Error>;
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<(Vec<TokenOfferOneDataDB>, bool, i64), Error>;
 
     async fn get_collections_data(
         &self,
@@ -736,7 +738,27 @@ impl DatabaseAccess for PgPool {
         contract_address: &str,
         chain_id: &str,
         token_id: &str,
-    ) -> Result<Vec<TokenOfferOneDataDB>, Error> {
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<(Vec<TokenOfferOneDataDB>, bool, i64), Error> {
+        // FIXME: pagination assume that all offers used the same currency
+        let offset = (page - 1) * items_per_page;
+        let total_count = sqlx::query!(
+            "SELECT COUNT(*)
+            FROM token_offer
+            WHERE token_offer.contract_address = $1
+                AND token_offer.chain_id = $2
+                AND token_offer.token_id = $3
+            ",
+            contract_address,
+            chain_id,
+            token_id
+        )
+        .fetch_one(self)
+        .await?;
+
+        let count = total_count.count.unwrap_or(0);
+
         let token_offers_data = sqlx::query_as!(
             TokenOfferOneDataDB,
             "SELECT
@@ -750,14 +772,22 @@ impl DatabaseAccess for PgPool {
             WHERE token_offer.contract_address = $1
                 AND token_offer.chain_id = $2
                 AND token_offer.token_id = $3
+            ORDER BY amount DESC
+            LIMIT $4 OFFSET $5
             ",
             contract_address,
             chain_id,
-            token_id
+            token_id,
+            items_per_page,
+            offset
         )
         .fetch_all(self)
         .await?;
-        Ok(token_offers_data)
+
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((token_offers_data, has_next_page, count))
     }
 }
 
