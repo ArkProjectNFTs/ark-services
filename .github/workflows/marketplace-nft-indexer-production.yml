@@ -9,6 +9,7 @@ on:
       - ".github/workflows/marketplace-nft-indexer-production.yml"
       - "infrastructure/cdk-starknet-indexer/**"
       - "ark-indexer-marketplace/**"
+      - "ark-sqlx/providers/marketplace/**"
 
 jobs:
   push-indexer-image:
