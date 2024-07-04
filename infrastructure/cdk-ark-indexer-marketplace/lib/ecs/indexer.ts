@@ -82,34 +82,24 @@ function deployIndexerServices(
       CHAIN_ID: "0x534e5f4d41494e",
       HEAD_OF_CHAIN: "true",
       INDEXER_VERSION: indexerVersion,
-      IPFS_GATEWAY_URI: "https://ipfs.io/ipfs/",
+      IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev/ipfs/",
       RPC_PROVIDER: rpcProviderUri,
       RUST_LOG: "INFO",
       AWS_SECRET_NAME: "prod/ark-db-credentials",
+      AWS_NFT_IMAGE_BUCKET_NAME: "ark-nft-media-mainnet",
     },
   });
 
   taskDefinition.addToTaskRolePolicy(
     new PolicyStatement({
-      actions: ["s3:*"],
-      resources: ["*"],
+      actions: ["s3:PutObject"],
+      resources: ["arn:aws:s3:::ark-nft-media-mainnet/*"],
     })
   );
 
   taskDefinition.addToTaskRolePolicy(
     new PolicyStatement({
       actions: ["logs:CreateLogStream", "logs:PutLogEvents"],
-      resources: ["*"],
-    })
-  );
-
-  taskDefinition.addToTaskRolePolicy(
-    new PolicyStatement({
-      actions: [
-        "lambda:InvokeAsync",
-        "lambda:InvokeFunction",
-        "lambda:InvokeFunctionUrl",
-      ],
       resources: ["*"],
     })
   );
