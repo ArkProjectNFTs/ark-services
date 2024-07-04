@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/marketplace-api-production.yml"
       - "ark-marketplace-api/**"
+      - "ark-sqlx/providers/marketplace/**"
 
 jobs:
   discord-notification:
