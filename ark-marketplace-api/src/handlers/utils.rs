@@ -15,7 +15,7 @@ pub fn extract_page_params(
         Err(e) => {
             let msg = format!("Error when parsing page query parameters: {}", e);
             tracing::error!(msg);
-            return Err(msg);
+            Err(msg)
         }
         Ok(params) => Ok((
             params.page.unwrap_or(default_page),
