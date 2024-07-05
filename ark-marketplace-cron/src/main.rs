@@ -59,13 +59,12 @@ async fn main() -> std::io::Result<()> {
     match connect_redis().await {
         Ok(con) => {
             let _ = cache_collection_pages(&db_pool, con.clone()).await;
-            update_listed_tokens(&db_pool, con).await;
-
+            update_listed_tokens(&db_pool, con.clone()).await;
+            update_top_bid_tokens(&db_pool, con).await;
         }
         Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
     }
     // @todo when adding new calculation add spawn & try_join!
-    update_top_bid_tokens(&db_pool).await;
     update_top_bid_collections(&db_pool).await;
     update_collections_floor(&db_pool).await;
     tracing::info!("Marketplace cron job completed");
