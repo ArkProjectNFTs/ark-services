@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
 use crate::models::token::{
     Listing, TokenData, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData,
@@ -739,16 +741,23 @@ impl DatabaseAccess for PgPool {
     ) -> Result<(Vec<TokenOfferOneDataDB>, bool, i64), Error> {
         // FIXME: pagination assume that all offers used the same currency
         let offset = (page - 1) * items_per_page;
+        let current_time: i64 = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(d) => d.as_secs().try_into().unwrap(),
+            Err(_) => 0,
+        };
         let total_count = sqlx::query!(
             "SELECT COUNT(*)
             FROM token_offer
             WHERE token_offer.contract_address = $1
                 AND token_offer.chain_id = $2
                 AND token_offer.token_id = $3
+                AND token_offer.status = 'PLACED'
+                AND end_date > $4
             ",
             contract_address,
             chain_id,
-            token_id
+            token_id,
+            current_time
         )
         .fetch_one(self)
         .await?;
@@ -768,12 +777,15 @@ impl DatabaseAccess for PgPool {
             WHERE token_offer.contract_address = $1
                 AND token_offer.chain_id = $2
                 AND token_offer.token_id = $3
-            ORDER BY amount DESC
-            LIMIT $4 OFFSET $5
+                AND token_offer.status = 'PLACED'
+                AND end_date > $4
+            ORDER BY amount DESC, expire_at ASC
+            LIMIT $5 OFFSET $6
             ",
             contract_address,
             chain_id,
             token_id,
+            current_time,
             items_per_page,
             offset
         )
