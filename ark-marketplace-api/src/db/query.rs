@@ -1,7 +1,8 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
 use crate::models::token::{
-    TokenData, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenPortfolioData,
+    TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
+    TokenOfferOneDataDB, TokenPortfolioData,
 };
 use redis::AsyncCommands;
 
@@ -222,5 +223,28 @@ pub async fn get_token_offers_data<D: DatabaseAccess + Sync>(
 ) -> Result<(Vec<TokenOfferOneDataDB>, bool, i64), sqlx::Error> {
     db_access
         .get_token_offers_data(contract_address, chain_id, token_id, page, items_per_page)
+        .await
+}
+
+pub async fn get_token_activity_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    contract_address: &str,
+    chain_id: &str,
+    token_id: &str,
+    page: i64,
+    items_per_page: i64,
+    direction: &str,
+    types: &Option<Vec<TokenEventType>>,
+) -> Result<(Vec<TokenActivityData>, bool, i64), sqlx::Error> {
+    db_access
+        .get_token_activity_data(
+            contract_address,
+            chain_id,
+            token_id,
+            page,
+            items_per_page,
+            direction,
+            types,
+        )
         .await
 }

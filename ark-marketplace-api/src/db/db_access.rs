@@ -2,14 +2,20 @@ use std::time::SystemTime;
 
 use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
 use crate::models::token::{
-    Listing, TokenData, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData,
-    TokenPortfolioData, TopOffer,
+    Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
+    TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 
 use async_trait::async_trait;
 use sqlx::Error;
+use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
+
+#[derive(FromRow)]
+struct Count {
+    total: i64,
+}
 
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
@@ -85,6 +91,17 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         chain_id: &str,
     ) -> Result<CollectionFloorPrice, Error>;
+
+    async fn get_token_activity_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+        page: i64,
+        items_per_page: i64,
+        direction: &str,
+        types: &Option<Vec<TokenEventType>>,
+    ) -> Result<(Vec<TokenActivityData>, bool, i64), Error>;
 }
 
 #[async_trait]
@@ -796,6 +813,193 @@ impl DatabaseAccess for PgPool {
         let has_next_page = page < total_pages;
 
         Ok((token_offers_data, has_next_page, count))
+    }
+
+    async fn get_token_activity_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+        page: i64,
+        items_per_page: i64,
+        direction: &str,
+        types: &Option<Vec<TokenEventType>>,
+    ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
+        let offset = (page - 1) * items_per_page;
+
+        fn event_type_list(values: &[TokenEventType]) -> String {
+            values
+                .iter()
+                .map(|v| format!("'{}'", v.to_db_string()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        }
+
+        let types_filter = match types {
+            None => String::from(""),
+            Some(values) => {
+                format!("AND te.event_type IN ({})", event_type_list(values))
+            }
+        };
+        let common_sql_query = format!(
+            "
+                FROM token_event te
+                LEFT JOIN token_offer ON te.order_hash = token_offer.order_hash
+                WHERE te.contract_address = $1
+                    AND te.chain_id = $2
+                    AND te.token_id = $3
+                    {}
+            ",
+            types_filter
+        );
+
+        let count_sql_query = format!(
+            "
+            SELECT COUNT(*) AS total
+            {}
+            ",
+            common_sql_query
+        );
+
+        let total_count: Count = sqlx::query_as(&count_sql_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .fetch_one(self)
+            .await?;
+        let count = total_count.total;
+
+        let price_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN hex_to_decimal(token_offer.offer_amount)
+                ELSE hex_to_decimal(te.amount)
+            END AS price
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let from_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN token_offer.from_address
+                ELSE te.from_address
+            END AS from
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let to_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN token_offer.to_address
+                ELSE te.to_address
+            END AS to
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let activity_sql_query = format!(
+            "
+            SELECT 
+                te.event_type AS activity_type,
+                te.block_timestamp AS time_stamp,
+                te.transaction_hash,
+                {},
+                {},
+                {}
+            {}
+            ORDER BY te.block_timestamp {}
+            LIMIT {} OFFSET {}
+            ",
+            price_select_part,
+            from_select_part,
+            to_select_part,
+            common_sql_query,
+            direction,
+            items_per_page,
+            offset,
+        );
+        let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .fetch_all(self)
+            .await?;
+
+        // Calculate if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((token_activity_data, has_next_page, count))
+    }
+}
+
+/// DB conversion for TokenEventType
+const TOKEN_EVENT_LISTING_STR: &str = "Listing";
+const TOKEN_EVENT_COLLECTION_OFFER_STR: &str = "CollectionOffer";
+const TOKEN_EVENT_OFFER_STR: &str = "Offer";
+const TOKEN_EVENT_AUCTION_STR: &str = "Auction";
+const TOKEN_EVENT_FULFILL_STR: &str = "Fulfill";
+const TOKEN_EVENT_CANCELLED_STR: &str = "Cancelled";
+const TOKEN_EVENT_EXECUTED_STR: &str = "Executed";
+const TOKEN_EVENT_SALE_STR: &str = "Sale";
+const TOKEN_EVENT_MINT_STR: &str = "Mint";
+const TOKEN_EVENT_BURN_STR: &str = "Burn";
+const TOKEN_EVENT_TRANSFER_STR: &str = "Transfer";
+
+impl<DB> sqlx::Type<DB> for TokenEventType
+where
+    DB: sqlx::Database,
+    String: sqlx::Type<DB>,
+{
+    fn type_info() -> <DB as sqlx::Database>::TypeInfo {
+        <String as sqlx::Type<DB>>::type_info()
+    }
+}
+
+impl<'r, DB> sqlx::Decode<'r, DB> for TokenEventType
+where
+    DB: sqlx::Database,
+    &'r str: sqlx::Decode<'r, DB>,
+{
+    fn decode(
+        value: <DB as sqlx::database::HasValueRef<'r>>::ValueRef,
+    ) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <&str as sqlx::Decode<DB>>::decode(value)?;
+        match s {
+            TOKEN_EVENT_LISTING_STR => Ok(TokenEventType::Listing),
+            TOKEN_EVENT_COLLECTION_OFFER_STR => Ok(TokenEventType::CollectionOffer),
+            TOKEN_EVENT_OFFER_STR => Ok(TokenEventType::Offer),
+            TOKEN_EVENT_AUCTION_STR => Ok(TokenEventType::Auction),
+            TOKEN_EVENT_FULFILL_STR => Ok(TokenEventType::Fulfill),
+            TOKEN_EVENT_CANCELLED_STR => Ok(TokenEventType::Cancelled),
+            TOKEN_EVENT_EXECUTED_STR => Ok(TokenEventType::Executed),
+            TOKEN_EVENT_SALE_STR => Ok(TokenEventType::Sale),
+            TOKEN_EVENT_MINT_STR => Ok(TokenEventType::Mint),
+            TOKEN_EVENT_BURN_STR => Ok(TokenEventType::Burn),
+            TOKEN_EVENT_TRANSFER_STR => Ok(TokenEventType::Transfer),
+            _ => Err("Invalid event type".into()),
+        }
+    }
+}
+
+/// Convert TokenEventType to matching keys in DB
+impl TokenEventType {
+    fn to_db_string(&self) -> String {
+        match self {
+            Self::Listing => TOKEN_EVENT_LISTING_STR.to_string(),
+            Self::CollectionOffer => TOKEN_EVENT_COLLECTION_OFFER_STR.to_string(),
+            Self::Offer => TOKEN_EVENT_OFFER_STR.to_string(),
+            Self::Auction => TOKEN_EVENT_AUCTION_STR.to_string(),
+            Self::Fulfill => TOKEN_EVENT_FULFILL_STR.to_string(),
+            Self::Cancelled => TOKEN_EVENT_CANCELLED_STR.to_string(),
+            Self::Executed => TOKEN_EVENT_EXECUTED_STR.to_string(),
+            Self::Sale => TOKEN_EVENT_SALE_STR.to_string(),
+            Self::Mint => TOKEN_EVENT_MINT_STR.to_string(),
+            Self::Burn => TOKEN_EVENT_BURN_STR.to_string(),
+            Self::Transfer => TOKEN_EVENT_TRANSFER_STR.to_string(),
+        }
     }
 }
 
