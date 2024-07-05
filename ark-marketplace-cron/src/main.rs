@@ -39,30 +39,36 @@ async fn connect_redis() -> Result<MultiplexedConnection, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    // dotenv::dotenv().ok();
+    dotenv::dotenv().ok();
     init_logging();
     info!("Starting marketplace cron job");
-    // let database_url = get_database_url()
-    //     .await
-    //     .expect("Could not get the database URL");
+    let database_url = get_database_url()
+         .await
+         .expect("Could not get the database URL");
 
-    // let db_pool = PgPoolOptions::new()
-    //     .connect(&database_url)
-    //     .await
-    //     .expect("Could not connect to the database");
+     let db_pool = PgPoolOptions::new()
+         .connect(&database_url)
+         .await
+         .expect("Could not connect to the database");
 
-    // match connect_redis().await {
-    //     Ok(con) => {
-    //         let _ = cache_collection_pages(&db_pool, con).await;
-    //     }
-    //     Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
-    // }
-    // // @todo when adding new calculation add spawn & try_join!
-    // update_listed_tokens(&db_pool).await;
-    // update_top_bid_tokens(&db_pool).await;
-    // update_top_bid_collections(&db_pool).await;
-    // update_collections_floor(&db_pool).await;
-    info!("Marketplace cron job completed");
+    let db_pool = PgPoolOptions::new()
+        .connect(&database_url)
+        .await
+        .expect("Could not connect to the database");
+
+    match connect_redis().await {
+        Ok(con) => {
+            let _ = cache_collection_pages(&db_pool, con.clone()).await;
+            update_listed_tokens(&db_pool, con).await;
+
+        }
+        Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
+    }
+    // @todo when adding new calculation add spawn & try_join!
+    update_top_bid_tokens(&db_pool).await;
+    update_top_bid_collections(&db_pool).await;
+    update_collections_floor(&db_pool).await;
+    tracing::info!("Marketplace cron job completed");
     Ok(())
 }
 

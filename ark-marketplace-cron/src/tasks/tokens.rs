@@ -4,11 +4,68 @@ use redis::AsyncCommands;
 use serde_json::json;
 use sqlx::PgPool;
 use tracing::info;
+use async_std::stream::StreamExt;
+use sqlx::Row;
 
 const CHAIN_ID: &str = "0x534e5f4d41494e";
 const ITEMS_PER_PAGE: i64 = 50;
 
-pub async fn update_listed_tokens(pool: &PgPool) {
+async fn clear_collection_cache(
+        mut con: MultiplexedConnection,
+        contract_address: &str,
+    ) -> redis::RedisResult<()> {
+        // Create a pattern for matching keys
+        let pattern = format!("*{}_*", contract_address);
+
+        // Collect keys matching the pattern
+        let mut cmd = redis::cmd("SCAN");
+        cmd.cursor_arg(0);
+        cmd.arg("MATCH").arg(pattern);
+        let mut keys: Vec<String> = vec![];
+        {
+            let mut iter = cmd.iter_async::<_>(&mut con).await?;
+            while let Some(key) = iter.next().await {
+                keys.push(key);
+            }
+        }
+
+        // Delete keys and log the results
+        if !keys.is_empty() {
+            con.del(keys.clone()).await?;
+        }
+
+        Ok(())
+    }
+
+pub async fn update_listed_tokens(
+    pool: &PgPool,
+    con: MultiplexedConnection
+    ) {
+
+    let select_collections_query = r#"
+        SELECT DISTINCT contract_address
+        FROM token
+        WHERE (NOW() > to_timestamp(listing_end_date) OR NOW() < to_timestamp(listing_start_date))
+          AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
+    "#;
+
+    let collections: Vec<String> = match sqlx::query(select_collections_query)
+        .fetch_all(pool)
+        .await {
+        Ok(rows) => rows.iter().map(|row| row.get::<String, _>(0)).collect(),
+        Err(e) => {
+            tracing::error!("Failed to select collections: {}", e);
+            return;
+        }
+    };
+
+    // loop through collections and clear cache
+    for collection in collections {
+        match clear_collection_cache(con.clone(), &collection).await {
+            Ok(_) => info!("Cache cleared for collection: {}", collection),
+            Err(e) => tracing::error!("Failed to clear cache for collection {}: {}", collection, e),
+        }
+    }
 
     let clean_dates_query = r#"
         UPDATE token
