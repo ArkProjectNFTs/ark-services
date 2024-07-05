@@ -270,9 +270,9 @@ impl DatabaseAccess for PgPool {
            GROUP BY contract.contract_address, contract.chain_id, token.current_owner
            LIMIT $2 OFFSET $3
            ",
-           user_address,
-           items_per_page,
-           (page - 1) * items_per_page,
+            user_address,
+            items_per_page,
+            (page - 1) * items_per_page,
         )
         .fetch_all(self)
         .await?;
