@@ -251,7 +251,7 @@ impl DatabaseAccess for PgPool {
                      WHERE  t1.contract_address = contract.contract_address
                        AND  t1.chain_id = contract.chain_id
                        AND  t1.current_owner = token.current_owner
-                       AND  t1.is_listed = true
+                       AND  t1.listing_start_amount is not null
                   ) as user_listed_tokens,
                  contract.floor_price AS floor,
                  (
@@ -265,7 +265,7 @@ impl DatabaseAccess for PgPool {
                  INNER JOIN token ON contract.contract_address = token.contract_address
                  WHERE token.current_owner = $1
                  AND   contract.is_verified = true
-           GROUP BY contract.contract_address, contract.chain_id, token.current_owner, token.is_listed
+           GROUP BY contract.contract_address, contract.chain_id, token.current_owner
            LIMIT $2 OFFSET $3
            ",
            user_address,
@@ -312,14 +312,14 @@ impl DatabaseAccess for PgPool {
                      FROM token
                      WHERE token.contract_address = contract.contract_address
                      AND token.chain_id = contract.chain_id
-                     AND token.is_listed = true
+                     AND token.listing_start_amount IS NOT NULL
                  ) AS listed_items,
                  (
                      SELECT COUNT(*)
                      FROM token
                      WHERE token.contract_address = contract.contract_address
                      AND token.chain_id = contract.chain_id
-                     AND token.is_listed = true
+                     AND token.listing_start_amount IS NOT NULL
                  ) * 100 / NULLIF(
                      (
                          SELECT COUNT(*)
@@ -658,7 +658,7 @@ impl DatabaseAccess for PgPool {
             WHERE token.current_owner = $1
             AND (
                 $2 = false OR
-                is_listed = true
+                token.listing_start_amount IS NOT NULL
             )
             {}
             ",
@@ -689,14 +689,10 @@ impl DatabaseAccess for PgPool {
             WHERE token.current_owner = $3
             AND (
                 $4 = false OR
-                token.is_listed = true
+                token.listing_start_amount IS NOT NULL
             )
             {}
-            ORDER BY
-            CASE
-                WHEN token.is_listed = true THEN 1
-                ELSE 2
-            END,
+            ORDER BY listing_start_amount ASC NULLS LAST,
             CASE
                 WHEN $5 = 'price' THEN
                     CASE WHEN $6 = 'asc' THEN token.listing_start_amount
