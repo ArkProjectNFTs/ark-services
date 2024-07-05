@@ -154,26 +154,29 @@ impl Storage for MetadataSqlStorage {
     async fn find_tokens_without_metadata(
         &self,
         filter: Option<(String, String)>,
-        target_metadata_status: Option<String>,
+        refresh_collection: bool,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
-        let metadata_status = match target_metadata_status {
-            Some(status) => status,
-            None => "TO_REFRESH".to_string(),
-        };
-
         let base_query = "SELECT t.contract_address, t.token_id, t.chain_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE c.is_spam = false AND c.is_nsfw  = false AND c.contract_type = 'ERC721'";
         let (query, params) = if let Some((contract_address, chain_id)) = filter {
             (
                 format!(
-                    "{} AND t.metadata_status = $1 AND t.chain_id = $2 AND t.contract_address = $3 LIMIT 100",
+                    "{} AND t.metadata_status = 'TO_REFRESH' AND t.chain_id = $1 AND t.contract_address = $2 LIMIT 100",
                     base_query
                 ),
-                vec![metadata_status, chain_id, contract_address],
+                vec![chain_id, contract_address],
             )
         } else {
+            let status = if refresh_collection {
+                "COLLECTION_TO_REFRESH"
+            } else {
+                "TO_REFRESH"
+            };
             (
-                format!("{} AND t.metadata_status = $1 LIMIT 100", base_query),
-                vec![metadata_status],
+                format!(
+                    "{} AND t.metadata_status = '{}' LIMIT 100",
+                    base_query, status
+                ),
+                vec![],
             )
         };
 

@@ -139,19 +139,10 @@ async fn main() -> Result<()> {
         }
     }
 
-    let target_metadata_status = if config.refresh_contract_metadata {
-        "COLLECTION_TO_REFRESH"
-    } else {
-        "TO_REFRESH"
-    };
-
     let mut total_tokens: u64 = 0;
     loop {
         match storage
-            .find_tokens_without_metadata(
-                config.filter.clone(),
-                Some(target_metadata_status.to_string()),
-            )
+            .find_tokens_without_metadata(config.filter.clone(), config.refresh_contract_metadata)
             .await
         {
             Ok(tokens) => {
@@ -168,18 +159,15 @@ async fn main() -> Result<()> {
                         return Ok(());
                     }
 
-                    info!(
-                        "No tokens found that require metadata refresh (status: {})",
-                        target_metadata_status
-                    );
+                    info!("No tokens found that require metadata refresh");
                     sleep(config.loop_delay_duration).await;
                 } else {
                     for token in tokens {
                         total_tokens += 1;
 
                         info!(
-                            "🔄 Refreshing Token Metadata [{}]: Token: {:?} - Metadata Status: {}",
-                            total_tokens, token, target_metadata_status
+                            "🔄 Refreshing Token Metadata [{}]: Token: {:?}",
+                            total_tokens, token
                         );
 
                         match metadata_manager
