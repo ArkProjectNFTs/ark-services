@@ -157,27 +157,27 @@ impl Storage for MetadataSqlStorage {
         refresh_collection: bool,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
         let base_query = "SELECT t.contract_address, t.token_id, t.chain_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE c.is_spam = false AND c.is_nsfw  = false AND c.contract_type = 'ERC721'";
-        let (query, params) = if let Some((contract_address, chain_id)) = filter {
-            (
+        let status = if refresh_collection {
+            "COLLECTION_TO_REFRESH"
+        } else {
+            "TO_REFRESH"
+        };
+
+        let (query, params) = match filter {
+            Some((contract_address, chain_id)) => (
                 format!(
-                    "{} AND t.metadata_status = 'TO_REFRESH' AND t.chain_id = $1 AND t.contract_address = $2 LIMIT 100",
-                    base_query
+                    "{} AND t.metadata_status = '{}' AND t.chain_id = $1 AND t.contract_address = $2 LIMIT 100",
+                    base_query, status
                 ),
                 vec![chain_id, contract_address],
-            )
-        } else {
-            let status = if refresh_collection {
-                "COLLECTION_TO_REFRESH"
-            } else {
-                "TO_REFRESH"
-            };
-            (
+            ),
+            None => (
                 format!(
                     "{} AND t.metadata_status = '{}' LIMIT 100",
                     base_query, status
                 ),
                 vec![],
-            )
+            ),
         };
 
         let mut query_builder = sqlx::query(&query);
@@ -185,32 +185,34 @@ impl Storage for MetadataSqlStorage {
             query_builder = query_builder.bind(param);
         }
 
-        match query_builder.fetch_all(&self.pool).await {
-            Ok(rows) => {
-                if rows.is_empty() {
-                    return Ok(vec![]);
-                } else {
-                    let mut tokens: Vec<TokenWithoutMetadata> = vec![];
-                    for row in rows {
-                        if let Ok(res) =
-                            sana::storage::sqlx::types::TokenWithoutMetadata::from_row(&row)
-                        {
-                            tokens.push(TokenWithoutMetadata {
-                                contract_address: res.contract_address,
-                                token_id: res.token_id,
-                                chain_id: res.chain_id,
-                                is_verified: res.is_verified,
-                                save_images: res.save_images,
-                            });
-                        }
-                    }
-                    return Ok(tokens);
-                }
-            }
+        let rows = match query_builder.fetch_all(&self.pool).await {
+            Ok(rows) => rows,
             Err(e) => {
                 error!("Failed to fetch token ids without metadata. Error: {}", e);
-                Err(StorageError::DatabaseError(e.to_string()))
+                return Err(StorageError::DatabaseError(e.to_string()));
             }
+        };
+
+        // Process the rows
+        if rows.is_empty() {
+            return Ok(vec![]);
         }
+
+        let tokens: Vec<TokenWithoutMetadata> = rows
+            .into_iter()
+            .filter_map(|row| {
+                sana::storage::sqlx::types::TokenWithoutMetadata::from_row(&row)
+                    .ok()
+                    .map(|res| TokenWithoutMetadata {
+                        contract_address: res.contract_address,
+                        token_id: res.token_id,
+                        chain_id: res.chain_id,
+                        is_verified: res.is_verified,
+                        save_images: res.save_images,
+                    })
+            })
+            .collect();
+
+        Ok(tokens)
     }
 }
