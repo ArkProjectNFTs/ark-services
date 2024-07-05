@@ -10,6 +10,7 @@ export const env = createEnv({
     PORT: z.coerce.number().default(3000),
   },
   server: {
+    REDIS_URL: z.string(),
     PGUSER: z.string(),
     PGPASSWORD: z.string(),
     PGHOST: z.string(),
@@ -21,9 +22,26 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    ARN_ECS_INDEXER_CLUSTER: z.string(),
+    INDEXER_TASK_DEFINITION: z.string(),
+    INDEXER_SUBNETS: z.string(),
+    MARKETPLACE_INDEXER_SUBNETS: z.string(),
+    MARKETPLACE_INDEXER_TASK_DEFINITION: z.string(),
+    MARKETPLACE_INDEXER_CLUSTER: z.string(),
+    MARKETPLACE_INDEXER_SECURITY_GROUPS: z.string(),
   },
   client: {},
   runtimeEnv: {
+    INDEXER_SUBNETS: process.env.INDEXER_SUBNETS,
+    INDEXER_TASK_DEFINITION: process.env.INDEXER_TASK_DEFINITION,
+    ARN_ECS_INDEXER_CLUSTER: process.env.ARN_ECS_INDEXER_CLUSTER,
+    MARKETPLACE_INDEXER_SUBNETS: process.env.MARKETPLACE_INDEXER_SUBNETS,
+    MARKETPLACE_INDEXER_TASK_DEFINITION:
+      process.env.MARKETPLACE_INDEXER_TASK_DEFINITION,
+    MARKETPLACE_INDEXER_CLUSTER: process.env.MARKETPLACE_INDEXER_CLUSTER,
+    MARKETPLACE_INDEXER_SECURITY_GROUPS:
+      process.env.MARKETPLACE_INDEXER_SECURITY_GROUPS,
+    REDIS_URL: process.env.REDIS_URL,
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_URL: process.env.VERCEL_URL,
     PORT: process.env.PORT ?? "3000",

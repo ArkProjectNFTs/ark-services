@@ -22,9 +22,9 @@ export default function NetworkSelector() {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="production-mainnet">Production Mainnet</SelectItem>
-          <SelectItem value="production-sepolia">Production Sepolia</SelectItem>
+          {/* <SelectItem value="production-sepolia">Production Sepolia</SelectItem>
           <SelectItem value="staging-mainnet">Staging Mainnet</SelectItem>
-          <SelectItem value="staging-sepolia">Staging Sepolia</SelectItem>
+          <SelectItem value="staging-sepolia">Staging Sepolia</SelectItem> */}
         </SelectContent>
       </Select>
     </div>

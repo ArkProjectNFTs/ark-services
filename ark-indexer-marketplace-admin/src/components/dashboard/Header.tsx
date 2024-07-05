@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Skeleton } from "~/components/ui/skeleton";
+import CollectionSearch from "../CollectionSearch";
 import Logo from "../icons/Logo";
 import DashboardNav from "./DashboardNav";
 import NetworkSelector from "./NetworkSelector";
@@ -32,6 +33,7 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
         <Logo className="h-8 w-auto" />
         <DashboardNav />
         <div className="flex-grow" />
+        <CollectionSearch />
         <NetworkSelector />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
