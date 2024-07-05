@@ -122,7 +122,7 @@ impl Storage for MetadataStorage {
     async fn find_tokens_without_metadata(
         &self,
         filter: Option<(String, String)>,
-        _target_metadata_status: Option<String>,
+        _refresh_collection: bool,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
         match self
             .provider
