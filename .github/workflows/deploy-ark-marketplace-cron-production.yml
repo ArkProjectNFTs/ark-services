@@ -1,0 +1,71 @@
+name: Deploy ArkProject Marketplace Cron to Scaleway (Mainnet)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-ark-marketplace-cron-production.yml"
+      - "ark-marketplace-cron/**"
+
+jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    name: Discord Notification
+    steps:
+      - name: Send notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "🚢 Deploying Marketplace Cron to Mainnet environment..."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+  push-marketplace-cron-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Login to Scaleway Registry
+        uses: docker/login-action@v1
+        with:
+          registry: rg.fr-par.scw.cloud
+          username: nologin
+          password: ${{ secrets.SCW_SECRET_KEY }}
+
+      - name: Build and push image to Scaleway Registry
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./docker/marketplace-cron/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: rg.fr-par.scw.cloud/namespace-ark-project/marketplace-cron:latest
+
+  discord-notification-success:
+    needs: push-marketplace-cron-image
+    runs-on: ubuntu-latest
+    name: Discord Notification Success
+    steps:
+      - name: Send success notification to dev-updates channel
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "✅ Marketplace Cron successfully deployed to Mainnet environment!"
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
