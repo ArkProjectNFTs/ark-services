@@ -2,19 +2,11 @@ FROM --platform=$TARGETPLATFORM rust:latest as builder
 
 WORKDIR /app
 
-# Copy only the necessary files for the cron job
-COPY ark-marketplace-cron/Cargo.toml ./Cargo.toml
-COPY ark-marketplace-cron/src ./src
-COPY .sqlx ./.sqlx
+# Copy the entire project directory
+COPY . .
 
-# Create a dummy Cargo.lock to satisfy the compiler
-RUN touch Cargo.lock
-
-# Build dependencies
-RUN cargo build --release
-
-# Build the actual application
-RUN cargo build --release
+# Build the application
+RUN cargo build --release -p ark-marketplace-cron
 
 # Start a new stage with a minimal image
 FROM --platform=$TARGETPLATFORM debian:buster-slim
@@ -28,4 +20,4 @@ WORKDIR /app
 COPY --from=builder /app/target/release/ark-marketplace-cron .
 
 # Set the binary as the entrypoint
-CMD ["./ark-marketplace-cron"]
+ENTRYPOINT ["./ark-marketplace-cron"]
