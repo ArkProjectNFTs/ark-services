@@ -1,4 +1,4 @@
-name: Deploy ArkProject Marketplace Cron to Scaleway (Mainnet)
+name: Build and Push ArkProject Marketplace Cron to Scaleway Registry
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "🚢 Deploying Marketplace Cron to Mainnet environment..."
+                  "content": "🚢 Building and pushing Marketplace Cron to Scaleway Registry..."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -48,14 +48,11 @@ jobs:
           username: nologin
           password: ${{ secrets.SCW_SECRET_KEY }}
 
-      - name: Build and push image to Scaleway Registry
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./docker/marketplace-cron/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: rg.fr-par.scw.cloud/namespace-ark-project/marketplace-cron:latest
+      - name: Build cron, tag, and push image to Scaleway Registry
+        run: |
+          docker buildx create --use --name marketplace-cron
+          docker buildx build --tag rg.fr-par.scw.cloud/namespace-ark-project/marketplace-cron:latest --file docker/marketplace-cron/Dockerfile . --load
+          docker push rg.fr-par.scw.cloud/namespace-ark-project/marketplace-cron:latest
 
   discord-notification-success:
     needs: push-marketplace-cron-image
@@ -67,6 +64,6 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "✅ Marketplace Cron successfully deployed to Mainnet environment!"
+                  "content": "✅ Marketplace Cron successfully built and pushed to Scaleway Registry!"
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
