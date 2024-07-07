@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/deploy-ark-marketplace-cron-production.yml"
       - "ark-marketplace-cron/**"
+      - "docker/marketplace-cron/**"
 
 jobs:
   discord-notification:
