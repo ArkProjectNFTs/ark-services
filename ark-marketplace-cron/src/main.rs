@@ -38,6 +38,7 @@ async fn connect_redis() -> Result<MultiplexedConnection, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    tracing::info!("Starting marketplace cron job");
     dotenv::dotenv().ok();
     init_logging();
 
@@ -61,6 +62,7 @@ async fn main() -> std::io::Result<()> {
     update_top_bid_tokens(&db_pool).await;
     update_top_bid_collections(&db_pool).await;
     update_collections_floor(&db_pool).await;
+    tracing::info!("Marketplace cron job completed");
     Ok(())
 }
 

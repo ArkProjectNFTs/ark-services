@@ -6,4 +6,5 @@ COPY . .
 
 RUN cargo build -p ark-marketplace-cron --release
 
-CMD ["cargo", "run", "-p", "ark-marketplace-cron", "--release"]
+
+COPY --from=builder /app/target/release/ark-marketplace-cron .
