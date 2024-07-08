@@ -22,7 +22,7 @@ runs:
         sudo apt-get install -y awscli jq
         cargo install sqlx-cli --no-default-features --features rustls,postgres
 
-   - name: Check Migration Files
+    - name: Check Migration Files
       shell: bash
       run: |
         if [ ! -d "./ark-sqlx/migrations/marketplace" ]; then
