@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Discord Notification
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Send notification to dev-updates channel
         uses: ./.github/actions/discord-notification
         with:
