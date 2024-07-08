@@ -70,6 +70,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [push-marketplace-api-image]
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
