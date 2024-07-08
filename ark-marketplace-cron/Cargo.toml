@@ -8,6 +8,7 @@ anyhow = "1.0"
 aws-config = "1.5.0"
 aws-sdk-secretsmanager = "1.30.0"
 bigdecimal = { version = "0.3", features = ["serde"] }
+clap = "3.0"
 sqlx = { version = "0.7", features = ["postgres", "runtime-async-std", "bigdecimal"] }
 tokio = { version = "1", features = ["full"] }
 dotenv = "0.15.0"

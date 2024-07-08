@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM orderbook_token_history WHERE token_address = $1 AND token_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c9cce2f7cebebccadacc8733316a5b576f2df3e04ee28de3d964da2b36eb9e2e"
+}
