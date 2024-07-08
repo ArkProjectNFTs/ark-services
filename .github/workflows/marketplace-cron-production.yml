@@ -1,4 +1,4 @@
-name: Build and Push ArkProject Marketplace Cron to Scaleway Registry
+name: MKT CRON (Production) (Scaleway)
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-ark-marketplace-cron-production.yml"
+      - ".github/workflows/marketplace-cron-production.yml"
       - "ark-marketplace-cron/**"
       - "docker/marketplace-cron/**"
 
