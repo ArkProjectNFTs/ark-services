@@ -39,10 +39,9 @@ async fn connect_redis() -> Result<MultiplexedConnection, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    info!("Starting marketplace cron job");
     // dotenv::dotenv().ok();
-    // init_logging();
-
+    init_logging();
+    info!("Starting marketplace cron job");
     // let database_url = get_database_url()
     //     .await
     //     .expect("Could not get the database URL");
