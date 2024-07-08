@@ -1,0 +1,21 @@
+name: MKT SQL Migrations (Scaleway)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-migrations:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [mainnet]
+
+    name: Run SQL Migrations on ${{ matrix.environment }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}

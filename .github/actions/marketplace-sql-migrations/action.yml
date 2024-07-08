@@ -1,0 +1,44 @@
+name: "Apply Marketplace SQL Migrations"
+description: "Run SQL migrations on Mainnet database"
+inputs:
+  discord-webhook-url:
+    description: "Discord webhook URL for notifications"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Notify start of migrations
+      run: |
+        curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database...\"}" \
+            ${{ inputs.discord-webhook-url }}
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y awscli jq
+        cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+    - name: Run SQL Migrations
+      run: |
+        cd ark-sqlx
+        sqlx migrate run --source ./migrations/marketplace
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+
+    - name: Notify success of migrations
+      if: success()
+      run: |
+        curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"✅ SQL migrations `/migrations/marketplace` on Mainnet database were successful.\"}" \
+            ${{ inputs.discord-webhook-url }}
+
+    - name: Notify failure of migrations
+      if: failure()
+      run: |
+        curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"content\": \"❌ SQL migrations `/migrations/marketplace` on Mainnet database failed.\"}" \
+            ${{ inputs.discord-webhook-url }}

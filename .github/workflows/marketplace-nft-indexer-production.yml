@@ -1,4 +1,4 @@
-name: Deploy Metadata Indexer Marketplace (Production)
+name: MKT NFT Indexer (Production) (Mainnet) (AWS)
 
 on:
   workflow_dispatch:
@@ -6,29 +6,23 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-metadata-marketplace-production.yml"
-      - "infrastructure/cdk-ark-metadata-marketplace/**"
-      - "ark-metadata-marketplace/**"
+      - ".github/workflows/marketplace-nft-indexer-production.yml"
+      - "infrastructure/cdk-starknet-indexer/**"
+      - "ark-indexer-marketplace/**"
+      - "ark-sqlx/providers/marketplace/**"
 
 jobs:
-  discord-notification:
+  push-indexer-image:
     runs-on: ubuntu-latest
-    name: Discord Notification
     steps:
       - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "Deploying Metadata Marketplace Indexer on Production environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "Deploying `ark-indexer-marketplace` on Production environment..."
 
-  push-metadata-indexer-image:
-    runs-on: ubuntu-latest
-    steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -69,6 +63,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Build ark-indexer-marketplace
+        run: cargo build --release -p ark-indexer-marketplace
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -80,11 +77,11 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Build metadata indexer, tag, and push image to Amazon ECR
+      - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:metadata-marketplace-production-latest --file docker/metadata-marketplace/Dockerfile . --load
-          docker push $ECR_URL:metadata-marketplace-production-latest
+          docker buildx build --tag $ECR_URL:indexer-marketplace-production-latest --file docker/indexer-marketplace/Dockerfile . --load
+          docker push $ECR_URL:indexer-marketplace-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
@@ -99,10 +96,17 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    needs: [push-metadata-indexer-image]
+    needs: [push-indexer-image]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -112,16 +116,9 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          override: true
-
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-metadata-marketplace
+          cd infrastructure/cdk-ark-indexer-marketplace
           pnpm install
 
       - name: Cache Cargo registry
@@ -145,13 +142,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-target-
 
-      - name: Install Cargo Lambda
-        run: |
-          pip install cargo-lambda
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STARKNET_NODE_MAINNET_SSH_KEY }}
+          
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
-      - name: Bootstrap Metadata Indexer Marketplace
+      - name: Ensure deployment directory exists
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "mkdir -p /opt/marketplace-nft-indexer"
+
+      - name: Stop the service
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl stop marketplace-nft-indexer.service"
+
+      - name: Upload binary to Scaleway server
+        run: scp -o StrictHostKeyChecking=no target/release/ark-indexer-marketplace github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }}:/opt/marketplace-nft-indexer/
+
+      - name: Restart the service
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl start marketplace-nft-indexer.service"
+
+      - name: Bootstrap Indexer Marketplace
         run: |
-          cd infrastructure/cdk-ark-metadata-marketplace
+          cd infrastructure/cdk-ark-indexer-marketplace
           pnpm cdk bootstrap -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
@@ -159,12 +174,32 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy Metadata Indexer Marketplace
+      - name: Deploy Indexer Marketplace
         run: |
-          cd infrastructure/cdk-ark-metadata-marketplace
+          cd infrastructure/cdk-ark-indexer-marketplace
           pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
           AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Send success notification to dev-updates channel
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "✅ Successfully deployed `ark-indexer-marketplace` on Production environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send failure notification to dev-updates channel
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "❌ Failed to deploy `ark-indexer-marketplace` on Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}

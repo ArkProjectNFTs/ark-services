@@ -1,13 +1,9 @@
-name: Deploy AWS Redis (Production)
+name: Redis (Production) (AWS)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/deploy-ark-redis.yml"
-      - "infrastructure/cdk-ark-redis/**"
+  release:
+    types: [published]
 
 jobs:
   deploy:
@@ -34,7 +30,7 @@ jobs:
       - name: Deploy Redis
         run: |
           cd infrastructure/cdk-ark-redis
-          pnpm cdk deploy --require-approval never
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}

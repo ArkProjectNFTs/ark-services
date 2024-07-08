@@ -1,17 +1,7 @@
-name: Deploy Deprecated NFT Indexers (Staging)
+name: NFT Indexer (Production) (AWS)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/deploy-ark-deprecated-indexers-staging.yml"
-      - "infrastructure/cdk-ark-indexers/**"
-      - "ark-indexer/**"
-      - "ark-lambdas/**"
-      - "ark-dynamodb/**"
-      - "ark-metadata-refresh/**"
 
 jobs:
   discord-notification:
@@ -19,19 +9,21 @@ jobs:
     name: Discord Notification
     steps:
       - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "🧪 Deploying Indexers on Staging environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "🚢 Deploying Indexers to Production environment..."
 
   push-indexer-image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "18"
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -86,8 +78,8 @@ jobs:
       - name: Build indexer, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:indexer-staging-latest --file docker/indexer/Dockerfile . --load
-          docker push $ECR_URL:indexer-staging-latest
+          docker buildx build --tag $ECR_URL:indexer-production-latest --file docker/indexer/Dockerfile . --load
+          docker push $ECR_URL:indexer-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
@@ -164,8 +156,8 @@ jobs:
       - name: Build metadata, tag, and push image to Amazon ECR
         run: |
           docker buildx create --use --name ecr-deploy-builder-metadata
-          docker buildx build --tag $ECR_URL:metadata-staging-latest --file docker/metadata/Dockerfile . --load
-          docker push $ECR_URL:metadata-staging-latest
+          docker buildx build --tag $ECR_URL:metadata-production-latest --file docker/metadata/Dockerfile . --load
+          docker push $ECR_URL:metadata-production-latest
         env:
           ECR_URL: ${{ env.ECR_URL }}
           AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
@@ -233,7 +225,7 @@ jobs:
       - name: Bootstrap Indexers
         run: |
           cd infrastructure/cdk-ark-indexers
-          pnpm cdk bootstrap
+          pnpm cdk bootstrap -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
@@ -243,7 +235,7 @@ jobs:
       - name: Deploy Indexers
         run: |
           cd infrastructure/cdk-ark-indexers
-          pnpm cdk deploy --require-approval never
+          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}

@@ -1,4 +1,4 @@
-name: Deploy NFT APIs (Production)
+name: NFT APIs (Production) (Mainnet)
 
 on:
   workflow_dispatch:
@@ -11,13 +11,10 @@ jobs:
     name: Discord Notification
     steps:
       - name: Send notification to dev-updates channel
-        run: |
-          curl -H "Content-Type: application/json" \
-              -X POST \
-              -d '{
-                  "content": "🚢 Deploying NFT APIs on Production environment..."
-              }' \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "🚢 Deploying NFT APIs on Production environment..."
 
   deploy:
     runs-on: ubuntu-latest

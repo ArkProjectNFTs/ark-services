@@ -1,9 +1,13 @@
-name: Deploy AWS Redis (Production)
+name: Deploy VPC (AWS)
 
 on:
   workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/vpc.yml"
+      - "infrastructure/cdk-ark-vpc/**"
 
 jobs:
   deploy:
@@ -24,13 +28,23 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          cd infrastructure/cdk-ark-redis
+          cd infrastructure/cdk-ark-vpc
           pnpm install
 
-      - name: Deploy Redis
+      - name: Bootstrap VPC
         run: |
-          cd infrastructure/cdk-ark-redis
-          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
+          cd infrastructure/cdk-ark-vpc
+          pnpm cdk bootstrap
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy VPC
+        run: |
+          cd infrastructure/cdk-ark-vpc
+          pnpm cdk deploy --require-approval never
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets. AWS_CDK_SECRET_ACCESS_KEY }}
