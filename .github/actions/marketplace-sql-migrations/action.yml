@@ -8,6 +8,7 @@ runs:
   using: "composite"
   steps:
     - name: Notify start of migrations
+      shell: bash
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
@@ -15,12 +16,14 @@ runs:
             ${{ inputs.discord-webhook-url }}
 
     - name: Install Dependencies
+      shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y awscli jq
         cargo install sqlx-cli --no-default-features --features rustls,postgres
 
     - name: Run SQL Migrations
+      shell: bash
       run: |
         cd ark-sqlx
         sqlx migrate run --source ./migrations/marketplace
@@ -28,6 +31,7 @@ runs:
         DATABASE_URL: ${{ env.DATABASE_URL }}
 
     - name: Notify success of migrations
+      shell: bash
       if: success()
       run: |
         curl -H "Content-Type: application/json" \
@@ -36,6 +40,7 @@ runs:
             ${{ inputs.discord-webhook-url }}
 
     - name: Notify failure of migrations
+      shell: bash
       if: failure()
       run: |
         curl -H "Content-Type: application/json" \
