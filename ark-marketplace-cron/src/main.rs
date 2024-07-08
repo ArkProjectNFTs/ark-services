@@ -9,6 +9,7 @@ use tasks::collections::{update_collections_floor, update_top_bid_collections};
 use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
+use tracing::info;
 
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
@@ -38,31 +39,31 @@ async fn connect_redis() -> Result<MultiplexedConnection, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    tracing::info!("Starting marketplace cron job");
-    dotenv::dotenv().ok();
-    init_logging();
+    info!("Starting marketplace cron job");
+    // dotenv::dotenv().ok();
+    // init_logging();
 
-    let database_url = get_database_url()
-        .await
-        .expect("Could not get the database URL");
+    // let database_url = get_database_url()
+    //     .await
+    //     .expect("Could not get the database URL");
 
-    let db_pool = PgPoolOptions::new()
-        .connect(&database_url)
-        .await
-        .expect("Could not connect to the database");
+    // let db_pool = PgPoolOptions::new()
+    //     .connect(&database_url)
+    //     .await
+    //     .expect("Could not connect to the database");
 
-    match connect_redis().await {
-        Ok(con) => {
-            let _ = cache_collection_pages(&db_pool, con).await;
-        }
-        Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
-    }
-    // @todo when adding new calculation add spawn & try_join!
-    update_listed_tokens(&db_pool).await;
-    update_top_bid_tokens(&db_pool).await;
-    update_top_bid_collections(&db_pool).await;
-    update_collections_floor(&db_pool).await;
-    tracing::info!("Marketplace cron job completed");
+    // match connect_redis().await {
+    //     Ok(con) => {
+    //         let _ = cache_collection_pages(&db_pool, con).await;
+    //     }
+    //     Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
+    // }
+    // // @todo when adding new calculation add spawn & try_join!
+    // update_listed_tokens(&db_pool).await;
+    // update_top_bid_tokens(&db_pool).await;
+    // update_top_bid_collections(&db_pool).await;
+    // update_collections_floor(&db_pool).await;
+    info!("Marketplace cron job completed");
     Ok(())
 }
 
