@@ -145,10 +145,27 @@ jobs:
         run: |
           pip install cargo-lambda
 
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.STARKNET_NODE_MAINNET_SSH_KEY }}
+          
       - name: Apply Marketplace SQL Migrations
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Ensure deployment directory exists
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "mkdir -p /opt/marketplace-metadata-indexer"
+
+      - name: Stop the service
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl stop marketplace-metadata-indexer.service"
+
+      - name: Upload binary to Scaleway server
+        run: scp -o StrictHostKeyChecking=no target/release/arkchain-indexer-marketplace github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }}:/opt/marketplace-metadata-indexer/
+
+      - name: Restart the service
+        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl start marketplace-metadata-indexer.service"
 
       - name: Bootstrap Metadata Indexer Marketplace
         run: |
