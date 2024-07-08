@@ -7,9 +7,9 @@ use redis::aio::MultiplexedConnection;
 use redis::Client;
 use tasks::collections::{update_collections_floor, update_top_bid_collections};
 use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
+use tracing::info;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
-use tracing::info;
 
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
