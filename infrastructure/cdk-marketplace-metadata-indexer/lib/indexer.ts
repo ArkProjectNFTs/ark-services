@@ -5,13 +5,13 @@ import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import * as iam from "aws-cdk-lib/aws-iam";
 
-export async function deployMetadataIndexer(
+export async function deployMarketplaceMetadataIndexer(
   scope: cdk.Stack,
   networks: string[],
   vpc: IVpc,
   isProductionEnvironment: boolean
 ) {
-  const cluster = new Cluster(scope, "metadata-marketplace", {
+  const cluster = new Cluster(scope, "marketplace", {
     vpc: vpc,
   });
 
@@ -22,17 +22,11 @@ export async function deployMetadataIndexer(
   );
 
   networks.forEach((network) => {
-    deployMetadataServices(
-      scope,
-      cluster,
-      ecrRepository,
-      network,
-      isProductionEnvironment
-    );
+    deploy(scope, cluster, ecrRepository, network, isProductionEnvironment);
   });
 }
 
-function deployMetadataServices(
+function deploy(
   scope: cdk.Stack,
   cluster: cdk.aws_ecs.ICluster,
   ecrRepository: cdk.aws_ecr.IRepository,
@@ -44,7 +38,7 @@ function deployMetadataServices(
 
   const logGroup = new LogGroup(
     scope,
-    `/ecs/metadata-marketplace-${
+    `/ecs/marketplace-metadata-indexer-${
       isProductionEnvironment ? "production" : "staging"
     }-${network}`,
     {
@@ -55,9 +49,9 @@ function deployMetadataServices(
 
   const taskDefinition = new cdk.aws_ecs.FargateTaskDefinition(
     scope,
-    `metadata-marketplace-${
+    `metadata-marketplace-indexer-${
       isProductionEnvironment ? "production" : "staging"
-    }-${network}-task-definition`,
+    }-${network}`,
     {
       memoryLimitMiB: 2048,
       cpu: 512,
@@ -120,9 +114,9 @@ function deployMetadataServices(
     })
   );
 
-  new cdk.aws_ecs.FargateService(scope, `indexer-${network}`, {
+  new cdk.aws_ecs.FargateService(scope, network, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: isProductionEnvironment ? 1 : 0,
+    desiredCount: 0,
   });
 }

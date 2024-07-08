@@ -1,21 +1,17 @@
 import * as cdk from "aws-cdk-lib";
 import { IVpc } from "aws-cdk-lib/aws-ec2";
 import { Cluster } from "aws-cdk-lib/aws-ecs";
-import { Table } from "aws-cdk-lib/aws-dynamodb";
 import { LogGroup } from "aws-cdk-lib/aws-logs";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as ssm from "aws-cdk-lib/aws-ssm";
 
-export async function deployIndexers(
+export async function deployMarketplaceNftIndexer(
   scope: cdk.Stack,
   networks: string[],
   vpc: IVpc,
-  isProductionEnvironment: boolean,
   environmentName: string,
-  indexerVersion: string
+  indexerVersion?: string
 ) {
-  const cluster = new Cluster(scope, "arkproject", {
+  const cluster = new Cluster(scope, `marketplace-${environmentName}`, {
     vpc: vpc,
   });
 
@@ -26,8 +22,7 @@ export async function deployIndexers(
   );
 
   networks.forEach((network) => {
-    deployIndexerServices(
-      isProductionEnvironment,
+    deploy(
       environmentName,
       scope,
       cluster,
@@ -38,18 +33,17 @@ export async function deployIndexers(
   });
 }
 
-function deployIndexerServices(
-  isProductionEnvironment: boolean,
+function deploy(
   environmentName: string,
   scope: cdk.Stack,
   cluster: cdk.aws_ecs.ICluster,
   ecrRepository: cdk.aws_ecr.IRepository,
   network: string,
-  indexerVersion: string
+  indexerVersion?: string
 ) {
   const logGroup = new LogGroup(
     scope,
-    `/ecs/indexer-marketplace-${environmentName}-${network}`,
+    `/ecs/marketplace-nft-indexer-${environmentName}-${network}`,
     {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       retention: 7,
@@ -58,7 +52,7 @@ function deployIndexerServices(
 
   const taskDefinition = new cdk.aws_ecs.FargateTaskDefinition(
     scope,
-    `indexer-marketplace-${environmentName}-${network}-task-definition`,
+    `marketplace-nft-indexer-${environmentName}-${network}`,
     {
       memoryLimitMiB: 2048,
       cpu: 512,
@@ -69,6 +63,20 @@ function deployIndexerServices(
     ? `https://juno.mainnet.arkproject.dev`
     : `https://sepolia.arkproject.dev`;
 
+  const environment: { [key: string]: string } = {
+    CHAIN_ID: "0x534e5f4d41494e",
+    HEAD_OF_CHAIN: "true",
+    IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev/ipfs/",
+    RPC_PROVIDER: rpcProviderUri,
+    RUST_LOG: "INFO",
+    AWS_SECRET_NAME: "prod/ark-db-credentials",
+    AWS_NFT_IMAGE_BUCKET_NAME: "ark-nft-media-mainnet",
+  };
+
+  if (indexerVersion) {
+    environment.INDEXER_VERSION = indexerVersion;
+  }
+
   taskDefinition.addContainer("indexer-marketplace", {
     image: cdk.aws_ecs.ContainerImage.fromEcrRepository(
       ecrRepository,
@@ -78,16 +86,7 @@ function deployIndexerServices(
       streamPrefix: "ecs",
       logGroup: logGroup,
     }),
-    environment: {
-      CHAIN_ID: "0x534e5f4d41494e",
-      HEAD_OF_CHAIN: "true",
-      INDEXER_VERSION: indexerVersion,
-      IPFS_GATEWAY_URI: "https://ipfs.arkproject.dev/ipfs/",
-      RPC_PROVIDER: rpcProviderUri,
-      RUST_LOG: "INFO",
-      AWS_SECRET_NAME: "prod/ark-db-credentials",
-      AWS_NFT_IMAGE_BUCKET_NAME: "ark-nft-media-mainnet",
-    },
+    environment,
   });
 
   taskDefinition.addToTaskRolePolicy(
@@ -111,12 +110,13 @@ function deployIndexerServices(
     })
   );
 
-  const capitalizedNetwork =
-    network.charAt(0).toUpperCase() + network.slice(1).toLowerCase();
-
-  new cdk.aws_ecs.FargateService(scope, `HeadOfChain${capitalizedNetwork}`, {
-    cluster: cluster,
-    taskDefinition: taskDefinition,
-    desiredCount: isProductionEnvironment ? 1 : 0,
-  });
+  new cdk.aws_ecs.FargateService(
+    scope,
+    `nft-indexer-${network.toLowerCase()}`,
+    {
+      cluster: cluster,
+      taskDefinition: taskDefinition,
+      desiredCount: 0,
+    }
+  );
 }

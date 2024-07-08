@@ -2,7 +2,7 @@
 
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { IndexerMarketplaceStack } from "../lib/ark-stack";
+import { MarketplaceNftIndexerStack } from "../lib/ark-stack";
 import { config } from "dotenv";
 
 config();
@@ -15,16 +15,14 @@ const isProductionEnvironment: boolean =
 const networks: string[] = ["mainnet"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
-const stackName = `ark-indexer-marketplace-${environment}`;
-const indexerVersion: string = process.env.INDEXER_VERSION ?? "UNDEFINED";
+const stackName = `marketplace-nft-indexer-${environment}`;
 
-new IndexerMarketplaceStack(app, stackName, {
+new MarketplaceNftIndexerStack(app, stackName, {
   env: {
     account: process.env.AWS_ACCOUNT_ID,
     region: process.env.AWS_REGION,
   },
   networks,
-  isProductionEnvironment,
   environmentName: environment,
-  indexerVersion,
+  indexerVersion: process.env.INDEXER_VERSION,
 });

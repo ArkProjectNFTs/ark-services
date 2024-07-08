@@ -1,15 +1,15 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 
-import { MetadataMarketplaceIndexerStackProps } from "./types";
-import { deployMetadataIndexer } from "./indexer";
+import { MarketplaceNftIndexerStackProps } from "./types";
+import { deployMarketplaceNftIndexer } from "./ecs/indexer";
 import { Vpc } from "aws-cdk-lib/aws-ec2";
 
-export class MetadataMarketplaceIndexerStack extends cdk.Stack {
+export class MarketplaceNftIndexerStack extends cdk.Stack {
   constructor(
     scope: Construct,
     id: string,
-    props: MetadataMarketplaceIndexerStackProps
+    props: MarketplaceNftIndexerStackProps
   ) {
     super(scope, id, props);
 
@@ -17,11 +17,12 @@ export class MetadataMarketplaceIndexerStack extends cdk.Stack {
       vpcId: "vpc-0d11f7ec183208e08",
     });
 
-    deployMetadataIndexer(
+    deployMarketplaceNftIndexer(
       this,
       props.networks,
       vpc,
-      props.isProductionEnvironment
+      props.environmentName,
+      props.indexerVersion
     );
   }
 }

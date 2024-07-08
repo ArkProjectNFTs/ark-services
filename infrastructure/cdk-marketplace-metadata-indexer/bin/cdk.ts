@@ -2,7 +2,7 @@
 
 import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
-import { MetadataMarketplaceIndexerStack } from "../lib/stack";
+import { MarketplaceMetadataIndexerStack } from "../lib/stack";
 import { config } from "dotenv";
 
 config();
@@ -15,12 +15,12 @@ const isProductionEnvironment: boolean =
 const networks: string[] = ["mainnet"];
 
 let environment = isProductionEnvironment ? "production" : "staging";
-const stackName = `ark-metadata-marketplace-${environment}`;
+const stackName = `marketplace-metadata-indexer-${environment}`;
 
-new MetadataMarketplaceIndexerStack(app, stackName, {
+new MarketplaceMetadataIndexerStack(app, stackName, {
   env: {
-    account: process.env.AWS_ACCOUNT_ID,
-    region: process.env.AWS_REGION,
+    account: "223605539824",
+    region: "us-east-1",
   },
   networks,
   isProductionEnvironment,
