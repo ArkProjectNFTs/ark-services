@@ -15,14 +15,14 @@ jobs:
   push-indexer-image:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Send notification to dev-updates channel
         uses: ./.github/actions/discord-notification
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           message: "Deploying `ark-indexer-marketplace` on Production environment..."
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -146,7 +146,7 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.STARKNET_NODE_MAINNET_SSH_KEY }}
-          
+
       - name: Apply Marketplace SQL Migrations
         uses: ./.github/actions/marketplace-sql-migrations
         with:
