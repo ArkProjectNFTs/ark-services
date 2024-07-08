@@ -11,6 +11,7 @@ runs:
   using: "composite"
   steps:
     - name: Send notification to Discord channel
+      shell: bash
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
