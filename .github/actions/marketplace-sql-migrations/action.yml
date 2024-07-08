@@ -22,13 +22,26 @@ runs:
         sudo apt-get install -y awscli jq
         cargo install sqlx-cli --no-default-features --features rustls,postgres
 
+   - name: Check Migration Files
+      shell: bash
+      run: |
+        if [ ! -d "./ark-sqlx/migrations/marketplace" ]; then
+          echo "Migration directory does not exist"
+          exit 1
+        fi
+        if [ -z "$(ls -A ./ark-sqlx/migrations/marketplace)" ]; then
+          echo "No migration files found"
+          exit 1
+        fi
+
     - name: Run SQL Migrations
       shell: bash
       run: |
+        echo "::add-mask::${{ secrets.DATABASE_URL }}"
         cd ark-sqlx
         sqlx migrate run --source ./migrations/marketplace
       env:
-        DATABASE_URL: ${{ env.DATABASE_URL }}
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     - name: Notify success of migrations
       shell: bash
