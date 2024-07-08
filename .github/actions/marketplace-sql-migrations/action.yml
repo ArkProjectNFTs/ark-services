@@ -4,6 +4,10 @@ inputs:
   discord-webhook-url:
     description: "Discord webhook URL for notifications"
     required: true
+  database-url:
+    description: "Database URL for running migrations"
+    required: true
+
 runs:
   using: "composite"
   steps:
@@ -37,11 +41,11 @@ runs:
     - name: Run SQL Migrations
       shell: bash
       run: |
-        echo "::add-mask::${{ secrets.DATABASE_URL }}"
+        echo "::add-mask::${{ inputs.database-url }}"
         cd ark-sqlx
         sqlx migrate run --source ./migrations/marketplace
       env:
-        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        DATABASE_URL: ${{ inputs.database-url }}
 
     - name: Notify success of migrations
       shell: bash

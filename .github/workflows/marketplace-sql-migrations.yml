@@ -19,3 +19,4 @@ jobs:
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          database-url: ${{ secrets.DATABASE_URL }}

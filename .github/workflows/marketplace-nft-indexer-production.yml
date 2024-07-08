@@ -151,6 +151,7 @@ jobs:
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          database-url: ${{ secrets.DATABASE_URL }}
 
       - name: Ensure deployment directory exists
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "mkdir -p /opt/marketplace-nft-indexer"
