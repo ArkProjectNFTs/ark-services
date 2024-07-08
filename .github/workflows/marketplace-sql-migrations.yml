@@ -6,11 +6,7 @@ on:
 jobs:
   run-migrations:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        environment: [mainnet]
-
-    name: Run SQL Migrations on ${{ matrix.environment }}
+    name: Run SQL Migrations
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2

@@ -11,21 +11,19 @@ on:
       - "ark-indexer-marketplace/**"
       - "ark-sqlx/providers/marketplace/**"
 
-env:
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_URL: ${{ env.ECR_URL }}
-  AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
-  RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
-  METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
-  METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
-  IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
-
 jobs:
   push-indexer-image:
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
+      RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
+      METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
+      METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
+      IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,11 +48,6 @@ jobs:
           cd infrastructure/cdk-ark-ecr
           pnpm install
           cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
 
       - name: Output ECR Repository URL
         id: set_ecr_url
@@ -88,6 +81,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: [push-indexer-image]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
