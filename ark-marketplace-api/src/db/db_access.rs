@@ -138,75 +138,22 @@ impl DatabaseAccess for PgPool {
         };
 
         let sql_query = format!(
-                "SELECT
-                     contract.contract_address as address,
-                     contract_image AS image,
-                     contract_name AS collection_name,
-                     hex_to_decimal(contract.floor_price) AS floor,
-                     CAST(0 AS INTEGER) AS floor_7d_percentage,
-                     CAST(0 AS INTEGER) AS volume_7d_eth,
-                     (
-                         SELECT COALESCE(MAX(CAST(offer_amount AS BIGINT)), 0)
-                         FROM token_offer
-                         WHERE token_offer.contract_address = contract.contract_address
-                         AND token_offer.chain_id = contract.chain_id
-                     ) AS top_offer,
-                     (
-                         SELECT COUNT(*)
-                         FROM token_event
-                         WHERE token_event.contract_address = contract.contract_address
-                         AND token_event.chain_id = contract.chain_id
-                         AND token_event.event_type = 'Sell'
-                         AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
-                     ) AS sales_7d,
-                     CAST(0 AS INTEGER) AS marketcap,
-                     (
-                         SELECT COUNT(*)
-                         FROM token
-                         WHERE token.contract_address = contract.contract_address
-                         AND token.chain_id = contract.chain_id
-                         AND token.is_listed = true
-                     ) AS listed_items,
-                    (
-                        SELECT COUNT(*)
-                        FROM token
-                        WHERE token.contract_address = contract.contract_address
-                        AND token.chain_id = contract.chain_id
-                        AND token.is_listed = true
-                    ) * 100 / NULLIF(
-                        (
-                            SELECT COUNT(*)
-                            FROM token
-                            WHERE token.contract_address = contract.contract_address
-                            AND token.chain_id = contract.chain_id
-                        ), 0
-                    ) AS listed_percentage,
-                    (
-                          SELECT COUNT(*)
-                          FROM token
-                          WHERE token.contract_address = contract.contract_address
-                          AND token.chain_id = contract.chain_id
-                      ) AS token_count,
-                    (
-                       SELECT COUNT(DISTINCT current_owner)
-                       FROM token
-                       WHERE token.contract_address = contract.contract_address
-                       AND token.chain_id = contract.chain_id
-                    ) AS owner_count,
-                    (
-                         SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
-                         FROM token_event
-                         WHERE token_event.contract_address = contract.contract_address
-                         AND token_event.chain_id = contract.chain_id
-                         AND token_event.event_type = 'Sell'
-                    ) AS total_volume,
-                    (
-                         SELECT COUNT(*)
-                         FROM token_event
-                         WHERE token_event.contract_address = contract.contract_address
-                         AND token_event.chain_id = contract.chain_id
-                         AND token_event.event_type = 'Sell'
-                     ) AS total_sales,
+            "SELECT
+                    contract.contract_address as address,
+                    contract_image AS image,
+                    contract_name AS collection_name,
+                    floor_price AS floor,
+                    CAST(0 AS INTEGER) AS floor_7d_percentage,
+                    volume_7d_eth,
+                    top_bid as top_offer
+                    sales_7d,
+                    marketcap,
+                    token_listed_count,
+                    listed_percentage,
+                    token_count,
+                    owner_count,
+                    total_volume
+                    total_sales,
                     contract.contract_symbol
                     FROM
                      contract
@@ -216,11 +163,11 @@ impl DatabaseAccess for PgPool {
                GROUP BY contract.contract_address, contract.chain_id
                LIMIT {} OFFSET {}
                ",
-               contract_timestamp_clause,
-               user_clause,
-               items_per_page,
-               (page - 1) * items_per_page,
-            );
+            contract_timestamp_clause,
+            user_clause,
+            items_per_page,
+            (page - 1) * items_per_page,
+        );
         let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
             .fetch_all(self)
             .await
@@ -273,12 +220,7 @@ impl DatabaseAccess for PgPool {
                        AND  t1.listing_start_amount is not null
                   ) as user_listed_tokens,
                  contract.floor_price AS floor,
-                 (
-                   SELECT COUNT(*)
-                   FROM token
-                   WHERE token.contract_address = contract.contract_address
-                   AND token.chain_id = contract.chain_id
-                 ) AS token_count
+                 contract.token_count
                 FROM
                  contract
                  INNER JOIN token ON contract.contract_address = token.contract_address
@@ -316,67 +258,16 @@ impl DatabaseAccess for PgPool {
                  END AS image,
                  contract_name AS collection_name,
                  contract.floor_price AS floor,
-                 CAST(0 AS INTEGER) AS floor_7d_percentage,
-                 CAST(0 AS INTEGER) AS volume_7d_eth,
+                 volume_7d_eth,
                  contract.top_bid AS top_offer,
-                 (
-                     SELECT COUNT(*)
-                     FROM token_event
-                     WHERE token_event.contract_address = contract.contract_address
-                     AND token_event.chain_id = contract.chain_id
-                 ) AS sales_7d,
-                 CAST(0 AS INTEGER) AS marketcap,
-                 (
-                     SELECT COUNT(*)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.listing_start_amount IS NOT NULL
-                 ) AS listed_items,
-                 (
-                     SELECT COUNT(*)
-                     FROM token
-                     WHERE token.contract_address = contract.contract_address
-                     AND token.chain_id = contract.chain_id
-                     AND token.listing_start_amount IS NOT NULL
-                 ) * 100 / NULLIF(
-                     (
-                         SELECT COUNT(*)
-                         FROM token
-                         WHERE token.contract_address = contract.contract_address
-                         AND token.chain_id = contract.chain_id
-                     ), 0
-                 ) AS listed_percentage,
-                 (
-                      SELECT COUNT(*)
-                      FROM token
-                      WHERE token.contract_address = contract.contract_address
-                      AND token.chain_id = contract.chain_id
-                  ) AS token_count,
-                 (
-                     SELECT COUNT(*)
-                     FROM (
-                         SELECT current_owner
-                         FROM token
-                         WHERE contract_address = contract.contract_address
-                           AND chain_id = contract.chain_id
-                         GROUP BY current_owner
-                     ) AS distinct_owners
-                 ) AS owner_count,
-                (
-                     SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
-                     FROM token_event
-                     WHERE token_event.contract_address = contract.contract_address
-                     AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sell'
-                ) AS total_volume,
-                (
-                     SELECT COUNT(*)
-                     FROM token_event
-                     WHERE token_event.contract_address = contract.contract_address
-                     AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sell'
-                 ) AS total_sales,
+                 sales_7d,
+                 marketcap,
+                 token_listed_count AS listed_items,
+                 listed_percentage,
+                 token_count,
+                 owner_count,
+                 total_volume,
+                 total_sales,
              contract_symbol
              FROM contract
              WHERE contract.contract_address = $1
@@ -901,7 +792,7 @@ impl DatabaseAccess for PgPool {
 
         let activity_sql_query = format!(
             "
-            SELECT 
+            SELECT
                 te.event_type AS activity_type,
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,

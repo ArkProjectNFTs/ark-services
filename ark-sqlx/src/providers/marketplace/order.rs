@@ -249,6 +249,7 @@ impl OrderProvider {
 
         Ok(())
     }
+
     async fn order_hash_exists_in_token_offers(
         client: &SqlxCtxPg,
         order_hash: &str,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                   SELECT\n                      token.contract_address as contract,\n                      token.token_id,\n                      hex_to_decimal(token.last_price) as last_price,\n                      CAST(0 as INTEGER) as floor_difference,\n                      token.listing_timestamp as listed_at,\n                      hex_to_decimal(token.listing_start_amount) as price,\n                      token.metadata as metadata\n                   FROM token\n                   WHERE token.contract_address = $3\n                     AND token.chain_id = $4\n                   ORDER BY\n                       token.listing_start_amount ASC NULLS LAST,\n                       CAST(token.token_id AS NUMERIC)\n               LIMIT $1 OFFSET $2",
+  "query": "\n               SELECT\n                  token.contract_address as contract,\n                  token.token_id,\n                  hex_to_decimal(token.last_price) as last_price,\n                  CAST(0 as INTEGER) as floor_difference,\n                  token.listing_timestamp as listed_at,\n                  hex_to_decimal(token.listing_start_amount) as price,\n                  token.metadata as metadata\n               FROM token\n               WHERE token.contract_address = $3\n                 AND token.chain_id = $4\n               ORDER BY\n                   token.listing_start_amount ASC NULLS LAST,\n                   CAST(token.token_id AS NUMERIC)\n           LIMIT $1 OFFSET $2",
   "describe": {
     "columns": [
       {
@@ -57,5 +57,5 @@
       true
     ]
   },
-  "hash": "20536af9acb90304025aac4d59e84de7e93788c57f64e0d354b03c8811932334"
+  "hash": "22c4375b13dfc0bbeb710b4bb5b95d7703d6f134bb85764013f5109dcd9fcc17"
 }

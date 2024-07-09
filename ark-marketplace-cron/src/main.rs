@@ -3,9 +3,12 @@ mod tasks;
 
 use anyhow::Result;
 use aws_config::BehaviorVersion;
+use clap::{App, Arg};
 use redis::aio::MultiplexedConnection;
 use redis::Client;
-use tasks::collections::{update_collections_floor, update_top_bid_collections};
+use tasks::collections::{
+    update_collections_floor, update_collections_market_data, update_top_bid_collections,
+};
 use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing::info;
 use tracing_subscriber::fmt;
@@ -39,30 +42,60 @@ async fn connect_redis() -> Result<MultiplexedConnection, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
-    // dotenv::dotenv().ok();
+    dotenv::dotenv().ok();
     init_logging();
     info!("Starting marketplace cron job");
-    // let database_url = get_database_url()
-    //     .await
-    //     .expect("Could not get the database URL");
+    let database_url = get_database_url()
+        .await
+        .expect("Could not get the database URL");
 
-    // let db_pool = PgPoolOptions::new()
-    //     .connect(&database_url)
-    //     .await
-    //     .expect("Could not connect to the database");
+    let db_pool = PgPoolOptions::new()
+        .connect(&database_url)
+        .await
+        .expect("Could not connect to the database");
 
-    // match connect_redis().await {
-    //     Ok(con) => {
-    //         let _ = cache_collection_pages(&db_pool, con).await;
-    //     }
-    //     Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
-    // }
-    // // @todo when adding new calculation add spawn & try_join!
-    // update_listed_tokens(&db_pool).await;
-    // update_top_bid_tokens(&db_pool).await;
-    // update_top_bid_collections(&db_pool).await;
-    // update_collections_floor(&db_pool).await;
-    info!("Marketplace cron job completed");
+    let matches = App::new("marketplace-cron")
+        .arg(
+            Arg::with_name("task")
+                .long("task")
+                .takes_value(true)
+                .default_value("task_set1")
+                .help("Sets the task set to run"),
+        )
+        .arg(
+            Arg::with_name("disable-cache")
+                .short('d')
+                .long("disable-cache")
+                .default_value("false")
+                .takes_value(true)
+                .help("Disables the cache if set to true"),
+        )
+        .get_matches();
+
+    let task_set = matches.value_of("task").unwrap_or("");
+    let should_cache_pages = !matches.is_present("disable-cache");
+
+    match task_set {
+        "task_set1" => match connect_redis().await {
+            Ok(con) => {
+                update_listed_tokens(&db_pool, con.clone()).await;
+                update_top_bid_tokens(&db_pool, con.clone()).await;
+                if should_cache_pages {
+                    let _ = cache_collection_pages(&db_pool, con.clone()).await;
+                }
+            }
+            Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
+        },
+        "task_set2" => {
+            update_top_bid_collections(&db_pool).await;
+            update_collections_floor(&db_pool).await;
+            update_collections_market_data(&db_pool).await;
+        }
+        _ => {
+            tracing::error!("Invalid argument. Please use 'task_set1' or 'task_set2'");
+        }
+    }
+    tracing::info!("Marketplace cron job completed");
     Ok(())
 }
 
