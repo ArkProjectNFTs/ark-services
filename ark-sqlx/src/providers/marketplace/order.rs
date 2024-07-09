@@ -758,10 +758,39 @@ impl OrderProvider {
         Ok(())
     }
 
+    async fn offer_exists(
+        client: &SqlxCtxPg,
+        order_hash: &str,
+        offer_timestamp: i64,
+    ) -> Result<bool, ProviderError> {
+        let query = "
+            SELECT CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM token_offer
+                    WHERE order_hash = $1 AND offer_timestamp = $2
+                )
+                THEN 1
+                ELSE 0
+            END;
+        ";
+        let exists: i32 = sqlx::query_scalar(query)
+            .bind(order_hash)
+            .bind(offer_timestamp)
+            .fetch_one(&client.pool)
+            .await?;
+        Ok(exists != 0)
+    }
+
     async fn insert_offers(
         client: &SqlxCtxPg,
         offer_data: &OfferData,
     ) -> Result<(), ProviderError> {
+        if Self::offer_exists(client, &offer_data.order_hash, offer_data.timestamp).await? {
+            trace!("Offer already exists in database.");
+            return Ok(());
+        }
+
         if !Self::token_exists(
             client,
             &offer_data.contract_address,
