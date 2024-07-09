@@ -5,6 +5,7 @@ ALTER COLUMN marketcap TYPE numeric;
 
 drop index idx_token_is_listed;
 drop index idx_token_order;
+drop materialized view token_materialized_view;
 
 
 ALTER TABLE token
