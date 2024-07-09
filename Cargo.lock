@@ -611,7 +611,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.2#25d955e7537a0c7d1bf1c0179d62b5e2b49378e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.3#06f2509decda478e91dbbe54f00a8880591c7a37"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -738,7 +738,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.2#25d955e7537a0c7d1bf1c0179d62b5e2b49378e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.3#06f2509decda478e91dbbe54f00a8880591c7a37"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -808,7 +808,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.2#25d955e7537a0c7d1bf1c0179d62b5e2b49378e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.3#06f2509decda478e91dbbe54f00a8880591c7a37"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -2142,7 +2142,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.2#25d955e7537a0c7d1bf1c0179d62b5e2b49378e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.3#06f2509decda478e91dbbe54f00a8880591c7a37"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4122,7 +4122,7 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.2#25d955e7537a0c7d1bf1c0179d62b5e2b49378e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.3#06f2509decda478e91dbbe54f00a8880591c7a37"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -4663,7 +4663,7 @@ dependencies = [
 [[package]]
 name = "sana"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.2#25d955e7537a0c7d1bf1c0179d62b5e2b49378e5"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.3#06f2509decda478e91dbbe54f00a8880591c7a37"
 dependencies = [
  "anyhow",
  "ark-metadata",
