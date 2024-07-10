@@ -18,7 +18,6 @@ struct Offer {
     start_date: Option<i64>,
     end_date: Option<i64>,
     currency_address: Option<String>,
-    broker_id: Option<String>,
 }
 
 async fn clear_collection_cache(
@@ -152,13 +151,19 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
     // For each token whose offer has been deleted, check if there are valid offers left
     for (contract_address, token_id) in &expired_offers {
         let select_valid_offers_query = r#"
-            SELECT *
+            SELECT
+                CAST(hex_to_decimal(offer_amount) AS FLOAT8) as offer_amount,
+                order_hash,
+                start_date,
+                end_date,
+                currency_address,
+                broker_id
             FROM token_offer
             WHERE contract_address = $1
               AND token_id = $2
               AND NOW() <= to_timestamp(end_date)
               AND STATUS = 'PLACED'
-            ORDER BY offer_amount DESC
+            ORDER BY hex_to_decimal(offer_amount) DESC
             LIMIT 1;
         "#;
 
@@ -178,7 +183,6 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
                     top_bid_start_date = '{}',
                     top_bid_end_date = '{}',
                     top_bid_currency_address = '{}',
-                    top_bid_broker_id = '{}',
                     has_bid = true
                 WHERE contract_address = '{}'
                   AND token_id = '{}';
@@ -188,7 +192,6 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
                 offer.start_date.unwrap_or(0),
                 offer.end_date.unwrap_or(0),
                 offer.currency_address.unwrap_or_default(),
-                offer.broker_id.unwrap_or_default(),
                 contract_address,
                 token_id
             ),
