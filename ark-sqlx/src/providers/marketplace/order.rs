@@ -207,7 +207,6 @@ pub struct OfferExecutedInfo {
     token_id: String,
     to_address: String,
     price: String,
-    order_hash: String,
     currency_chain_id: String,
     currency_address: String,
 }
@@ -495,16 +494,18 @@ impl OrderProvider {
         contract_address: &String,
         token_id: &str,
         chain_id: &str,
+        order_hash: &str,
     ) -> Result<Option<String>, ProviderError> {
         let query = "
             SELECT from_address
             FROM token_event
-            WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3 and event_type = $4;
+            WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3 and order_hash = $4 and event_type = $5;
         ";
         let result = sqlx::query(query)
             .bind(contract_address)
             .bind(token_id)
             .bind(chain_id)
+            .bind(order_hash)
             .bind(EventType::Fulfill.to_string())
             .fetch_optional(&client.pool)
             .await?;
@@ -646,13 +647,15 @@ impl OrderProvider {
             UPDATE token
             SET
                 current_owner = $3, updated_timestamp = $4,
-                last_price = $5, listing_orderhash = $6,
-                currency_chain_id = $7, currency_address = $8,
-                listing_start_date = null, listing_end_date = null,
+                last_price = $5,
+                currency_chain_id = $6, currency_address = $7,
+                listing_orderhash = null,
+                listing_start_date = null,
+                listing_end_date = null,
                 listing_start_amount = null, listing_end_amount = null,
                 top_bid_amount = null, top_bid_start_date = null, top_bid_end_date = null, top_bid_currency_address = null,
                 top_bid_order_hash = null,
-                held_timestamp = $9
+                held_timestamp = $8
             WHERE contract_address = $1 AND token_id = $2;
         ";
 
@@ -662,7 +665,6 @@ impl OrderProvider {
             .bind(&info.to_address)
             .bind(info.block_timestamp as i64)
             .bind(&info.price)
-            .bind(&info.order_hash.to_string())
             .bind(&info.currency_chain_id)
             .bind(&info.currency_address)
             .bind(info.block_timestamp as i64)
@@ -1230,7 +1232,6 @@ impl OrderProvider {
                     token_id: offer_data.token_id.clone(),
                     to_address: offer_data.offer_maker.clone(),
                     price: offer_data.offer_amount.clone(),
-                    order_hash: data.order_hash.clone(),
                     currency_chain_id: offer_data.currency_chain_id.clone(),
                     currency_address: offer_data.currency_address.clone(),
                 };
@@ -1275,6 +1276,7 @@ impl OrderProvider {
                         &token_data.contract_address,
                         &token_data.token_id,
                         &token_data.chain_id,
+                        &data.order_hash,
                     )
                     .await?;
 
@@ -1285,7 +1287,6 @@ impl OrderProvider {
                         token_id: token_data.token_id.clone(),
                         to_address: fulfiller.clone().unwrap_or_default(),
                         price: token_data.listing_start_amount.clone().unwrap_or_default(),
-                        order_hash: data.order_hash.clone(),
                         currency_chain_id: token_data.chain_id.clone(),
                         currency_address: token_data.currency_chain_id.clone().unwrap_or_default(),
                     };
