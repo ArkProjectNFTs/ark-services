@@ -157,6 +157,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
             WHERE contract_address = $1
               AND token_id = $2
               AND NOW() <= to_timestamp(end_date)
+              AND STATUS = 'PLACED'
             ORDER BY offer_amount DESC
             LIMIT 1;
         "#;
