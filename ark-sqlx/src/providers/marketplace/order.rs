@@ -884,7 +884,7 @@ impl OrderProvider {
 
         let update_query = "
             UPDATE token
-            SET has_offer = true
+            SET has_bid = true
             WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
         ";
 
