@@ -699,7 +699,7 @@ impl OrderProvider {
         {
             let update_query = "
                 UPDATE token
-                SET top_bid_amount = $3, top_bid_start_date = $4, top_bid_end_date = $5, top_bid_currency_address = $6, top_bid_order_hash = $7
+                SET top_bid_amount = $3, top_bid_start_date = $4, top_bid_end_date = $5, top_bid_currency_address = $6, top_bid_order_hash = $7, has_bid = true
                 WHERE contract_address = $1 AND token_id = $2
             ";
             sqlx::query(update_query)
@@ -712,7 +712,18 @@ impl OrderProvider {
                 .bind(top_bid_order_hash)
                 .execute(&client.pool)
                 .await?;
-        }
+        } else {
+             let update_query = "
+                 UPDATE token
+                 SET top_bid_amount = NULL, top_bid_start_date = NULL, top_bid_end_date = NULL, top_bid_currency_address = NULL, top_bid_order_hash = NULL, has_bid = false
+                 WHERE contract_address = $1 AND token_id = $2
+             ";
+             sqlx::query(update_query)
+                 .bind(&info.contract_address)
+                 .bind(&info.token_id)
+                 .execute(&client.pool)
+                 .await?;
+         }
 
         Ok(())
     }
@@ -826,7 +837,7 @@ impl OrderProvider {
             if offer_amount > topbid_amount {
                 let update_query = "
                     UPDATE token
-                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8
+                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8, has_bid = true
                     WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
                 ";
                 let result = sqlx::query(update_query)
