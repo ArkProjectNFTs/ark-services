@@ -26,7 +26,7 @@
       {
         "ordinal": 4,
         "name": "volume_7d_eth",
-        "type_info": "Int8"
+        "type_info": "Numeric"
       },
       {
         "ordinal": 5,
@@ -41,7 +41,7 @@
       {
         "ordinal": 7,
         "name": "marketcap",
-        "type_info": "Int8"
+        "type_info": "Numeric"
       },
       {
         "ordinal": 8,

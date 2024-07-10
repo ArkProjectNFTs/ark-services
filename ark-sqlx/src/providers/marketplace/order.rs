@@ -713,17 +713,17 @@ impl OrderProvider {
                 .execute(&client.pool)
                 .await?;
         } else {
-             let update_query = "
+            let update_query = "
                  UPDATE token
                  SET top_bid_amount = NULL, top_bid_start_date = NULL, top_bid_end_date = NULL, top_bid_currency_address = NULL, top_bid_order_hash = NULL, has_bid = false
                  WHERE contract_address = $1 AND token_id = $2
              ";
-             sqlx::query(update_query)
-                 .bind(&info.contract_address)
-                 .bind(&info.token_id)
-                 .execute(&client.pool)
-                 .await?;
-         }
+            sqlx::query(update_query)
+                .bind(&info.contract_address)
+                .bind(&info.token_id)
+                .execute(&client.pool)
+                .await?;
+        }
 
         Ok(())
     }
