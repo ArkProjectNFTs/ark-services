@@ -27,6 +27,7 @@ pub struct TokenMarketData {
     pub buy_in_progress: Option<bool>,
     pub top_offer: Option<TopOffer>,
     pub listing: Option<Listing>,
+    pub last_price: Option<BigDecimal>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -48,6 +49,7 @@ pub struct TokenOneData {
     pub is_listed: Option<bool>,
     pub has_offer: Option<bool>,
     pub buy_in_progress: Option<bool>,
+    pub last_price: Option<BigDecimal>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]

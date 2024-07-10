@@ -314,7 +314,8 @@ impl DatabaseAccess for PgPool {
                     token.updated_timestamp as updated_timestamp,
                     (token.listing_start_amount IS NOT NULL) as is_listed,
                     has_bid as has_offer,
-                    token.buy_in_progress as buy_in_progress
+                    token.buy_in_progress as buy_in_progress,
+                    hex_to_decimal(token.last_price) as last_price
                 FROM token
                 INNER JOIN contract as c ON c.contract_address = token.contract_address
                     AND c.chain_id = token.chain_id
@@ -398,6 +399,7 @@ impl DatabaseAccess for PgPool {
             buy_in_progress: token_data.buy_in_progress,
             top_offer: Some(top_offer),
             listing: Some(listing),
+            last_price: token_data.last_price,
         })
     }
 
