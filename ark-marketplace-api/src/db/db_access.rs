@@ -313,7 +313,7 @@ impl DatabaseAccess for PgPool {
                     token.listing_timestamp as created_timestamp,
                     token.updated_timestamp as updated_timestamp,
                     (token.listing_start_amount IS NOT NULL) as is_listed,
-                    EXISTS(SELECT 1 FROM token_offer WHERE token_offer.token_id = token.token_id) as has_offer,
+                    has_bid as has_offer,
                     token.buy_in_progress as buy_in_progress
                 FROM token
                 INNER JOIN contract as c ON c.contract_address = token.contract_address
