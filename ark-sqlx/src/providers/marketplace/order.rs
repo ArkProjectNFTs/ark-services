@@ -882,6 +882,19 @@ impl OrderProvider {
             .execute(&client.pool)
             .await?;
 
+        let update_query = "
+            UPDATE token
+            SET has_offer = true
+            WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
+        ";
+
+        sqlx::query(update_query)
+            .bind(&offer_data.contract_address)
+            .bind(&offer_data.token_id)
+            .bind(&offer_data.chain_id)
+            .execute(&client.pool)
+            .await?;
+
         Ok(())
     }
 
