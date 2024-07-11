@@ -616,26 +616,22 @@ impl OrderProvider {
         client: &SqlxCtxPg,
         contract_address: &String,
         token_id: &str,
-        order_hash: &str,
     ) -> Result<(), ProviderError> {
-        let order_in_token = Self::order_hash_exists_in_token(client, order_hash).await?;
-        if order_in_token {
-            let query = "
-            UPDATE token
-            SET
-                listing_start_amount = null,
-                listing_end_amount = null,
-                listing_start_date = null,
-                listing_end_date = null
-            WHERE contract_address = $1 AND token_id = $2;
-            ";
+        let query = "
+        UPDATE token
+        SET
+            listing_start_amount = null,
+            listing_end_amount = null,
+            listing_start_date = null,
+            listing_end_date = null
+        WHERE contract_address = $1 AND token_id = $2;
+        ";
 
-            sqlx::query(query)
-                .bind(contract_address)
-                .bind(token_id)
-                .execute(&client.pool)
-                .await?;
-        }
+        sqlx::query(query)
+            .bind(contract_address)
+            .bind(token_id)
+            .execute(&client.pool)
+            .await?;
         Ok(())
     }
 
@@ -1124,7 +1120,6 @@ impl OrderProvider {
                 client,
                 &token_data.contract_address,
                 &token_data.token_id,
-                &data.order_hash,
             )
             .await?;
         }
