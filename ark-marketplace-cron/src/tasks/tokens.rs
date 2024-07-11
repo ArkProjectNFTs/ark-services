@@ -51,7 +51,7 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
     let select_collections_query = r#"
         SELECT DISTINCT contract_address
         FROM token
-        WHERE NOW() > to_timestamp(listing_end_date)
+        WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
           AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
     "#;
 
@@ -84,7 +84,7 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
             listing_currency_chain_id = NULL,
             listing_type = NULL,
             listing_orderhash = NULL
-        WHERE NOW() > to_timestamp(listing_end_date)
+        WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
           AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
     "#;
 
@@ -110,7 +110,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
     let select_expired_offers_query = r#"
         SELECT DISTINCT contract_address, token_id
         FROM token_offer
-        WHERE NOW() > to_timestamp(end_date);
+        WHERE NOW() - interval '2 minutes' > to_timestamp(end_date);
     "#;
 
     let expired_offers: Vec<(String, String)> = match sqlx::query_as(select_expired_offers_query)
