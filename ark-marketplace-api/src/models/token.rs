@@ -32,6 +32,8 @@ pub struct TokenMarketData {
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenInformationData {
+    pub token_id: String,
+    pub collection_address: String,
     pub price: Option<BigDecimal>,
     pub last_price: Option<BigDecimal>,
     pub top_offer: Option<BigDecimal>,
