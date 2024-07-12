@@ -413,6 +413,8 @@ impl DatabaseAccess for PgPool {
             TokenInformationData,
             "
                     SELECT
+                        token_id,
+                        token.contract_address as collection_address,
                         hex_to_decimal(token.listing_start_amount) as price,
                         hex_to_decimal(token.last_price) as last_price,
                         top_bid_amount as top_offer,

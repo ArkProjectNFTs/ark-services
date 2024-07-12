@@ -14,3 +14,8 @@ do
 
   cp -R $folder/.sqlx/* .sqlx/
 done
+
+cd .sqlx
+git add .
+git commit -am "feat(sqlx): add sqlx files"
+echo "Files committed"
