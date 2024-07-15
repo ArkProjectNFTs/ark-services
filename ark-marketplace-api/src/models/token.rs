@@ -214,3 +214,16 @@ pub struct TokenActivityData {
     pub time_stamp: i64,
     pub transaction_hash: Option<String>,
 }
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct TokenPortfolioActivityData {
+    pub activity_type: TokenEventType,
+    pub price: Option<BigDecimal>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub time_stamp: i64,
+    pub transaction_hash: Option<String>,
+    pub token_id: Option<String>,
+    pub contract_address: Option<String>,
+    pub metadata: Option<JsonValue>,
+}

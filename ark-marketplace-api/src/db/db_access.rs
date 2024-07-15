@@ -5,7 +5,7 @@ use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
     TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
-
+use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::FromRow;
@@ -722,14 +722,6 @@ impl DatabaseAccess for PgPool {
     ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
 
-        fn event_type_list(values: &[TokenEventType]) -> String {
-            values
-                .iter()
-                .map(|v| format!("'{}'", v.to_db_string()))
-                .collect::<Vec<_>>()
-                .join(", ")
-        }
-
         let types_filter = match types {
             None => String::from(""),
             Some(values) => {
@@ -797,7 +789,10 @@ impl DatabaseAccess for PgPool {
         let activity_sql_query = format!(
             "
             SELECT
-                te.event_type AS activity_type,
+                CASE
+                    WHEN te.event_type = 'Executed' THEN 'Sale'
+                    ELSE te.event_type
+                END AS activity_type,
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
                 {},
@@ -827,74 +822,6 @@ impl DatabaseAccess for PgPool {
         let has_next_page = page < total_pages;
 
         Ok((token_activity_data, has_next_page, count))
-    }
-}
-
-/// DB conversion for TokenEventType
-const TOKEN_EVENT_LISTING_STR: &str = "Listing";
-const TOKEN_EVENT_COLLECTION_OFFER_STR: &str = "CollectionOffer";
-const TOKEN_EVENT_OFFER_STR: &str = "Offer";
-const TOKEN_EVENT_AUCTION_STR: &str = "Auction";
-const TOKEN_EVENT_FULFILL_STR: &str = "Fulfill";
-const TOKEN_EVENT_CANCELLED_STR: &str = "Cancelled";
-const TOKEN_EVENT_EXECUTED_STR: &str = "Executed";
-const TOKEN_EVENT_SALE_STR: &str = "Sale";
-const TOKEN_EVENT_MINT_STR: &str = "Mint";
-const TOKEN_EVENT_BURN_STR: &str = "Burn";
-const TOKEN_EVENT_TRANSFER_STR: &str = "Transfer";
-
-impl<DB> sqlx::Type<DB> for TokenEventType
-where
-    DB: sqlx::Database,
-    String: sqlx::Type<DB>,
-{
-    fn type_info() -> <DB as sqlx::Database>::TypeInfo {
-        <String as sqlx::Type<DB>>::type_info()
-    }
-}
-
-impl<'r, DB> sqlx::Decode<'r, DB> for TokenEventType
-where
-    DB: sqlx::Database,
-    &'r str: sqlx::Decode<'r, DB>,
-{
-    fn decode(
-        value: <DB as sqlx::database::HasValueRef<'r>>::ValueRef,
-    ) -> Result<Self, sqlx::error::BoxDynError> {
-        let s = <&str as sqlx::Decode<DB>>::decode(value)?;
-        match s {
-            TOKEN_EVENT_LISTING_STR => Ok(TokenEventType::Listing),
-            TOKEN_EVENT_COLLECTION_OFFER_STR => Ok(TokenEventType::CollectionOffer),
-            TOKEN_EVENT_OFFER_STR => Ok(TokenEventType::Offer),
-            TOKEN_EVENT_AUCTION_STR => Ok(TokenEventType::Auction),
-            TOKEN_EVENT_FULFILL_STR => Ok(TokenEventType::Fulfill),
-            TOKEN_EVENT_CANCELLED_STR => Ok(TokenEventType::Cancelled),
-            TOKEN_EVENT_EXECUTED_STR => Ok(TokenEventType::Executed),
-            TOKEN_EVENT_SALE_STR => Ok(TokenEventType::Sale),
-            TOKEN_EVENT_MINT_STR => Ok(TokenEventType::Mint),
-            TOKEN_EVENT_BURN_STR => Ok(TokenEventType::Burn),
-            TOKEN_EVENT_TRANSFER_STR => Ok(TokenEventType::Transfer),
-            _ => Err("Invalid event type".into()),
-        }
-    }
-}
-
-/// Convert TokenEventType to matching keys in DB
-impl TokenEventType {
-    fn to_db_string(&self) -> String {
-        match self {
-            Self::Listing => TOKEN_EVENT_LISTING_STR.to_string(),
-            Self::CollectionOffer => TOKEN_EVENT_COLLECTION_OFFER_STR.to_string(),
-            Self::Offer => TOKEN_EVENT_OFFER_STR.to_string(),
-            Self::Auction => TOKEN_EVENT_AUCTION_STR.to_string(),
-            Self::Fulfill => TOKEN_EVENT_FULFILL_STR.to_string(),
-            Self::Cancelled => TOKEN_EVENT_CANCELLED_STR.to_string(),
-            Self::Executed => TOKEN_EVENT_EXECUTED_STR.to_string(),
-            Self::Sale => TOKEN_EVENT_SALE_STR.to_string(),
-            Self::Mint => TOKEN_EVENT_MINT_STR.to_string(),
-            Self::Burn => TOKEN_EVENT_BURN_STR.to_string(),
-            Self::Transfer => TOKEN_EVENT_TRANSFER_STR.to_string(),
-        }
     }
 }
 

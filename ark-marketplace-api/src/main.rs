@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
-use ark_marketplace_api::routes::{collection, default, token};
+use ark_marketplace_api::routes::{collection, default, portfolio, token};
 use aws_config::BehaviorVersion;
 use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
@@ -102,6 +102,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(redis_conn.clone()))
             .configure(default::config)
             .configure(collection::config)
+            .configure(portfolio::config)
             .configure(token::config)
     })
     .bind("0.0.0.0:8080")?

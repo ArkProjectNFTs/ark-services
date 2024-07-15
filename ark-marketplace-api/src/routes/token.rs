@@ -11,11 +11,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
-        "/portfolio/{user_address}",
-        web::get().to(token_handler::get_tokens_portfolio::<PgPool>),
-    );
-
-    cfg.route(
         "/tokens/{address}/{chain_id}/{token_id}",
         web::get().to(get_token::<PgPool>),
     );
