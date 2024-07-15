@@ -84,6 +84,15 @@ export const contractRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      const contract = await fetchContract(
+        input.contractAddress,
+        MAINNET_CHAIN_ID,
+      );
+
+      if (contract?.is_refreshing) {
+        throw new Error("Contract is already refreshing");
+      }
+
       await updateIsRefreshingContract(
         input.contractAddress,
         MAINNET_CHAIN_ID,

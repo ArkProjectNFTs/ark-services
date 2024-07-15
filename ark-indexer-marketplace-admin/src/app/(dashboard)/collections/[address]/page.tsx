@@ -3,7 +3,6 @@ import Link from "next/link";
 import { LinkIcon } from "lucide-react";
 
 import EditCollectionForm from "~/components/dashboard/EditCollectionForm";
-import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { api } from "~/trpc/server";
 import FlushCacheButton from "./components/flush-cache-button";
