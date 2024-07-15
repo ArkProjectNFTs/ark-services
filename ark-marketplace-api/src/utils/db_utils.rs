@@ -6,8 +6,8 @@ pub fn event_type_list(values: &[TokenEventType]) -> String {
         .map(|v| format!("'{}'", v.to_db_string()))
         .collect::<Vec<_>>();
 
-    if types.contains(&TOKEN_EVENT_SALE_STR.to_string()) {
-        types.push(TOKEN_EVENT_EXECUTED_STR.to_string());
+    if types.contains(&format!("'{}'", TOKEN_EVENT_SALE_STR)) {
+        types.push(format!("'{}'", TOKEN_EVENT_EXECUTED_STR));
     }
 
     types.join(", ")

@@ -1,10 +1,10 @@
 use crate::models::token::{TokenActivityData, TokenEventType};
 
+use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
-use crate::utils::db_utils::event_type_list;
 
 #[derive(FromRow)]
 struct Count {
@@ -116,7 +116,10 @@ impl DatabaseAccess for PgPool {
         let activity_sql_query = format!(
             "
             SELECT
-                te.event_type AS activity_type,
+                CASE
+                    WHEN te.event_type = 'Executed' THEN 'Sale'
+                    ELSE te.event_type
+                END AS activity_type,
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
                 te.token_id,

@@ -789,7 +789,10 @@ impl DatabaseAccess for PgPool {
         let activity_sql_query = format!(
             "
             SELECT
-                te.event_type AS activity_type,
+                CASE
+                    WHEN te.event_type = 'Executed' THEN 'Sale'
+                    ELSE te.event_type
+                END AS activity_type,
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
                 {},
