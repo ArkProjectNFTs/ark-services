@@ -40,6 +40,7 @@ pub struct TokenInformationData {
     pub owner: Option<String>,
     pub collection_name: Option<String>,
     pub metadata: Option<JsonValue>,
+    pub collection_image: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
