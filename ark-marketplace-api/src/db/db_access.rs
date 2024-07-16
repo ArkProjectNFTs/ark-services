@@ -1,12 +1,15 @@
 use std::time::SystemTime;
 
-use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
+use crate::models::collection::{
+    CollectionData, CollectionFloorPrice, CollectionPortfolioData, CollectionSearchData,
+};
 use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
     TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
+use regex::Regex;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
@@ -73,6 +76,11 @@ pub trait DatabaseAccess: Send + Sync {
         user_address: Option<&str>,
     ) -> Result<Vec<CollectionData>, Error>;
 
+    async fn search_collections_data(
+        &self,
+        query_search: Option<&str>,
+    ) -> Result<Vec<CollectionSearchData>, Error>;
+
     async fn get_portfolio_collections_data(
         &self,
         page: i64,
@@ -106,6 +114,55 @@ pub trait DatabaseAccess: Send + Sync {
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
+    async fn search_collections_data(
+        &self,
+        query_search: Option<&str>,
+    ) -> Result<Vec<CollectionSearchData>, Error> {
+        let re = Regex::new(r"^0x0*").unwrap();
+        let cleaned_query_search = query_search
+            .as_ref()
+            .map(|qs| re.replace(qs, "").to_string());
+
+        let where_clause = if let Some(ref cleaned) = cleaned_query_search {
+            if !cleaned.is_empty() {
+                format!(
+                    " AND (contract.contract_name ILIKE '%{}%' or contract.contract_address ILIKE '%{}%')",
+                    query_search.unwrap(), cleaned
+                )
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+        let sql_query = format!(
+            "SELECT
+                 contract.contract_address as address,
+                 contract_image AS image,
+                 contract_name AS name,
+                 token_count AS token_count,
+                 is_verified AS is_verified
+             FROM
+                 contract
+             WHERE 1=1
+                {}
+             ORDER BY contract_name",
+            { where_clause }
+        );
+
+        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionSearchData>(&sql_query)
+            .fetch_all(self)
+            .await;
+
+        match collection_data {
+            Ok(data) => Ok(data),
+            Err(e) => {
+                tracing::error!("Database query failed: {}", e);
+                Err(e)
+            }
+        }
+    }
+
     async fn get_collections_data(
         &self,
         page: i64,

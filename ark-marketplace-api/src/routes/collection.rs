@@ -18,4 +18,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/portfolio/{user_address}/collections",
         web::get().to(collection_handler::get_portfolio_collections::<PgPool>),
     );
+
+    cfg.route(
+        "/collections/search",
+        web::get().to(collection_handler::search_collections::<PgPool>),
+    );
 }

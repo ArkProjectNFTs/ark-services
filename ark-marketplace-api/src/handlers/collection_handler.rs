@@ -1,5 +1,8 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::db::query::{get_collection_data, get_collections_data, get_portfolio_collections_data};
+use crate::db::query::{
+    get_collection_data, get_collections_data, get_portfolio_collections_data,
+    search_collections_data,
+};
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
@@ -88,6 +91,30 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
         })),
         Err(err) => {
             tracing::error!("error query get_portfolio_collections_data: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct SearchQuery {
+    q: Option<String>,
+}
+
+pub async fn search_collections<D: DatabaseAccess + Sync>(
+    query_parameters: web::Query<SearchQuery>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let query_search = query_parameters.q.as_deref();
+    let db_access = db_pool.get_ref();
+
+    match search_collections_data(db_access, query_search.unwrap_or("")).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok(collection_data) => HttpResponse::Ok().json(json!({
+            "data": collection_data
+        })),
+        Err(err) => {
+            tracing::error!("error query search_collections_data: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
