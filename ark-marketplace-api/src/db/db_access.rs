@@ -420,7 +420,8 @@ impl DatabaseAccess for PgPool {
                         top_bid_amount as top_offer,
                         token.current_owner as owner,
                         c.contract_name as collection_name,
-                        token.metadata as metadata
+                        token.metadata as metadata,
+                        c.contract_image as collection_image
                     FROM token
                     INNER JOIN contract as c ON c.contract_address = token.contract_address
                         AND c.chain_id = token.chain_id
