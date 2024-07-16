@@ -19,6 +19,9 @@ use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[derive(Deserialize)]
 struct DatabaseCredentials {
     username: String,
