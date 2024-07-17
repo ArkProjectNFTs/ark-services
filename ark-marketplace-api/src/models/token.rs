@@ -14,6 +14,7 @@ pub struct TokenData {
     pub listed_at: Option<i64>,
     pub price: Option<BigDecimal>,
     pub metadata: Option<JsonValue>,
+    pub owner: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]

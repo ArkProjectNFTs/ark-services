@@ -564,7 +564,8 @@ impl DatabaseAccess for PgPool {
                    CAST(0 as INTEGER) as floor_difference,
                    token.listing_timestamp as listed_at,
                    hex_to_decimal(token.listing_start_amount) as price,
-                   token.metadata as metadata
+                   token.metadata as metadata,
+                   current_owner as owner
                FROM token
                WHERE token.contract_address = $1
                    AND token.chain_id = $2
