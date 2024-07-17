@@ -1,5 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::models::collection::{CollectionData, CollectionFloorPrice, CollectionPortfolioData};
+use crate::models::collection::{
+    CollectionData, CollectionFloorPrice, CollectionPortfolioData, CollectionSearchData,
+};
 use crate::models::token::{
     TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
     TokenOfferOneDataDB, TokenPortfolioData,
@@ -26,6 +28,13 @@ pub async fn get_portfolio_collections_data<D: DatabaseAccess + Sync>(
     db_access
         .get_portfolio_collections_data(page, items_per_page, user_address)
         .await
+}
+
+pub async fn search_collections_data<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    query_search: &str,
+) -> Result<Vec<CollectionSearchData>, sqlx::Error> {
+    db_access.search_collections_data(Some(query_search)).await
 }
 
 pub async fn get_collection_data<D: DatabaseAccess + Sync>(

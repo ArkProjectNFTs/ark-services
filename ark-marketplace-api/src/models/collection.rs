@@ -32,6 +32,15 @@ pub struct CollectionPortfolioData {
     pub user_listed_tokens: Option<i64>,
 }
 
+#[derive(Serialize, Deserialize, FromRow)]
+pub struct CollectionSearchData {
+    pub name: Option<String>,
+    pub address: String,
+    pub image: Option<String>,
+    pub token_count: Option<i64>,
+    pub is_verified: Option<bool>,
+}
+
 #[derive(FromRow)]
 pub struct CollectionFloorPrice {
     pub value: Option<BigDecimal>,
