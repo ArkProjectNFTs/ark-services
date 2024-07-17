@@ -737,8 +737,10 @@ impl DatabaseAccess for PgPool {
                     AND te.chain_id = $2
                     AND te.token_id = $3
                     {}
+                    AND te.event_type NOT IN ({})
             ",
-            types_filter
+            types_filter,
+            event_type_list(&[TokenEventType::Fulfill])
         );
 
         let count_sql_query = format!(
@@ -796,20 +798,20 @@ impl DatabaseAccess for PgPool {
                 END AS activity_type,
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
-                {},
-                {},
-                {}
-            {}
-            ORDER BY te.block_timestamp {}
-            LIMIT {} OFFSET {}
+                {price_select},
+                {from_select},
+                {to_select}
+            {common}
+            ORDER BY te.block_timestamp {direction}
+            LIMIT {limit} OFFSET {offset}
             ",
-            price_select_part,
-            from_select_part,
-            to_select_part,
-            common_sql_query,
-            direction,
-            items_per_page,
-            offset,
+            price_select = price_select_part,
+            from_select = from_select_part,
+            to_select = to_select_part,
+            common = common_sql_query,
+            direction = direction,
+            limit = items_per_page,
+            offset = offset,
         );
         let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
             .bind(contract_address)
