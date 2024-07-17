@@ -6,7 +6,7 @@ use sqlx::FromRow;
 pub struct CollectionData {
     pub address: String,
     pub image: Option<String>,
-    pub collection_name: Option<String>,
+    pub name: Option<String>,
     pub floor: Option<BigDecimal>,
     pub volume_7d_eth: Option<BigDecimal>,
     pub top_offer: Option<BigDecimal>,
@@ -14,7 +14,6 @@ pub struct CollectionData {
     pub marketcap: Option<BigDecimal>,
     pub listed_items: Option<i64>,
     pub listed_percentage: Option<i64>,
-    pub contract_symbol: Option<String>,
     pub token_count: Option<i64>,
     pub owner_count: Option<i64>,
     pub total_volume: Option<i64>,
@@ -25,7 +24,7 @@ pub struct CollectionData {
 pub struct CollectionPortfolioData {
     pub address: String,
     pub image: Option<String>,
-    pub collection_name: Option<String>,
+    pub name: Option<String>,
     pub floor: Option<BigDecimal>,
     pub token_count: Option<i64>,
     pub user_token_count: Option<i64>,

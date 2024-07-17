@@ -7,7 +7,7 @@ use sqlx::FromRow;
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
 pub struct TokenData {
-    pub contract: Option<String>,
+    pub collection_address: Option<String>,
     pub token_id: Option<String>,
     pub last_price: Option<BigDecimal>,
     pub floor_difference: Option<i32>,
@@ -77,7 +77,7 @@ pub struct Listing {
 
 #[derive(Serialize, Deserialize, FromRow)]
 pub struct TokenPortfolioData {
-    pub contract: Option<String>,
+    pub collection_address: Option<String>,
     pub token_id: Option<String>,
     pub list_price: Option<BigDecimal>,
     pub best_offer: Option<BigDecimal>,
@@ -225,6 +225,6 @@ pub struct TokenPortfolioActivityData {
     pub time_stamp: i64,
     pub transaction_hash: Option<String>,
     pub token_id: Option<String>,
-    pub contract_address: Option<String>,
+    pub collection_address: Option<String>,
     pub metadata: Option<JsonValue>,
 }

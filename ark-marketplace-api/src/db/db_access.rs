@@ -198,7 +198,7 @@ impl DatabaseAccess for PgPool {
             "SELECT
                     contract.contract_address as address,
                     contract_image AS image,
-                    contract_name AS collection_name,
+                    contract_name AS name,
                     floor_price AS floor,
                     CAST(0 AS INTEGER) AS floor_7d_percentage,
                     volume_7d_eth,
@@ -210,8 +210,7 @@ impl DatabaseAccess for PgPool {
                     token_count,
                     owner_count,
                     total_volume
-                    total_sales,
-                    contract.contract_symbol
+                    total_sales
                     FROM
                      contract
                      INNER JOIN token ON contract.contract_address = token.contract_address
@@ -262,7 +261,7 @@ impl DatabaseAccess for PgPool {
             SELECT
                  contract.contract_address as address,
                  contract_image AS image,
-                 contract_name AS collection_name,
+                 contract_name AS name,
                  ( SELECT count(*)
                     FROM   token t1
                     WHERE  t1.contract_address = contract.contract_address
@@ -313,7 +312,7 @@ impl DatabaseAccess for PgPool {
                      WHEN contract_image = '' THEN NULL
                      ELSE contract_image
                  END AS image,
-                 contract_name AS collection_name,
+                 contract_name AS name,
                  contract.floor_price AS floor,
                  volume_7d_eth,
                  contract.top_bid AS top_offer,
@@ -324,8 +323,7 @@ impl DatabaseAccess for PgPool {
                  token_count,
                  owner_count,
                  total_volume,
-                 total_sales,
-             contract_symbol
+                 total_sales
              FROM contract
              WHERE contract.contract_address = $1
              AND contract.chain_id = $2
@@ -560,7 +558,7 @@ impl DatabaseAccess for PgPool {
         let tokens_data_query = format!(
             "
                SELECT
-                   token.contract_address as contract,
+                   token.contract_address as collection_address,
                    token.token_id,
                    hex_to_decimal(token.last_price) as last_price,
                    CAST(0 as INTEGER) as floor_difference,
@@ -647,7 +645,7 @@ impl DatabaseAccess for PgPool {
         let tokens_data_query = format!(
             "
             SELECT
-                token.contract_address as contract,
+                token.contract_address as collection_address,
                 token.token_id,
                 hex_to_decimal(token.listing_start_amount) as list_price,
                 top_bid_amount as best_offer,

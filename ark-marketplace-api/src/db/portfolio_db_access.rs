@@ -123,7 +123,7 @@ impl DatabaseAccess for PgPool {
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
                 te.token_id,
-                te.contract_address,
+                te.contract_address as collection_address,
                 token.metadata,
                 {},
                 {},
