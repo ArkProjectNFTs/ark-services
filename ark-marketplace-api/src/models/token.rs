@@ -196,6 +196,10 @@ impl FromStr for TokenEventType {
             MINT_STR => Ok(Self::Mint),
             BURN_STR => Ok(Self::Burn),
             TRANSFER_STR => Ok(Self::Transfer),
+            // cancel event
+            LISTING_CANCELLED_STR => Ok(Self::ListingCancelled),
+            AUCTION_CANCELLED_STR => Ok(Self::AuctionCancelled),
+            OFFER_CANCELLED_STR => Ok(Self::OfferCancelled),
             _ => Err(format!("Invalid variant: {} ({})", s, VARIANTS.join(", "))),
         }
     }
