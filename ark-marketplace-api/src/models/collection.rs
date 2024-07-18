@@ -1,3 +1,4 @@
+use crate::models::token::TokenEventType;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -43,4 +44,15 @@ pub struct CollectionSearchData {
 #[derive(FromRow)]
 pub struct CollectionFloorPrice {
     pub value: Option<BigDecimal>,
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct CollectionActivityData {
+    pub activity_type: TokenEventType,
+    pub price: Option<BigDecimal>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub time_stamp: i64,
+    pub transaction_hash: Option<String>,
+    pub token_id: Option<String>,
 }
