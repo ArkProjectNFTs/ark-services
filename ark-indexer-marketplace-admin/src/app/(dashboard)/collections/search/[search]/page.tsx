@@ -7,8 +7,10 @@ export default async function CollectionSearch({
 }: {
   params: { search: string };
 }) {
+  console.log("params", params);
+
   const contracts = await api.contract.searchContracts.query({
-    contractName: params.search || "",
+    contractName: params.search,
   });
 
   return (
