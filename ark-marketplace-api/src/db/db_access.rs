@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use crate::models::collection::{
-    CollectionData, CollectionFloorPrice, CollectionPortfolioData, CollectionSearchData,
+    CollectionData, CollectionFloorPrice, CollectionPortfolioData, CollectionSearchData, CollectionActivityData
 };
 use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -93,6 +93,16 @@ pub trait DatabaseAccess: Send + Sync {
         contract_address: &str,
         chain_id: &str,
     ) -> Result<CollectionData, Error>;
+
+    async fn get_collection_activity_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        page: i64,
+        items_per_page: i64,
+        direction: &str,
+        types: &Option<Vec<TokenEventType>>,
+    ) -> Result<(Vec<CollectionActivityData>, bool, i64), Error>;
 
     async fn get_collection_floor_price(
         &self,
@@ -335,6 +345,120 @@ impl DatabaseAccess for PgPool {
         .await?;
 
         Ok(collection_data)
+    }
+
+    async fn get_collection_activity_data(
+            &self,
+            contract_address: &str,
+            chain_id: &str,
+            page: i64,
+            items_per_page: i64,
+            direction: &str,
+            types: &Option<Vec<TokenEventType>>,
+        ) -> Result<(Vec<CollectionActivityData>, bool, i64), Error> {
+        let offset = (page - 1) * items_per_page;
+        let types_filter = match types {
+            None => String::from(""),
+            Some(values) => {
+                format!("AND te.event_type IN ({})", event_type_list(values))
+            }
+        };
+        let common_sql_query = format!(
+            "
+                FROM token_event te
+                LEFT JOIN token_offer ON te.order_hash = token_offer.order_hash
+                WHERE te.contract_address = $1
+                    AND te.chain_id = $2
+                    {}
+            ",
+            types_filter
+        );
+
+        let count_sql_query = format!(
+            "
+            SELECT COUNT(*) AS total
+            FROM token_event te
+            WHERE te.contract_address = $1
+                AND te.chain_id = $2
+                {}
+            ",
+            types_filter
+        );
+
+        let total_count: Count = sqlx::query_as(&count_sql_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .fetch_one(self)
+            .await?;
+        let count = total_count.total;
+
+        let price_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN hex_to_decimal(token_offer.offer_amount)
+                ELSE hex_to_decimal(te.amount)
+            END AS price
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let from_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN token_offer.from_address
+                ELSE te.from_address
+            END AS from
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let to_select_part = format!(
+            "
+            CASE
+                WHEN te.event_type in ({}) THEN token_offer.to_address
+                ELSE te.to_address
+            END AS to
+            ",
+            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+        );
+
+        let activity_sql_query = format!(
+            "
+            SELECT
+                CASE
+                    WHEN te.event_type = 'Executed' THEN 'Sale'
+                    ELSE te.event_type
+                END AS activity_type,
+                te.block_timestamp AS time_stamp,
+                te.transaction_hash,
+                te.token_id,
+                {},
+                {},
+                {}
+            {}
+            ORDER BY te.block_timestamp {}
+            LIMIT {} OFFSET {}
+            ",
+            price_select_part,
+            from_select_part,
+            to_select_part,
+            common_sql_query,
+            direction,
+            items_per_page,
+            offset,
+        );
+
+        let collection_activity_data: Vec<CollectionActivityData> = sqlx::query_as(&activity_sql_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .fetch_all(self)
+            .await?;
+
+        // Calculate if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((collection_activity_data, has_next_page, count))
     }
 
     async fn get_collection_floor_price(

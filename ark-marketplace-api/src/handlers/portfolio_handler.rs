@@ -6,8 +6,7 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
-
-const CHAIN_ID: &str = "0x534e5f4d41494e";
+use super::utils::CHAIN_ID;
 
 #[derive(Deserialize, Debug)]
 struct ActivityQueryParameters {
