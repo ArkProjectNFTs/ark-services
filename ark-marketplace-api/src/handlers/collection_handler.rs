@@ -152,7 +152,7 @@ pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
 #[derive(Deserialize)]
 pub struct SearchQuery {
     q: Option<String>,
-    items: Option<i64>,
+    limit: Option<i64>,
 }
 
 pub async fn search_collections<D: DatabaseAccess + Sync>(
@@ -161,7 +161,7 @@ pub async fn search_collections<D: DatabaseAccess + Sync>(
 ) -> impl Responder {
     let query_search = query_parameters.q.as_deref();
     let db_access = db_pool.get_ref();
-    let items = query_parameters.items.unwrap_or(8);
+    let items = query_parameters.limit.unwrap_or(8);
 
     match search_collections_data(db_access, query_search.unwrap_or(""), items).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
