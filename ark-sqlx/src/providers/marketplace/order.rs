@@ -189,6 +189,7 @@ pub struct OfferData {
     order_hash: String,
     token_id: String,
     contract_address: String,
+    broker_id: String,
     chain_id: String,
     timestamp: i64,
     offer_maker: String,
@@ -354,6 +355,7 @@ impl OrderProvider {
                         status,
                         token_id,
                         contract_address,
+                        broker_id,
                         chain_id,
                         offer_maker,
                         offer_amount,
@@ -372,6 +374,7 @@ impl OrderProvider {
             status,
             token_id,
             contract_address,
+            broker_id,
             chain_id,
             offer_maker,
             offer_amount,
@@ -384,6 +387,7 @@ impl OrderProvider {
             (
                 String,
                 i64,
+                String,
                 String,
                 String,
                 String,
@@ -408,6 +412,7 @@ impl OrderProvider {
                 status,
                 token_id,
                 contract_address,
+                broker_id,
                 chain_id,
                 offer_maker,
                 offer_amount,
@@ -835,7 +840,7 @@ impl OrderProvider {
             if offer_amount > topbid_amount {
                 let update_query = "
                     UPDATE token
-                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8, has_bid = true
+                    SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8, has_bid = true, top_bid_broker_id = $9
                     WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
                 ";
                 let result = sqlx::query(update_query)
@@ -847,6 +852,7 @@ impl OrderProvider {
                     .bind(offer_data.end_date)
                     .bind(&offer_data.currency_address)
                     .bind(&offer_data.order_hash)
+                    .bind(&offer_data.broker_id)
                     .execute(&client.pool)
                     .await;
 
@@ -859,8 +865,8 @@ impl OrderProvider {
 
         let insert_query = "
             INSERT INTO token_offer
-            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status, start_date, end_date)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status, start_date, end_date, broker_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
         ";
 
         sqlx::query(insert_query)
@@ -877,6 +883,7 @@ impl OrderProvider {
             .bind(&offer_data.status)
             .bind(offer_data.start_date)
             .bind(offer_data.end_date)
+            .bind(&offer_data.broker_id)
             .execute(&client.pool)
             .await?;
 
@@ -960,6 +967,7 @@ impl OrderProvider {
                 &OfferData {
                     token_id: token_id.clone(),
                     contract_address: contract_address.clone(),
+                    broker_id: data.broker_id.clone(),
                     chain_id: data.token_chain_id.clone(),
                     timestamp: block_timestamp as i64,
                     offer_maker: data.offerer.clone(),
