@@ -48,9 +48,7 @@ export default async function CollectionSearch({
                   <h3 className="text-lg font-semibold text-white">
                     {contract.contract_name}
                   </h3>
-                  <p className="w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-white/80">
-                    {/* {contract.contract_address} */}
-                  </p>
+                  <p className="w-full overflow-hidden text-ellipsis whitespace-nowrap text-sm text-white/80"></p>
                   <div className="mt-2">
                     {contract.is_spam && (
                       <div className="mr-2 inline-flex items-center rounded-md bg-red-500 px-2 py-1 text-xs font-medium text-primary-foreground shadow focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
@@ -59,13 +57,9 @@ export default async function CollectionSearch({
                     )}
 
                     {contract.is_verified && (
-                      <Link
-                        href="#"
-                        className="inline-flex items-center rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
-                        prefetch={false}
-                      >
+                      <div className="inline-flex items-center rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50">
                         VERIFIED
-                      </Link>
+                      </div>
                     )}
                   </div>
                 </div>
