@@ -1,4 +1,5 @@
 use actix_cors::Cors;
+use actix_web::middleware::DefaultHeaders;
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
 use ark_marketplace_api::routes::{collection, default, portfolio, token};
@@ -98,6 +99,7 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(cors)
+            .wrap(DefaultHeaders::new().add(("X-GIT-REVISION", env!("GIT_HASH", "N/A"))))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(redis_conn.clone()))
             .configure(default::config)

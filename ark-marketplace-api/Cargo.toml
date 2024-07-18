@@ -3,6 +3,8 @@ name = "ark-marketplace-api"
 version = "0.1.0"
 edition = "2021"
 
+build = "src/build.rs"
+
 [dependencies]
 actix-web = "4.4.0"
 actix-cors = "0.7.0"
