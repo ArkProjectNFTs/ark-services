@@ -34,12 +34,17 @@ export const contractRouter = createTRPCRouter({
     .query(async ({ input }: { input: { contractName: string } }) => {
       console.log("Searching contracts with name:", input.contractName);
 
-      const contracts = await searchContracts(
-        input.contractName,
-        MAINNET_CHAIN_ID,
-      );
+      try {
+        const contracts = await searchContracts(
+          input.contractName,
+          MAINNET_CHAIN_ID,
+        );
 
-      return contracts;
+        console.log("Contracts found:", JSON.stringify(contracts, null, 2));
+        return contracts;
+      } catch (err) {
+        return [];
+      }
     }),
 
   getRefreshingContracts: protectedProcedure
