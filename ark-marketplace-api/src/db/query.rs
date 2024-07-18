@@ -34,8 +34,11 @@ pub async fn get_portfolio_collections_data<D: DatabaseAccess + Sync>(
 pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     query_search: &str,
+    items: i64,
 ) -> Result<Vec<CollectionSearchData>, sqlx::Error> {
-    db_access.search_collections_data(Some(query_search)).await
+    db_access
+        .search_collections_data(Some(query_search), items)
+        .await
 }
 
 pub async fn get_collection_data<D: DatabaseAccess + Sync>(
