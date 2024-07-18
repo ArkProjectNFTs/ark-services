@@ -28,5 +28,4 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         "/collections/search",
         web::get().to(collection_handler::search_collections::<PgPool>),
     );
-
 }

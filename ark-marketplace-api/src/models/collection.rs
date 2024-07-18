@@ -1,7 +1,7 @@
+use crate::models::token::TokenEventType;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use crate::models::token::TokenEventType;
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
 pub struct CollectionData {

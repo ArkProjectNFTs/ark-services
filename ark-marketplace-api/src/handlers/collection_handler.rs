@@ -1,18 +1,18 @@
+use super::utils::extract_page_params;
+use super::utils::CHAIN_ID;
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
-    get_collection_data, get_collections_data, get_portfolio_collections_data,
-    search_collections_data, get_collection_activity_data
+    get_collection_activity_data, get_collection_data, get_collections_data,
+    get_portfolio_collections_data, search_collections_data,
 };
+use crate::models::token::TokenEventType;
 use crate::utils::http_utils::normalize_address;
-use actix_web::{web, HttpResponse, Responder, HttpRequest};
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use super::utils::CHAIN_ID;
-use super::utils::extract_page_params;
-use crate::models::token::TokenEventType;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParameters {
@@ -87,18 +87,17 @@ pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
     let contract_address = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
-
-   let (page, items_per_page) = match extract_page_params(req.query_string(), 1, 100) {
-       Err(msg) => return HttpResponse::BadRequest().json(msg),
-       Ok((page, items_per_page)) => (page, items_per_page),
-   };
+    let (page, items_per_page) = match extract_page_params(req.query_string(), 1, 100) {
+        Err(msg) => return HttpResponse::BadRequest().json(msg),
+        Ok((page, items_per_page)) => (page, items_per_page),
+    };
 
     let params = serde_qs::from_str::<ActivityQueryParameters>(req.query_string());
-        if let Err(e) = params {
-            let msg = format!("Error when parsing query parameters: {}", e);
-            tracing::error!(msg);
-            return HttpResponse::BadRequest().json(msg);
-        }
+    if let Err(e) = params {
+        let msg = format!("Error when parsing query parameters: {}", e);
+        tracing::error!(msg);
+        return HttpResponse::BadRequest().json(msg);
+    }
     let params = params.unwrap();
     let direction = params.direction.as_deref().unwrap_or("desc");
 
@@ -107,7 +106,7 @@ pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
     match get_collection_activity_data(
         db_access,
         &normalized_address,
-        &CHAIN_ID,
+        CHAIN_ID,
         page,
         items_per_page,
         direction,

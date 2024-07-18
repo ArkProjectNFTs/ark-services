@@ -1,7 +1,8 @@
 use std::time::SystemTime;
 
 use crate::models::collection::{
-    CollectionData, CollectionFloorPrice, CollectionPortfolioData, CollectionSearchData, CollectionActivityData
+    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
+    CollectionSearchData,
 };
 use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -348,14 +349,14 @@ impl DatabaseAccess for PgPool {
     }
 
     async fn get_collection_activity_data(
-            &self,
-            contract_address: &str,
-            chain_id: &str,
-            page: i64,
-            items_per_page: i64,
-            direction: &str,
-            types: &Option<Vec<TokenEventType>>,
-        ) -> Result<(Vec<CollectionActivityData>, bool, i64), Error> {
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        page: i64,
+        items_per_page: i64,
+        direction: &str,
+        types: &Option<Vec<TokenEventType>>,
+    ) -> Result<(Vec<CollectionActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
         let types_filter = match types {
             None => String::from(""),
@@ -448,11 +449,12 @@ impl DatabaseAccess for PgPool {
             offset,
         );
 
-        let collection_activity_data: Vec<CollectionActivityData> = sqlx::query_as(&activity_sql_query)
-            .bind(contract_address)
-            .bind(chain_id)
-            .fetch_all(self)
-            .await?;
+        let collection_activity_data: Vec<CollectionActivityData> =
+            sqlx::query_as(&activity_sql_query)
+                .bind(contract_address)
+                .bind(chain_id)
+                .fetch_all(self)
+                .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

@@ -1,3 +1,4 @@
+use super::utils::CHAIN_ID;
 use crate::db::portfolio_db_access::DatabaseAccess;
 use crate::db::portfolio_query::get_activity_data;
 use crate::models::token::TokenEventType;
@@ -6,7 +7,6 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
-use super::utils::CHAIN_ID;
 
 #[derive(Deserialize, Debug)]
 struct ActivityQueryParameters {

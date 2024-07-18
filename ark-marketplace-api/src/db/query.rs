@@ -1,6 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
 use crate::models::collection::{
-    CollectionData, CollectionFloorPrice, CollectionPortfolioData, CollectionSearchData, CollectionActivityData,
+    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
+    CollectionSearchData,
 };
 use crate::models::token::{
     TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -97,9 +98,15 @@ pub async fn get_collection_activity_data<D: DatabaseAccess + Sync>(
     direction: &str,
     types: &Option<Vec<TokenEventType>>,
 ) -> Result<(Vec<CollectionActivityData>, bool, i64), sqlx::Error> {
-
     let collection_activity_data = db_access
-        .get_collection_activity_data(contract_address, chain_id, page, items_per_page, direction, types)
+        .get_collection_activity_data(
+            contract_address,
+            chain_id,
+            page,
+            items_per_page,
+            direction,
+            types,
+        )
         .await?;
 
     Ok(collection_activity_data)
