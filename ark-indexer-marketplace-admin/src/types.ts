@@ -24,6 +24,7 @@ export type Contract = {
   deployed_timestamp?: number;
   is_verified: boolean;
   save_images: boolean;
+  is_refreshing: boolean;
 };
 
 export type RefreshingContract = {
@@ -35,4 +36,6 @@ export type RefreshingContract = {
   contract_symbol?: string;
   contract_image?: string;
   token_count: number;
+  refreshed_token_count: number;
+  progression: number;
 };

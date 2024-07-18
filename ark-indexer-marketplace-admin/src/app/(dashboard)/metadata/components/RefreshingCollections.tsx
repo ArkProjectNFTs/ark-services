@@ -1,26 +1,30 @@
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import { Progress } from "~/components/ui/progress";
-import type { RefreshingContract } from "~/types";
+"use client";
 
-export default function RefreshingCollections(props: {
-  contracts: RefreshingContract[];
-}) {
+import Link from "next/link";
+import { LinkIcon } from "lucide-react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { Button } from "~/components/ui/button";
+import { Progress } from "~/components/ui/progress";
+import { api } from "~/trpc/react";
+
+export default function RefreshingCollections() {
+  const [contracts] = api.contract.getRefreshingContracts.useSuspenseQuery(
+    {},
+    {
+      refetchInterval: 5000,
+    },
+  );
+
   return (
-    <Card className="col-span-3">
-      <CardHeader>
-        <CardTitle>Refreshing Collections Metadata</CardTitle>
-        <CardDescription></CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-8">
-          {props.contracts.map((contract) => {
+    <div className="space-y-8">
+      {contracts.length === 0 ? (
+        <p className="text-muted-foreground">
+          No collections are currently refreshing.
+        </p>
+      ) : (
+        <>
+          {contracts.map((contract) => {
             return (
               <div
                 key={contract.contract_address}
@@ -33,28 +37,40 @@ export default function RefreshingCollections(props: {
                   </AvatarFallback>
                 </Avatar>
                 <div className="ml-4 space-y-1">
-                  <p className="text-sm font-medium leading-none">
+                  <Link
+                    href={`/collections/${contract.contract_address}`}
+                    className="text-sm font-medium leading-none"
+                  >
                     {contract.contract_name}
-                  </p>
+                  </Link>
                   <p className="min-w-[200px] text-sm text-muted-foreground">
                     {contract.contract_address}
                   </p>
                   <div className="flex items-center gap-4">
                     <div className="w-[200px]">
-                      <Progress value={33} />
+                      <Progress value={contract.progression} />
                     </div>
                     <div className="text-xs">
-                      {contract.token_count} token
+                      {contract.refreshed_token_count}/{contract.token_count}{" "}
+                      token
                       {contract.token_count > 1 && "s"}
                     </div>
                   </div>
                 </div>
-                <div className="ml-auto font-medium">100%</div>
+                <div className="ml-auto flex items-center justify-center gap-4">
+                  <div className=" font-medium">{contract.progression}%</div>
+                  <Link
+                    target="_blank"
+                    href={`https://market.arkproject.dev/collection/${contract.contract_address}`}
+                  >
+                    <Button>View on ArkProject</Button>
+                  </Link>
+                </div>
               </div>
             );
           })}
-        </div>
-      </CardContent>
-    </Card>
+        </>
+      )}
+    </div>
   );
 }

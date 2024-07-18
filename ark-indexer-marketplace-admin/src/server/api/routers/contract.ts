@@ -47,7 +47,19 @@ export const contractRouter = createTRPCRouter({
     .query(async () => {
       const contracts = await fetchRefreshingContracts(MAINNET_CHAIN_ID);
 
-      return contracts;
+      return contracts.map((contract) => {
+        const tokenCount = contract.token_count || 0;
+        const refreshedTokenCount = contract.refreshed_token_count || 0;
+        const progression =
+          tokenCount > 0
+            ? parseFloat(((refreshedTokenCount / tokenCount) * 100).toFixed(2))
+            : 0;
+
+        return {
+          ...contract,
+          progression,
+        };
+      });
     }),
 
   getContract: protectedProcedure
@@ -72,6 +84,15 @@ export const contractRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
+      const contract = await fetchContract(
+        input.contractAddress,
+        MAINNET_CHAIN_ID,
+      );
+
+      if (contract?.is_refreshing) {
+        throw new Error("Contract is already refreshing");
+      }
+
       await updateIsRefreshingContract(
         input.contractAddress,
         MAINNET_CHAIN_ID,

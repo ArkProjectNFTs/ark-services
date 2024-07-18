@@ -13,57 +13,30 @@ export async function updateIsRefreshingContract(
 }
 
 export async function fetchRefreshingContracts(chainId: string) {
-  const query = `WITH refreshed_tokens AS (
-      SELECT
-          t.contract_address,
-          t.chain_id,
-          COUNT(t.token_id) AS refreshed_token_count
-      FROM
-          token AS t
-      WHERE t.metadata_status = 'OK'
-      AND t.chain_id = $1
-      GROUP BY
-          t.contract_address,
-          t.chain_id
-  )
+  const query = `
   SELECT
-      c.contract_address,
-      c.chain_id,
-      c.updated_timestamp,
-      c.contract_type,
-      c.contract_name,
-      c.contract_symbol,
-      c.contract_image,
-      COALESCE(rt.refreshed_token_count, 0) AS refreshed_token_count,
-      COUNT(t.token_id) AS token_count,
-      ROUND((COALESCE(rt.refreshed_token_count, 0) * 100.0 / COUNT(t.token_id)), 2) AS progress_percentage
-  FROM
-      contract AS c
-  INNER JOIN
-      token AS t
-      ON c.contract_address = t.contract_address
-      AND c.chain_id = t.chain_id
-  LEFT JOIN
-      refreshed_tokens AS rt
-      ON c.contract_address = rt.contract_address
-      AND c.chain_id = rt.chain_id
-  WHERE
-      c.is_spam = false
-      AND c.is_refreshing = true
-      AND c.chain_id = $1
-      AND c.contract_type = 'ERC721'
-  GROUP BY
-      c.contract_address,
-      c.chain_id,
-      c.updated_timestamp,
-      c.contract_type,
-      c.contract_name,
-      c.contract_symbol,
-      c.contract_image,
-      rt.refreshed_token_count
-  ORDER BY
-      token_count DESC
-  LIMIT 20`;
+    c.contract_address,
+    c.chain_id,
+    c.updated_timestamp,
+    c.contract_type,
+    c.contract_name,
+    c.contract_symbol,
+    c.contract_image,
+    CAST(c.token_count AS INTEGER),
+    (
+        SELECT CAST(COUNT(*) AS INTEGER)
+        FROM token as t 
+        WHERE t.contract_address = c.contract_address 
+        AND t.chain_id = c.chain_id 
+        AND t.metadata_status = 'OK'
+    ) AS refreshed_token_count
+    FROM contract c 
+    WHERE
+        c.is_spam = false
+        AND c.is_refreshing = true
+        AND c.chain_id = $1
+        AND c.contract_type = 'ERC721'
+    LIMIT 20;`;
   const res = await pool.query<RefreshingContract>(query, [chainId]);
 
   return res.rows;
@@ -71,7 +44,7 @@ export async function fetchRefreshingContracts(chainId: string) {
 
 export async function fetchContract(contractAddress: string, chainId: string) {
   const res = await pool.query<Contract>(
-    `SELECT contract_address, chain_id, updated_timestamp, contract_type, contract_name, contract_symbol, contract_image, metadata_ok, is_spam, is_nsfw, deployed_timestamp, is_verified, save_images
+    `SELECT contract_address, chain_id, updated_timestamp, contract_type, contract_name, contract_symbol, contract_image, metadata_ok, is_spam, is_nsfw, deployed_timestamp, is_verified, save_images, is_refreshing
      FROM contract
      WHERE contract_address = $1 AND chain_id = $2`,
     [contractAddress, chainId],
