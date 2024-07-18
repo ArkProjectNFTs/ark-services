@@ -80,6 +80,7 @@ pub trait DatabaseAccess: Send + Sync {
     async fn search_collections_data(
         &self,
         query_search: Option<&str>,
+        items: i64,
     ) -> Result<Vec<CollectionSearchData>, Error>;
 
     async fn get_portfolio_collections_data(
@@ -128,6 +129,7 @@ impl DatabaseAccess for PgPool {
     async fn search_collections_data(
         &self,
         query_search: Option<&str>,
+        items: i64,
     ) -> Result<Vec<CollectionSearchData>, Error> {
         let re = Regex::new(r"^0x0*").unwrap();
         let cleaned_query_search = query_search
@@ -157,8 +159,11 @@ impl DatabaseAccess for PgPool {
                  contract
              WHERE 1=1
                 {}
-             ORDER BY contract_name",
-            { where_clause }
+             ORDER BY contract_name
+             LIMIT {}
+             ",
+            { where_clause },
+            items
         );
 
         let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionSearchData>(&sql_query)
