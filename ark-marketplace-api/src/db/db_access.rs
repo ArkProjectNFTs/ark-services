@@ -159,7 +159,7 @@ impl DatabaseAccess for PgPool {
                  contract
              WHERE contract_name != ''
                 {}
-             ORDER BY is_verified desc, contract_name
+             ORDER BY token_count desc, is_verified desc, contract_name
              LIMIT {}
              ",
             { where_clause },
