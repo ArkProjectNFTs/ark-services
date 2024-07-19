@@ -157,9 +157,9 @@ impl DatabaseAccess for PgPool {
                  is_verified AS is_verified
              FROM
                  contract
-             WHERE 1=1
+             WHERE contract_name != ''
                 {}
-             ORDER BY contract_name
+             ORDER BY is_verified desc, contract_name
              LIMIT {}
              ",
             { where_clause },
