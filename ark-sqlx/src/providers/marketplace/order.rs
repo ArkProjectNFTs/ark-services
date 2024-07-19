@@ -13,7 +13,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -22,6 +22,22 @@ enum RollbackStatus {
     CancelledByNewOrder,
     CancelledAssetFault,
     CancelledOwnership,
+}
+
+#[derive(sqlx::FromRow)]
+struct TokenInfo {
+    token_id: String,
+    contract_address: String,
+    chain_id: String,
+}
+
+#[derive(sqlx::FromRow)]
+struct Offer {
+    offer_amount: Option<f64>,
+    order_hash: Option<String>,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
+    currency_address: Option<String>,
 }
 
 impl RollbackStatus {
@@ -606,13 +622,118 @@ impl OrderProvider {
         order_hash: &str,
         status: OrderStatus,
     ) -> Result<(), ProviderError> {
-        let query = "UPDATE token_offer SET status = $2 WHERE order_hash = $1;";
+        let select_query = "
+            SELECT token_id, contract_address, chain_id
+            FROM token_offer
+            WHERE order_hash = $1;
+        ";
 
-        sqlx::query(query)
+        // Execute the query and retrieve the token information
+        let token_info: Option<TokenInfo> = sqlx::query_as(select_query)
             .bind(order_hash)
-            .bind(status.to_string())
-            .execute(&client.pool)
+            .fetch_optional(&client.pool)
             .await?;
+
+        if let Some(ref info) = token_info {
+            let query = "UPDATE token_offer SET status = $2 WHERE order_hash = $1;";
+
+            sqlx::query(query)
+                .bind(order_hash)
+                .bind(status.to_string())
+                .execute(&client.pool)
+                .await?;
+
+            // special case for cancelled orders
+            if status == OrderStatus::Cancelled {
+                let contract_address = &info.contract_address;
+                let chain_id = &info.chain_id;
+                let token_id = &info.token_id;
+
+                let select_valid_offers_query = r#"
+                    SELECT
+                        CAST(hex_to_decimal(offer_amount) AS FLOAT8) as offer_amount,
+                        order_hash,
+                        start_date,
+                        end_date,
+                        currency_address,
+                        broker_id
+                    FROM token_offer
+                    WHERE contract_address = $1
+                      AND token_id = $2
+                      AND chain_id = $3
+                      AND NOW() <= to_timestamp(end_date)
+                      AND STATUS = 'PLACED'
+                    ORDER BY hex_to_decimal(offer_amount) DESC
+                    LIMIT 1;
+                "#;
+
+                let valid_offer: Result<Offer, _> = sqlx::query_as(select_valid_offers_query)
+                    .bind(contract_address.clone())
+                    .bind(token_id.clone())
+                    .bind(chain_id.clone())
+                    .fetch_one(&client.pool)
+                    .await;
+
+                // Update `top_bid` fields based on whether a valid offer exists
+                let update_top_bid_query = match valid_offer {
+                    Ok(offer) => format!(
+                        r#"
+                        UPDATE token
+                        SET top_bid_amount = '{}',
+                            top_bid_order_hash = '{}',
+                            top_bid_start_date = '{}',
+                            top_bid_end_date = '{}',
+                            top_bid_currency_address = '{}',
+                            has_bid = true
+                        WHERE contract_address = '{}'
+                          AND chain_id = '{}'
+                          AND token_id = '{}';
+                        "#,
+                        offer.offer_amount.unwrap_or(0.0),
+                        offer.order_hash.unwrap_or_default(),
+                        offer.start_date.unwrap_or(0),
+                        offer.end_date.unwrap_or(0),
+                        offer.currency_address.unwrap_or_default(),
+                        contract_address.clone(),
+                        chain_id.clone(),
+                        token_id.clone()
+                    ),
+                    _ => format!(
+                        r#"
+                        UPDATE token
+                        SET top_bid_amount = NULL,
+                            top_bid_order_hash = NULL,
+                            top_bid_start_date = NULL,
+                            top_bid_end_date = NULL,
+                            top_bid_currency_address = NULL,
+                            top_bid_broker_id = NULL,
+                            has_bid = false
+                        WHERE contract_address = '{}'
+                          AND chain_id = '{}'
+                          AND token_id = '{}';
+                    "#,
+                        contract_address.clone(),
+                        chain_id.clone(),
+                        token_id.clone()
+                    ),
+                };
+
+                match sqlx::query(&update_top_bid_query)
+                    .execute(&client.pool)
+                    .await
+                {
+                    Ok(_) => info!(
+                        "Update of top_bid fields successful for token: {}",
+                        token_id
+                    ),
+                    Err(e) => tracing::error!(
+                        "Failed to update top_bid fields for token {}: {}",
+                        token_id,
+                        e
+                    ),
+                }
+            }
+        }
 
         Ok(())
     }
@@ -1079,7 +1200,7 @@ impl OrderProvider {
     ) -> Result<(), ProviderError> {
         trace!("Registering cancelled order {:?}", data);
 
-        /* @TODO: maybe we have to check in offer ? */
+        // if the order hash exists in token table, then it is a listing
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
         {
@@ -1132,7 +1253,13 @@ impl OrderProvider {
             .await?;
         }
 
-        Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
+        // if the order hash exists in token_offer table, then it is an offer
+        if Self::get_offer_data_by_order_hash(client, &data.order_hash)
+            .await?
+            .is_some()
+        {
+            Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
+        }
 
         Ok(())
     }
