@@ -115,7 +115,11 @@ pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
     .await
     {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-        Ok(collection_data) => HttpResponse::Ok().json(collection_data),
+        Ok((collection_data, has_next_page, collection_count)) => HttpResponse::Ok().json(json!({
+            "data": collection_data,
+            "collection_count": collection_count,
+            "next_page": if has_next_page { Some(page + 1) } else { None }
+        })),
         Err(err) => {
             tracing::error!("error query get_collection_activity: {}", err);
             HttpResponse::InternalServerError().finish()
