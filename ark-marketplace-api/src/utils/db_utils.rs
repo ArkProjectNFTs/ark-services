@@ -25,6 +25,10 @@ const TOKEN_EVENT_SALE_STR: &str = "Sale";
 const TOKEN_EVENT_MINT_STR: &str = "Mint";
 const TOKEN_EVENT_BURN_STR: &str = "Burn";
 const TOKEN_EVENT_TRANSFER_STR: &str = "Transfer";
+// Cancel event
+const TOKEN_EVENT_LISTING_CANCELLED_STR: &str = "ListingCancelled";
+const TOKEN_EVENT_AUCTION_CANCELLED_STR: &str = "AuctionCancelled";
+const TOKEN_EVENT_OFFER_CANCELLED_STR: &str = "OfferCancelled";
 
 impl<DB> sqlx::Type<DB> for TokenEventType
 where
@@ -57,6 +61,10 @@ where
             TOKEN_EVENT_MINT_STR => Ok(TokenEventType::Mint),
             TOKEN_EVENT_BURN_STR => Ok(TokenEventType::Burn),
             TOKEN_EVENT_TRANSFER_STR => Ok(TokenEventType::Transfer),
+            // Cancel event
+            TOKEN_EVENT_LISTING_CANCELLED_STR => Ok(TokenEventType::ListingCancelled),
+            TOKEN_EVENT_AUCTION_CANCELLED_STR => Ok(TokenEventType::AuctionCancelled),
+            TOKEN_EVENT_OFFER_CANCELLED_STR => Ok(TokenEventType::OfferCancelled),
             _ => Err("Invalid event type".into()),
         }
     }
@@ -77,6 +85,10 @@ impl TokenEventType {
             Self::Mint => TOKEN_EVENT_MINT_STR.to_string(),
             Self::Burn => TOKEN_EVENT_BURN_STR.to_string(),
             Self::Transfer => TOKEN_EVENT_TRANSFER_STR.to_string(),
+            // Cancel event
+            Self::ListingCancelled => TOKEN_EVENT_LISTING_CANCELLED_STR.to_string(),
+            Self::AuctionCancelled => TOKEN_EVENT_AUCTION_CANCELLED_STR.to_string(),
+            Self::OfferCancelled => TOKEN_EVENT_OFFER_CANCELLED_STR.to_string(),
         }
     }
 }

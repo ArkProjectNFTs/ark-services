@@ -121,6 +121,10 @@ pub enum TokenEventType {
     Mint,
     Burn,
     Transfer,
+    // Cancel event type
+    ListingCancelled,
+    AuctionCancelled,
+    OfferCancelled,
 }
 
 const LISTING_STR: &str = "LISTING";
@@ -134,8 +138,11 @@ const SALE_STR: &str = "SALE";
 const MINT_STR: &str = "MINT";
 const BURN_STR: &str = "BURN";
 const TRANSFER_STR: &str = "TRANSFER";
+const LISTING_CANCELLED_STR: &str = "DELISTING";
+const AUCTION_CANCELLED_STR: &str = "CANCEL_AUCTION";
+const OFFER_CANCELLED_STR: &str = "CANCEL_OFFER";
 
-const VARIANTS: [&str; 11] = [
+const VARIANTS: [&str; 14] = [
     LISTING_STR,
     COLLECTION_OFFER_STR,
     OFFER_STR,
@@ -147,6 +154,9 @@ const VARIANTS: [&str; 11] = [
     MINT_STR,
     BURN_STR,
     TRANSFER_STR,
+    LISTING_CANCELLED_STR,
+    AUCTION_CANCELLED_STR,
+    OFFER_CANCELLED_STR,
 ];
 
 impl std::fmt::Display for TokenEventType {
@@ -163,6 +173,10 @@ impl std::fmt::Display for TokenEventType {
             Self::Mint => write!(f, "{}", MINT_STR),
             Self::Burn => write!(f, "{}", BURN_STR),
             Self::Transfer => write!(f, "{}", TRANSFER_STR),
+
+            Self::ListingCancelled => write!(f, "{}", LISTING_CANCELLED_STR),
+            Self::AuctionCancelled => write!(f, "{}", AUCTION_CANCELLED_STR),
+            Self::OfferCancelled => write!(f, "{}", OFFER_CANCELLED_STR),
         }
     }
 }
@@ -183,6 +197,10 @@ impl FromStr for TokenEventType {
             MINT_STR => Ok(Self::Mint),
             BURN_STR => Ok(Self::Burn),
             TRANSFER_STR => Ok(Self::Transfer),
+            // cancel event
+            LISTING_CANCELLED_STR => Ok(Self::ListingCancelled),
+            AUCTION_CANCELLED_STR => Ok(Self::AuctionCancelled),
+            OFFER_CANCELLED_STR => Ok(Self::OfferCancelled),
             _ => Err(format!("Invalid variant: {} ({})", s, VARIANTS.join(", "))),
         }
     }

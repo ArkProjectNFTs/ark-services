@@ -910,30 +910,72 @@ impl DatabaseAccess for PgPool {
     ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
 
+        let token_event_with_previous_cte_part = format!(
+            "
+            WITH temporary_event_with_previous AS (
+            (
+                SELECT 
+                    *,
+                    -- LAG() function is a window function that provides access to a row at a specified physical offset which comes before the current row.
+                    -- Here we want to retrieve the previous event type for given order_hash
+                    LAG(event_type) OVER (PARTITION BY order_hash ORDER BY block_timestamp) AS previous_event_type
+                    FROM token_event WHERE contract_address = $1 AND chain_id = $2 AND token_id = $3
+                )
+            ),
+            token_event_with_previous AS (
+                SELECT 
+                    *,
+                    -- Create new event type if needed
+                    CASE
+                        WHEN event_type = '{executed_type}' THEN '{sale_type}'
+                        WHEN event_type = '{cancelled_type}' AND previous_event_type = '{listing_type}' THEN '{listing_cancelled_type}'
+                        WHEN event_type = '{cancelled_type}' AND previous_event_type = '{auction_type}' THEN '{auction_cancelled_type}'
+                        WHEN event_type = '{cancelled_type}' AND previous_event_type = '{offer_type}' THEN '{offer_cancelled_type}'
+                        ELSE event_type
+                    END AS new_event_type
+                    FROM temporary_event_with_previous
+                    WHERE contract_address = $1 AND chain_id = $2 AND token_id = $3
+                )
+            ",
+            executed_type = TokenEventType::Executed.to_db_string(),
+            sale_type = TokenEventType::Sale.to_db_string(),
+            cancelled_type = TokenEventType::Cancelled.to_db_string(),
+            listing_type = TokenEventType::Listing.to_db_string(),
+            auction_type = TokenEventType::Auction.to_db_string(),
+            offer_type = TokenEventType::Offer.to_db_string(),
+            listing_cancelled_type = TokenEventType::ListingCancelled.to_db_string(),
+            auction_cancelled_type = TokenEventType::AuctionCancelled.to_db_string(),
+            offer_cancelled_type = TokenEventType::OfferCancelled.to_db_string(),
+        );
+
         let types_filter = match types {
             None => String::from(""),
             Some(values) => {
-                format!("AND te.event_type IN ({})", event_type_list(values))
+                format!("AND te.new_event_type IN ({})", event_type_list(values))
             }
         };
-        let common_sql_query = format!(
+
+        let common_where_part = format!(
             "
-                FROM token_event te
+                FROM token_event_with_previous as te
                 LEFT JOIN token_offer ON te.order_hash = token_offer.order_hash
                 WHERE te.contract_address = $1
                     AND te.chain_id = $2
                     AND te.token_id = $3
                     {}
+                    AND te.new_event_type NOT IN ({})
             ",
-            types_filter
+            types_filter,
+            event_type_list(&[TokenEventType::Fulfill])
         );
 
         let count_sql_query = format!(
             "
+            {}
             SELECT COUNT(*) AS total
             {}
             ",
-            common_sql_query
+            token_event_with_previous_cte_part, common_where_part,
         );
 
         let total_count: Count = sqlx::query_as(&count_sql_query)
@@ -974,30 +1016,36 @@ impl DatabaseAccess for PgPool {
             event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
         );
 
+        let result_ordering = format!(
+            "
+            ORDER BY te.block_timestamp {direction}
+            LIMIT {limit} OFFSET {offset}
+            ",
+            direction = direction,
+            limit = items_per_page,
+            offset = offset,
+        );
+
         let activity_sql_query = format!(
             "
+            {token_event_with_previous_cte}
             SELECT
-                CASE
-                    WHEN te.event_type = 'Executed' THEN 'Sale'
-                    ELSE te.event_type
-                END AS activity_type,
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
-                {},
-                {},
-                {}
-            {}
-            ORDER BY te.block_timestamp {}
-            LIMIT {} OFFSET {}
+                te.new_event_type AS activity_type,
+                {price_select},
+                {from_select},
+                {to_select}
+            {common_where}
+            {result_ordering}
             ",
-            price_select_part,
-            from_select_part,
-            to_select_part,
-            common_sql_query,
-            direction,
-            items_per_page,
-            offset,
+            token_event_with_previous_cte = token_event_with_previous_cte_part,
+            common_where = common_where_part,
+            price_select = price_select_part,
+            from_select = from_select_part,
+            to_select = to_select_part,
         );
+
         let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
             .bind(contract_address)
             .bind(chain_id)
