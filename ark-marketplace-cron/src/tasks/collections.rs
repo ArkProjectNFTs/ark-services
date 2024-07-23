@@ -43,25 +43,6 @@ pub async fn update_top_bid_collections(pool: &PgPool) {
     }
 }
 
-pub async fn update_collections_floor(pool: &PgPool) {
-    let update_top_bid_query = r#"
-        UPDATE contract
-        SET floor_price = min_price
-        FROM (
-                 SELECT contract_address, chain_id, MIN(hex_to_decimal(listing_start_amount)) as min_price
-                 FROM token
-                 GROUP BY contract_address, chain_id
-             ) AS token
-        WHERE token.contract_address = contract.contract_address
-          AND token.chain_id = contract.chain_id;
-    "#;
-
-    match sqlx::query(update_top_bid_query).execute(pool).await {
-        Ok(_) => info!("Update floor_price"),
-        Err(e) => tracing::error!("Failed to update floor_price field for collection: {}", e),
-    }
-}
-
 pub async fn update_collections_market_data(pool: &PgPool) {
     let update_top_bid_query = r#"
         UPDATE contract

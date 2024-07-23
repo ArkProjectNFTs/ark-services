@@ -7,7 +7,7 @@ use clap::{App, Arg};
 use redis::aio::MultiplexedConnection;
 use redis::Client;
 use tasks::collections::{
-    insert_floor_price, update_collections_floor, update_collections_market_data,
+    insert_floor_price, update_collections_market_data,
     update_top_bid_collections,
 };
 use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
@@ -89,7 +89,6 @@ async fn main() -> std::io::Result<()> {
         },
         "task_set2" => {
             update_top_bid_collections(&db_pool).await;
-            update_collections_floor(&db_pool).await;
             update_collections_market_data(&db_pool).await;
             insert_floor_price(&db_pool).await;
         }
