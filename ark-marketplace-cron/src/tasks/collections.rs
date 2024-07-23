@@ -192,7 +192,7 @@ pub async fn insert_floor_price(pool: &PgPool) {
     "#;
 
     match sqlx::query(action_query)
-        .bind(current_timestamp as i64)
+        .bind(current_timestamp)
         .execute(pool)
         .await
     {
