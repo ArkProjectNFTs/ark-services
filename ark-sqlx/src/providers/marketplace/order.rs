@@ -1166,6 +1166,42 @@ impl OrderProvider {
                 .bind(event_type.to_string())
                 .execute(&client.pool)
                 .await?;
+
+            // update the floor :
+            let current_floor_query = "
+               SELECT floor_price
+               FROM contract
+               WHERE contract_address = $1 AND chain_id = $2;
+           ";
+
+            let current_floor: Option<BigDecimal> = sqlx::query_scalar(current_floor_query)
+                .bind(&contract_address)
+                .bind(&data.token_chain_id)
+                .fetch_optional(&client.pool)
+                .await?
+                .unwrap_or_else(|| Some(BigDecimal::from(0)));
+
+            let default_floor = BigDecimal::from(0);
+            let current_floor_value = current_floor.unwrap_or(default_floor.clone());
+            let hex_str = &data.start_amount.trim_start_matches("0x"); // Remove the "0x" prefix
+            let bigint =
+                BigInt::parse_bytes(hex_str.as_bytes(), 16).unwrap_or_else(|| BigInt::from(0)); // Parse the hex string
+            let listing_amount = BigDecimal::new(bigint, 0); // Convert BigInt to BigDecimal
+
+            if listing_amount < current_floor_value || current_floor_value == default_floor {
+                let update_floor_query = "
+                   UPDATE contract
+                   SET floor_price = $3
+                   WHERE contract_address = $1 AND chain_id = $2;
+               ";
+
+                sqlx::query(update_floor_query)
+                    .bind(&contract_address)
+                    .bind(&data.token_chain_id)
+                    .bind(&listing_amount)
+                    .execute(&client.pool)
+                    .await?;
+            }
         }
 
         if let Some(token_id_hex) = data.token_id.clone() {

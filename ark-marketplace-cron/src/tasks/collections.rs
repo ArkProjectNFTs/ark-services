@@ -1,6 +1,6 @@
+use chrono::{TimeZone, Timelike, Utc};
 use sqlx::PgPool;
 use tracing::info;
-use chrono::{TimeZone, Utc, Timelike};
 
 pub async fn update_top_bid_collections(pool: &PgPool) {
     let update_top_bid_query = r#"
@@ -174,7 +174,10 @@ pub async fn update_collections_market_data(pool: &PgPool) {
 pub async fn insert_floor_price(pool: &PgPool) {
     let now = chrono::Utc::now();
     let current_hour = now.time().hour();
-    let current_hour_start_naive = now.date_naive().and_hms_opt(current_hour, 0, 0).expect("Invalid time");
+    let current_hour_start_naive = now
+        .date_naive()
+        .and_hms_opt(current_hour, 0, 0)
+        .expect("Invalid time");
     let current_hour_start = Utc.from_utc_datetime(&current_hour_start_naive);
     let current_timestamp = current_hour_start.timestamp();
 
