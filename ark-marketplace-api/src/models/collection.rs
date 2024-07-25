@@ -19,6 +19,7 @@ pub struct CollectionData {
     pub owner_count: Option<i64>,
     pub total_volume: Option<i64>,
     pub total_sales: Option<i64>,
+    pub floor_7d_percentage: Option<BigDecimal>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]

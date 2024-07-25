@@ -1,3 +1,4 @@
+use chrono::{TimeZone, Timelike, Utc};
 use sqlx::PgPool;
 use tracing::info;
 
@@ -39,25 +40,6 @@ pub async fn update_top_bid_collections(pool: &PgPool) {
             "Failed to update top_bid and top_bid_order_hash fields for collection: {}",
             e
         ),
-    }
-}
-
-pub async fn update_collections_floor(pool: &PgPool) {
-    let update_top_bid_query = r#"
-        UPDATE contract
-        SET floor_price = min_price
-        FROM (
-                 SELECT contract_address, chain_id, MIN(hex_to_decimal(listing_start_amount)) as min_price
-                 FROM token
-                 GROUP BY contract_address, chain_id
-             ) AS token
-        WHERE token.contract_address = contract.contract_address
-          AND token.chain_id = contract.chain_id;
-    "#;
-
-    match sqlx::query(update_top_bid_query).execute(pool).await {
-        Ok(_) => info!("Update floor_price"),
-        Err(e) => tracing::error!("Failed to update floor_price field for collection: {}", e),
     }
 }
 
@@ -140,7 +122,25 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                     WHERE
                         token.contract_address = contract.contract_address
                         AND token.chain_id = contract.chain_id
-                );
+                ),
+               floor_7d_percentage = (
+                   COALESCE(
+                        (
+                            SELECT
+                                (contract.floor_price - fc.floor) / NULLIF(fc.floor, 0) * 100
+                            FROM
+                                floor_collection fc
+                            WHERE
+                                fc.contract_address = contract.contract_address
+                                AND fc.chain_id = contract.chain_id
+                                AND to_timestamp(fc.timestamp) >= (CURRENT_DATE - INTERVAL '7 days')
+                            ORDER BY
+                                fc.timestamp ASC
+                            LIMIT 1
+                        ),
+                        0
+                    )
+               )
     "#;
 
     match sqlx::query(update_top_bid_query).execute(pool).await {
@@ -149,5 +149,54 @@ pub async fn update_collections_market_data(pool: &PgPool) {
             "Failed to update update_collections_market_data field for collection: {}",
             e
         ),
+    }
+}
+
+pub async fn insert_floor_price(pool: &PgPool) {
+    let now = chrono::Utc::now();
+    let current_hour = now.time().hour();
+    let current_hour_start_naive = now
+        .date_naive()
+        .and_hms_opt(current_hour, 0, 0)
+        .expect("Invalid time");
+    let current_hour_start = Utc.from_utc_datetime(&current_hour_start_naive);
+    let current_timestamp = current_hour_start.timestamp();
+
+    let action_query = r#"
+        WITH temp_min_price AS (
+            SELECT
+                contract_address,
+                chain_id,
+                DATE_TRUNC('hour', to_timestamp(listing_timestamp)) AS hour,
+                MIN(hex_to_decimal(listing_start_amount)) AS min_price
+            FROM
+                token
+            WHERE
+                to_timestamp(listing_timestamp) <= to_timestamp($1) AND
+                to_timestamp(listing_timestamp) > to_timestamp($1) - INTERVAL '24 hour'
+            GROUP BY
+                contract_address, chain_id, DATE_TRUNC('hour', to_timestamp(listing_timestamp))
+        )
+        INSERT INTO floor_collection (contract_address, chain_id, timestamp, floor)
+        SELECT
+            fc.contract_address,
+            fc.chain_id,
+            $1::bigint,
+            COALESCE(
+                (SELECT min_price FROM temp_min_price t WHERE t.contract_address = fc.contract_address AND t.chain_id = fc.chain_id ORDER BY t.hour DESC LIMIT 1),
+                '0'
+            )
+        FROM (SELECT DISTINCT contract_address, chain_id FROM token) AS fc
+        ON CONFLICT (contract_address, chain_id, timestamp)
+        DO UPDATE SET floor = EXCLUDED.floor
+    "#;
+
+    match sqlx::query(action_query)
+        .bind(current_timestamp)
+        .execute(pool)
+        .await
+    {
+        Ok(_) => info!("Successfully inserted floor price for all collections."),
+        Err(e) => tracing::error!("Failed to insert floor price for all collections: {}", e),
     }
 }

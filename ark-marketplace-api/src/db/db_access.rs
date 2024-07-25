@@ -216,7 +216,22 @@ impl DatabaseAccess for PgPool {
                     contract_image AS image,
                     contract_name AS name,
                     floor_price AS floor,
-                    CAST(0 AS INTEGER) AS floor_7d_percentage,
+                    COALESCE(
+                        (
+                            SELECT
+                                (contract.floor_price - fc.floor) / fc.floor * 100
+                            FROM
+                                floor_collection fc
+                            WHERE
+                                fc.contract_address = contract.contract_address
+                                AND fc.chain_id = contract.chain_id
+                                AND fc.timestamp >= (CURRENT_DATE - INTERVAL '7 days')
+                            ORDER BY
+                                fc.timestamp ASC
+                            LIMIT 1
+                        ),
+                        0
+                    ) AS floor_7d_percentage,
                     volume_7d_eth,
                     top_bid as top_offer
                     sales_7d,
@@ -339,7 +354,8 @@ impl DatabaseAccess for PgPool {
                  token_count,
                  owner_count,
                  total_volume,
-                 total_sales
+                 total_sales,
+                 floor_7d_percentage
              FROM contract
              WHERE contract.contract_address = $1
              AND contract.chain_id = $2
@@ -914,7 +930,7 @@ impl DatabaseAccess for PgPool {
             "
             WITH temporary_event_with_previous AS (
             (
-                SELECT 
+                SELECT
                     *,
                     -- LAG() function is a window function that provides access to a row at a specified physical offset which comes before the current row.
                     -- Here we want to retrieve the previous event type for given order_hash
@@ -923,7 +939,7 @@ impl DatabaseAccess for PgPool {
                 )
             ),
             token_event_with_previous AS (
-                SELECT 
+                SELECT
                     *,
                     -- Create new event type if needed
                     CASE

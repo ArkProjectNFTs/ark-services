@@ -3,6 +3,7 @@ use async_std::stream::StreamExt;
 use redis::aio::MultiplexedConnection;
 use redis::AsyncCommands;
 use serde_json::json;
+use sqlx::types::BigDecimal;
 use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::HashSet;
@@ -95,6 +96,70 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
 
     // cache collections
     for collection in &collections_clone {
+        let recalculate_query = r#"
+                SELECT MIN(hex_to_decimal(listing_start_amount)) AS min_price
+                FROM token
+                WHERE contract_address = $1
+                GROUP BY contract_address
+            "#;
+
+        match sqlx::query_scalar::<_, BigDecimal>(recalculate_query)
+            .bind(collection)
+            .fetch_optional(pool)
+            .await
+        {
+            Ok(new_floor_price) => {
+                if let Some(min_price) = new_floor_price {
+                    let current_floor_query = r#"
+                            SELECT floor_price
+                            FROM contract
+                            WHERE contract_address = $1;
+                        "#;
+                    match sqlx::query_scalar::<_, BigDecimal>(current_floor_query)
+                        .bind(collection)
+                        .fetch_optional(pool)
+                        .await
+                    {
+                        Ok(current_floor_opt) => {
+                            let current_floor =
+                                current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
+                            if min_price < current_floor {
+                                let update_query = r#"
+                                        UPDATE contract
+                                        SET floor_price = $2
+                                        WHERE contract_address = $1;
+                                    "#;
+                                match sqlx::query(update_query)
+                                    .bind(collection)
+                                    .bind(min_price)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        info!("Floor price updated for collection: {}", collection)
+                                    }
+                                    Err(e) => tracing::error!(
+                                        "Failed to update floor price for collection {}: {}",
+                                        collection,
+                                        e
+                                    ),
+                                }
+                            }
+                        }
+                        Err(e) => tracing::error!(
+                            "Failed to fetch current floor price for collection {}: {}",
+                            collection,
+                            e
+                        ),
+                    }
+                }
+            }
+            Err(e) => tracing::error!(
+                "Failed to recalculate floor price for collection {}: {}",
+                collection,
+                e
+            ),
+        }
         match cache_collection_page(pool, &mut con.clone(), collection).await {
             Ok(_) => info!("Cache updated for collection: {}", collection),
             Err(e) => tracing::error!(
