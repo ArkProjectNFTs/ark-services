@@ -1,10 +1,14 @@
 use crate::handlers::token_handler::{get_token, get_token_market, get_token_offers, get_tokens};
 use actix_web::web;
 use sqlx::PgPool;
+use crate::routes::auth::validator;
+use actix_web_httpauth::middleware::HttpAuthentication;
 
 use crate::handlers::token_handler;
 
 pub fn config(cfg: &mut web::ServiceConfig) {
+    let auth = HttpAuthentication::basic(validator);
+
     cfg.route(
         "/collections/{address}/{chain_id}/tokens",
         web::get().to(get_tokens::<PgPool>),
@@ -28,5 +32,12 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.route(
         "/tokens/{address}/{chain_id}/{token_id}/activity",
         web::get().to(token_handler::get_token_activity::<PgPool>),
+    );
+
+    cfg.route(
+        "/flush-all-data",
+        web::delete()
+            .to(token_handler::flush_all_data::<PgPool>)
+            .wrap(auth.clone()),
     );
 }
