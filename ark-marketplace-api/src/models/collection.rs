@@ -1,6 +1,7 @@
 use crate::models::token::TokenEventType;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
 #[derive(Serialize, Deserialize, FromRow, Clone)]
@@ -56,4 +57,7 @@ pub struct CollectionActivityData {
     pub time_stamp: i64,
     pub transaction_hash: Option<String>,
     pub token_id: Option<String>,
+    pub token_metadata: Option<JsonValue>,
+    pub name: Option<String>,
+    pub is_verified: Option<bool>,
 }
