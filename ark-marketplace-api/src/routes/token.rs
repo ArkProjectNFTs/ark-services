@@ -1,8 +1,8 @@
 use crate::handlers::token_handler::{get_token, get_token_market, get_token_offers, get_tokens};
-use actix_web::web;
-use sqlx::PgPool;
 use crate::routes::auth::validator;
+use actix_web::web;
 use actix_web_httpauth::middleware::HttpAuthentication;
+use sqlx::PgPool;
 
 use crate::handlers::token_handler;
 
