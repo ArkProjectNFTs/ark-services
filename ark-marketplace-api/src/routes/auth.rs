@@ -24,6 +24,8 @@ pub async fn validator(
     req: ServiceRequest,
     credentials: BasicAuth,
 ) -> Result<ServiceRequest, (Error, ServiceRequest)> {
+    println!("Validating credentials");
+
     let user = std::env::var("API_USER").unwrap_or_default();
     let password = std::env::var("API_PASSWORD").unwrap_or_default();
 

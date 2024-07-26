@@ -122,10 +122,54 @@ pub trait DatabaseAccess: Send + Sync {
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
     ) -> Result<(Vec<TokenActivityData>, bool, i64), Error>;
+
+    async fn flush_all_data(&self) -> Result<u64, Error>;
 }
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
+    async fn flush_all_data(&self) -> Result<u64, Error> {
+        let mut total_rows_affected = 0;
+
+        const TABLES: [&str; 2] = ["token_offer", "token_event"];
+
+        for table in TABLES {
+            let rows_affected = sqlx::query(format!("DELETE FROM {}", table).as_str())
+                .execute(self)
+                .await?
+                .rows_affected();
+            total_rows_affected += rows_affected;
+        }
+
+        let query = "
+            UPDATE token
+            SET
+                listing_start_amount = null,
+                listing_end_amount = null,
+                listing_start_date = null,
+                listing_end_date = null,
+                listing_currency_address = null,
+                listing_orderhash = null,
+                listing_timestamp = null,
+                listing_currency_chain_id = null,
+                listing_broker_id = null,
+                last_price = null,
+                top_bid_amount = NULL,
+                top_bid_order_hash = NULL,
+                top_bid_start_date = NULL,
+                top_bid_end_date = NULL,
+                top_bid_currency_address = NULL,
+                top_bid_broker_id = NULL,
+                has_bid = false,
+                buy_in_progress = false,
+                held_timestamp = null
+            ";
+
+        sqlx::query(query).execute(self).await?;
+
+        Ok(total_rows_affected)
+    }
+
     async fn search_collections_data(
         &self,
         query_search: Option<&str>,

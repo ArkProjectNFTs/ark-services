@@ -286,3 +286,9 @@ pub async fn get_token_activity_data<D: DatabaseAccess + Sync>(
         )
         .await
 }
+
+pub async fn flush_all_data_query<D: DatabaseAccess + Sync>(
+    db_access: &D,
+) -> Result<u64, sqlx::Error> {
+    db_access.flush_all_data().await
+}
