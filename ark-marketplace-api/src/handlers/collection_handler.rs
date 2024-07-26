@@ -71,7 +71,9 @@ pub async fn get_collection<D: DatabaseAccess + Sync>(
     .await
     {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-        Ok(collection_data) => HttpResponse::Ok().json(collection_data),
+        Ok(collection_data) => HttpResponse::Ok().json(json!({
+            "data": collection_data,
+        })),
         Err(err) => {
             tracing::error!("error query get_collection: {}", err);
             HttpResponse::InternalServerError().finish()
