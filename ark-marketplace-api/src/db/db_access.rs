@@ -10,7 +10,6 @@ use crate::models::token::{
 };
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
-use regex::Regex;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
@@ -175,16 +174,27 @@ impl DatabaseAccess for PgPool {
         query_search: Option<&str>,
         items: i64,
     ) -> Result<Vec<CollectionSearchData>, Error> {
-        let re = Regex::new(r"^0x0*").unwrap();
-        let cleaned_query_search = query_search
-            .as_ref()
-            .map(|qs| re.replace(qs, "").to_string());
 
-        let where_clause = if let Some(ref cleaned) = cleaned_query_search {
+        let where_clause = if let Some(ref cleaned) = query_search {
             if !cleaned.is_empty() {
+                let owner_param = format!("0x0{}", cleaned);
+                let query = "SELECT DISTINCT contract_address FROM token WHERE current_owner = $1";
+                let contract_addresses: Vec<String> = sqlx::query_scalar(query)
+                    .bind(owner_param)
+                    .fetch_all(self)
+                    .await?;
+                let in_clause = if !contract_addresses.is_empty() {
+                    let addresses = contract_addresses.iter()
+                        .map(|addr| format!("'{}'", addr))
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    format!(" OR contract.contract_address IN ({})", addresses)
+                } else {
+                    String::new()
+                };
                 format!(
-                    " AND (contract.contract_name ILIKE '%{}%' or contract.contract_address ILIKE '%{}%')",
-                    query_search.unwrap(), cleaned
+                    " AND (contract.contract_name ILIKE '%{}%' OR contract.contract_address ILIKE '%{}%' {})",
+                    cleaned, cleaned, in_clause
                 )
             } else {
                 String::new()
@@ -288,7 +298,7 @@ impl DatabaseAccess for PgPool {
                     total_sales
                     FROM
                      contract
-                     INNER JOIN token ON contract.contract_address = token.contract_address
+                     INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id
                      WHERE 1=1
                      {} {}
                GROUP BY contract.contract_address, contract.chain_id
@@ -320,7 +330,7 @@ impl DatabaseAccess for PgPool {
             "
                 SELECT COUNT(DISTINCT contract.contract_address)
                 FROM contract
-                INNER JOIN token ON contract.contract_address = token.contract_address
+                INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id
                 WHERE token.current_owner = $1 and contract.is_verified = true
                 ",
             user_address
@@ -354,7 +364,7 @@ impl DatabaseAccess for PgPool {
                  contract.token_count
                 FROM
                  contract
-                 INNER JOIN token ON contract.contract_address = token.contract_address
+                 INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id
                  WHERE token.current_owner = $1
                  AND   contract.is_verified = true
            GROUP BY contract.contract_address, contract.chain_id, token.current_owner

@@ -1,4 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
+use crate::utils::http_utils::get_address_from_starknet_id;
+use regex::Regex;
+
 use crate::models::collection::{
     CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
     CollectionSearchData,
@@ -36,8 +39,20 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     query_search: &str,
     items: i64,
 ) -> Result<Vec<CollectionSearchData>, sqlx::Error> {
+
+    let mut cleaned_query_search = query_search.to_string();
+    // Check if query_search is a starknet.id and get the associated address
+    if cleaned_query_search.ends_with(".stark") {
+        if let Ok(Some(address)) = get_address_from_starknet_id(query_search).await {
+            cleaned_query_search = address;
+        }
+    }
+
+    let re = Regex::new(r"^0x0*").unwrap();
+    cleaned_query_search = re.replace(&cleaned_query_search, "").to_string();
+
     db_access
-        .search_collections_data(Some(query_search), items)
+        .search_collections_data(Some(&cleaned_query_search), items)
         .await
 }
 

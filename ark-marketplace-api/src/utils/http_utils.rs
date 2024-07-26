@@ -1,5 +1,6 @@
 use num_bigint::BigUint;
 use std::str::FromStr;
+use reqwest;
 
 /// Returns the padded hex string of parameter that can be an hexadecimal / decimal string.
 /// Returns an error if the parameter is not found.
@@ -35,4 +36,27 @@ pub fn normalize_address(address: &str) -> String {
     let normalized_address = format!("{}{}", prefix, hex);
 
     normalized_address
+}
+
+/**
+ * Get the address from the Starknet ID.
+ *
+ * # Arguments
+ *
+ * * `starknet_id` - The Starknet ID.
+ *
+ * # Returns
+ *
+ * * The address if it exists.
+ */
+pub async fn get_address_from_starknet_id(starknet_id: &str) -> Result<Option<String>, reqwest::Error> {
+    let url = format!("https://api.starknet.id/domain_to_addr?domain={}", starknet_id);
+    let response = reqwest::get(&url).await?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await?;
+        if let Some(address) = json["addr"].as_str() {
+            return Ok(Some(address.to_string()));
+        }
+    }
+    Ok(None)
 }
