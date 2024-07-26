@@ -233,6 +233,9 @@ pub struct TokenActivityData {
     pub to: Option<String>,
     pub time_stamp: i64,
     pub transaction_hash: Option<String>,
+    pub metadata: Option<JsonValue>,
+    pub collection_name: Option<String>,
+    pub collection_is_verified: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]

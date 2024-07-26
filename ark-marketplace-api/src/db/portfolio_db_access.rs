@@ -106,6 +106,7 @@ impl DatabaseAccess for PgPool {
                 FROM token_event te
                 LEFT JOIN token_offer ON te.order_hash = token_offer.order_hash
                 LEFT JOIN token ON te.token_id = token.token_id and te.contract_address = token.contract_address and te.chain_id = token.chain_id
+                LEFT JOIN contract ON te.contract_address = contract.contract_address and te.chain_id = contract.chain_id
                 WHERE te.chain_id = $1
                     AND (te.from_address = $2 or te.to_address = $2)
                     {}
@@ -125,6 +126,8 @@ impl DatabaseAccess for PgPool {
                 te.token_id,
                 te.contract_address as collection_address,
                 token.metadata,
+                contract.contract_name as collection_name,
+                contract.is_verified as collection_is_verified,
                 {},
                 {},
                 {}
