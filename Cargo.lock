@@ -576,6 +576,7 @@ dependencies = [
  "num-bigint",
  "redis 0.25.4",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "serde_qs",
