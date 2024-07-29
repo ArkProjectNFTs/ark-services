@@ -140,31 +140,86 @@ impl DatabaseAccess for PgPool {
             total_rows_affected += rows_affected;
         }
 
-        let query = "
-            UPDATE token
-            SET
-                listing_start_amount = null,
-                listing_end_amount = null,
-                listing_start_date = null,
-                listing_end_date = null,
-                listing_currency_address = null,
-                listing_orderhash = null,
-                listing_timestamp = null,
-                listing_currency_chain_id = null,
-                listing_broker_id = null,
-                last_price = null,
-                top_bid_amount = NULL,
-                top_bid_order_hash = NULL,
-                top_bid_start_date = NULL,
-                top_bid_end_date = NULL,
-                top_bid_currency_address = NULL,
-                top_bid_broker_id = NULL,
-                has_bid = false,
-                buy_in_progress = false,
-                held_timestamp = null
-            ";
+        let batch_size = 500;
+        let mut offset = 0;
 
-        sqlx::query(query).execute(self).await?;
+        loop {
+            let select_query = format!(
+                "
+                SELECT token_id, contract_address, chain_id
+                FROM token
+                WHERE listing_start_amount IS NOT NULL
+                   OR listing_end_amount IS NOT NULL
+                   OR listing_start_date IS NOT NULL
+                   OR listing_end_date IS NOT NULL
+                   OR listing_currency_address IS NOT NULL
+                   OR listing_orderhash IS NOT NULL
+                   OR listing_timestamp IS NOT NULL
+                   OR listing_currency_chain_id IS NOT NULL
+                   OR listing_broker_id IS NOT NULL
+                   OR last_price IS NOT NULL
+                   OR top_bid_amount IS NOT NULL
+                   OR top_bid_order_hash IS NOT NULL
+                   OR top_bid_start_date IS NOT NULL
+                   OR top_bid_end_date IS NOT NULL
+                   OR top_bid_currency_address IS NOT NULL
+                   OR top_bid_broker_id IS NOT NULL
+                   OR has_bid IS NOT FALSE
+                   OR buy_in_progress IS NOT FALSE
+                   OR held_timestamp IS NOT NULL
+                LIMIT {} OFFSET {}
+                ", batch_size, offset
+            );
+
+            let tokens_array: [(String, String, String); 500] = sqlx::query_as(&select_query)
+                .fetch_all(self)
+                .await?
+                .try_into()
+                .expect("Expected exactly 500 tokens");
+
+            if tokens_array.is_empty() {
+                break;
+            }
+
+            for (token_id, contract_address, chain_id) in tokens_array.iter() {
+                let update_query = "
+                    UPDATE token
+                    SET
+                        listing_start_amount = null,
+                        listing_end_amount = null,
+                        listing_start_date = null,
+                        listing_end_date = null,
+                        listing_currency_address = null,
+                        listing_orderhash = null,
+                        listing_timestamp = null,
+                        listing_currency_chain_id = null,
+                        listing_broker_id = null,
+                        last_price = null,
+                        top_bid_amount = NULL,
+                        top_bid_order_hash = NULL,
+                        top_bid_start_date = NULL,
+                        top_bid_end_date = NULL,
+                        top_bid_currency_address = NULL,
+                        top_bid_broker_id = NULL,
+                        has_bid = false,
+                        buy_in_progress = false,
+                        held_timestamp = null
+                    WHERE
+                        contract_address = $1
+                        AND chain_id = $2
+                        AND token_id = $3
+                ";
+
+                sqlx::query(update_query)
+                    .bind(contract_address)
+                    .bind(chain_id)
+                    .bind(token_id)
+                    .execute(self)
+                    .await?;
+            }
+
+            offset += batch_size;
+        }
 
         Ok(total_rows_affected)
     }
