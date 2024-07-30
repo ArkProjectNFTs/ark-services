@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::models::collection::{
     CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
-    CollectionSearchData,
+    CollectionSearchData, OwnerData,
 };
 use crate::models::token::{
     TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -38,8 +38,7 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     query_search: &str,
     items: i64,
-) -> Result<Vec<CollectionSearchData>, sqlx::Error> {
-
+) -> Result<(Vec<CollectionSearchData>, Vec<OwnerData>), sqlx::Error> {
     let mut cleaned_query_search = query_search.to_string();
     // Check if query_search is a starknet.id and get the associated address
     if cleaned_query_search.ends_with(".stark") {
