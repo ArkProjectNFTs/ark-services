@@ -1072,6 +1072,8 @@ impl DatabaseAccess for PgPool {
             "
                 FROM token_event_with_previous as te
                 LEFT JOIN token_offer ON te.order_hash = token_offer.order_hash
+                LEFT JOIN token ON te.token_id = token.token_id and te.contract_address = token.contract_address and te.chain_id = token.chain_id
+                LEFT JOIN contract ON te.contract_address = contract.contract_address and te.chain_id = contract.chain_id
                 WHERE te.contract_address = $1
                     AND te.chain_id = $2
                     AND te.token_id = $3
@@ -1146,6 +1148,9 @@ impl DatabaseAccess for PgPool {
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
                 te.new_event_type AS activity_type,
+                token.metadata,
+                contract.contract_name as collection_name,
+                contract.is_verified as collection_is_verified,
                 {price_select},
                 {from_select},
                 {to_select}
