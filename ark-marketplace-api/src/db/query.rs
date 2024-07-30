@@ -39,7 +39,6 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     query_search: &str,
     items: i64,
 ) -> Result<(Vec<CollectionSearchData>, Vec<OwnerData>), sqlx::Error> {
-
     let mut cleaned_query_search = query_search.to_string();
     // Check if query_search is a starknet.id and get the associated address
     if cleaned_query_search.ends_with(".stark") {

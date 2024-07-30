@@ -168,7 +168,8 @@ impl DatabaseAccess for PgPool {
                    OR buy_in_progress IS NOT FALSE
                    OR held_timestamp IS NOT NULL
                 LIMIT {} OFFSET {}
-                ", batch_size, offset
+                ",
+                batch_size, offset
             );
 
             let tokens_array: [(String, String, String); 500] = sqlx::query_as(&select_query)
@@ -260,9 +261,10 @@ impl DatabaseAccess for PgPool {
                     cleaned, cleaned, items
                 );
 
-                collections = sqlx::query_as::<sqlx::Postgres, CollectionSearchData>(&collection_query)
-                    .fetch_all(self)
-                    .await?;
+                collections =
+                    sqlx::query_as::<sqlx::Postgres, CollectionSearchData>(&collection_query)
+                        .fetch_all(self)
+                        .await?;
             }
         }
 
