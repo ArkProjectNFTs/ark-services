@@ -61,3 +61,10 @@ pub struct CollectionActivityData {
     pub name: Option<String>,
     pub is_verified: Option<bool>,
 }
+
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct OwnerData {
+    owner: String,
+    chain_id: String,
+}

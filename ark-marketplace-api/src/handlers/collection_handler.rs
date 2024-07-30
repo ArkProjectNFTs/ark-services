@@ -171,9 +171,12 @@ pub async fn search_collections<D: DatabaseAccess + Sync>(
 
     match search_collections_data(db_access, query_search.unwrap_or(""), items).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-        Ok(collection_data) => HttpResponse::Ok().json(json!({
-            "data": collection_data
-        })),
+        Ok((collection_data, owner_data)) => HttpResponse::Ok().json(json!({
+            "data": {
+                "collections": collection_data,
+                "accounts": owner_data
+            }
+            })),
         Err(err) => {
             tracing::error!("error query search_collections_data: {}", err);
             HttpResponse::InternalServerError().finish()

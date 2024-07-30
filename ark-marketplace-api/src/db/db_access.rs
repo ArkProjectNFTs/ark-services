@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use crate::models::collection::{
     CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
-    CollectionSearchData,
+    CollectionSearchData, OwnerData,
 };
 use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -80,7 +80,7 @@ pub trait DatabaseAccess: Send + Sync {
         &self,
         query_search: Option<&str>,
         items: i64,
-    ) -> Result<Vec<CollectionSearchData>, Error>;
+    ) -> Result<(Vec<CollectionSearchData>, Vec<OwnerData>), Error>;
 
     async fn get_portfolio_collections_data(
         &self,
@@ -228,64 +228,45 @@ impl DatabaseAccess for PgPool {
         &self,
         query_search: Option<&str>,
         items: i64,
-    ) -> Result<Vec<CollectionSearchData>, Error> {
+    ) -> Result<(Vec<CollectionSearchData>, Vec<OwnerData>), Error> {
+        let mut collections = Vec::new();
+        let mut accounts = Vec::new();
 
-        let where_clause = if let Some(ref cleaned) = query_search {
+        if let Some(ref cleaned) = query_search {
             if !cleaned.is_empty() {
-                let owner_param = format!("0x0{}", cleaned);
-                let query = "SELECT DISTINCT contract_address FROM token WHERE current_owner = $1";
-                let contract_addresses: Vec<String> = sqlx::query_scalar(query)
-                    .bind(owner_param)
+                eprintln!("Searching for {}", cleaned);
+                // Search for owner matching the query
+                let account_query = "SELECT distinct token.chain_id, current_owner as owner FROM token WHERE current_owner = $1 OR current_owner = $2";
+                accounts = sqlx::query_as::<_, OwnerData>(account_query)
+                    .bind(format!("0x0{}", cleaned))
+                    .bind(format!("0x00{}", cleaned))
                     .fetch_all(self)
                     .await?;
-                let in_clause = if !contract_addresses.is_empty() {
-                    let addresses = contract_addresses.iter()
-                        .map(|addr| format!("'{}'", addr))
-                        .collect::<Vec<_>>()
-                        .join(", ");
-                    format!(" OR contract.contract_address IN ({})", addresses)
-                } else {
-                    String::new()
-                };
-                format!(
-                    " AND (contract.contract_name ILIKE '%{}%' OR contract.contract_address ILIKE '%{}%' {})",
-                    cleaned, cleaned, in_clause
-                )
-            } else {
-                String::new()
-            }
-        } else {
-            String::new()
-        };
-        let sql_query = format!(
-            "SELECT
-                 contract.contract_address as address,
-                 contract_image AS image,
-                 contract_name AS name,
-                 token_count AS token_count,
-                 is_verified AS is_verified
-             FROM
-                 contract
-             WHERE contract_name != ''
-                {}
-             ORDER BY token_count desc, is_verified desc, contract_name
-             LIMIT {}
-             ",
-            { where_clause },
-            items
-        );
 
-        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionSearchData>(&sql_query)
-            .fetch_all(self)
-            .await;
+                // Search for collections matching the query
+                let collection_query = format!(
+                    "SELECT
+                         contract.contract_address as address,
+                         contract_image AS image,
+                         contract_name AS name,
+                         token_count AS token_count,
+                         is_verified AS is_verified
+                     FROM
+                         contract
+                     WHERE contract_name ILIKE '%{}%' OR contract.contract_address ILIKE '%{}%'
+                     ORDER BY token_count desc, is_verified desc, contract_name
+                     LIMIT {}
+                     ",
+                    cleaned, cleaned, items
+                );
 
-        match collection_data {
-            Ok(data) => Ok(data),
-            Err(e) => {
-                tracing::error!("Database query failed: {}", e);
-                Err(e)
+                collections = sqlx::query_as::<sqlx::Postgres, CollectionSearchData>(&collection_query)
+                    .fetch_all(self)
+                    .await?;
             }
         }
+
+        Ok((collections, accounts))
     }
 
     async fn get_collections_data(
