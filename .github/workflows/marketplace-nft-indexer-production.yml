@@ -32,7 +32,7 @@ jobs:
         uses: ./.github/actions/discord-notification
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message: "Deploying `ark-indexer-marketplace` on Production environment..."
+          message: "Deploying NFT Indexer Marketplace on Production environment..."
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
@@ -136,7 +136,7 @@ jobs:
           ssh-private-key: ${{ secrets.STARKNET_NODE_MAINNET_SSH_KEY }}
 
       - name: Build ark-indexer-marketplace
-        run: cargo build --release -p ark-indexer-marketplace
+        run: cargo build -p ark-indexer-marketplace --profile release-lto
 
       - name: Apply Marketplace SQL Migrations
         uses: ./.github/actions/marketplace-sql-migrations
