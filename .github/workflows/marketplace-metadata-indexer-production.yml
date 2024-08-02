@@ -136,7 +136,7 @@ jobs:
             ${{ runner.os }}-target-
 
       - name: Build ark-indexer-marketplace
-        run: cargo build --release -p ark-indexer-marketplace
+        run: cargo build --profile release-lto -p ark-indexer-marketplace
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
