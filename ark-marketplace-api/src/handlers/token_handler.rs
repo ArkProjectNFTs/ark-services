@@ -290,6 +290,27 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     }))
 }
 
+pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
+    req: HttpRequest,
+    path: web::Path<(String, String, String)>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let (contract_address, chain_id, token_id) = path.into_inner();
+    let normalized_address = normalize_address(&contract_address);
+    let db_access = db_pool.get_ref();
+
+    match get_token_data(db_access, &normalized_address, &chain_id, &token_id).await {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok(token_data) => HttpResponse::Ok().json(json!({
+            "data": token_data,
+        })),
+        Err(err) => {
+            tracing::error!("error query get_tokens_data: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
 pub async fn get_token_trait_filters<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
     es_data: web::Data<HashMap<String, String>>,

@@ -248,6 +248,12 @@ impl Serialize for TokenEventType {
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct TokenMetadataInfo {
+    pub metadata_status: String,
+    pub metadata_updated_at: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct TokenActivityData {
     pub activity_type: TokenEventType,
     pub price: Option<BigDecimal>,
