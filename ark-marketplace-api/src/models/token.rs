@@ -5,13 +5,33 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
-#[derive(Serialize, Deserialize, FromRow, Clone)]
+/// DEV-690: Expected format for Token Data
+/// {
+///  "data": [
+///    {
+///      "collection_address": "0x032d99485b22f2e58c8a0206d3b3bb259997ff0db70cffd25585d7dd9a5b0546",
+///      "collection_name": "ARKTEST",
+///      "floor_difference": 0,
+///      "last_price": "1700000000000000",
+///      "listed_at": 1721332538,
+///      "is_listed": true,
+///      "listing": {
+///        is_auction: false,
+///      },
+#[derive(Serialize, Deserialize, Clone)]
+pub struct TokenDataListing {
+    pub is_auction: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct TokenData {
     pub collection_address: Option<String>,
     pub token_id: Option<String>,
     pub last_price: Option<BigDecimal>,
     pub floor_difference: Option<i32>,
     pub listed_at: Option<i64>,
+    pub is_listed: Option<bool>,
+    pub listing: Option<TokenDataListing>,
     pub price: Option<BigDecimal>,
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,

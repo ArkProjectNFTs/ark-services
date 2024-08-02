@@ -1,3 +1,5 @@
+/// required to use map on stream
+use futures_util::TryStreamExt;
 use std::time::SystemTime;
 
 use crate::models::collection::{
@@ -5,19 +7,37 @@ use crate::models::collection::{
     CollectionSearchData, OwnerData,
 };
 use crate::models::token::{
-    Listing, TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
-    TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
+    Listing, TokenActivityData, TokenData, TokenDataListing, TokenEventType, TokenInformationData,
+    TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
+use bigdecimal::BigDecimal;
+use serde_json::Value as JsonValue;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
 
+const LISTING_TYPE_AUCTION_STR: &str = "Auction";
+
 #[derive(FromRow)]
 struct Count {
     total: i64,
+}
+
+#[derive(FromRow)]
+struct TokenDataDB {
+    pub collection_address: Option<String>,
+    pub token_id: Option<String>,
+    pub last_price: Option<BigDecimal>,
+    pub floor_difference: Option<i32>,
+    pub listed_at: Option<i64>,
+    pub is_listed: Option<bool>,
+    pub listing_type: Option<String>,
+    pub price: Option<BigDecimal>,
+    pub metadata: Option<JsonValue>,
+    pub owner: Option<String>,
 }
 
 #[async_trait]
@@ -807,6 +827,8 @@ impl DatabaseAccess for PgPool {
                    hex_to_decimal(token.last_price) as last_price,
                    CAST(0 as INTEGER) as floor_difference,
                    token.listing_timestamp as listed_at,
+                   (token.listing_start_amount IS NOT NULL) as is_listed,
+                   token.listing_type as listing_type,
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata,
                    current_owner as owner
@@ -819,19 +841,38 @@ impl DatabaseAccess for PgPool {
             order_by
         );
 
-        let tokens_data: Vec<TokenData> = sqlx::query_as(&tokens_data_query)
+        let query = sqlx::query_as(&tokens_data_query)
             .bind(contract_address)
             .bind(chain_id)
             .bind(buy_now)
             .bind(items_per_page)
-            .bind((page - 1) * items_per_page)
-            .fetch_all(self)
+            .bind((page - 1) * items_per_page);
+
+        let tokens_data: Vec<TokenData> = query
+            .fetch(self)
+            .map_ok(|token: TokenDataDB| TokenData {
+                collection_address: token.collection_address,
+                token_id: token.token_id,
+                last_price: token.last_price,
+                floor_difference: token.floor_difference,
+                listed_at: token.listed_at,
+                is_listed: token.is_listed,
+                listing: token
+                    .listing_type
+                    .as_ref()
+                    .map(|listing_type| TokenDataListing {
+                        is_auction: Some(listing_type == LISTING_TYPE_AUCTION_STR),
+                    }),
+                metadata: token.metadata,
+                price: token.price,
+                owner: token.owner,
+            })
+            .try_collect()
             .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
-
         Ok((tokens_data, has_next_page, token_count))
     }
 
