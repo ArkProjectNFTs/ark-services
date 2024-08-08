@@ -1,10 +1,10 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::utils::http_utils::get_address_from_starknet_id;
+use crate::utils::http_utils::{get_address_from_starknet_id, get_starknet_id_from_address, get_image_from_starknet_address};
 use regex::Regex;
 
 use crate::models::collection::{
     CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
-    CollectionSearchData, OwnerData,
+    CollectionSearchData, OwnerDataCompleted,
 };
 use crate::models::token::{
     TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -38,21 +38,49 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     db_access: &D,
     query_search: &str,
     items: i64,
-) -> Result<(Vec<CollectionSearchData>, Vec<OwnerData>), sqlx::Error> {
+) -> Result<(Vec<CollectionSearchData>, Vec<OwnerDataCompleted>), sqlx::Error> {
     let mut cleaned_query_search = query_search.to_string();
+    let mut starknet_id = String::new();
+    let mut starknet_address = String::new();
+    let mut starknet_image: Option<String> = None;
     // Check if query_search is a starknet.id and get the associated address
     if cleaned_query_search.ends_with(".stark") {
+        starknet_id = cleaned_query_search.clone();
         if let Ok(Some(address)) = get_address_from_starknet_id(query_search).await {
-            cleaned_query_search = address;
+            cleaned_query_search = address.clone();
+            starknet_address = address;
         }
+    } else {
+        starknet_address = cleaned_query_search.clone();
+        if let Ok(Some(stark_id)) = get_starknet_id_from_address(query_search).await {
+            starknet_id = stark_id;
+        }
+    }
+
+    println!(" _________DEBUG {:?}", &starknet_address);
+
+    // get the image if multiple take the first one
+    if let Ok(Some(image)) = get_image_from_starknet_address(&starknet_address).await {
+        starknet_image = Some(image);
     }
 
     let re = Regex::new(r"^0x0*").unwrap();
     cleaned_query_search = re.replace(&cleaned_query_search, "").to_string();
 
-    db_access
+    let (collections, accounts) = db_access
         .search_collections_data(Some(&cleaned_query_search), items)
-        .await
+        .await?;
+
+    let completed_accounts = accounts.into_iter().map(|account| {
+        OwnerDataCompleted {
+            owner: account.owner,
+            chain_id: account.chain_id,
+            starknet_id: starknet_id.to_string(),
+            image: starknet_image.clone()
+        }
+    }).collect();
+
+    Ok((collections, completed_accounts))
 }
 
 pub async fn get_collection_data<D: DatabaseAccess + Sync>(
