@@ -917,6 +917,28 @@ impl OrderProvider {
         Ok(exists != 0)
     }
 
+    async fn handle_broker_foreign_key_violation(
+        client: &SqlxCtxPg,
+        broker_id: &str,
+        chain_id: &str,
+    ) -> Result<(), ProviderError> {
+        let insert_broker_query = "
+            INSERT INTO broker (id, contract_address, chain_id, name)
+            VALUES ($1, $1, $2, $3)
+            ON CONFLICT DO NOTHING;
+        ";
+
+        sqlx::query(insert_broker_query)
+            .bind(broker_id)
+            .bind(chain_id)
+            .bind("Inserted by indexer")
+            .execute(&client.pool)
+            .await?;
+
+        Ok(())
+    }
+
+
     async fn insert_offers(
         client: &SqlxCtxPg,
         offer_data: &OfferData,
@@ -964,21 +986,46 @@ impl OrderProvider {
                     SET top_bid_amount = $4, top_bid_start_date = $5, top_bid_end_date = $6, top_bid_currency_address = $7, top_bid_order_hash = $8, has_bid = true, top_bid_broker_id = $9
                     WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
                 ";
-                let result = sqlx::query(update_query)
+
+                let update_query_binded = sqlx::query(update_query)
                     .bind(&offer_data.contract_address)
                     .bind(&offer_data.token_id)
                     .bind(&offer_data.chain_id)
-                    .bind(offer_amount)
+                    .bind(offer_amount.clone())
                     .bind(offer_data.start_date)
                     .bind(offer_data.end_date)
                     .bind(&offer_data.currency_address)
                     .bind(&offer_data.order_hash)
-                    .bind(&offer_data.broker_id)
+                    .bind(&offer_data.broker_id);
+
+                let result = update_query_binded
                     .execute(&client.pool)
                     .await;
 
                 match result {
                     Ok(_) => trace!("Update query executed successfully."),
+                    Err(sqlx::Error::Database(ref e)) if e.code() == Some(std::borrow::Cow::Borrowed("23503")) && e.message().contains("token_top_bid_broker_id_fkey") => {
+                        // Handle Foreign Key violation for broker_id
+                        Self::handle_broker_foreign_key_violation(&client, &offer_data.broker_id, &offer_data.chain_id).await?;
+
+                        let retry_result = sqlx::query(update_query)
+                            .bind(&offer_data.contract_address)
+                            .bind(&offer_data.token_id)
+                            .bind(&offer_data.chain_id)
+                            .bind(offer_amount.clone())
+                            .bind(offer_data.start_date)
+                            .bind(offer_data.end_date)
+                            .bind(&offer_data.currency_address)
+                            .bind(&offer_data.order_hash)
+                            .bind(&offer_data.broker_id)
+                            .execute(&client.pool)
+                            .await;
+
+                        match retry_result {
+                            Ok(_) => trace!("Update query executed successfully after inserting broker."),
+                            Err(e) => error!("Error executing update query after inserting broker: {:?}", e),
+                        }
+                    },
                     Err(e) => error!("Error executing update query: {:?}", e),
                 }
             }
@@ -1143,7 +1190,7 @@ impl OrderProvider {
                 listing_type = EXCLUDED.listing_type;
             ";
 
-            sqlx::query(upsert_query)
+            let upsert_query_binded = sqlx::query(upsert_query)
                 .bind(contract_address.clone())
                 .bind(token_id.clone())
                 .bind(data.token_chain_id.clone())
@@ -1163,9 +1210,48 @@ impl OrderProvider {
                 .bind(data.currency_chain_id.clone())
                 .bind(block_timestamp as i64)
                 .bind(OrderStatus::Placed.to_string())
-                .bind(event_type.to_string())
-                .execute(&client.pool)
-                .await?;
+                .bind(event_type.to_string());
+
+            let result = upsert_query_binded.execute(&client.pool).await;
+
+            // check if the broker is missing
+            let _ = match result {
+                Ok(_) => Ok(()),
+                Err(sqlx::Error::Database(ref e)) if e.code() == Some(std::borrow::Cow::Borrowed("23503")) && e.message().contains("token_listing_broker_id_fkey") => {
+                    // Handle Foreign Key violation for broker_id
+                    Self::handle_broker_foreign_key_violation(&client, &data.broker_id, &data.token_chain_id).await?;
+
+                    // Retry the upsert operation
+                    sqlx::query(upsert_query)
+                        .bind(contract_address.clone())
+                        .bind(token_id.clone())
+                        .bind(data.token_chain_id.clone())
+                        .bind(data.token_id.clone())
+                        .bind(block_timestamp as i64)
+                        .bind(block_timestamp as i64)
+                        .bind(block_timestamp as i64)
+                        .bind(data.offerer.clone())
+                        .bind(data.quantity.clone())
+                        .bind(data.start_amount.clone())
+                        .bind(data.end_amount.clone())
+                        .bind(data.start_date as i64)
+                        .bind(data.end_date as i64)
+                        .bind(data.broker_id.clone())
+                        .bind(data.order_hash.clone())
+                        .bind(data.currency_address.clone())
+                        .bind(data.currency_chain_id.clone())
+                        .bind(block_timestamp as i64)
+                        .bind(OrderStatus::Placed.to_string())
+                        .bind(event_type.to_string())
+                        .execute(&client.pool).await;
+
+                    Ok(())
+                },
+                Err(e) => {
+                    error!("Error executing update query because of broker : {:?}", e);
+                    Err(ProviderError::from(e))
+                }
+            };
 
             // update the floor :
             let current_floor_query = "
