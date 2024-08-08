@@ -370,7 +370,7 @@ impl DatabaseAccess for PgPool {
             .fetch_all(self)
             .await
             .unwrap_or_else(|err| {
-                eprintln!("Query error : {}", err);
+                println!("Query error : {}", err);
                 std::process::exit(1);
             });
 

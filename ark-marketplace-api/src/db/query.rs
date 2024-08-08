@@ -1,5 +1,7 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::utils::http_utils::{get_address_from_starknet_id, get_starknet_id_from_address, get_image_from_starknet_address};
+use crate::utils::http_utils::{
+    get_address_from_starknet_id, get_image_from_starknet_address, get_starknet_id_from_address,
+};
 use regex::Regex;
 
 use crate::models::collection::{
@@ -57,8 +59,6 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
         }
     }
 
-    println!(" _________DEBUG {:?}", &starknet_address);
-
     // get the image if multiple take the first one
     if let Ok(Some(image)) = get_image_from_starknet_address(&starknet_address).await {
         starknet_image = Some(image);
@@ -71,14 +71,15 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
         .search_collections_data(Some(&cleaned_query_search), items)
         .await?;
 
-    let completed_accounts = accounts.into_iter().map(|account| {
-        OwnerDataCompleted {
+    let completed_accounts = accounts
+        .into_iter()
+        .map(|account| OwnerDataCompleted {
             owner: account.owner,
             chain_id: account.chain_id,
             starknet_id: starknet_id.to_string(),
-            image: starknet_image.clone()
-        }
-    }).collect();
+            image: starknet_image.clone(),
+        })
+        .collect();
 
     Ok((collections, completed_accounts))
 }
