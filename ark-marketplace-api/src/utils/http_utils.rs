@@ -65,3 +65,54 @@ pub async fn get_address_from_starknet_id(
     }
     Ok(None)
 }
+
+/**
+ * Get the Starknet ID from the address.
+ *
+ * # Arguments
+ *
+ * * `address` - address.
+ *
+ * # Returns
+ *
+ * * The Starknet ID if it exists.
+ */
+pub async fn get_starknet_id_from_address(address: &str) -> Result<Option<String>, reqwest::Error> {
+    let url = format!("https://api.Starknet.id/addr_to_domain?addr={}", address);
+    let response = reqwest::get(&url).await?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await?;
+        if let Some(address) = json["domain"].as_str() {
+            return Ok(Some(address.to_string()));
+        }
+    }
+    Ok(None)
+}
+
+/**
+ * The API will return all the Starknet IDs owned by the address.
+ *
+ * # Arguments
+ *
+ * * `address` - address.
+ *
+ * # Returns
+ *
+ */
+pub async fn get_image_from_starknet_address(
+    address: &str,
+) -> Result<Option<String>, reqwest::Error> {
+    let url = format!("https://api.Starknet.id/addr_to_full_ids?addr={}", address);
+    let response = reqwest::get(&url).await?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await?;
+        if let Some(full_ids) = json["full_ids"].as_array() {
+            if let Some(first_id) = full_ids.get(0) {
+                if let Some(pp_url) = first_id["pp_url"].as_str() {
+                    return Ok(Some(pp_url.to_string()));
+                }
+            }
+        }
+    }
+    Ok(None)
+}

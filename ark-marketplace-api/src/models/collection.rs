@@ -64,6 +64,14 @@ pub struct CollectionActivityData {
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]
 pub struct OwnerData {
-    owner: String,
-    chain_id: String,
+    pub owner: String,
+    pub chain_id: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct OwnerDataCompleted {
+    pub owner: String,
+    pub chain_id: String,
+    pub starknet_id: String,
+    pub image: Option<String>,
 }

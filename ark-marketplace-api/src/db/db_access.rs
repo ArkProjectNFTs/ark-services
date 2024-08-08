@@ -255,7 +255,6 @@ impl DatabaseAccess for PgPool {
 
         if let Some(ref cleaned) = query_search {
             if !cleaned.is_empty() {
-                eprintln!("Searching for {}", cleaned);
                 // Search for owner matching the query
                 let account_query = "SELECT distinct token.chain_id, current_owner as owner FROM token WHERE current_owner = $1 OR current_owner = $2";
                 accounts = sqlx::query_as::<_, OwnerData>(account_query)
@@ -371,7 +370,7 @@ impl DatabaseAccess for PgPool {
             .fetch_all(self)
             .await
             .unwrap_or_else(|err| {
-                eprintln!("Query error : {}", err);
+                println!("Query error : {}", err);
                 std::process::exit(1);
             });
 
