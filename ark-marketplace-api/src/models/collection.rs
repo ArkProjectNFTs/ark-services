@@ -73,6 +73,6 @@ pub struct OwnerData {
 pub struct OwnerDataCompleted {
     pub owner: String,
     pub chain_id: String,
-    pub starknet_id: String,
+    pub starknet_id: Option<String>,
     pub image: Option<String>,
 }

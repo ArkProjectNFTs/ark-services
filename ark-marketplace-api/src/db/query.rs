@@ -42,12 +42,12 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     items: i64,
 ) -> Result<(Vec<CollectionSearchData>, Vec<OwnerDataCompleted>), sqlx::Error> {
     let mut cleaned_query_search = query_search.to_string();
-    let mut starknet_id = String::new();
+    let mut starknet_id: Option<String> = None;
     let mut starknet_address = String::new();
     let mut starknet_image: Option<String> = None;
     // Check if query_search is a starknet.id and get the associated address
     if cleaned_query_search.ends_with(".stark") {
-        starknet_id = cleaned_query_search.clone();
+        starknet_id = Some(cleaned_query_search.clone());
         if let Ok(Some(address)) = get_address_from_starknet_id(query_search).await {
             cleaned_query_search = address.clone();
             starknet_address = address;
@@ -55,7 +55,7 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
     } else {
         starknet_address = cleaned_query_search.clone();
         if let Ok(Some(stark_id)) = get_starknet_id_from_address(query_search).await {
-            starknet_id = stark_id;
+            starknet_id = Some(stark_id);
         }
     }
 
@@ -76,7 +76,7 @@ pub async fn search_collections_data<D: DatabaseAccess + Sync>(
         .map(|account| OwnerDataCompleted {
             owner: account.owner,
             chain_id: account.chain_id,
-            starknet_id: starknet_id.to_string(),
+            starknet_id: starknet_id.clone(),
             image: starknet_image.clone(),
         })
         .collect();

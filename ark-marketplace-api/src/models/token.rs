@@ -256,6 +256,7 @@ pub struct TokenActivityData {
     pub metadata: Option<JsonValue>,
     pub collection_name: Option<String>,
     pub collection_is_verified: Option<bool>,
+    pub collection_address: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]

@@ -169,7 +169,13 @@ pub async fn search_collections<D: DatabaseAccess + Sync>(
     let db_access = db_pool.get_ref();
     let items = query_parameters.limit.unwrap_or(8);
 
-    match search_collections_data(db_access, query_search.unwrap_or(""), items).await {
+    match search_collections_data(
+        db_access,
+        query_search.unwrap_or("").to_lowercase().as_str(),
+        items,
+    )
+    .await
+    {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok((collection_data, owner_data)) => HttpResponse::Ok().json(json!({
         "data": {
