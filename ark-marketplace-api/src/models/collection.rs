@@ -21,6 +21,7 @@ pub struct CollectionData {
     pub total_volume: Option<i64>,
     pub total_sales: Option<i64>,
     pub floor_7d_percentage: Option<BigDecimal>,
+    pub is_verified: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
