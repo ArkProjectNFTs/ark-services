@@ -1007,7 +1007,7 @@ impl OrderProvider {
                     {
                         // Handle Foreign Key violation for broker_id
                         Self::handle_broker_foreign_key_violation(
-                            &client,
+                            client,
                             &offer_data.broker_id,
                             &offer_data.chain_id,
                         )
@@ -1233,14 +1233,14 @@ impl OrderProvider {
                 {
                     // Handle Foreign Key violation for broker_id
                     Self::handle_broker_foreign_key_violation(
-                        &client,
+                        client,
                         &data.broker_id,
                         &data.token_chain_id,
                     )
                     .await?;
 
                     // Retry the upsert operation
-                    sqlx::query(upsert_query)
+                    let _ = sqlx::query(upsert_query)
                         .bind(contract_address.clone())
                         .bind(token_id.clone())
                         .bind(data.token_chain_id.clone())
