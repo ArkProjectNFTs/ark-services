@@ -352,7 +352,8 @@ impl DatabaseAccess for PgPool {
                     token_count,
                     owner_count,
                     total_volume
-                    total_sales
+                    total_sales,
+                    is_verified
                     FROM
                      contract
                      INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id
@@ -466,7 +467,8 @@ impl DatabaseAccess for PgPool {
                  owner_count,
                  total_volume,
                  total_sales,
-                 floor_7d_percentage
+                 floor_7d_percentage,
+                 is_verified
              FROM contract
              WHERE contract.contract_address = $1
              AND contract.chain_id = $2
