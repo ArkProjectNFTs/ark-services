@@ -104,11 +104,13 @@ pub async fn get_image_from_starknet_address(
 ) -> Result<Option<String>, reqwest::Error> {
     let url = format!("https://api.Starknet.id/addr_to_full_ids?addr={}", address);
     let response = reqwest::get(&url).await?;
+
     if response.status().is_success() {
         let json: serde_json::Value = response.json().await?;
+
         if let Some(full_ids) = json["full_ids"].as_array() {
-            if let Some(first_id) = full_ids.first() {
-                if let Some(pp_url) = first_id["pp_url"].as_str() {
+            for full_id in full_ids {
+                if let Some(pp_url) = full_id["pp_url"].as_str() {
                     return Ok(Some(pp_url.to_string()));
                 }
             }
