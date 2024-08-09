@@ -1197,6 +1197,7 @@ impl DatabaseAccess for PgPool {
                 token.metadata,
                 contract.contract_name as collection_name,
                 contract.is_verified as collection_is_verified,
+                contract.contract_address as collection_address,
                 {price_select},
                 {from_select},
                 {to_select}
