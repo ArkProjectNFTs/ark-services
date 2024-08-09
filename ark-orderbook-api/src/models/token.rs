@@ -122,8 +122,8 @@ pub struct TokenOffer {
     pub offer_timestamp: Option<i64>,
     pub currency_address: Option<String>,
     pub currency_chain_id: Option<String>,
-    pub start_date: i64,
-    pub end_date: i64,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
     pub status: String,
 }
 
