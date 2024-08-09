@@ -883,10 +883,10 @@ impl OrderProvider {
             .bind(&event_data.chain_id)
             .bind(event_data.event_type.to_string())
             .bind(event_data.block_timestamp)
-            .bind(&event_data.from_address.clone().unwrap_or_default())
-            .bind(&event_data.to_address.clone().unwrap_or_default())
-            .bind(&event_data.amount.clone().unwrap_or_default())
-            .bind(&event_data.canceled_reason.clone().unwrap_or_default())
+            .bind(event_data.from_address.clone().unwrap_or_default())
+            .bind(event_data.to_address.clone().unwrap_or_default())
+            .bind(event_data.amount.clone().unwrap_or_default())
+            .bind(event_data.canceled_reason.clone().unwrap_or_default())
             .execute(&client.pool)
             .await?;
 
