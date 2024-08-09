@@ -107,7 +107,7 @@ pub async fn get_image_from_starknet_address(
     if response.status().is_success() {
         let json: serde_json::Value = response.json().await?;
         if let Some(full_ids) = json["full_ids"].as_array() {
-            if let Some(first_id) = full_ids.get(0) {
+            if let Some(first_id) = full_ids.first() {
                 if let Some(pp_url) = first_id["pp_url"].as_str() {
                     return Ok(Some(pp_url.to_string()));
                 }
