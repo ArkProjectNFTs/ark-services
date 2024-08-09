@@ -35,7 +35,6 @@ pub struct TokenData {
     pub price: Option<BigDecimal>,
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,
-    pub currency_address: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -63,7 +62,6 @@ pub struct TokenInformationData {
     pub collection_name: Option<String>,
     pub metadata: Option<JsonValue>,
     pub collection_image: Option<String>,
-    pub currency_address: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
