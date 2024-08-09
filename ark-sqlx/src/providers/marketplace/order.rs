@@ -938,7 +938,6 @@ impl OrderProvider {
         Ok(())
     }
 
-
     async fn insert_offers(
         client: &SqlxCtxPg,
         offer_data: &OfferData,
@@ -998,15 +997,21 @@ impl OrderProvider {
                     .bind(&offer_data.order_hash)
                     .bind(&offer_data.broker_id);
 
-                let result = update_query_binded
-                    .execute(&client.pool)
-                    .await;
+                let result = update_query_binded.execute(&client.pool).await;
 
                 match result {
                     Ok(_) => trace!("Update query executed successfully."),
-                    Err(sqlx::Error::Database(ref e)) if e.code() == Some(std::borrow::Cow::Borrowed("23503")) && e.message().contains("token_top_bid_broker_id_fkey") => {
+                    Err(sqlx::Error::Database(ref e))
+                        if e.code() == Some(std::borrow::Cow::Borrowed("23503"))
+                            && e.message().contains("token_top_bid_broker_id_fkey") =>
+                    {
                         // Handle Foreign Key violation for broker_id
-                        Self::handle_broker_foreign_key_violation(&client, &offer_data.broker_id, &offer_data.chain_id).await?;
+                        Self::handle_broker_foreign_key_violation(
+                            &client,
+                            &offer_data.broker_id,
+                            &offer_data.chain_id,
+                        )
+                        .await?;
 
                         let retry_result = sqlx::query(update_query)
                             .bind(&offer_data.contract_address)
@@ -1022,10 +1027,15 @@ impl OrderProvider {
                             .await;
 
                         match retry_result {
-                            Ok(_) => trace!("Update query executed successfully after inserting broker."),
-                            Err(e) => error!("Error executing update query after inserting broker: {:?}", e),
+                            Ok(_) => {
+                                trace!("Update query executed successfully after inserting broker.")
+                            }
+                            Err(e) => error!(
+                                "Error executing update query after inserting broker: {:?}",
+                                e
+                            ),
                         }
-                    },
+                    }
                     Err(e) => error!("Error executing update query: {:?}", e),
                 }
             }
@@ -1217,9 +1227,17 @@ impl OrderProvider {
             // check if the broker is missing
             let _ = match result {
                 Ok(_) => Ok(()),
-                Err(sqlx::Error::Database(ref e)) if e.code() == Some(std::borrow::Cow::Borrowed("23503")) && e.message().contains("token_listing_broker_id_fkey") => {
+                Err(sqlx::Error::Database(ref e))
+                    if e.code() == Some(std::borrow::Cow::Borrowed("23503"))
+                        && e.message().contains("token_listing_broker_id_fkey") =>
+                {
                     // Handle Foreign Key violation for broker_id
-                    Self::handle_broker_foreign_key_violation(&client, &data.broker_id, &data.token_chain_id).await?;
+                    Self::handle_broker_foreign_key_violation(
+                        &client,
+                        &data.broker_id,
+                        &data.token_chain_id,
+                    )
+                    .await?;
 
                     // Retry the upsert operation
                     sqlx::query(upsert_query)
@@ -1243,10 +1261,11 @@ impl OrderProvider {
                         .bind(block_timestamp as i64)
                         .bind(OrderStatus::Placed.to_string())
                         .bind(event_type.to_string())
-                        .execute(&client.pool).await;
+                        .execute(&client.pool)
+                        .await;
 
                     Ok(())
-                },
+                }
                 Err(e) => {
                     error!("Error executing update query because of broker : {:?}", e);
                     Err(ProviderError::from(e))
