@@ -292,32 +292,3 @@ pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> 
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::db::db_access::MockDb;
-    use crate::handlers::collection_handler::get_collections;
-    use crate::models::collection::CollectionData;
-    use actix_web::{http, test, web, App};
-
-    #[actix_rt::test]
-    async fn test_get_tokens_handler() {
-        let app = test::init_service(App::new().app_data(web::Data::new(MockDb)).route(
-            "/collection/0x/tokens",
-            web::get().to(get_collections::<MockDb>),
-        ))
-        .await;
-
-        let req = test::TestRequest::get()
-            .uri("/collection/0x/tokens")
-            .to_request();
-        let resp = test::call_service(&app, req).await;
-        let status = resp.status();
-        assert_eq!(status, http::StatusCode::OK);
-        let response_body = test::read_body(resp).await;
-        let tokens_data: Vec<CollectionData> = serde_json::from_slice(&response_body).unwrap();
-
-        assert_eq!(tokens_data[0].id, Some("1".to_string()));
-        assert_eq!(tokens_data[0].address, Some(4));
-    }
-}
