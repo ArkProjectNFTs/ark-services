@@ -1,0 +1,18 @@
+Source: co.screenshot.starknet-sequencer-adapter
+Version: 0.1.0
+Section: microservice
+Priority: extra
+Maintainer: ScreeshotLabs <contact@screenshot.co>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+Vcs-Git: git@github.com:arkprojectnfts/ark-services.git
+Vcs-Browser: http://github.com/arkprojectnfts/ark-services.git
+
+Package: co.screenshot.starknet-sequencer-adapter
+Description: A fast indexer that plug to starknet sequencer.
+Build-Depends: debhelper (>= 8.0.0)
+Depends: openssl
+Section: utils
+Priority: extra
+Architecture: any
+Tag: ark::indexer, purpose::cli/daemon/datalake, role::microservice/developer, compatible::x86

@@ -1,0 +1,39 @@
+[package]
+name = "ark-indexer-transactions"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tikv-jemallocator = "0.6.0"
+tokio = { version = "1.40.0", features = ["full"] }
+serde = { version = "1.0.210", features = ["derive"] }
+serde_json = "1.0.128"
+futures = "0.3"
+futures-util = "0.3.30"
+envy = "0.4.2"
+chrono = { version = "0.4.38", features = ["serde"]}
+sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono", "bigdecimal"] }
+anyhow = "1.0.87"
+starknet = "0.11.0"
+async-trait = "0.1.82"
+mockall = "0.13.0"
+tracing = "0.1.40"
+thiserror = "1.0.63"
+num-bigint = "0.4.6"
+num-traits = "0.2.19"
+starknet-crypto = "0.7.1"
+bigdecimal = { version = "0.3", features = ["serde"] }
+config = "0.14.0"
+
+[package.metadata.deb]
+maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
+copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"
+extended-description = """ScreenshotLabs price engine API"""
+depends = "$auto, systemd"
+section = "admin"
+priority = "optional"
+assets = [
+ ["target/release/ark-indexer-transactions", "usr/bin/", "755"],
+ ["debian/ark-indexer-transactions.service", "/lib/systemd/system/ark-indexer-transactions.service", "644"], 
+]
+maintainer-scripts = "debian/scripts"

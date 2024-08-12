@@ -1,0 +1,149 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,\n                t.updated_timestamp, t.current_owner, t.last_price,\n                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,\n                t.broker_id,\n                (\n                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL\n                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date\n                    AND t.status != 'CANCELLED'\n                ) AS is_listed,\n                EXISTS(\n                        SELECT 1\n                        FROM orderbook_token_offers o\n                        WHERE o.token_id = t.token_id\n                        AND o.token_address = t.token_address\n                        AND o.status not in ('CANCELLED', 'FULFILLED', 'EXECUTED')\n                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date\n                    ) AS has_offer,\n                t.currency_chain_id, t.currency_address,\n                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,\n                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,\n                t.status,\n                t.buy_in_progress\n            FROM\n                orderbook_token t\n            LEFT JOIN\n                orderbook_token_history th ON th.token_id = t.token_id AND th.token_address = t.token_address\n            WHERE\n                t.token_address = $1 AND t.token_id = $2\n            GROUP BY\n                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,\n                t.updated_timestamp, t.current_owner, t.last_price,\n                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,\n                t.broker_id,th.event_type, th.event_timestamp\n            ORDER BY\n                th.event_timestamp DESC;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "order_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "token_chain_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "token_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "token_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "listed_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "current_owner",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "last_price",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "quantity",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "start_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "end_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "start_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 12,
+        "name": "end_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "broker_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "is_listed",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 15,
+        "name": "has_offer",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "currency_chain_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 17,
+        "name": "currency_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "top_bid_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 19,
+        "name": "top_bid_order_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 20,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "buy_in_progress",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      null,
+      false,
+      false,
+      null,
+      null,
+      false,
+      true
+    ]
+  },
+  "hash": "388ad9ebe79ec284c8e8be7c6fd5f5bbe62d860030b9f666c9ea7f3e7fd2d6c3"
+}

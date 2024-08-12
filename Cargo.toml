@@ -38,6 +38,8 @@ members = [
   "ark-marketplace-api",
   "ark-marketplace-cron",
   "ark-price-engine",
+  "starknet-sequencer-adapter",
+  "ark-indexer-transactions",
 ]
 resolver = "2"
 
