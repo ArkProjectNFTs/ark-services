@@ -11,8 +11,8 @@ actix-cors = "0.7.0"
 actix-rt = "2.9.0"
 actix-web-httpauth = "0.8.1"
 ark-sqlx.workspace = true
-apistos = { version = "0.1", features = ["extras", "qs_query"] }
-schemars = { package = "apistos-schemars", version = "0.8", features = ["chrono", "uuid1", "url", "rust_decimal"] }
+utoipa = { version = "4", features = ["actix_extras"] }
+utoipa-swagger-ui = { version = "7", features = ["actix-web"] }
 bigdecimal = { version = "0.3", features = ["serde"] }
 env_logger = "0.11.3"
 num-bigint = "0.4.4"

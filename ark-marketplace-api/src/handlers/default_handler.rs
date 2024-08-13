@@ -1,18 +1,45 @@
 use actix_web::{HttpResponse, Responder};
-use actix_web::web::{Json, Path};
-use actix_web::Error;
-use apistos::actix::CreatedJson;
-use apistos::{api_operation, ApiComponent};
-use schemars::JsonSchema;
+use utoipa::ToSchema;
+use serde::Serialize;
+use actix_web::get;
+use utoipa::OpenApi;
 
 
-#[derive(serde::Serialize, JsonSchema)]
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        health_check,
+        root
+    ),
+    components(schemas(HealthCheckResponse))
+)]
+pub(super) struct HealthApi;
+
+#[derive(ToSchema, Serialize)]
 struct HealthCheckResponse {
+    #[schema()]
     status: String,
 }
 
-#[api_operation(summary = "Health Check")]
-async fn health_check() -> Result<CreatedJson<HealthCheckResponse>, Error> {
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Health Check", body = HealthCheckResponse)
+    )
+)]
+#[get("/health")]
+pub async fn health_check() -> impl Responder {
+    HttpResponse::Ok().json(HealthCheckResponse {
+        status: "ok".to_string(),
+    })
+}
+
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Health Check", body = HealthCheckResponse)
+    )
+)]
+#[get("/")]
+pub async fn root() -> impl Responder {
     HttpResponse::Ok().json(HealthCheckResponse {
         status: "ok".to_string(),
     })

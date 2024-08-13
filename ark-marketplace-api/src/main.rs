@@ -13,6 +13,12 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
+use utoipa::OpenApi;
+use utoipa::ToSchema;
+use serde::Serialize;
+
+use utoipa_swagger_ui::{SwaggerUi};
+use ark_marketplace_api::handlers::default_handler;
 
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
@@ -91,10 +97,26 @@ async fn get_write_database_url() -> Result<String> {
     }
 }
 
+#[derive(ToSchema, Serialize)]
+struct HealthCheckResponse {
+    #[schema()]
+    status: String,
+}
+
+#[derive(OpenApi)]
+#[openapi(
+        paths(default_handler::root, default_handler::health_check),
+        components(schemas(HealthCheckResponse))
+    )
+]
+struct ApiDoc;
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     init_logging();
+
+    let openapi = ApiDoc::openapi();
 
     let database_url = get_database_url()
         .await
@@ -156,6 +178,11 @@ async fn main() -> std::io::Result<()> {
             .configure(collection::config)
             .configure(portfolio::config)
             .configure(token::config)
+            .service(default_handler::health_check)
+            .service(default_handler::root)
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+            )
     })
     .bind("0.0.0.0:8080")?
     .run()
