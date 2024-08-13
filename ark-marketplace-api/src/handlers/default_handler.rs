@@ -1,15 +1,6 @@
 use actix_web::{HttpResponse, Responder};
-use utoipa::ToSchema;
-use serde::Serialize;
 use actix_web::get;
-use utoipa::OpenApi;
-
-
-#[derive(ToSchema, Serialize)]
-struct HealthCheckResponse {
-    #[schema()]
-    status: String,
-}
+use crate::types::default::{HealthCheckResponseV1, HealthCheckResponse};
 
 #[utoipa::path(
     responses(
@@ -33,13 +24,6 @@ pub async fn root() -> impl Responder {
     HttpResponse::Ok().json(HealthCheckResponse {
         status: "ok".to_string(),
     })
-}
-
-
-#[derive(ToSchema, Serialize)]
-struct HealthCheckResponseV1 {
-    #[schema()]
-    status_v1: String,
 }
 
 #[utoipa::path(

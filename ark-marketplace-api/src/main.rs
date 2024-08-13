@@ -2,7 +2,7 @@ use actix_cors::Cors;
 use actix_web::middleware::DefaultHeaders;
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
-use ark_marketplace_api::routes::{collection, default, portfolio, token};
+use ark_marketplace_api::routes::{collection, portfolio, token};
 use aws_config::BehaviorVersion;
 use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
@@ -14,8 +14,7 @@ use tokio::sync::Mutex;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
-use utoipa::ToSchema;
-use serde::Serialize;
+use ark_marketplace_api::types::default::{HealthCheckResponseV1, HealthCheckResponse};
 
 use utoipa_swagger_ui::{SwaggerUi, Url};
 use ark_marketplace_api::handlers::default_handler;
@@ -131,8 +130,6 @@ struct ApiDocV1;
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     init_logging();
-
-    let openapi = ApiDoc::openapi();
 
     let database_url = get_database_url()
         .await
