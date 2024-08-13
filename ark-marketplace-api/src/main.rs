@@ -17,7 +17,7 @@ use utoipa::OpenApi;
 use utoipa::ToSchema;
 use serde::Serialize;
 
-use utoipa_swagger_ui::{SwaggerUi};
+use utoipa_swagger_ui::{SwaggerUi, Url};
 use ark_marketplace_api::handlers::default_handler;
 
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
@@ -103,6 +103,13 @@ struct HealthCheckResponse {
     status: String,
 }
 
+
+#[derive(ToSchema, Serialize)]
+struct HealthCheckResponseV1 {
+    #[schema()]
+    status_v1: String,
+}
+
 #[derive(OpenApi)]
 #[openapi(
         paths(default_handler::root, default_handler::health_check),
@@ -110,6 +117,15 @@ struct HealthCheckResponse {
     )
 ]
 struct ApiDoc;
+
+
+#[derive(OpenApi)]
+#[openapi(
+        paths(default_handler::health_check_v1),
+        components(schemas(HealthCheckResponseV1))
+    )
+]
+struct ApiDocV1;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -181,8 +197,19 @@ async fn main() -> std::io::Result<()> {
             .service(default_handler::health_check)
             .service(default_handler::root)
             .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+                web::scope("/v1")
+                    .service(default_handler::health_check_v1),
             )
+            .service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
+                (
+                    Url::new("apiv0", "/api-docs/openapi.json"),
+                    ApiDoc::openapi(),
+                ),
+                (
+                    Url::with_primary("apiv1", "/api-docs/openapi_v1.json", true),
+                    ApiDocV1::openapi(),
+                ),
+            ]))
     })
     .bind("0.0.0.0:8080")?
     .run()

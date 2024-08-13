@@ -5,16 +5,6 @@ use actix_web::get;
 use utoipa::OpenApi;
 
 
-#[derive(OpenApi)]
-#[openapi(
-    paths(
-        health_check,
-        root
-    ),
-    components(schemas(HealthCheckResponse))
-)]
-pub(super) struct HealthApi;
-
 #[derive(ToSchema, Serialize)]
 struct HealthCheckResponse {
     #[schema()]
@@ -42,5 +32,25 @@ pub async fn health_check() -> impl Responder {
 pub async fn root() -> impl Responder {
     HttpResponse::Ok().json(HealthCheckResponse {
         status: "ok".to_string(),
+    })
+}
+
+
+#[derive(ToSchema, Serialize)]
+struct HealthCheckResponseV1 {
+    #[schema()]
+    status_v1: String,
+}
+
+#[utoipa::path(
+    context_path = "/v1",
+    responses(
+        (status = 200, description = "Health Check", body = HealthCheckResponseV1)
+    )
+)]
+#[get("/health")]
+pub async fn health_check_v1() -> impl Responder {
+    HttpResponse::Ok().json(HealthCheckResponseV1 {
+        status_v1: "okV1".to_string(),
     })
 }
