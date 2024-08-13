@@ -1,6 +1,5 @@
-use utoipa::ToSchema;
 use serde::Serialize;
-
+use utoipa::ToSchema;
 
 #[derive(ToSchema, Serialize)]
 pub struct HealthCheckResponseV1 {

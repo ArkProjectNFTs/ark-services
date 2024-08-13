@@ -1,6 +1,6 @@
-use actix_web::{HttpResponse, Responder};
+use crate::types::default::{HealthCheckResponse, HealthCheckResponseV1};
 use actix_web::get;
-use crate::types::default::{HealthCheckResponseV1, HealthCheckResponse};
+use actix_web::{HttpResponse, Responder};
 
 #[utoipa::path(
     responses(

@@ -3,6 +3,7 @@ use actix_web::middleware::DefaultHeaders;
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
 use ark_marketplace_api::routes::{collection, portfolio, token};
+use ark_marketplace_api::types::default::{HealthCheckResponse, HealthCheckResponseV1};
 use aws_config::BehaviorVersion;
 use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
@@ -14,10 +15,9 @@ use tokio::sync::Mutex;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
-use ark_marketplace_api::types::default::{HealthCheckResponseV1, HealthCheckResponse};
 
-use utoipa_swagger_ui::{SwaggerUi, Url};
 use ark_marketplace_api::handlers::default_handler;
+use utoipa_swagger_ui::{SwaggerUi, Url};
 
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
@@ -111,19 +111,16 @@ struct HealthCheckResponseV1 {
 
 #[derive(OpenApi)]
 #[openapi(
-        paths(default_handler::root, default_handler::health_check),
-        components(schemas(HealthCheckResponse))
-    )
-]
+    paths(default_handler::root, default_handler::health_check),
+    components(schemas(HealthCheckResponse))
+)]
 struct ApiDoc;
-
 
 #[derive(OpenApi)]
 #[openapi(
-        paths(default_handler::health_check_v1),
-        components(schemas(HealthCheckResponseV1))
-    )
-]
+    paths(default_handler::health_check_v1),
+    components(schemas(HealthCheckResponseV1))
+)]
 struct ApiDocV1;
 
 #[actix_web::main]
@@ -193,10 +190,7 @@ async fn main() -> std::io::Result<()> {
             .configure(token::config)
             .service(default_handler::health_check)
             .service(default_handler::root)
-            .service(
-                web::scope("/v1")
-                    .service(default_handler::health_check_v1),
-            )
+            .service(web::scope("/v1").service(default_handler::health_check_v1))
             .service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
                 (
                     Url::new("apiv0", "/api-docs/openapi.json"),
