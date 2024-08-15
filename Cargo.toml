@@ -37,6 +37,7 @@ members = [
   "ark-indexer-marketplace",
   "ark-marketplace-api",
   "ark-marketplace-cron",
+  "ark-priceengine",
 ]
 resolver = "2"
 

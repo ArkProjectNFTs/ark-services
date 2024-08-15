@@ -1,0 +1,13 @@
+[Unit]
+AssertPathExists=/usr/bin/ark-priceengine
+
+[Service]
+WorkingDirectory=~
+ExecStart=/usr/bin/ark-priceengine
+Restart=always
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+Alias=ark-priceengine
+WantedBy=default.target
