@@ -1,0 +1,53 @@
+[package]
+name = "ark-priceengine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tikv-jemallocator = "0.6.0"
+tokio = { version = "1", features = ["full"] }
+openssl = "0.10.66"
+openssl-probe = "0.1.5"
+warp = "0.3"
+tokio-tungstenite = { version = "*", features = ["tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures = "0.3"
+futures-util = "0.3.30"
+url = "2.5.2"
+
+[package.metadata.deb]
+maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
+copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"
+extended-description = """ScreenshotLabs price engine API"""
+depends = "$auto, systemd"
+section = "admin"
+priority = "optional"
+assets = [
+ ["target/release/ark-priceengine", "usr/bin/", "755"],
+ ["debian/ark-priceengine.service", "/lib/systemd/system/ark-priceengine.service", "644"], 
+]
+maintainer-scripts = "debian/scripts"
+
+[profile.dev]
+debug = 1
+
+[profile.release]
+debug = 0
+opt-level=3
+lto = true # Link Time Optimization (LTO)
+codegen-units=1 # Set this to 1 to allow for maximum size reduction optimizations:
+panic = 'abort' # removes the need for this extra unwinding code.
+
+[profile.release.package."*"]
+opt-level = 3
+
+[rust]
+debuginfo-level = 1
+
+[target.x86_64-unknown-linux-gnu]
+linker = "/usr/bin/clang"
+rustflags = ["-Clink-arg=-fuse-ld=lld", "-Clink-arg=-Wl,--no-rosegment"]
+
+[net]
+git-fetch-with-cli = true
