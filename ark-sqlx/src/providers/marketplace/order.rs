@@ -1,4 +1,6 @@
 use crate::providers::{ProviderError, SqlxCtxPg};
+use crate::providers::marketplace::types::{TokenEventType, AUCTION_CANCELLED_STR, AUCTION_STR, BURN_STR, CANCELLED_STR, COLLECTION_OFFER_STR, EXECUTED_STR, FULFILL_STR, LISTING_CANCELLED_STR, LISTING_STR, MINT_STR, OFFER_CANCELLED_STR, OFFER_STR, ROLLBACK_STR, SALE_STR, TRANSFER_STR};
+
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
@@ -14,6 +16,59 @@ use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{error, info, trace};
+
+// conversion from Diri string
+impl FromStr for TokenEventType {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            LISTING_STR => Ok(TokenEventType::Listing),
+            AUCTION_STR => Ok(TokenEventType::Auction),
+            OFFER_STR => Ok(TokenEventType::Offer),
+            COLLECTION_OFFER_STR => Ok(TokenEventType::CollectionOffer),
+            FULFILL_STR => Ok(TokenEventType::Fulfill),
+            EXECUTED_STR => Ok(TokenEventType::Executed),
+            CANCELLED_STR => Ok(TokenEventType::Cancelled),
+            SALE_STR => Ok(TokenEventType::Sale),
+            MINT_STR => Ok(TokenEventType::Mint),
+            BURN_STR => Ok(TokenEventType::Burn),
+            TRANSFER_STR => Ok(TokenEventType::Transfer),
+            ROLLBACK_STR => Ok(TokenEventType::Rollback),
+            LISTING_CANCELLED_STR => Ok(TokenEventType::ListingCancelled),
+            AUCTION_CANCELLED_STR => Ok(TokenEventType::AuctionCancelled),
+            OFFER_CANCELLED_STR => Ok(TokenEventType::OfferCancelled),
+            _ => Err("Unknown event type"),
+        }
+    }
+}
+
+
+impl fmt::Display for TokenEventType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                TokenEventType::Listing => LISTING_STR,
+                TokenEventType::Auction => AUCTION_STR,
+                TokenEventType::Offer => OFFER_STR,
+                TokenEventType::CollectionOffer => COLLECTION_OFFER_STR,
+                TokenEventType::Fulfill => FULFILL_STR,
+                TokenEventType::Executed => EXECUTED_STR,
+                TokenEventType::Cancelled => CANCELLED_STR,
+                TokenEventType::Sale => SALE_STR,
+                TokenEventType::Mint => MINT_STR,
+                TokenEventType::Burn => BURN_STR,
+                TokenEventType::Transfer => TRANSFER_STR,
+                TokenEventType::Rollback => ROLLBACK_STR,
+                TokenEventType::ListingCancelled => LISTING_CANCELLED_STR,
+                TokenEventType::AuctionCancelled => AUCTION_CANCELLED_STR,
+                TokenEventType::OfferCancelled => OFFER_CANCELLED_STR,
+                }
+        )
+    }
+}
 
 #[derive(Debug)]
 #[allow(clippy::enum_variant_names)]
@@ -72,104 +127,6 @@ pub enum OrderStatus {
     Executed,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum EventType {
-    Listing,
-    Auction,
-    Offer,
-    CollectionOffer,
-    Fulfill,
-    Executed,
-    Cancelled,
-    Mint,
-    Burn,
-    Transfer,
-    Rollback,
-}
-
-impl From<String> for EventType {
-    fn from(s: String) -> Self {
-        match s.as_str() {
-            "Listing" => EventType::Listing,
-            "Auction" => EventType::Auction,
-            "Offer" => EventType::Offer,
-            "CollectionOffer" => EventType::CollectionOffer,
-            "Fulfill" => EventType::Fulfill,
-            "Executed" => EventType::Executed,
-            "Cancelled" => EventType::Cancelled,
-            "Mint" => EventType::Mint,
-            "Burn" => EventType::Burn,
-            "Transfer" => EventType::Transfer,
-            "Rollback" => EventType::Rollback,
-            _ => {
-                error!("Unknown event type: {}", s);
-                EventType::Listing
-            }
-        }
-    }
-}
-
-impl FromStr for EventType {
-    type Err = &'static str;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Listing" => Ok(EventType::Listing),
-            "Auction" => Ok(EventType::Auction),
-            "Offer" => Ok(EventType::Offer),
-            "CollectionOffer" => Ok(EventType::CollectionOffer),
-            "Fulfill" => Ok(EventType::Fulfill),
-            "Executed" => Ok(EventType::Executed),
-            "Cancelled" => Ok(EventType::Cancelled),
-            "Mint" => Ok(EventType::Mint),
-            "Burn" => Ok(EventType::Burn),
-            "Transfer" => Ok(EventType::Transfer),
-            "Rollback" => Ok(EventType::Rollback),
-            _ => Err("Unknown event type"),
-        }
-    }
-}
-
-impl EventType {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            EventType::Listing => "Listing",
-            EventType::Auction => "Auction",
-            EventType::Offer => "Offer",
-            EventType::CollectionOffer => "CollectionOffer",
-            EventType::Fulfill => "Fulfill",
-            EventType::Executed => "Executed",
-            EventType::Cancelled => "Cancelled",
-            EventType::Mint => "Mint",
-            EventType::Burn => "Burn",
-            EventType::Transfer => "Transfer",
-            EventType::Rollback => "Rollback",
-        }
-    }
-}
-
-impl fmt::Display for EventType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                EventType::Listing => "Listing",
-                EventType::Auction => "Auction",
-                EventType::Offer => "Offer",
-                EventType::CollectionOffer => "CollectionOffer",
-                EventType::Fulfill => "Fulfill",
-                EventType::Executed => "Executed",
-                EventType::Cancelled => "Cancelled",
-                EventType::Mint => "Mint",
-                EventType::Burn => "Burn",
-                EventType::Transfer => "Transfer",
-                EventType::Rollback => "Rollback",
-            }
-        )
-    }
-}
-
 impl fmt::Display for OrderStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -187,13 +144,14 @@ impl fmt::Display for OrderStatus {
 
 pub struct OrderProvider {}
 
+#[derive(sqlx::FromRow)]
 struct EventHistoryData {
     order_hash: String,
     token_id: String,
     token_id_hex: String,
     contract_address: String,
     chain_id: String,
-    event_type: EventType,
+    event_type: TokenEventType,
     block_timestamp: i64,
     from_address: Option<String>,
     to_address: Option<String>,
@@ -527,7 +485,7 @@ impl OrderProvider {
             .bind(token_id)
             .bind(chain_id)
             .bind(order_hash)
-            .bind(EventType::Fulfill.to_string())
+            .bind(TokenEventType::Fulfill.to_string())
             .fetch_optional(&client.pool)
             .await?;
 
@@ -871,7 +829,7 @@ impl OrderProvider {
 
         let q = "
             INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);        
         ";
 
         let _r = sqlx::query(q)
@@ -893,6 +851,49 @@ impl OrderProvider {
         Ok(())
     }
 
+    async fn insert_cancel_event(
+        client: &SqlxCtxPg,
+        order_hash: String,
+        block_timestamp: i64,
+        reason: String,
+    ) -> Result<(), ProviderError> {
+        // retrieve previous order hash event
+        let query = "
+            SELECT
+                order_hash,
+                token_id, 
+                token_id_hex,
+                contract_address,
+                chain_id,
+                event_type,
+                block_timestamp,
+                from_address,
+                to_address,
+                amount,
+                canceled_reason
+            FROM token_event
+            WHERE order_hash = $1
+            ORDER BY block_timestamp DESC
+            LIMIT 1
+        ";
+        if let Ok(mut event_history) = sqlx::query_as::<_, EventHistoryData>(query)
+        .bind(order_hash)
+        .fetch_one(&client.pool)
+        .await {
+            event_history.block_timestamp = block_timestamp;
+            event_history.canceled_reason = reason.into();
+            event_history.event_type = match event_history.event_type {
+                TokenEventType::Listing => TokenEventType::ListingCancelled,
+                TokenEventType::Auction => TokenEventType::AuctionCancelled,
+                TokenEventType::Offer => TokenEventType::OfferCancelled,
+                _ => TokenEventType::Cancelled,
+            };
+
+            Self::insert_event_history(client, &event_history).await?;
+        }
+        Ok(())
+    }
+    
     async fn offer_exists(
         client: &SqlxCtxPg,
         order_hash: &str,
@@ -1103,7 +1104,7 @@ impl OrderProvider {
             None => return Err(ProviderError::from("Missing token id")),
         };
 
-        let event_type = EventType::from_str(&data.order_type).map_err(ProviderError::from)?;
+        let event_type = TokenEventType::from_str(&data.order_type).map_err(ProviderError::from)?;
         let contract_address = Self::get_or_create_contract(
             client,
             &data.token_address,
@@ -1119,7 +1120,7 @@ impl OrderProvider {
             }
         }
 
-        if event_type == EventType::Offer || event_type == EventType::CollectionOffer {
+        if event_type == TokenEventType::Offer || event_type == TokenEventType::CollectionOffer {
             // create token without listing information
             let upsert_query = "
                 INSERT INTO token (contract_address, token_id, token_id_hex, chain_id, updated_timestamp, listing_orderhash, block_timestamp, status)
@@ -1352,32 +1353,6 @@ impl OrderProvider {
                 }
             }
 
-            let token_id = match BigInt::from_str(&token_data.token_id) {
-                Ok(token_id) => token_id.to_string(),
-                Err(e) => {
-                    error!("Failed to parse token id: {}", e);
-                    return Err(ProviderError::from("Failed to parse token id"));
-                }
-            };
-
-            Self::insert_event_history(
-                client,
-                &EventHistoryData {
-                    order_hash: data.order_hash.clone(),
-                    token_id: token_id.clone(),
-                    token_id_hex: token_data.token_id_hex.clone(),
-                    contract_address: token_data.contract_address.clone(),
-                    chain_id: token_data.chain_id.clone(),
-                    event_type: EventType::Cancelled,
-                    block_timestamp: block_timestamp as i64,
-                    canceled_reason: data.reason.clone().into(),
-                    to_address: None,
-                    amount: None,
-                    from_address: None,
-                },
-            )
-            .await?;
-
             Self::update_token_status(
                 client,
                 &token_data.contract_address,
@@ -1401,6 +1376,8 @@ impl OrderProvider {
         {
             Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
         }
+        // insert cancelled event 
+        Self::insert_cancel_event(client, data.order_hash.clone(), block_timestamp as i64, data.reason.clone()).await?;
 
         Ok(())
     }
@@ -1439,7 +1416,7 @@ impl OrderProvider {
                     token_id_hex: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address.clone(),
                     chain_id: token_data.chain_id.clone(),
-                    event_type: EventType::Fulfill,
+                    event_type: TokenEventType::Fulfill,
                     block_timestamp: block_timestamp as i64,
                     canceled_reason: None,
                     to_address: None,
@@ -1516,7 +1493,7 @@ impl OrderProvider {
                         token_id_hex: token_data.token_id_hex.clone(),
                         contract_address: offer_data.contract_address.clone(),
                         chain_id: offer_data.chain_id.clone(),
-                        event_type: EventType::Executed,
+                        event_type: TokenEventType::Executed,
                         block_timestamp: block_timestamp as i64,
                         canceled_reason: None,
                         to_address,
@@ -1572,7 +1549,7 @@ impl OrderProvider {
                             token_id_hex: token_data.token_id_hex.clone(),
                             contract_address: token_data.contract_address.clone(),
                             chain_id: token_data.chain_id,
-                            event_type: EventType::Executed,
+                            event_type: TokenEventType::Executed,
                             canceled_reason: None,
                             to_address: None,
                             amount: token_data.listing_start_amount,
@@ -1620,7 +1597,7 @@ impl OrderProvider {
                     token_id_hex: token_data.token_id_hex.clone(),
                     contract_address: token_data.contract_address,
                     chain_id: token_data.chain_id,
-                    event_type: EventType::Rollback,
+                    event_type: TokenEventType::Rollback,
                     canceled_reason: Some(string_reason),
                     to_address: None,
                     amount: None,

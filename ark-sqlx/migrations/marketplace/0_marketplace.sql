@@ -70,7 +70,10 @@ CREATE TABLE token_event (
   order_hash TEXT,
   token_id TEXT NOT NULL,
   token_id_hex TEXT NOT NULL,
-  event_type TEXT CHECK (event_type IN ('Listing', 'CollectionOffer', 'Offer', 'Auction', 'Fulfill', 'Cancelled', 'Executed', 'Sale', 'Mint', 'Burn', 'Transfer')),
+  event_type TEXT CHECK (event_type IN 
+    ('Listing', 'CollectionOffer', 'Offer', 'Auction', 
+      'Fulfill', 'Cancelled', 'Executed', 'Sale', 'Mint', 
+      'Burn', 'Transfer', 'ListingCancelled', 'AuctionCancelled', 'OfferCancelled')),
   block_timestamp BIGINT NOT NULL,
   transaction_hash TEXT NULL,
   to_address TEXT, -- NULL if not transfer
