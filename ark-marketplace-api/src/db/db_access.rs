@@ -38,6 +38,7 @@ struct TokenDataDB {
     pub price: Option<BigDecimal>,
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,
+    pub currency_address: Option<String>,
 }
 
 #[async_trait]
@@ -344,7 +345,7 @@ impl DatabaseAccess for PgPool {
                         0
                     ) AS floor_7d_percentage,
                     volume_7d_eth,
-                    top_bid as top_offer
+                    top_bid as top_offer,
                     sales_7d,
                     marketcap,
                     token_listed_count,
@@ -832,7 +833,8 @@ impl DatabaseAccess for PgPool {
                    token.listing_type as listing_type,
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata,
-                   current_owner as owner
+                   current_owner as owner,
+                   token.listing_currency_address as currency_address
                FROM token
                WHERE token.contract_address = $1
                    AND token.chain_id = $2
@@ -867,6 +869,7 @@ impl DatabaseAccess for PgPool {
                 metadata: token.metadata,
                 price: token.price,
                 owner: token.owner,
+                currency_address: token.currency_address,
             })
             .try_collect()
             .await?;
@@ -939,7 +942,8 @@ impl DatabaseAccess for PgPool {
                 c.floor_price as floor,
                 token.held_timestamp as received_at,
                 token.metadata as metadata,
-                c.contract_name as collection_name
+                c.contract_name as collection_name,
+                token.listing_currency_address as currency_address
             FROM token
             INNER JOIN contract as c ON c.contract_address = token.contract_address
                 AND c.chain_id = token.chain_id
@@ -1219,31 +1223,5 @@ impl DatabaseAccess for PgPool {
         let has_next_page = page < total_pages;
 
         Ok((token_activity_data, has_next_page, count))
-    }
-}
-
-#[cfg(test)]
-pub struct MockDb;
-
-#[cfg(test)]
-#[async_trait]
-impl DatabaseAccess for MockDb {
-    async fn get_collections_data(
-        &self,
-        _page: i64,
-        _items_per_page: i64,
-        _time_range: i64,
-    ) -> Result<Vec<CollectionData>, Error> {
-        Ok(vec![CollectionData {
-            image: Some("https://example.com/image.png".to_string()),
-            collection_name: Some("Example Collection".to_string()),
-            floor: Some("1".to_string()),
-            floor_7d_percentage: Some(4),
-            volume_7d_eth: Some(789),
-            top_offer: Some("Top Offer".to_string()),
-            sales_7d: Some(10),
-            marketcap: Some(1112),
-            listed_items: Some(13),
-        }])
     }
 }
