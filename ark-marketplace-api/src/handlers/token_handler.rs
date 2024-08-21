@@ -1,8 +1,10 @@
+use super::utils::CHAIN_ID;
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
     flush_all_data_query, get_collection_floor_price, get_token_activity_data, get_token_data,
     get_token_marketdata, get_token_offers_data, get_tokens_data, get_tokens_portfolio_data,
 };
+use crate::managers::elasticsearch_manager::ElasticsearchManager;
 use crate::models::token::TokenEventType;
 use crate::models::token::TokenOfferOneData;
 use crate::utils::currency_utils::compute_floor_difference;
@@ -16,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::utils::extract_page_params;
+use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -283,6 +286,37 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
         "next_page": if has_next_page { Some(page + 1)} else { None },
         "count": count,
     }))
+}
+
+pub async fn get_token_trait_filters<D: DatabaseAccess + Sync>(
+    path: web::Path<String>,
+    data: web::Data<HashMap<String, String>>,
+) -> impl Responder {
+    let contract_address = path.into_inner();
+    let default_url = "URL not found".to_string();
+    let default_username = "Username not found".to_string();
+    let default_password = "Password not found".to_string();
+    let es_url = data.get("url").unwrap_or(&default_url);
+    let username = data.get("username").unwrap_or(&default_username);
+    let password = data.get("password").unwrap_or(&default_password);
+    let elasticsearch_manager = ElasticsearchManager::new(
+        es_url.to_string(),
+        username.to_string(),
+        password.to_string(),
+    );
+    let normalized_address = normalize_address(&contract_address);
+    let result = elasticsearch_manager
+        .get_attributes_for_collection(&normalized_address, CHAIN_ID)
+        .await;
+
+    match result {
+        Ok(json_response) => HttpResponse::Ok().json(json!({
+            "data": json_response
+        })),
+        Err(e) => HttpResponse::InternalServerError().json(json!({
+            "error": format!("Failed to retrieve data: {}", e)
+        })),
+    }
 }
 
 pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> impl Responder {
