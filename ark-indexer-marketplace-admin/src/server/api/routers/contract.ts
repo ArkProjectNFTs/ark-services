@@ -10,6 +10,7 @@ import {
   updateIsRefreshingContract,
 } from "~/lib/queries/contract";
 import { clearListedTokensCache } from "~/lib/redis";
+import { Contract } from "~/types";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 const MAINNET_CHAIN_ID = "0x534e5f4d41494e"; // Hardcoded value
@@ -46,7 +47,7 @@ export const contractRouter = createTRPCRouter({
       //   return [];
       // }
 
-      return [];
+      return [] as Contract[];
     }),
 
   getRefreshingContracts: protectedProcedure

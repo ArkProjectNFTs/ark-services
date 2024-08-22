@@ -10,7 +10,7 @@ export default async function CollectionSearch({
   console.log("params", params);
 
   const contracts = await api.contract.searchContracts.query({
-    contractName: params.search,
+    contractName: "test",
   });
 
   return (
