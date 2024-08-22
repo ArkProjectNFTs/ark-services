@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { LinkIcon } from "lucide-react";
 
