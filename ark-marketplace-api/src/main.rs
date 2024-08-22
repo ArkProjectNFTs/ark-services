@@ -7,6 +7,7 @@ use aws_config::BehaviorVersion;
 use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
+use std::collections::HashMap;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -89,6 +90,17 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
+    let elasticsearch_url =
+        std::env::var("ELASTICSEARCH_URL").expect("ELASTICSEARCH_URL must be set");
+    let elasticsearch_username =
+        std::env::var("ELASTICSEARCH_USERNAME").expect("ELASTICSEARCH_USERNAME must be set");
+    let elasticsearch_password =
+        std::env::var("ELASTICSEARCH_PASSWORD").expect("ELASTICSEARCH_PASSWORD must be set");
+    let mut es_config = HashMap::new();
+    es_config.insert("url".to_string(), elasticsearch_url);
+    es_config.insert("username".to_string(), elasticsearch_username);
+    es_config.insert("password".to_string(), elasticsearch_password);
+
     HttpServer::new(move || {
         let cors = Cors::default()
             // Maybe we need to add some origin for security reason.
@@ -102,6 +114,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(DefaultHeaders::new().add(("X-GIT-REVISION", env!("GIT_HASH", "N/A"))))
             .app_data(web::Data::new(db_pool.clone()))
             .app_data(web::Data::new(redis_conn.clone()))
+            .app_data(web::Data::new(es_config.clone()))
             .configure(default::config)
             .configure(collection::config)
             .configure(portfolio::config)

@@ -1,7 +1,9 @@
 mod aws_s3_file_manager;
+mod elasticsearch_manager;
 mod metadata_storage;
 
 use crate::aws_s3_file_manager::AWSFileManager;
+use crate::elasticsearch_manager::EsManager;
 use anyhow::Result;
 use arkproject::{
     metadata::{
@@ -27,6 +29,9 @@ struct Config {
     ipfs_gateway_uri: String,
     filter: Option<(String, String)>,
     refresh_contract_metadata: bool,
+    elasticsearch_url: String,
+    elasticsearch_username: String,
+    elasticsearch_password: String,
 }
 
 #[derive(Deserialize)]
@@ -95,6 +100,13 @@ fn get_env_variables() -> Config {
         Err(_) => None,
     };
 
+    // elasticsearch
+    let elasticsearch_url = env::var("ELASTICSEARCH_URL").expect("ELASTICSEARCH_URL must be set");
+    let elasticsearch_username =
+        env::var("ELASTICSEARCH_USERNAME").expect("ELASTICSEARCH_USERNAME must be set");
+    let elasticsearch_password =
+        env::var("ELASTICSEARCH_PASSWORD").expect("ELASTICSEARCH_PASSWORD must be set");
+
     Config {
         bucket_name,
         rpc_url,
@@ -103,6 +115,9 @@ fn get_env_variables() -> Config {
         ipfs_gateway_uri,
         filter,
         refresh_contract_metadata,
+        elasticsearch_url,
+        elasticsearch_username,
+        elasticsearch_password,
     }
 }
 
@@ -115,10 +130,22 @@ async fn main() -> Result<()> {
     let storage = MetadataSqlStorage::new_pg(database_uri.as_str()).await?;
     let starknet_client = StarknetClientHttp::new(&config.rpc_url)?;
     let file_manager = AWSFileManager::new(config.bucket_name);
+    let elasticsearch_manager = EsManager::new(
+        config.elasticsearch_url,
+        config.elasticsearch_username,
+        config.elasticsearch_password,
+    );
 
-    trace!("Initialized AWSFileManager, StarknetClientHttp, and MetadataStorage");
+    trace!(
+        "Initialized AWSFileManager, StarknetClientHttp, MetadataStorage and ElasticsearchManager"
+    );
 
-    let mut metadata_manager = MetadataManager::new(&storage, &starknet_client, &file_manager);
+    let mut metadata_manager = MetadataManager::new(
+        &storage,
+        &starknet_client,
+        &file_manager,
+        &elasticsearch_manager,
+    );
 
     debug!("Starting main loop to check and refresh token metadata");
 
