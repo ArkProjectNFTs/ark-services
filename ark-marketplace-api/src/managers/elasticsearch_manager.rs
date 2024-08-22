@@ -6,18 +6,14 @@ use std::collections::HashMap;
 #[derive(Clone)]
 pub struct ElasticsearchManager {
     client: ReqwestClient,
-    elasticsearch_url: String,
-    username: String,
-    password: String,
+    es_data: HashMap<String, String>,
 }
 
 impl ElasticsearchManager {
-    pub fn new(elasticsearch_url: String, username: String, password: String) -> Self {
+    pub fn new(es_data: HashMap<String, String>) -> Self {
         Self {
             client: ReqwestClient::new(),
-            elasticsearch_url,
-            username,
-            password,
+            es_data
         }
     }
 
@@ -26,7 +22,7 @@ impl ElasticsearchManager {
         collection_id: &str,
         chain_id: &str,
     ) -> Result<HashMap<String, HashMap<String, usize>>, Box<dyn std::error::Error>> {
-        let url = format!("{}/nft-metadata/_search", self.elasticsearch_url);
+        let url = format!("{}/nft-metadata/_search", self.get_es_url());
 
         let body = json!({
             "_source": ["metadata.attributes.trait_type", "metadata.attributes.value"],
@@ -51,7 +47,7 @@ impl ElasticsearchManager {
         let response = self
             .client
             .post(&url)
-            .basic_auth(&self.username, Some(&self.password))
+            .basic_auth(self.get_username(), Some(self.get_password()))
             .json(&body)
             .send()
             .await?;
@@ -96,5 +92,17 @@ impl ElasticsearchManager {
         }
 
         traits_map
+    }
+
+    fn get_es_url(&self) -> &str {
+        self.es_data.get("url").map(String::as_str).unwrap_or("URL not found")
+    }
+
+    fn get_username(&self) -> &str {
+        self.es_data.get("username").map(String::as_str).unwrap_or("Username not found")
+    }
+
+    fn get_password(&self) -> &str {
+        self.es_data.get("password").map(String::as_str).unwrap_or("Password not found")
     }
 }

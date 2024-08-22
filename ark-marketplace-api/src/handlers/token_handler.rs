@@ -16,7 +16,8 @@ use serde_json::json;
 use serde_qs;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
+use urlencoding::decode;
+use serde_urlencoded;
 use super::utils::extract_page_params;
 use std::collections::HashMap;
 
@@ -290,20 +291,12 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
 
 pub async fn get_token_trait_filters<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
-    data: web::Data<HashMap<String, String>>,
+    es_data: web::Data<HashMap<String, String>>,
 ) -> impl Responder {
     let contract_address = path.into_inner();
-    let default_url = "URL not found".to_string();
-    let default_username = "Username not found".to_string();
-    let default_password = "Password not found".to_string();
-    let es_url = data.get("url").unwrap_or(&default_url);
-    let username = data.get("username").unwrap_or(&default_username);
-    let password = data.get("password").unwrap_or(&default_password);
-    let elasticsearch_manager = ElasticsearchManager::new(
-        es_url.to_string(),
-        username.to_string(),
-        password.to_string(),
-    );
+    let elasticsearch_manager = ElasticsearchManager::new(es_data.get_ref().clone());
+
+
     let normalized_address = normalize_address(&contract_address);
     let result = elasticsearch_manager
         .get_attributes_for_collection(&normalized_address, CHAIN_ID)
@@ -317,6 +310,44 @@ pub async fn get_token_trait_filters<D: DatabaseAccess + Sync>(
             "error": format!("Failed to retrieve data: {}", e)
         })),
     }
+}
+
+pub async fn get_filtered_tokens<D: DatabaseAccess + Sync>(
+    req: HttpRequest,
+    path: web::Path<String>,
+    db_pool: web::Data<D>,
+    es_data: web::Data<HashMap<String, String>>,
+) -> impl Responder {
+    let contract_address = path.into_inner();
+    let normalized_address = normalize_address(&contract_address);
+
+    let (page, items_per_page) = match extract_page_params(req.query_string(), 1, 100) {
+        Err(msg) => return HttpResponse::BadRequest().json(msg),
+        Ok((page, items_per_page)) => (page, items_per_page),
+    };
+
+    let query_string = req.query_string();
+    let query_params: HashMap<String, String> = serde_urlencoded::from_str(query_string).unwrap_or_default();
+
+    if let Some(traits_param) = query_params.get("traits") {
+        let decoded_traits = decode(traits_param).expect("Failed to decode traits");
+        println!("Decoded traits: {}", decoded_traits);
+        let traits_map: HashMap<String, Vec<String>> = serde_json::from_str(&decoded_traits).expect("Failed to parse JSON");
+
+        // Utiliser le `traits_map` pour construire la requête Elasticsearch ici...
+    }
+
+
+    let db_access = db_pool.get_ref();
+
+    let elasticsearch_manager = ElasticsearchManager::new(es_data.get_ref().clone());
+
+    HttpResponse::Ok().json(json!({
+        "data": "OK"
+        //"data": token_offers_data,
+        //"count": count,
+        //"next_page": if has_next_page { Some(page + 1)} else { None}
+    }))
 }
 
 pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> impl Responder {

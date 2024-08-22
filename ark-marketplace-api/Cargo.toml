@@ -31,3 +31,5 @@ regex = "1.5.4"
 redis = { version = "0.25.4", features = ["aio", "tokio-comp"] }
 serde_qs = "0.13.0"
 futures-util = "0.3.30"
+urlencoding = "2.1"
+serde_urlencoded = "0.7"
