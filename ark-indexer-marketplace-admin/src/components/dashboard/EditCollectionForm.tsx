@@ -52,7 +52,7 @@ async function uploadFileToS3(file: File, presignedUrl: string) {
   }
 }
 
-export default function CollectionForm(props: { contract?: Contract }) {
+export default function EditCollectionForm(props: { contract?: Contract }) {
   const [avatarMediaKey, setAvatarMediaKey] = useState<string>();
   const [file, setFile] = useState<File>();
 
