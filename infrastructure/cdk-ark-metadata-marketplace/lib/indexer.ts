@@ -103,6 +103,9 @@ function deployMetadataServices(
       AWS_SECRET_NAME: isProductionEnvironment
         ? "prod/ark-db-credentials"
         : "staging/ark-db-credentials",
+      ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL ?? "",
+      ELASTICSEARCH_USERNAME: process.env.ELASTICSEARCH_USERNAME ?? "elastic",
+      ELASTICSEARCH_PASSWORD: process.env.ELASTICSEARCH_PASSWORD ?? "",
     },
   });
 
@@ -123,6 +126,6 @@ function deployMetadataServices(
   new cdk.aws_ecs.FargateService(scope, `indexer-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: isProductionEnvironment ? 1 : 0,
+    desiredCount: 0,
   });
 }
