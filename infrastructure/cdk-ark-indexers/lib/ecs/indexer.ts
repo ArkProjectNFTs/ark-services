@@ -214,6 +214,9 @@ function deployMetadataServices(
       IPFS_GATEWAY_URI:
         process.env.IPFS_GATEWAY_URI ?? "https://ipfs.arkproject.dev/ipfs/",
       RUST_LOG: "INFO",
+      ELASTICSEARCH_URL: process.env.ELASTICSEARCH_URL,
+      ELASTICSEARCH_USERNAME: process.env.ELASTICSEARCH_USERNAME ?? "elastic",
+      ELASTICSEARCH_PASSWORD: process.env.ELASTICSEARCH_PASSWORD,
     },
   });
 
@@ -236,6 +239,6 @@ function deployMetadataServices(
   new cdk.aws_ecs.FargateService(scope, `metadata-${network}`, {
     cluster: cluster,
     taskDefinition: taskDefinition,
-    desiredCount: isProductionEnvironment ? 1 : 0,
+    desiredCount: 0,
   });
 }
