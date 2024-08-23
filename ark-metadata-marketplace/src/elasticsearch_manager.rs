@@ -65,3 +65,16 @@ impl EsManager {
         }
     }
 }
+
+#[async_trait]
+impl ElasticsearchManager for NoOpElasticsearchManager {
+    async fn upsert_token_metadata(
+        &self,
+        _contract_address: &str,
+        _token_id: &str,
+        _chain_id: &str,
+        _metadata: TokenMetadata,
+    ) -> Result<(), RequestError> {
+        Ok(())
+    }
+}
