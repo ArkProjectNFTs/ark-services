@@ -144,7 +144,7 @@ async fn main() -> Result<()> {
         &storage,
         &starknet_client,
         &file_manager,
-        &elasticsearch_manager,
+        Some(&elasticsearch_manager),
     );
 
     debug!("Starting main loop to check and refresh token metadata");
