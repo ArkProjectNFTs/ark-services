@@ -366,3 +366,14 @@ pub async fn flush_all_data_query<D: DatabaseAccess + Sync>(
 ) -> Result<u64, sqlx::Error> {
     db_access.flush_all_data().await
 }
+
+pub async fn refresh_token_metadata<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    contract_address: &str,
+    chain_id: &str,
+    token_id: &str,
+) -> Result<(), sqlx::Error> {
+    db_access
+        .refresh_token_metadata(contract_address, chain_id, token_id)
+        .await
+}
