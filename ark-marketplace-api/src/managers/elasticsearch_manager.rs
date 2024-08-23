@@ -94,6 +94,84 @@ impl ElasticsearchManager {
         traits_map
     }
 
+    pub async fn search_tokens_by_traits(
+        &self,
+        collection_id: &str,
+        chain_id: &str,
+        traits: HashMap<String, Vec<String>>,
+    ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+        let url = format!("{}/nft-metadata/_search", self.get_es_url());
+
+        // Build the query
+        let mut must_clauses = Vec::new();
+
+        for (trait_type, values) in traits.iter() {
+            for value in values.iter() {
+                let phrase = format!("\"trait_type\":\"{}\",\"value\":\"{}\"", trait_type, value);
+                must_clauses.push(json!({
+                    "match_phrase": {
+                        "raw_metadata": phrase
+                    }
+                }));
+            }
+        }
+
+        must_clauses.push(json!({
+            "term": {
+                "contract_address.keyword": collection_id
+            }
+        }));
+
+        must_clauses.push(json!({
+            "term": {
+                "chain_id.keyword": chain_id
+            }
+        }));
+
+        let body = json!({
+            "_source": ["token_id"],
+            "query": {
+                "bool": {
+                    "must": must_clauses
+                }
+            }
+        });
+
+        let response = self
+            .client
+            .post(&url)
+            .basic_auth(self.get_username(), Some(self.get_password()))
+            .json(&body)
+            .send()
+            .await?;
+
+        if response.status().is_success() {
+            let json_response: Value = response.json().await?;
+            let token_ids = Self::extract_token_ids(&json_response);
+            println!("Result: {:?}", token_ids);
+
+            Ok(token_ids)
+        } else {
+            Err(format!("Request failed with status: {}", response.status()).into())
+        }
+    }
+
+    fn extract_token_ids(response: &Value) -> Vec<String> {
+        let mut token_ids = Vec::new();
+
+        if let Some(hits) = response.get("hits").and_then(|h| h.get("hits")) {
+            if let Some(hits_array) = hits.as_array() {
+                for hit in hits_array {
+                    if let Some(token_id) = hit.get("_source").and_then(|s| s.get("token_id")).and_then(|t| t.as_str()) {
+                        token_ids.push(token_id.to_string());
+                    }
+                }
+            }
+        }
+
+        token_ids
+    }
+
     fn get_es_url(&self) -> &str {
         self.es_data.get("url").map(String::as_str).unwrap_or("URL not found")
     }

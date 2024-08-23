@@ -53,6 +53,7 @@ pub trait DatabaseAccess: Send + Sync {
         buy_now: bool,
         sort: Option<String>,
         direction: Option<String>,
+        token_ids: Option<Vec<String>>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_token_data(
@@ -337,7 +338,7 @@ impl DatabaseAccess for PgPool {
                             WHERE
                                 fc.contract_address = contract.contract_address
                                 AND fc.chain_id = contract.chain_id
-                                AND fc.timestamp >= (CURRENT_DATE - INTERVAL '7 days')
+                                AND fc.timestamp >= EXTRACT(EPOCH FROM (CURRENT_DATE - INTERVAL '7 days'))
                             ORDER BY
                                 fc.timestamp ASC
                             LIMIT 1
@@ -348,11 +349,12 @@ impl DatabaseAccess for PgPool {
                     top_bid as top_offer,
                     sales_7d,
                     marketcap,
+                    token_listed_count AS listed_items,
                     token_listed_count,
                     listed_percentage,
                     token_count,
                     owner_count,
-                    total_volume
+                    total_volume,
                     total_sales,
                     is_verified
                     FROM
@@ -769,6 +771,7 @@ impl DatabaseAccess for PgPool {
         buy_now: bool,
         sort: Option<String>,
         direction: Option<String>,
+        token_ids: Option<Vec<String>>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
         let sort_field = sort.as_deref().unwrap_or("price");
         let sort_direction = direction.as_deref().unwrap_or("asc");
@@ -821,6 +824,15 @@ impl DatabaseAccess for PgPool {
         //let count = total_count.count.unwrap_or(0);
         let count = 0;
 
+        let token_ids_condition = if let Some(token_ids) = token_ids {
+            format!(
+                "AND token.token_id IN ({})",
+                token_ids.iter().map(|id| format!("'{}'", id)).collect::<Vec<_>>().join(", ")
+            )
+        } else {
+            String::new()
+        };
+
         let tokens_data_query = format!(
             "
                SELECT
@@ -839,9 +851,11 @@ impl DatabaseAccess for PgPool {
                WHERE token.contract_address = $1
                    AND token.chain_id = $2
                    AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+                   {}
                ORDER BY {}
                LIMIT $4 OFFSET $5",
-            order_by
+               token_ids_condition,
+                order_by
         );
 
         let query = sqlx::query_as(&tokens_data_query)
