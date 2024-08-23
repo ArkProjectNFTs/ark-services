@@ -161,8 +161,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-target-
 
-      - name: Build ark-indexer-marketplace
-        run: cargo build --profile release-lto -p ark-indexer-marketplace
+      - name: Build ark-metadata-marketplace
+        run: cargo build --profile release-lto -p ark-metadata-marketplace
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -180,9 +180,6 @@ jobs:
 
       - name: Stop the service
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl stop marketplace-metadata-indexer.service"
-
-      - name: List target directory
-        run: find target -type f -name "ark-*"
 
       - name: Upload binary to Scaleway server
         run: scp -o StrictHostKeyChecking=no target/release-lto/ark-metadata-marketplace github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }}:/opt/marketplace-metadata-indexer/
