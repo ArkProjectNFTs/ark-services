@@ -179,8 +179,9 @@ jobs:
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.METADATA_INDEXER_SERVER_IP }} "mkdir -p /opt/marketplace-metadata-indexer"
 
       - name: Stop the service
+        continue-on-error: true
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.METADATA_INDEXER_SERVER_IP }} "sudo systemctl stop marketplace-metadata-indexer.service"
-
+        
       - name: Upload binary to Scaleway server
         run: scp -o StrictHostKeyChecking=no target/release-lto/ark-metadata-marketplace github@${{ vars.METADATA_INDEXER_SERVER_IP }}:/opt/marketplace-metadata-indexer/
 
