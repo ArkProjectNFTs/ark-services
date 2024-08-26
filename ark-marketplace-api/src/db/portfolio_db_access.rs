@@ -120,7 +120,7 @@ impl DatabaseAccess for PgPool {
                 {},
                 {}
             {}
-            ORDER BY te.block_timestamp {}
+            ORDER BY te.block_timestamp {}, te.token_event_id
             LIMIT {} OFFSET {}
             ",
             price_select_part,
