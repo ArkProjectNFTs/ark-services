@@ -1,4 +1,3 @@
-
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum TokenEventType {
     Listing,
@@ -19,7 +18,6 @@ pub enum TokenEventType {
     OfferCancelled,
 }
 
-
 /// DB for EventType
 pub(crate) const LISTING_STR: &str = "Listing";
 pub(crate) const AUCTION_STR: &str = "Auction";
@@ -36,7 +34,6 @@ pub(crate) const ROLLBACK_STR: &str = "Rollback";
 pub(crate) const LISTING_CANCELLED_STR: &str = "ListingCancelled";
 pub(crate) const AUCTION_CANCELLED_STR: &str = "AuctionCancelled";
 pub(crate) const OFFER_CANCELLED_STR: &str = "OfferCancelled";
-
 
 impl<DB> sqlx::Type<DB> for TokenEventType
 where

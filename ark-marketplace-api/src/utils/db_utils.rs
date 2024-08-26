@@ -14,7 +14,6 @@ pub fn event_type_list(values: &[TokenEventType]) -> String {
     types.join(", ")
 }
 
-
 /// Convert TokenEventType to matching keys in DB
 impl TokenEventType {
     pub fn to_db_string(&self) -> String {
@@ -72,8 +71,7 @@ where
                 TokenEventTypeDB::ListingCancelled => Ok(TokenEventType::ListingCancelled),
                 TokenEventTypeDB::AuctionCancelled => Ok(TokenEventType::AuctionCancelled),
                 TokenEventTypeDB::OfferCancelled => Ok(TokenEventType::OfferCancelled),
-                TokenEventTypeDB::Rollback => Err("Unsupported rollback event".into())
-                // _ => Ok(TokenEventType::Burn),
+                TokenEventTypeDB::Rollback => Err("Unsupported rollback event".into()), // _ => Ok(TokenEventType::Burn),
             }
         } else {
             Err("Invalid event type".into())

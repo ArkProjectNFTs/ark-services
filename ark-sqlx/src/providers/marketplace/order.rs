@@ -1,5 +1,9 @@
+use crate::providers::marketplace::types::{
+    TokenEventType, AUCTION_CANCELLED_STR, AUCTION_STR, BURN_STR, CANCELLED_STR,
+    COLLECTION_OFFER_STR, EXECUTED_STR, FULFILL_STR, LISTING_CANCELLED_STR, LISTING_STR, MINT_STR,
+    OFFER_CANCELLED_STR, OFFER_STR, ROLLBACK_STR, SALE_STR, TRANSFER_STR,
+};
 use crate::providers::{ProviderError, SqlxCtxPg};
-use crate::providers::marketplace::types::{TokenEventType, AUCTION_CANCELLED_STR, AUCTION_STR, BURN_STR, CANCELLED_STR, COLLECTION_OFFER_STR, EXECUTED_STR, FULFILL_STR, LISTING_CANCELLED_STR, LISTING_STR, MINT_STR, OFFER_CANCELLED_STR, OFFER_STR, ROLLBACK_STR, SALE_STR, TRANSFER_STR};
 
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
@@ -43,7 +47,6 @@ impl FromStr for TokenEventType {
     }
 }
 
-
 impl fmt::Display for TokenEventType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -65,7 +68,7 @@ impl fmt::Display for TokenEventType {
                 TokenEventType::ListingCancelled => LISTING_CANCELLED_STR,
                 TokenEventType::AuctionCancelled => AUCTION_CANCELLED_STR,
                 TokenEventType::OfferCancelled => OFFER_CANCELLED_STR,
-                }
+            }
         )
     }
 }
@@ -877,9 +880,10 @@ impl OrderProvider {
             LIMIT 1
         ";
         if let Ok(mut event_history) = sqlx::query_as::<_, EventHistoryData>(query)
-        .bind(order_hash)
-        .fetch_one(&client.pool)
-        .await {
+            .bind(order_hash)
+            .fetch_one(&client.pool)
+            .await
+        {
             event_history.block_timestamp = block_timestamp;
             event_history.canceled_reason = reason.into();
             event_history.event_type = match event_history.event_type {
@@ -893,7 +897,7 @@ impl OrderProvider {
         }
         Ok(())
     }
-    
+
     async fn offer_exists(
         client: &SqlxCtxPg,
         order_hash: &str,
@@ -1376,8 +1380,14 @@ impl OrderProvider {
         {
             Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
         }
-        // insert cancelled event 
-        Self::insert_cancel_event(client, data.order_hash.clone(), block_timestamp as i64, data.reason.clone()).await?;
+        // insert cancelled event
+        Self::insert_cancel_event(
+            client,
+            data.order_hash.clone(),
+            block_timestamp as i64,
+            data.reason.clone(),
+        )
+        .await?;
 
         Ok(())
     }
