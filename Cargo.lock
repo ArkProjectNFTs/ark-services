@@ -570,6 +570,7 @@ dependencies = [
  "actix-web",
  "actix-web-httpauth",
  "anyhow",
+ "ark-sqlx",
  "async-std",
  "async-trait",
  "aws-config",
