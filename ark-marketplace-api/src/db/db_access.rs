@@ -570,25 +570,13 @@ impl DatabaseAccess for PgPool {
             event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
         );
 
-        let from_select_part = format!(
-            "
-            CASE
-                WHEN te.event_type in ({}) THEN token_offer.from_address
-                ELSE te.from_address
-            END AS from
-            ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
-        );
+        let from_select_part = "
+            te.from_address AS from
+            ";
 
-        let to_select_part = format!(
-            "
-            CASE
-                WHEN te.event_type in ({}) THEN token_offer.to_address
-                ELSE te.to_address
-            END AS to
-            ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
-        );
+        let to_select_part = "
+            te.to_address AS to
+            ";
 
         let activity_sql_query = format!(
             "
@@ -1208,25 +1196,13 @@ impl DatabaseAccess for PgPool {
             event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
         );
 
-        let from_select_part = format!(
-            "
-            CASE
-                WHEN te.event_type in ({}) THEN token_offer.from_address
-                ELSE te.from_address
-            END AS from
-            ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
-        );
+        let from_select_part = "
+            te.from_address AS from
+            ";
 
-        let to_select_part = format!(
-            "
-            CASE
-                WHEN te.event_type in ({}) THEN token_offer.to_address
-                ELSE te.to_address
-            END AS to
-            ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
-        );
+        let to_select_part = "
+            te.to_address AS to
+            ";
 
         let result_ordering = format!(
             "
