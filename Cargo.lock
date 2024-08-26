@@ -620,7 +620,6 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.6#25aab1c738222e18c9933c9b28373d382b717abf"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -766,7 +765,6 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.6#25aab1c738222e18c9933c9b28373d382b717abf"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -836,7 +834,6 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.6#25aab1c738222e18c9933c9b28373d382b717abf"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -1757,7 +1754,7 @@ dependencies = [
 [[package]]
 name = "cainome"
 version = "0.1.5"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.8#e79deabeb989f73100c0b2e6a1fe5427858e40a8"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "cainome-cairo-serde",
  "cainome-parser",
@@ -1767,7 +1764,7 @@ dependencies = [
 [[package]]
 name = "cainome-cairo-serde"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.8#e79deabeb989f73100c0b2e6a1fe5427858e40a8"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "starknet 0.8.0",
  "thiserror",
@@ -1776,7 +1773,7 @@ dependencies = [
 [[package]]
 name = "cainome-parser"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.8#e79deabeb989f73100c0b2e6a1fe5427858e40a8"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "quote",
  "serde_json",
@@ -1788,7 +1785,7 @@ dependencies = [
 [[package]]
 name = "cainome-rs"
 version = "0.1.0"
-source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.8#e79deabeb989f73100c0b2e6a1fe5427858e40a8"
+source = "git+https://github.com/cartridge-gg/cainome?tag=v0.1.7#2d4b52b2e79796f76fba9e3a1b1027e8e63292b8"
 dependencies = [
  "anyhow",
  "cainome-cairo-serde",
@@ -2219,7 +2216,6 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.6#25aab1c738222e18c9933c9b28373d382b717abf"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4238,7 +4234,6 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.6#25aab1c738222e18c9933c9b28373d382b717abf"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -4790,7 +4785,6 @@ dependencies = [
 [[package]]
 name = "sana"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.6#25aab1c738222e18c9933c9b28373d382b717abf"
 dependencies = [
  "anyhow",
  "ark-metadata",
