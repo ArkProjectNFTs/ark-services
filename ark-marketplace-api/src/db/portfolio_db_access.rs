@@ -14,8 +14,6 @@ struct Count {
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
 pub trait DatabaseAccess: Send + Sync {
-    // async fn get_token_metadata_last_refresh() -> Result<(), Error>;
-
     async fn get_activity_data(
         &self,
         chain_id: &str,
@@ -29,12 +27,6 @@ pub trait DatabaseAccess: Send + Sync {
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
-    // async fn get_token_metadata_last_refresh() {
-    //     let query = "SELECT metadata_status, metadata_updated_at FROM token WHERE token_id = $1 AND contract_address = $2 AND chain_id = $3 LIMIT 1";
-    //     let last_refresh: LastRefresh = sqlx::query_as(query).fetch_one(self).await?;
-    //     // Ok(last_refresh.last_refresh)
-    // }
-
     async fn get_activity_data(
         &self,
         chain_id: &str,
