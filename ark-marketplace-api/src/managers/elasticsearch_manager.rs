@@ -148,7 +148,6 @@ impl ElasticsearchManager {
         if response.status().is_success() {
             let json_response: Value = response.json().await?;
             let token_ids = Self::extract_token_ids(&json_response);
-            println!("Result: {:?}", token_ids);
 
             Ok(token_ids)
         } else {

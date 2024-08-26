@@ -350,7 +350,6 @@ impl DatabaseAccess for PgPool {
                     sales_7d,
                     marketcap,
                     token_listed_count AS listed_items,
-                    token_listed_count,
                     listed_percentage,
                     token_count,
                     owner_count,
