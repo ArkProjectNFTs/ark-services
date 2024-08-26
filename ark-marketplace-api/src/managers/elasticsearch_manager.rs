@@ -84,9 +84,8 @@ impl ElasticsearchManager {
                             {
                                 if let Some(value) = attribute.get("value").and_then(|v| v.as_str())
                                 {
-                                    let entry = traits_map
-                                        .entry(trait_type.to_string())
-                                        .or_insert_with(HashMap::new);
+                                    let entry =
+                                        traits_map.entry(trait_type.to_string()).or_default();
                                     *entry.entry(value.to_string()).or_insert(0) += 1;
                                 }
                             }

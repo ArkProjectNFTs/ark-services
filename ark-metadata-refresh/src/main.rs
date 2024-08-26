@@ -5,6 +5,7 @@ use anyhow::Result;
 use ark_dynamodb::metadata_storage::MetadataStorage;
 use arkproject::{
     metadata::{
+        elasticsearch_manager::NoOpElasticsearchManager,
         metadata_manager::{MetadataError, MetadataManager},
         storage::Storage,
     },
@@ -80,8 +81,12 @@ async fn main() -> Result<()> {
 
     trace!("Initialized AWSFileManager, StarknetClientHttp, and MetadataStorage");
 
-    let mut metadata_manager =
-        MetadataManager::new(&metadata_storage, &starknet_client, &file_manager);
+    let mut metadata_manager = MetadataManager::new(
+        &metadata_storage,
+        &starknet_client,
+        &file_manager,
+        None::<&NoOpElasticsearchManager>,
+    );
 
     debug!("Starting main loop to check and refresh token metadata");
 
