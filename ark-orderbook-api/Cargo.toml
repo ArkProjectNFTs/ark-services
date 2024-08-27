@@ -20,4 +20,16 @@ async-trait = "0.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
+[profile.release]
+debug = 0
+opt-level=3
+lto = true # Link Time Optimization (LTO)
+codegen-units=1 # Set this to 1 to allow for maximum size reduction optimizations:
+panic = 'abort' # removes the need for this extra unwinding code.
 
+[profile.release.package."*"]
+opt-level = 3
+
+[target.x86_64-unknown-linux-gnu]
+linker = "/usr/bin/clang"
+rustflags = ["-Clink-arg=-fuse-ld=lld", "-Clink-arg=-Wl,--no-rosegment"]
