@@ -39,6 +39,7 @@ struct TokenDataDB {
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,
     pub currency_address: Option<String>,
+    pub buy_in_progress: Option<bool>,
 }
 
 #[async_trait]
@@ -884,7 +885,8 @@ impl DatabaseAccess for PgPool {
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata,
                    current_owner as owner,
-                   token.listing_currency_address as currency_address
+                   token.listing_currency_address as currency_address,
+                   token.buy_in_progress
                FROM token
                WHERE token.contract_address = $1
                    AND token.chain_id = $2
@@ -911,6 +913,7 @@ impl DatabaseAccess for PgPool {
                 floor_difference: token.floor_difference,
                 listed_at: token.listed_at,
                 is_listed: token.is_listed,
+                buy_in_progress: token.buy_in_progress,
                 listing: token
                     .listing_type
                     .as_ref()

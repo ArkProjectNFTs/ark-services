@@ -36,6 +36,7 @@ pub struct TokenData {
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,
     pub currency_address: Option<String>,
+    pub buy_in_progress: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
