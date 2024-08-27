@@ -37,6 +37,7 @@ members = [
   "ark-indexer-marketplace",
   "ark-marketplace-api",
   "ark-marketplace-cron",
+  "ark-indexer-transactions",
 ]
 resolver = "2"
 
@@ -60,18 +61,16 @@ debug = 1
 
 [profile.release]
 debug = 0
-opt-level = 's'   # Optimize for size.
+opt-level = 3   # Optimize for size.
 lto = true        # Link Time Optimization (LTO)
 codegen-units = 1 # Set this to 1 to allow for maximum size reduction optimizations:
 panic = 'abort'   # removes the need for this extra unwinding code.
 
-[profile.release-lto]
-inherits = "release"
-lto = true
-opt-level = 3
-codegen-units = 1
+[target.x86_64-unknown-linux-gnu]
+linker = "/usr/bin/clang"
+rustflags = ["-Clink-arg=-fuse-ld=lld", "-Clink-arg=-Wl,--no-rosegment"]
 
-[profile.release-lto.package."*"]
+[profile.release.package."*"]
 opt-level = 3
 
 [net]

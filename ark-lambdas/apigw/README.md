@@ -61,7 +61,7 @@ let ctx = LambdaCtx::from_event(&event).await?;
 To build a specific lambda, being at the root of `ark-services`, you can run:
 
 ```bash
-cargo build -p lambda-<name_of_the_lambda>
+cargo build --release -p lambda-<name_of_the_lambda>
 ```
 
 ## Test the lambda
