@@ -123,7 +123,8 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
                         .await
                     {
                         Ok(current_floor_opt) => {
-                            let current_floor = current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
+                            let current_floor =
+                                current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
                             if min_price < current_floor {
                                 let update_query = r#"
                                     UPDATE contract
@@ -166,7 +167,10 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
                         .await
                     {
                         Ok(_) => {
-                            info!("No tokens listed. Floor price set to NULL for collection: {}", collection)
+                            info!(
+                                "No tokens listed. Floor price set to NULL for collection: {}",
+                                collection
+                            )
                         }
                         Err(e) => tracing::error!(
                             "Failed to set floor price to NULL for collection {}: {}",
