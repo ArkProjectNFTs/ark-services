@@ -162,7 +162,7 @@ jobs:
             ${{ runner.os }}-target-
 
       - name: Build ark-metadata-marketplace
-        run: cargo build --profile release-lto -p ark-metadata-marketplace
+        run: cargo build --release -p ark-metadata-marketplace
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -183,7 +183,7 @@ jobs:
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.METADATA_INDEXER_SERVER_IP }} "sudo systemctl stop marketplace-metadata-indexer.service"
         
       - name: Upload binary to Scaleway server
-        run: scp -o StrictHostKeyChecking=no target/release-lto/ark-metadata-marketplace github@${{ vars.METADATA_INDEXER_SERVER_IP }}:/opt/marketplace-metadata-indexer/
+        run: scp -o StrictHostKeyChecking=no target/release/ark-metadata-marketplace github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }}:/opt/marketplace-metadata-indexer/
 
       - name: Restart the service
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.METADATA_INDEXER_SERVER_IP }} "sudo systemctl start marketplace-metadata-indexer.service"
