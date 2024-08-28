@@ -33,6 +33,8 @@ impl TokenEventType {
             Self::ListingCancelled => TokenEventTypeDB::ListingCancelled.to_string(),
             Self::AuctionCancelled => TokenEventTypeDB::AuctionCancelled.to_string(),
             Self::OfferCancelled => TokenEventTypeDB::OfferCancelled.to_string(),
+            Self::ListingExpired => TokenEventTypeDB::ListingExpired.to_string(),
+            Self::OfferExpired => TokenEventTypeDB::OfferExpired.to_string(),
         }
     }
 }
@@ -71,6 +73,8 @@ where
                 TokenEventTypeDB::ListingCancelled => Ok(TokenEventType::ListingCancelled),
                 TokenEventTypeDB::AuctionCancelled => Ok(TokenEventType::AuctionCancelled),
                 TokenEventTypeDB::OfferCancelled => Ok(TokenEventType::OfferCancelled),
+                TokenEventTypeDB::ListingExpired => Ok(TokenEventType::ListingExpired),
+                TokenEventTypeDB::OfferExpired => Ok(TokenEventType::OfferExpired),
                 TokenEventTypeDB::Rollback => Err("Unsupported rollback event".into()), // _ => Ok(TokenEventType::Burn),
             }
         } else {

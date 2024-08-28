@@ -16,6 +16,9 @@ pub enum TokenEventType {
     ListingCancelled,
     AuctionCancelled,
     OfferCancelled,
+    // Expired
+    ListingExpired,
+    OfferExpired,
 }
 
 /// DB for EventType
@@ -34,6 +37,8 @@ pub(crate) const ROLLBACK_STR: &str = "Rollback";
 pub(crate) const LISTING_CANCELLED_STR: &str = "ListingCancelled";
 pub(crate) const AUCTION_CANCELLED_STR: &str = "AuctionCancelled";
 pub(crate) const OFFER_CANCELLED_STR: &str = "OfferCancelled";
+pub(crate) const LISTING_EXPIRED_STR: &str = "ListingExpired";
+pub(crate) const OFFER_EXPIRED_STR: &str = "OfferExpired";
 
 impl<DB> sqlx::Type<DB> for TokenEventType
 where
@@ -70,6 +75,8 @@ where
             LISTING_CANCELLED_STR => Ok(TokenEventType::ListingCancelled),
             AUCTION_CANCELLED_STR => Ok(TokenEventType::AuctionCancelled),
             OFFER_CANCELLED_STR => Ok(TokenEventType::OfferCancelled),
+            LISTING_EXPIRED_STR => Ok(TokenEventType::ListingExpired),
+            OFFER_EXPIRED_STR => Ok(TokenEventType::OfferExpired),
             _ => Err("Invalid event type".into()),
         }
     }
@@ -93,6 +100,8 @@ impl TokenEventType {
             TokenEventType::ListingCancelled => LISTING_CANCELLED_STR.to_string(),
             TokenEventType::AuctionCancelled => AUCTION_CANCELLED_STR.to_string(),
             TokenEventType::OfferCancelled => OFFER_CANCELLED_STR.to_string(),
+            TokenEventType::ListingExpired => LISTING_EXPIRED_STR.to_string(),
+            TokenEventType::OfferExpired => OFFER_EXPIRED_STR.to_string(),
         }
     }
 }

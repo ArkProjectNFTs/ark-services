@@ -147,6 +147,9 @@ pub enum TokenEventType {
     ListingCancelled,
     AuctionCancelled,
     OfferCancelled,
+    // Expired event type
+    ListingExpired,
+    OfferExpired,
 }
 
 const LISTING_STR: &str = "LISTING";
@@ -163,8 +166,10 @@ const TRANSFER_STR: &str = "TRANSFER";
 const LISTING_CANCELLED_STR: &str = "DELISTING";
 const AUCTION_CANCELLED_STR: &str = "CANCEL_AUCTION";
 const OFFER_CANCELLED_STR: &str = "CANCEL_OFFER";
+const LISTING_EXPIRED_STR: &str = "EXPIRED_LISTING";
+const OFFER_EXPIRED_STR: &str = "EXPIRED_OFFER";
 
-const VARIANTS: [&str; 14] = [
+const VARIANTS: [&str; 16] = [
     LISTING_STR,
     COLLECTION_OFFER_STR,
     OFFER_STR,
@@ -179,6 +184,8 @@ const VARIANTS: [&str; 14] = [
     LISTING_CANCELLED_STR,
     AUCTION_CANCELLED_STR,
     OFFER_CANCELLED_STR,
+    LISTING_EXPIRED_STR,
+    OFFER_EXPIRED_STR,
 ];
 
 impl std::fmt::Display for TokenEventType {
@@ -199,6 +206,9 @@ impl std::fmt::Display for TokenEventType {
             Self::ListingCancelled => write!(f, "{}", LISTING_CANCELLED_STR),
             Self::AuctionCancelled => write!(f, "{}", AUCTION_CANCELLED_STR),
             Self::OfferCancelled => write!(f, "{}", OFFER_CANCELLED_STR),
+
+            Self::ListingExpired => write!(f, "{}", LISTING_EXPIRED_STR),
+            Self::OfferExpired => write!(f, "{}", OFFER_EXPIRED_STR),
         }
     }
 }
@@ -223,6 +233,8 @@ impl FromStr for TokenEventType {
             LISTING_CANCELLED_STR => Ok(Self::ListingCancelled),
             AUCTION_CANCELLED_STR => Ok(Self::AuctionCancelled),
             OFFER_CANCELLED_STR => Ok(Self::OfferCancelled),
+            LISTING_EXPIRED_STR => Ok(Self::ListingExpired),
+            OFFER_EXPIRED_STR => Ok(Self::OfferExpired),
             _ => Err(format!("Invalid variant: {} ({})", s, VARIANTS.join(", "))),
         }
     }

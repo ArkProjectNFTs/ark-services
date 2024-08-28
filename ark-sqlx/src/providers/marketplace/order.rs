@@ -1,7 +1,8 @@
 use crate::providers::marketplace::types::{
     TokenEventType, AUCTION_CANCELLED_STR, AUCTION_STR, BURN_STR, CANCELLED_STR,
-    COLLECTION_OFFER_STR, EXECUTED_STR, FULFILL_STR, LISTING_CANCELLED_STR, LISTING_STR, MINT_STR,
-    OFFER_CANCELLED_STR, OFFER_STR, ROLLBACK_STR, SALE_STR, TRANSFER_STR,
+    COLLECTION_OFFER_STR, EXECUTED_STR, FULFILL_STR, LISTING_CANCELLED_STR, LISTING_EXPIRED_STR,
+    LISTING_STR, MINT_STR, OFFER_CANCELLED_STR, OFFER_EXPIRED_STR, OFFER_STR, ROLLBACK_STR,
+    SALE_STR, TRANSFER_STR,
 };
 use crate::providers::{ProviderError, SqlxCtxPg};
 
@@ -42,6 +43,8 @@ impl FromStr for TokenEventType {
             LISTING_CANCELLED_STR => Ok(TokenEventType::ListingCancelled),
             AUCTION_CANCELLED_STR => Ok(TokenEventType::AuctionCancelled),
             OFFER_CANCELLED_STR => Ok(TokenEventType::OfferCancelled),
+            LISTING_EXPIRED_STR => Ok(TokenEventType::ListingExpired),
+            OFFER_EXPIRED_STR => Ok(TokenEventType::OfferExpired),
             _ => Err("Unknown event type"),
         }
     }
@@ -68,6 +71,8 @@ impl fmt::Display for TokenEventType {
                 TokenEventType::ListingCancelled => LISTING_CANCELLED_STR,
                 TokenEventType::AuctionCancelled => AUCTION_CANCELLED_STR,
                 TokenEventType::OfferCancelled => OFFER_CANCELLED_STR,
+                TokenEventType::ListingExpired => LISTING_EXPIRED_STR,
+                TokenEventType::OfferExpired => OFFER_EXPIRED_STR,
             }
         )
     }
