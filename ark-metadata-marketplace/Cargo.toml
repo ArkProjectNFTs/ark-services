@@ -25,6 +25,9 @@ sqlx.workspace = true
 mime_guess = "2.0"
 reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] }
 thiserror = "1.0.32"
+openssl = "0.10.66"
+openssl-probe = "0.1.5"
+tikv-jemallocator = "0.6.0"
 
 [dev-dependencies]
 sqlx = { version = "0.7", features = [
