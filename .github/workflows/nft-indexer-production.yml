@@ -65,7 +65,6 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-          override: true
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -143,7 +142,6 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-          override: true
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -193,7 +191,6 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-          override: true
 
       - name: Install Dependencies
         run: |
