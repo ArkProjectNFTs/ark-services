@@ -8,9 +8,13 @@ use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::HashSet;
 use tracing::info;
+use chrono::Utc;
+use uuid::Uuid;
 
 const CHAIN_ID: &str = "0x534e5f4d41494e";
 const ITEMS_PER_PAGE: i64 = 50;
+const EXPIRED_OFFER_EVENT: &str = "OfferExpired";
+const EXPIRED_LISTING_EVENT: &str = "ListingExpired";
 
 #[derive(sqlx::FromRow)]
 struct Offer {
@@ -49,6 +53,54 @@ async fn clear_collection_cache(
 }
 
 pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
+
+    // Insert expired listing events
+    let select_expired_listings_query = r#"
+        SELECT DISTINCT contract_address, chain_id, token_id, token_id_hex
+        FROM token
+        WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
+          AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
+    "#;
+
+    let expired_listings: Vec<(String, String, String, String)> = match sqlx::query_as(select_expired_listings_query)
+        .fetch_all(pool)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            tracing::error!("Failed to select expired listings: {}", e);
+            return;
+        }
+    };
+
+    for (contract_address, chain_id, token_id, token_id_hex) in &expired_listings {
+        let now = Utc::now().timestamp();
+        let token_event_id = Uuid::new_v4().to_string();
+        let insert_expired_listing_event_query = r#"
+            INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
+            VALUES ($6, $1, $2, $3, $4, $5, $7);
+        "#;
+
+        match sqlx::query(insert_expired_listing_event_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .bind(token_id_hex)
+            .bind(EXPIRED_LISTING_EVENT)
+            .bind(token_event_id)
+            .bind(now)
+            .execute(pool)
+            .await
+        {
+            Ok(_) => info!("Inserted expired listing event for token: {}", token_id),
+            Err(e) => tracing::error!(
+                "Failed to insert expired listing event for token {}: {}",
+                token_id,
+                e
+            ),
+        }
+    }
+
     let select_collections_query = r#"
         SELECT DISTINCT contract_address
         FROM token
@@ -199,12 +251,12 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
 
 pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
     let select_expired_offers_query = r#"
-        SELECT DISTINCT contract_address, token_id
+        SELECT DISTINCT contract_address, chain_id, token_id
         FROM token_offer
         WHERE NOW() - interval '2 minutes' > to_timestamp(end_date);
     "#;
 
-    let expired_offers: Vec<(String, String)> = match sqlx::query_as(select_expired_offers_query)
+    let expired_offers: Vec<(String, String, String)> = match sqlx::query_as(select_expired_offers_query)
         .fetch_all(pool)
         .await
     {
@@ -215,11 +267,63 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
         }
     };
 
-    // Delete these offers from the `token_offer` table
-    for (contract_address, token_id) in &expired_offers {
+    for (contract_address, chain_id, token_id) in &expired_offers {
+        // Fetch token_id_hex from the token table
+        let select_token_id_hex_query = r#"
+            SELECT token_id_hex
+            FROM token
+            WHERE contract_address = $1
+              AND chain_id = $2
+              AND token_id = $3;
+        "#;
+
+        let token_id_hex: String = match sqlx::query_scalar(select_token_id_hex_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .fetch_one(pool)
+            .await
+        {
+            Ok(hex) => hex,
+            Err(e) => {
+                tracing::error!("Failed to fetch token_id_hex for token {}: {}", token_id, e);
+                return;
+            }
+        };
+
+        let now = Utc::now().timestamp();
+        let token_event_id = Uuid::new_v4().to_string();
+
+        // insert expired offer event
+        let insert_expired_offer_event_query = r#"
+            INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
+            VALUES ($6, $1, $2, $3, $4, $5, $7);
+        "#;
+
+        match sqlx::query(insert_expired_offer_event_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .bind(token_id_hex)
+            .bind(EXPIRED_OFFER_EVENT)
+            .bind(token_event_id)
+            .bind(now)
+            .execute(pool)
+            .await
+        {
+            Ok(_) => info!("Inserted expired offer event for token: {}", token_id),
+            Err(e) => tracing::error!(
+                "Failed to insert expired offer event for token {}: {}",
+                token_id,
+                e
+            ),
+        }
+
+        // Delete these offers from the `token_offer` table
         let delete_expired_offers_query = r#"
             DELETE FROM token_offer
             WHERE contract_address = $1
+              AND chain_id = $3
               AND token_id = $2
               AND NOW() > to_timestamp(end_date);
         "#;
@@ -227,6 +331,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
         match sqlx::query(delete_expired_offers_query)
             .bind(contract_address)
             .bind(token_id)
+            .bind(chain_id)
             .execute(pool)
             .await
         {
@@ -237,10 +342,8 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
                 e
             ),
         }
-    }
 
-    // For each token whose offer has been deleted, check if there are valid offers left
-    for (contract_address, token_id) in &expired_offers {
+        // For each token whose offer has been deleted, check if there are valid offers left
         let select_valid_offers_query = r#"
             SELECT
                 CAST(hex_to_decimal(offer_amount) AS FLOAT8) as offer_amount,
@@ -252,6 +355,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
             FROM token_offer
             WHERE contract_address = $1
               AND token_id = $2
+              AND chain_id = $3
               AND NOW() <= to_timestamp(end_date)
               AND STATUS = 'PLACED'
             ORDER BY hex_to_decimal(offer_amount) DESC
@@ -261,6 +365,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
         let valid_offer: Result<Offer, _> = sqlx::query_as(select_valid_offers_query)
             .bind(contract_address)
             .bind(token_id)
+            .bind(chain_id)
             .fetch_one(pool)
             .await;
 
@@ -319,7 +424,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
     // Clear the cache for each collection
     let collections: HashSet<String> = expired_offers
         .into_iter()
-        .map(|(contract_address, _)| contract_address)
+        .map(|(contract_address, _, _)| contract_address)
         .collect();
     for contract_address in &collections {
         match clear_collection_cache(con.clone(), contract_address).await {

@@ -11,6 +11,8 @@ use crate::models::token::{
     TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
+use crate::utils::db_utils::generate_order_by_clause;
+
 use async_trait::async_trait;
 use bigdecimal::BigDecimal;
 use serde_json::Value as JsonValue;
@@ -802,57 +804,13 @@ impl DatabaseAccess for PgPool {
         buy_now: bool,
         sort: Option<String>,
         direction: Option<String>,
+        sort_value: Option<String>,
         token_ids: Option<Vec<String>>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
         let sort_field = sort.as_deref().unwrap_or("price");
         let sort_direction = direction.as_deref().unwrap_or("asc");
-
-        let order_by = match (sort_field, sort_direction) {
-            ("price", "asc") => {
-                "token.listing_start_amount ASC NULLS LAST, CAST(token.token_id AS NUMERIC)"
-            }
-            ("price", "desc") => {
-                "token.listing_start_amount DESC NULLS FIRST, CAST(token.token_id AS NUMERIC)"
-            }
-            (_, "asc") => "CAST(token.token_id AS NUMERIC) ASC",
-            (_, "desc") => "CAST(token.token_id AS NUMERIC) DESC",
-            _ => "CAST(token.token_id AS NUMERIC) ASC", // Default case
-        };
-        /*let total_token_count = sqlx::query!(
-            "
-                SELECT COUNT(*)
-                FROM token
-                WHERE token.contract_address = $1
-                  AND token.chain_id = $2
-                ",
-            contract_address,
-            chain_id
-        )
-        .fetch_one(self)
-        .await?;*/
-
-        //let token_count = total_token_count.count.unwrap_or(0);
+        let order_by = generate_order_by_clause(sort_field, sort_direction, sort_value.as_deref());
         let token_count = 0;
-
-        /*let total_count = sqlx::query!(
-            "
-                SELECT COUNT(*)
-                FROM token
-                WHERE token.contract_address = $1
-                AND token.chain_id = $2
-                AND (
-                    $3 = false
-                    OR token.is_listed = true
-                )
-                ",
-            contract_address,
-            chain_id,
-            buy_now
-        )
-        .fetch_one(self)
-        .await?;*/
-
-        //let count = total_count.count.unwrap_or(0);
         let count = 0;
 
         let token_ids_condition = match token_ids {

@@ -191,6 +191,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     buy_now: bool,
     sort: &str,
     direction: &str,
+    sort_value: Option<String>,
     disable_cache: bool,
     token_ids: Option<Vec<String>>,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
@@ -230,6 +231,8 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                     Some(sort.to_string()),
                     Some(direction.to_string()),
                     token_ids,
+                    sort_value,
+                    None
                 )
                 .await?;
 
