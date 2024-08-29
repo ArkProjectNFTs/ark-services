@@ -855,14 +855,18 @@ impl DatabaseAccess for PgPool {
         let count = 0;
 
         let token_ids_condition = if let Some(token_ids) = token_ids {
-            format!(
-                "AND token.token_id IN ({})",
-                token_ids
-                    .iter()
-                    .map(|id| format!("'{}'", id))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
+            if !token_ids.is_empty() {
+                format!(
+                    "AND token.token_id IN ({})",
+                    token_ids
+                        .iter()
+                        .map(|id| format!("'{}'", id))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            } else {
+                String::new()
+            }
         } else {
             String::new()
         };
