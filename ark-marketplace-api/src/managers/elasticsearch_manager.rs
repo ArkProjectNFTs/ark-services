@@ -13,7 +13,7 @@ impl ElasticsearchManager {
     pub fn new(es_data: HashMap<String, String>) -> Self {
         Self {
             client: ReqwestClient::new(),
-            es_data
+            es_data,
         }
     }
 
@@ -160,7 +160,11 @@ impl ElasticsearchManager {
         if let Some(hits) = response.get("hits").and_then(|h| h.get("hits")) {
             if let Some(hits_array) = hits.as_array() {
                 for hit in hits_array {
-                    if let Some(token_id) = hit.get("_source").and_then(|s| s.get("token_id")).and_then(|t| t.as_str()) {
+                    if let Some(token_id) = hit
+                        .get("_source")
+                        .and_then(|s| s.get("token_id"))
+                        .and_then(|t| t.as_str())
+                    {
                         token_ids.push(token_id.to_string());
                     }
                 }
@@ -171,14 +175,23 @@ impl ElasticsearchManager {
     }
 
     fn get_es_url(&self) -> &str {
-        self.es_data.get("url").map(String::as_str).unwrap_or("URL not found")
+        self.es_data
+            .get("url")
+            .map(String::as_str)
+            .unwrap_or("URL not found")
     }
 
     fn get_username(&self) -> &str {
-        self.es_data.get("username").map(String::as_str).unwrap_or("Username not found")
+        self.es_data
+            .get("username")
+            .map(String::as_str)
+            .unwrap_or("Username not found")
     }
 
     fn get_password(&self) -> &str {
-        self.es_data.get("password").map(String::as_str).unwrap_or("Password not found")
+        self.es_data
+            .get("password")
+            .map(String::as_str)
+            .unwrap_or("Password not found")
     }
 }

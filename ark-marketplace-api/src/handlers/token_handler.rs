@@ -1,26 +1,27 @@
+use super::utils::extract_page_params;
 use super::utils::CHAIN_ID;
 use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
     flush_all_data_query, get_collection_floor_price, get_token_activity_data, get_token_data,
-    get_token_marketdata, get_token_offers_data, get_tokens_data, get_tokens_portfolio_data,
-    get_tokens_data_by_id,
+    get_token_marketdata, get_token_offers_data, get_tokens_data, get_tokens_data_by_id,
+    get_tokens_portfolio_data, refresh_token_metadata,
 };
 use crate::managers::elasticsearch_manager::ElasticsearchManager;
-use crate::models::token::TokenEventType;
 use crate::models::token::TokenOfferOneData;
+use crate::models::token::{TokenEventType, TokenInformationData};
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use chrono::Utc;
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
+use serde_urlencoded;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use urlencoding::decode;
-use serde_urlencoded;
-use super::utils::extract_page_params;
-use std::collections::HashMap;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -290,6 +291,80 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     }))
 }
 
+#[derive(Deserialize)]
+pub struct RefreshMetadataRequest {
+    pub contract_address: String,
+    pub chain_id: String,
+    pub token_id: String,
+}
+
+fn is_metadata_refreshing(token_data: &TokenInformationData) -> bool {
+    if let Some(metadata_status) = &token_data.metadata_status {
+        if metadata_status == "TO_REFRESH" {
+            return true;
+        }
+    }
+
+    if let Some(metadata_updated_at) = token_data.metadata_updated_at {
+        let current_time = Utc::now().timestamp();
+        let time_diff = current_time - metadata_updated_at;
+        if time_diff <= 60 {
+            return true;
+        }
+    }
+
+    false
+}
+
+pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
+    body: web::Json<RefreshMetadataRequest>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let db_access = db_pool.get_ref();
+    let normalized_address = normalize_address(&body.contract_address);
+
+    match get_token_data(
+        db_access,
+        &normalized_address,
+        &body.chain_id,
+        &body.token_id,
+    )
+    .await
+    {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok(token_data) => {
+            if is_metadata_refreshing(&token_data) {
+                return HttpResponse::Ok().json(json!({
+                    "message": "Metadata refresh has already been requested"
+                }));
+            }
+
+            match refresh_token_metadata(
+                db_access,
+                &normalized_address,
+                &body.chain_id,
+                &body.token_id,
+            )
+            .await
+            {
+                Ok(_) => HttpResponse::Ok().json(json!({
+                    "message": "Metadata refresh has been requested"
+                })),
+                Err(err) => {
+                    tracing::error!("Failed to refresh metadata: {}", err);
+                    HttpResponse::InternalServerError().json(json!({
+                        "message": "Failed to refresh metadata"
+                    }))
+                }
+            }
+        }
+        Err(err) => {
+            tracing::error!("error query get_tokens_data: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
 pub async fn get_token_trait_filters<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
     es_data: web::Data<HashMap<String, String>>,
@@ -319,24 +394,30 @@ pub async fn get_filtered_tokens<D: DatabaseAccess + Sync>(
     es_data: web::Data<HashMap<String, String>>,
 ) -> impl Responder {
     let query_string = req.query_string();
-    let query_params: HashMap<String, String> = serde_urlencoded::from_str(query_string).unwrap_or_default();
+    let query_params: HashMap<String, String> =
+        serde_urlencoded::from_str(query_string).unwrap_or_default();
     let contract_address = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
     let buy_now = query_params.get("buy_now").map(String::as_str) == Some("true");
-    let sort = query_params.get("sort").map(String::as_str).unwrap_or("price");
-    let direction = query_params.get("direction").map(String::as_str).unwrap_or("asc");
-
+    let sort = query_params
+        .get("sort")
+        .map(String::as_str)
+        .unwrap_or("price");
+    let direction = query_params
+        .get("direction")
+        .map(String::as_str)
+        .unwrap_or("asc");
 
     let (page, items_per_page) = match extract_page_params(query_string, 1, 100) {
         Err(msg) => return HttpResponse::BadRequest().json(msg),
         Ok((page, items_per_page)) => (page, items_per_page),
     };
 
-
     let mut token_ids = None;
     if let Some(traits_param) = query_params.get("traits") {
         let decoded_traits = decode(traits_param).expect("Failed to decode traits");
-        let traits_map: HashMap<String, Vec<String>> = serde_json::from_str(&decoded_traits).expect("Failed to parse JSON");
+        let traits_map: HashMap<String, Vec<String>> =
+            serde_json::from_str(&decoded_traits).expect("Failed to parse JSON");
 
         let elasticsearch_manager = ElasticsearchManager::new(es_data.get_ref().clone());
 
@@ -346,41 +427,43 @@ pub async fn get_filtered_tokens<D: DatabaseAccess + Sync>(
 
         token_ids = match result {
             Ok(token_ids) => Some(token_ids),
-            Err(e) => return HttpResponse::InternalServerError().json(json!({
-                "error": format!("Failed to retrieve data: {}", e)
-            })),
+            Err(e) => {
+                return HttpResponse::InternalServerError().json(json!({
+                    "error": format!("Failed to retrieve data: {}", e)
+                }))
+            }
         };
     }
 
     let db_access = db_pool.get_ref();
 
     match get_tokens_data_by_id(
-           db_access,
-           &normalized_address,
-           CHAIN_ID,
-           page,
-           items_per_page,
-           buy_now,
-           sort,
-           direction,
-           token_ids,
-       )
-       .await
-       {
-           Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-           Ok((ref collection_data, _, _)) if collection_data.is_empty() => {
-               HttpResponse::NotFound().body("data not found")
-           }
-           Ok((collection_data, _has_next_page, token_count)) => HttpResponse::Ok().json(json!({
-               "data": collection_data,
-               "token_count": token_count,
-               "next_page": page + 1
-           })),
-           Err(err) => {
-               tracing::error!("error query get_tokens_data: {}", err);
-               HttpResponse::InternalServerError().finish()
-           }
-       }
+        db_access,
+        &normalized_address,
+        CHAIN_ID,
+        page,
+        items_per_page,
+        buy_now,
+        sort,
+        direction,
+        token_ids,
+    )
+    .await
+    {
+        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Ok((ref collection_data, _, _)) if collection_data.is_empty() => {
+            HttpResponse::NotFound().body("data not found")
+        }
+        Ok((collection_data, _has_next_page, token_count)) => HttpResponse::Ok().json(json!({
+            "data": collection_data,
+            "token_count": token_count,
+            "next_page": page + 1
+        })),
+        Err(err) => {
+            tracing::error!("error query get_tokens_data: {}", err);
+            HttpResponse::InternalServerError().finish()
+        }
+    }
 }
 
 pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> impl Responder {
