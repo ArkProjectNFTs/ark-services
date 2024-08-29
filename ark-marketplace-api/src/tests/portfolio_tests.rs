@@ -4,7 +4,7 @@ use serde_json::Value;
 #[tokio::test]
 async fn test_get_activity() {
     let client = Client::new();
-    let user_address = "0xe4769a4d2f7f69c70951a003eba5c32707cef3cdfb6b27ca63567f51cdd078";
+    let user_address = "0x00e4769a4d2f7f69c70951a003eba5c32707cef3cdfb6b27ca63567f51cdd078";
 
     let url = format!("http://localhost:8080/portfolio/{}/activity", user_address);
     let res = client
@@ -26,7 +26,7 @@ async fn test_get_activity() {
 #[tokio::test]
 async fn test_get_tokens_portfolio() {
     let client = Client::new();
-    let user_address = "0xe4769a4d2f7f69c70951a003eba5c32707cef3cdfb6b27ca63567f51cdd078";
+    let user_address = "0x00e4769a4d2f7f69c70951a003eba5c32707cef3cdfb6b27ca63567f51cdd078";
 
     let url = format!("http://localhost:8080/portfolio/{}", user_address);
     let res = client
