@@ -134,4 +134,3 @@ async fn test_get_token_activity() {
     let body: Value = res.json().await.expect("Failed to parse response body");
     println!("{:?}", body);
 }
-

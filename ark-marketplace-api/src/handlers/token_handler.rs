@@ -6,18 +6,22 @@ use crate::db::query::{
     get_token_marketdata, get_token_offers_data, get_tokens_data, get_tokens_portfolio_data,
     refresh_token_metadata,
 };
+use crate::managers::elasticsearch_manager::ElasticsearchManager;
 use crate::models::token::TokenOfferOneData;
 use crate::models::token::{TokenEventType, TokenInformationData};
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
+
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use urlencoding::decode;
 
 #[derive(Deserialize)]
 pub struct QueryParameters {
@@ -28,6 +32,7 @@ pub struct QueryParameters {
     direction: Option<String>,
     collection: Option<String>,
     disable_cache: Option<String>,
+    filters: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -55,6 +60,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     query_parameters: web::Query<QueryParameters>,
     db_pool: web::Data<D>,
     redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
+    es_data: web::Data<HashMap<String, String>>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
@@ -63,10 +69,39 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
     let direction = query_parameters.direction.as_deref().unwrap_or("asc");
-    let disable_cache = query_parameters.disable_cache.as_deref() == Some("true");
+    let mut disable_cache = query_parameters.disable_cache.as_deref() == Some("true");
 
     let db_access = db_pool.get_ref();
     let mut redis_con_ref = redis_con.get_ref().lock().await;
+    let mut token_ids = None;
+    if let Some(filters_param) = &query_parameters.filters {
+        let decoded_filters = decode(&filters_param).expect("Failed to decode filters");
+        let filters_map: HashMap<String, serde_json::Value> =
+            serde_json::from_str(&decoded_filters).expect("Failed to parse JSON");
+
+        if let Some(traits) = filters_map.get("traits") {
+            // for now we dont want to cache results with traits
+            disable_cache = true;
+            let traits_map: HashMap<String, Vec<String>> =
+                serde_json::from_value(traits.clone()).expect("Failed to parse traits JSON");
+
+            let elasticsearch_manager = ElasticsearchManager::new(es_data.get_ref().clone());
+
+            let result = elasticsearch_manager
+                .search_tokens_by_traits(&normalized_address, CHAIN_ID, traits_map)
+                .await;
+
+            token_ids = match result {
+                Ok(token_ids) => Some(token_ids),
+                Err(e) => {
+                    return HttpResponse::InternalServerError().json(json!({
+                        "error": format!("Failed to retrieve data: {}", e)
+                    }))
+                }
+            };
+        }
+    }
+
     match get_tokens_data(
         db_access,
         &mut redis_con_ref,
@@ -78,6 +113,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
         sort,
         direction,
         disable_cache,
+        token_ids,
     )
     .await
     {
