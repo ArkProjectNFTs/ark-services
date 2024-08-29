@@ -31,12 +31,12 @@ impl ElasticsearchManager {
                     "must": [
                         {
                             "term": {
-                                "contract_address.keyword": collection_id
+                                "contract_address": collection_id
                             }
                         },
                         {
                             "term": {
-                                "chain_id.keyword": chain_id
+                                "chain_id": chain_id
                             }
                         }
                     ]
@@ -51,7 +51,6 @@ impl ElasticsearchManager {
             .json(&body)
             .send()
             .await?;
-
         if response.status().is_success() {
             let json_response: Value = response.json().await?;
             let traits_map = Self::process_elasticsearch_response(&json_response);
@@ -118,13 +117,13 @@ impl ElasticsearchManager {
 
         must_clauses.push(json!({
             "term": {
-                "contract_address.keyword": collection_id
+                "contract_address": collection_id
             }
         }));
 
         must_clauses.push(json!({
             "term": {
-                "chain_id.keyword": chain_id
+                "chain_id": chain_id
             }
         }));
 
