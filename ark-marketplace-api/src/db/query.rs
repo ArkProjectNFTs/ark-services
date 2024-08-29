@@ -192,6 +192,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     sort: &str,
     direction: &str,
     disable_cache: bool,
+    token_ids: Option<Vec<String>>,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
     // Generate a unique key for this query based on buy_now value
     let cache_key = if buy_now {
@@ -228,7 +229,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                     buy_now,
                     Some(sort.to_string()),
                     Some(direction.to_string()),
-                    None,
+                    token_ids,
                 )
                 .await?;
 
@@ -267,34 +268,6 @@ pub async fn get_token_marketdata<D: DatabaseAccess + Sync>(
     db_access
         .get_token_marketdata(contract_address, chain_id, token_id)
         .await
-}
-
-#[allow(clippy::too_many_arguments)]
-pub async fn get_tokens_data_by_id<D: DatabaseAccess + Sync>(
-    db_access: &D,
-    contract_address: &str,
-    chain_id: &str,
-    page: i64,
-    items_per_page: i64,
-    buy_now: bool,
-    sort: &str,
-    direction: &str,
-    token_ids: Option<Vec<String>>,
-) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
-    let tokens_data = db_access
-        .get_tokens_data(
-            contract_address,
-            chain_id,
-            page,
-            items_per_page,
-            buy_now,
-            Some(sort.to_string()),
-            Some(direction.to_string()),
-            token_ids,
-        )
-        .await?;
-
-    Ok(tokens_data)
 }
 
 #[allow(clippy::too_many_arguments)]
