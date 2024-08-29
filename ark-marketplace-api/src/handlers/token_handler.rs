@@ -322,7 +322,7 @@ pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
     let db_access = db_pool.get_ref();
     let normalized_address = normalize_address(&body.contract_address);
 
-    match get_token_data(db_access, &normalized_address, &CHAIN_ID, &body.token_id).await {
+    match get_token_data(db_access, &normalized_address, CHAIN_ID, &body.token_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => {
             if is_metadata_refreshing(&token_data) {
@@ -331,7 +331,7 @@ pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
                 }));
             }
 
-            match refresh_token_metadata(db_access, &normalized_address, &CHAIN_ID, &body.token_id)
+            match refresh_token_metadata(db_access, &normalized_address, CHAIN_ID, &body.token_id)
                 .await
             {
                 Ok(_) => HttpResponse::Ok().json(json!({
