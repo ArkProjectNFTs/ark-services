@@ -10,16 +10,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
-        "/collections/{address}/traits",
-        web::get().to(collection_handler::get_traits::<PgPool>),
-    );
-
-    cfg.route(
-        "/collections/{address}/filters",
-        web::get().to(collection_handler::get_filtered_tokens::<PgPool>),
-    );
-
-    cfg.route(
         "/collections/{address}/activity",
         web::get().to(collection_handler::get_collection_activity::<PgPool>),
     );
@@ -27,6 +17,16 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.route(
         "/collections/{address}/{chain_id}",
         web::get().to(collection_handler::get_collection::<PgPool>),
+    );
+
+    cfg.route(
+        "/collections/{address}/traits",
+        web::get().to(collection_handler::get_traits::<PgPool>),
+    );
+
+    cfg.route(
+        "/collections/{address}/filters",
+        web::get().to(collection_handler::get_filtered_tokens::<PgPool>),
     );
 
     cfg.route(
