@@ -35,7 +35,6 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-          override: true
 
       - name: Install pnpm
         run: |

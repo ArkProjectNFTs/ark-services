@@ -94,7 +94,6 @@ jobs:
         with:
           toolchain: stable
           profile: minimal
-          override: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v2
