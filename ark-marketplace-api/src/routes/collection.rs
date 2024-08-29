@@ -30,6 +30,16 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
+        "/collections/{address}/traits",
+        web::get().to(collection_handler::get_traits::<PgPool>),
+    );
+
+    cfg.route(
+        "/collections/{address}/filters",
+        web::get().to(collection_handler::get_filtered_tokens::<PgPool>),
+    );
+
+    cfg.route(
         "/portfolio/{user_address}/collections",
         web::get().to(collection_handler::get_portfolio_collections::<PgPool>),
     );
