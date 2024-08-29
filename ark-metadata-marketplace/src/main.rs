@@ -1,3 +1,6 @@
+extern crate openssl;
+extern crate openssl_probe;
+
 mod aws_s3_file_manager;
 mod elasticsearch_manager;
 mod metadata_storage;
@@ -20,6 +23,9 @@ use std::{env, time::Duration};
 use tokio::time::sleep;
 use tracing::{debug, error, info, span, trace, warn, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 struct Config {
     bucket_name: String,
