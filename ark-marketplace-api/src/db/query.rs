@@ -228,7 +228,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                     buy_now,
                     Some(sort.to_string()),
                     Some(direction.to_string()),
-                    None
+                    None,
                 )
                 .await?;
 
@@ -282,22 +282,20 @@ pub async fn get_tokens_data_by_id<D: DatabaseAccess + Sync>(
     token_ids: Option<Vec<String>>,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
     let tokens_data = db_access
-     .get_tokens_data(
-         contract_address,
-         chain_id,
-         page,
-         items_per_page,
-         buy_now,
-         Some(sort.to_string()),
-         Some(direction.to_string()),
-        token_ids,
-     )
-     .await?;
+        .get_tokens_data(
+            contract_address,
+            chain_id,
+            page,
+            items_per_page,
+            buy_now,
+            Some(sort.to_string()),
+            Some(direction.to_string()),
+            token_ids,
+        )
+        .await?;
 
     Ok(tokens_data)
 }
-
-
 
 #[allow(clippy::too_many_arguments)]
 pub async fn get_tokens_portfolio_data<D: DatabaseAccess + Sync>(

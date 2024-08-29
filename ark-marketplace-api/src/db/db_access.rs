@@ -857,7 +857,11 @@ impl DatabaseAccess for PgPool {
         let token_ids_condition = if let Some(token_ids) = token_ids {
             format!(
                 "AND token.token_id IN ({})",
-                token_ids.iter().map(|id| format!("'{}'", id)).collect::<Vec<_>>().join(", ")
+                token_ids
+                    .iter()
+                    .map(|id| format!("'{}'", id))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
         } else {
             String::new()
@@ -884,8 +888,7 @@ impl DatabaseAccess for PgPool {
                    {}
                ORDER BY {}
                LIMIT $4 OFFSET $5",
-               token_ids_condition,
-                order_by
+            token_ids_condition, order_by
         );
 
         let query = sqlx::query_as(&tokens_data_query)
