@@ -44,6 +44,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
+        "/metadata/refresh",
+        web::post().to(token_handler::post_refresh_token_metadata::<PgPool>),
+    );
+
+    cfg.route(
         "/flush-all-data",
         web::delete()
             .to(token_handler::flush_all_data::<PgPool>)

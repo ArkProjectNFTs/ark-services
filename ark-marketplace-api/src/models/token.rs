@@ -63,6 +63,8 @@ pub struct TokenInformationData {
     pub collection_name: Option<String>,
     pub metadata: Option<JsonValue>,
     pub collection_image: Option<String>,
+    pub metadata_updated_at: Option<i64>,
+    pub metadata_status: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow)]
@@ -245,6 +247,12 @@ impl Serialize for TokenEventType {
     {
         serializer.serialize_str(&self.to_string())
     }
+}
+
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct TokenMetadataInfo {
+    pub metadata_status: String,
+    pub metadata_updated_at: i64,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow)]

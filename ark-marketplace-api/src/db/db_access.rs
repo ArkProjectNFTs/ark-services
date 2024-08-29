@@ -44,6 +44,13 @@ struct TokenDataDB {
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
 pub trait DatabaseAccess: Send + Sync {
+    async fn refresh_token_metadata(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<(), Error>;
+
     async fn get_tokens_data(
         &self,
         contract_address: &str,
@@ -149,6 +156,28 @@ pub trait DatabaseAccess: Send + Sync {
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
+    async fn refresh_token_metadata(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        token_id: &str,
+    ) -> Result<(), Error> {
+        let query = "
+            UPDATE token
+            SET metadata_status = 'TO_REFRESH', updated_timestamp = EXTRACT(EPOCH FROM NOW())
+            WHERE contract_address = $1 AND chain_id = $2 AND token_id = $3
+        ";
+
+        sqlx::query(query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(token_id)
+            .execute(self)
+            .await?;
+
+        Ok(())
+    }
+
     async fn flush_all_data(&self) -> Result<u64, Error> {
         let mut total_rows_affected = 0;
 
@@ -743,7 +772,9 @@ impl DatabaseAccess for PgPool {
                         token.current_owner as owner,
                         c.contract_name as collection_name,
                         token.metadata as metadata,
-                        c.contract_image as collection_image
+                        c.contract_image as collection_image,
+                        metadata_updated_at,
+                        metadata_status
                     FROM token
                     INNER JOIN contract as c ON c.contract_address = token.contract_address
                         AND c.chain_id = token.chain_id
@@ -826,7 +857,11 @@ impl DatabaseAccess for PgPool {
         let token_ids_condition = if let Some(token_ids) = token_ids {
             format!(
                 "AND token.token_id IN ({})",
-                token_ids.iter().map(|id| format!("'{}'", id)).collect::<Vec<_>>().join(", ")
+                token_ids
+                    .iter()
+                    .map(|id| format!("'{}'", id))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             )
         } else {
             String::new()
@@ -853,8 +888,7 @@ impl DatabaseAccess for PgPool {
                    {}
                ORDER BY {}
                LIMIT $4 OFFSET $5",
-               token_ids_condition,
-                order_by
+            token_ids_condition, order_by
         );
 
         let query = sqlx::query_as(&tokens_data_query)

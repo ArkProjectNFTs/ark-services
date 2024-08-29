@@ -135,7 +135,6 @@ async fn test_get_token_activity() {
     println!("{:?}", body);
 }
 
-
 #[tokio::test]
 async fn test_get_token_trait_filters() {
     let client = Client::new();
