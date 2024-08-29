@@ -318,6 +318,7 @@ fn is_metadata_refreshing(token_data: &TokenInformationData) -> bool {
 pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
     body: web::Json<RefreshMetadataRequest>,
     db_pool: web::Data<D>,
+    write_db_pool: web::Data<D>,
 ) -> impl Responder {
     let db_access = db_pool.get_ref();
     let normalized_address = normalize_address(&body.contract_address);

@@ -65,6 +65,32 @@ async fn get_database_url() -> Result<String> {
     }
 }
 
+async fn get_write_database_url() -> Result<String> {
+    match std::env::var("WRITE_DATABASE_URL") {
+        Ok(url) => Ok(url),
+        Err(_) => {
+            let secret_name =
+                std::env::var("AWS_SECRET_NAME_WRITE_DB").expect("AWS_WRITE_SECRET_NAME not set");
+            let config = aws_config::load_defaults(BehaviorVersion::v2024_03_28()).await;
+            let client = aws_sdk_secretsmanager::Client::new(&config);
+            let secret_value = client
+                .get_secret_value()
+                .secret_id(secret_name)
+                .send()
+                .await?;
+            let result = secret_value.secret_string.unwrap();
+
+            let creds: DatabaseCredentials = serde_json::from_str(&result)?;
+            let database_url = format!(
+                "postgres://{}:{}@{}:{}/{}",
+                creds.username, creds.password, creds.host, creds.port, creds.dbname
+            );
+
+            Ok(database_url)
+        }
+    }
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
@@ -74,10 +100,19 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Could not get the database URL");
 
+    let write_database_url = get_write_database_url()
+        .await
+        .expect("Could not get the write database URL");
+
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)
         .await
         .expect("Could not connect to the database");
+
+    let write_db_pool = PgPoolOptions::new()
+        .connect(&write_database_url)
+        .await
+        .expect("Could not connect to the write database");
 
     let redis_conn = match connect_redis().await {
         Ok(con) => con,
@@ -113,6 +148,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .wrap(DefaultHeaders::new().add(("X-GIT-REVISION", env!("GIT_HASH", "N/A"))))
             .app_data(web::Data::new(db_pool.clone()))
+            .app_data(web::Data::new(write_db_pool.clone()))
             .app_data(web::Data::new(redis_conn.clone()))
             .app_data(web::Data::new(es_config.clone()))
             .configure(default::config)
