@@ -75,7 +75,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let mut redis_con_ref = redis_con.get_ref().lock().await;
     let mut token_ids = None;
     if let Some(filters_param) = &query_parameters.filters {
-        let decoded_filters = decode(&filters_param).expect("Failed to decode filters");
+        let decoded_filters = decode(filters_param).expect("Failed to decode filters");
         let filters_map: HashMap<String, serde_json::Value> =
             serde_json::from_str(&decoded_filters).expect("Failed to parse JSON");
 
