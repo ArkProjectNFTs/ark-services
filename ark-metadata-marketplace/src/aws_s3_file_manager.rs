@@ -30,10 +30,20 @@ impl FileManager for AWSFileManager {
 
         // Compute the SHA-256 hash of the file content to use as the file key.
         let hash = sha256::digest(&file.content);
-        let file_extension = file.name.split('.').last().unwrap_or("");
+        let file_extension = file.name.split('.').last();
         let key = file.dir_path.as_ref().map_or_else(
-            || format!("{}.{}", hash, file_extension),
-            |dir_path| format!("{}/{}.{}", dir_path, hash, file_extension),
+            || match file_extension {
+                Some(ext) if !ext.is_empty() && file.name.contains('.') => {
+                    format!("{}.{}", hash, ext)
+                }
+                _ => format!("{}", hash),
+            },
+            |dir_path| match file_extension {
+                Some(ext) if !ext.is_empty() && file.name.contains('.') => {
+                    format!("{}/{}.{}", dir_path, hash, ext)
+                }
+                _ => format!("{}/{}", dir_path, hash),
+            },
         );
 
         let content_type = from_path(&file.name)
