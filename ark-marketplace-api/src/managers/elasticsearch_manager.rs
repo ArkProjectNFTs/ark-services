@@ -82,7 +82,9 @@ impl ElasticsearchManager {
 
                 // Check if there are more results to scroll
                 let empty_vec = vec![];
-                let hits = json_response["hits"]["hits"].as_array().unwrap_or(&empty_vec);
+                let hits = json_response["hits"]["hits"]
+                    .as_array()
+                    .unwrap_or(&empty_vec);
                 if hits.is_empty() {
                     break;
                 }
@@ -146,11 +148,33 @@ impl ElasticsearchManager {
         let mut must_clauses = Vec::new();
 
         for (trait_type, values) in traits.iter() {
-            for value in values.iter() {
-                let phrase = format!("\"trait_type\":\"{}\",\"value\":\"{}\"", trait_type, value);
+            if values.len() == 1 {
+                // If there's only one value for a trait_type, use match_phrase directly
+                let phrase = format!(
+                    "\"trait_type\":\"{}\",\"value\":\"{}\"",
+                    trait_type, values[0]
+                );
                 must_clauses.push(json!({
                     "match_phrase": {
                         "raw_metadata": phrase
+                    }
+                }));
+            } else {
+                // If there are multiple values for a trait_type, use should to create a logical OR
+                let mut should_clauses = Vec::new();
+                for value in values.iter() {
+                    let phrase =
+                        format!("\"trait_type\":\"{}\",\"value\":\"{}\"", trait_type, value);
+                    should_clauses.push(json!({
+                        "match_phrase": {
+                            "raw_metadata": phrase
+                        }
+                    }));
+                }
+                must_clauses.push(json!({
+                    "bool": {
+                        "should": should_clauses,
+                        "minimum_should_match": 1
                     }
                 }));
             }
@@ -207,7 +231,9 @@ impl ElasticsearchManager {
 
                 // Check if there are more results to scroll
                 let empty_vec = Vec::new();
-                let hits = json_response["hits"]["hits"].as_array().unwrap_or(&empty_vec);
+                let hits = json_response["hits"]["hits"]
+                    .as_array()
+                    .unwrap_or(&empty_vec);
                 if hits.is_empty() {
                     break;
                 }
