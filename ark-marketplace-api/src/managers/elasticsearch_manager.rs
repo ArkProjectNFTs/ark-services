@@ -70,7 +70,6 @@ impl ElasticsearchManager {
 
             if response.status().is_success() {
                 let json_response: Value = response.json().await?;
-
                 // Update traits_map with the new batch of results
                 let new_traits_map = Self::process_elasticsearch_response(&json_response);
                 for (key, value_map) in new_traits_map {
@@ -144,7 +143,6 @@ impl ElasticsearchManager {
         let url = format!("{}/nft-metadata/_search?scroll=1m", self.get_es_url());
         let scroll_url = format!("{}/_search/scroll", self.get_es_url());
 
-        // Build the query
         let mut must_clauses = Vec::new();
 
         for (trait_type, values) in traits.iter() {
@@ -201,7 +199,6 @@ impl ElasticsearchManager {
                 }
             }
         });
-
         let mut token_ids = Vec::new();
         let mut scroll_id: Option<String> = None;
 
