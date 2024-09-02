@@ -22,10 +22,12 @@ impl ElasticsearchManager {
         collection_id: &str,
         chain_id: &str,
     ) -> Result<HashMap<String, HashMap<String, usize>>, Box<dyn std::error::Error>> {
-        let url = format!("{}/nft-metadata/_search", self.get_es_url());
+        let url = format!("{}/nft-metadata/_search?scroll=1m", self.get_es_url());
+        let scroll_url = format!("{}/_search/scroll", self.get_es_url());
 
         let body = json!({
             "_source": ["metadata.attributes.trait_type", "metadata.attributes.value"],
+            "size": 10000,
             "query": {
                 "bool": {
                     "must": [
@@ -44,20 +46,58 @@ impl ElasticsearchManager {
             }
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .basic_auth(self.get_username(), Some(self.get_password()))
-            .json(&body)
-            .send()
-            .await?;
-        if response.status().is_success() {
-            let json_response: Value = response.json().await?;
-            let traits_map = Self::process_elasticsearch_response(&json_response);
-            Ok(traits_map)
-        } else {
-            Err(format!("Request failed with status: {}", response.status()).into())
+        let mut traits_map: HashMap<String, HashMap<String, usize>> = HashMap::new();
+        let mut scroll_id: Option<String> = None;
+
+        loop {
+            let response = if let Some(ref id) = scroll_id {
+                // Request with the scroll_id to get the next batch
+                self.client
+                    .post(&scroll_url)
+                    .basic_auth(self.get_username(), Some(self.get_password()))
+                    .json(&json!({ "scroll": "1m", "scroll_id": id }))
+                    .send()
+                    .await?
+            } else {
+                // Initial search request
+                self.client
+                    .post(&url)
+                    .basic_auth(self.get_username(), Some(self.get_password()))
+                    .json(&body)
+                    .send()
+                    .await?
+            };
+
+            if response.status().is_success() {
+                let json_response: Value = response.json().await?;
+
+                // Update traits_map with the new batch of results
+                let new_traits_map = Self::process_elasticsearch_response(&json_response);
+                for (key, value_map) in new_traits_map {
+                    let entry = traits_map.entry(key).or_insert_with(HashMap::new);
+                    for (value_key, count) in value_map {
+                        *entry.entry(value_key).or_insert(0) += count;
+                    }
+                }
+
+                // Check if there are more results to scroll
+                let empty_vec = vec![];
+                let hits = json_response["hits"]["hits"].as_array().unwrap_or(&empty_vec);
+                if hits.is_empty() {
+                    break;
+                }
+                if hits.is_empty() {
+                    break;
+                }
+
+                // Update scroll_id for the next request
+                scroll_id = json_response["_scroll_id"].as_str().map(String::from);
+            } else {
+                return Err(format!("Request failed with status: {}", response.status()).into());
+            }
         }
+
+        Ok(traits_map)
     }
 
     /// Parse response
@@ -99,7 +139,8 @@ impl ElasticsearchManager {
         chain_id: &str,
         traits: HashMap<String, Vec<String>>,
     ) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-        let url = format!("{}/nft-metadata/_search", self.get_es_url());
+        let url = format!("{}/nft-metadata/_search?scroll=1m", self.get_es_url());
+        let scroll_url = format!("{}/_search/scroll", self.get_es_url());
 
         // Build the query
         let mut must_clauses = Vec::new();
@@ -129,6 +170,7 @@ impl ElasticsearchManager {
 
         let body = json!({
             "_source": ["token_id"],
+            "size": 10000,
             "query": {
                 "bool": {
                     "must": must_clauses
@@ -136,22 +178,51 @@ impl ElasticsearchManager {
             }
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .basic_auth(self.get_username(), Some(self.get_password()))
-            .json(&body)
-            .send()
-            .await?;
+        let mut token_ids = Vec::new();
+        let mut scroll_id: Option<String> = None;
 
-        if response.status().is_success() {
-            let json_response: Value = response.json().await?;
-            let token_ids = Self::extract_token_ids(&json_response);
+        loop {
+            let response = if let Some(ref id) = scroll_id {
+                // Request with the scroll_id to get the next batch
+                self.client
+                    .post(&scroll_url)
+                    .basic_auth(self.get_username(), Some(self.get_password()))
+                    .json(&json!({ "scroll": "1m", "scroll_id": id }))
+                    .send()
+                    .await?
+            } else {
+                // Initial search request
+                self.client
+                    .post(&url)
+                    .basic_auth(self.get_username(), Some(self.get_password()))
+                    .json(&body)
+                    .send()
+                    .await?
+            };
 
-            Ok(token_ids)
-        } else {
-            Err(format!("Request failed with status: {}", response.status()).into())
+            if response.status().is_success() {
+                let json_response: Value = response.json().await?;
+                let new_token_ids = Self::extract_token_ids(&json_response);
+                token_ids.extend(new_token_ids);
+
+                // Check if there are more results to scroll
+                let empty_vec = Vec::new();
+                let hits = json_response["hits"]["hits"].as_array().unwrap_or(&empty_vec);
+                if hits.is_empty() {
+                    break;
+                }
+                if hits.is_empty() {
+                    break;
+                }
+
+                // Update scroll_id for the next request
+                scroll_id = json_response["_scroll_id"].as_str().map(String::from);
+            } else {
+                return Err(format!("Request failed with status: {}", response.status()).into());
+            }
         }
+
+        Ok(token_ids)
     }
 
     fn extract_token_ids(response: &Value) -> Vec<String> {
