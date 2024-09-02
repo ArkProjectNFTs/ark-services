@@ -35,23 +35,3 @@ sqlx = { version = "0.7", features = [
     "runtime-tokio-rustls",
     "tls-rustls",
 ] }
-
-[profile.dev]
-debug = 1
-
-[profile.release]
-debug = 0
-opt-level = 3  # Optimize for size.
-lto = true        # Link Time Optimization (LTO)
-codegen-units = 1 # Set this to 1 to allow for maximum size reduction optimizations:
-panic = 'abort'   # removes the need for this extra unwinding code.
-
-[target.x86_64-unknown-linux-gnu]
-linker = "/usr/bin/clang"
-rustflags = ["-Clink-arg=-fuse-ld=lld", "-Clink-arg=-Wl,--no-rosegment"]
-
-[profile.release.package."*"]
-opt-level = 3
-
-[net]
-git-fetch-with-cli = true
