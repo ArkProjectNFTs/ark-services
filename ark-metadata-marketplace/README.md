@@ -24,20 +24,34 @@ curl -X PUT "https://localhost:9200/nft-metadata" -H 'Content-Type: application/
 {
   "mappings": {
     "properties": {
-      "name": { "type": "text" },
-      "description": { "type": "text" },
-      "image": { "type": "keyword" },
-      "token_id": { "type": "text" },
-      "contract_address": { "type": "text" },
       "chain_id": { "type": "text" },
-      "attributes": {
-        "type": "nested",
+      "contract_address": { "type": "text" },
+      "metadata": {
         "properties": {
-          "trait_type": { "type": "keyword" },
-          "value": { "type": "text" }
+          "animation_key": { "type": "text" },
+          "animation_mime_type": { "type": "text" },
+          "animation_url": { "type": "text" },
+          "attributes": {
+            "type": "nested",
+            "properties": {
+              "trait_type": { "type": "keyword" },
+              "value": { "type": "keyword" }
+            }
+          },
+          "background_color": { "type": "text" },
+          "description": { "type": "text" },
+          "external_url": { "type": "text" },
+          "image": { "type": "text" },
+          "image_key": { "type": "text" },
+          "image_mime_type": { "type": "text" },
+          "name": { "type": "text" },
+          "properties": { "type": "text" },
+          "youtube_url": { "type": "text" }
         }
       },
-      "external_url": { "type": "keyword" }
+      "metadata_updated_at": { "type": "long" },
+      "raw_metadata": { "type": "text" },
+      "token_id": { "type": "text" }
     }
   }
 }

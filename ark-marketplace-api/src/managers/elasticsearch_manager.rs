@@ -146,36 +146,33 @@ impl ElasticsearchManager {
         let mut must_clauses = Vec::new();
 
         for (trait_type, values) in traits.iter() {
-            if values.len() == 1 {
-                // If there's only one value for a trait_type, use match_phrase directly
-                let phrase = format!(
-                    "\"trait_type\":\"{}\",\"value\":\"{}\"",
-                    trait_type, values[0]
-                );
-                must_clauses.push(json!({
-                    "match_phrase": {
-                        "raw_metadata": phrase
-                    }
-                }));
-            } else {
-                // If there are multiple values for a trait_type, use should to create a logical OR
-                let mut should_clauses = Vec::new();
-                for value in values.iter() {
-                    let phrase =
-                        format!("\"trait_type\":\"{}\",\"value\":\"{}\"", trait_type, value);
-                    should_clauses.push(json!({
-                        "match_phrase": {
-                            "raw_metadata": phrase
-                        }
-                    }));
-                }
-                must_clauses.push(json!({
-                    "bool": {
-                        "should": should_clauses,
-                        "minimum_should_match": 1
+            let mut should_clauses = Vec::new();
+
+            for value in values.iter() {
+                should_clauses.push(json!({
+                    "term": {
+                        "metadata.attributes.value": value
                     }
                 }));
             }
+
+            must_clauses.push(json!({
+                "nested": {
+                    "path": "metadata.attributes",
+                    "query": {
+                        "bool": {
+                            "must": [
+                                { "term": { "metadata.attributes.trait_type": trait_type } },
+                                {
+                                    "bool": {
+                                        "should": should_clauses
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }));
         }
 
         must_clauses.push(json!({
@@ -199,6 +196,7 @@ impl ElasticsearchManager {
                 }
             }
         });
+
         let mut token_ids = Vec::new();
         let mut scroll_id: Option<String> = None;
 
