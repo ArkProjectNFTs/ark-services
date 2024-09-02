@@ -1,5 +1,5 @@
 #!/bin/sh
-# prerm script for ark-priceengine
+# prerm script for ark-price-engine
 #
 # see: dh_installdeb(1)
 
@@ -21,7 +21,7 @@ case "$1" in
     upgrade|deconfigure)
     ;;
     remove)
-        deb-systemd-invoke stop ark-priceengine
+        deb-systemd-invoke stop ark-price-engine
     ;;
 
     failed-upgrade)

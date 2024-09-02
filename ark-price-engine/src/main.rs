@@ -19,11 +19,6 @@ struct Prices {
 }
 
 #[derive(Serialize)]
-struct PriceResponse {
-    price: f64,
-}
-
-#[derive(Serialize)]
 struct CombinedPriceResponse {
     eth_usd: f64,
     strk_usd: f64,

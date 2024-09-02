@@ -1,5 +1,5 @@
 #!/bin/sh
-# preinst script for ark-priceengine
+# preinst script for ark-price-engine
 #
 # see: dh_installdeb(1)
 
@@ -16,8 +16,8 @@ set -e
 
 case "$1" in
     install|upgrade)
-        # Create ark-priceengine src folder if not exists (and the unique empty folder)
-        mkdir -p /usr/share/ark-priceengine/src/ark-priceengine/ark-priceengine-test
+        # Create ark-price-engine src folder if not exists (and the unique empty folder)
+        mkdir -p /usr/share/ark-price-engine/src/ark-price-engine/ark-price-engine-test
     ;;
 
     abort-upgrade)

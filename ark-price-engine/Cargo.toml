@@ -1,5 +1,5 @@
 [package]
-name = "ark-priceengine"
+name = "ark-price-engine"
 version = "0.1.0"
 edition = "2021"
 
@@ -24,30 +24,7 @@ depends = "$auto, systemd"
 section = "admin"
 priority = "optional"
 assets = [
- ["target/release/ark-priceengine", "usr/bin/", "755"],
- ["debian/ark-priceengine.service", "/lib/systemd/system/ark-priceengine.service", "644"], 
+ ["target/release/ark-price-engine", "usr/bin/", "755"],
+ ["debian/ark-price-engine.service", "/lib/systemd/system/ark-price-engine.service", "644"], 
 ]
 maintainer-scripts = "debian/scripts"
-
-[profile.dev]
-debug = 1
-
-[profile.release]
-debug = 0
-opt-level=3
-lto = true # Link Time Optimization (LTO)
-codegen-units=1 # Set this to 1 to allow for maximum size reduction optimizations:
-panic = 'abort' # removes the need for this extra unwinding code.
-
-[profile.release.package."*"]
-opt-level = 3
-
-[rust]
-debuginfo-level = 1
-
-[target.x86_64-unknown-linux-gnu]
-linker = "/usr/bin/clang"
-rustflags = ["-Clink-arg=-fuse-ld=lld", "-Clink-arg=-Wl,--no-rosegment"]
-
-[net]
-git-fetch-with-cli = true

@@ -1,0 +1,5 @@
+co.screenshot.ark-price-engine (0.1.0) stable; urgency=low
+
+  * Initial release of ark-price-engine add s3 features and fast ingest
+
+ -- Full Name <mehdi@screenshot.co>  Fri, 9 Aug 2024 16:30:35 +0100

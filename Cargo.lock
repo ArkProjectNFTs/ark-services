@@ -718,7 +718,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-priceengine"
+name = "ark-price-engine"
 version = "0.1.0"
 dependencies = [
  "futures",

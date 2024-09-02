@@ -30,10 +30,10 @@ case "$1" in
     remove|purge|disappear)
     if [ "$1" = "remove" ]; then
         if [ -x "/usr/bin/deb-systemd-helper" ]; then
-            deb-systemd-helper mask ark-priceengine.service >/dev/null
+            deb-systemd-helper mask ark-price-engine.service >/dev/null
             rm -Rf /usr/share/rvm
-            rm -Rf /usr/share/ark-priceengine
-            rm -Rf /opt/ark-priceengine
+            rm -Rf /usr/share/ark-price-engine
+            rm -Rf /opt/ark-price-engine
         fi
     fi
     ;;
