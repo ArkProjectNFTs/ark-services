@@ -869,9 +869,7 @@ impl DatabaseAccess for PgPool {
                 // If the token_ids is empty, no result
                 "AND 1 = 0".to_string()
             }
-            None => {
-                String::new()
-            }
+            None => String::new(),
         };
 
         let tokens_data_query = format!(
