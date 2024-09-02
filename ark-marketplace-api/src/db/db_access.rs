@@ -11,7 +11,7 @@ use crate::models::token::{
     TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
-use crate::utils::db_utils::generate_order_by_clause;
+use crate::utils::sql_utils::generate_order_by_clause;
 
 use async_trait::async_trait;
 use bigdecimal::BigDecimal;
@@ -63,6 +63,7 @@ pub trait DatabaseAccess: Send + Sync {
         buy_now: bool,
         sort: Option<String>,
         direction: Option<String>,
+        sort_value: Option<String>,
         token_ids: Option<Vec<String>>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 

@@ -81,7 +81,7 @@ async fn main() -> std::io::Result<()> {
                 update_listed_tokens(&db_pool, con.clone()).await;
                 update_top_bid_tokens(&db_pool, con.clone()).await;
                 if should_cache_pages {
-                    //let _ = cache_collection_pages(&db_pool, con.clone()).await;
+                    let _ = cache_collection_pages(&db_pool, con.clone()).await;
                 }
             }
             Err(e) => tracing::error!("Failed to connect to Redis: {}", e),

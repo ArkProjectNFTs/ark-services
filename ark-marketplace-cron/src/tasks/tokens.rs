@@ -1,5 +1,6 @@
 use crate::models::token::TokenData;
 use async_std::stream::StreamExt;
+use chrono::Utc;
 use redis::aio::MultiplexedConnection;
 use redis::AsyncCommands;
 use serde_json::json;
@@ -8,7 +9,6 @@ use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::HashSet;
 use tracing::info;
-use chrono::Utc;
 use uuid::Uuid;
 
 const CHAIN_ID: &str = "0x534e5f4d41494e";
@@ -53,7 +53,6 @@ async fn clear_collection_cache(
 }
 
 pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
-
     // Insert expired listing events
     let select_expired_listings_query = r#"
         SELECT DISTINCT contract_address, chain_id, token_id, token_id_hex
@@ -62,16 +61,17 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
           AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
     "#;
 
-    let expired_listings: Vec<(String, String, String, String)> = match sqlx::query_as(select_expired_listings_query)
-        .fetch_all(pool)
-        .await
-    {
-        Ok(rows) => rows,
-        Err(e) => {
-            tracing::error!("Failed to select expired listings: {}", e);
-            return;
-        }
-    };
+    let expired_listings: Vec<(String, String, String, String)> =
+        match sqlx::query_as(select_expired_listings_query)
+            .fetch_all(pool)
+            .await
+        {
+            Ok(rows) => rows,
+            Err(e) => {
+                tracing::error!("Failed to select expired listings: {}", e);
+                return;
+            }
+        };
 
     for (contract_address, chain_id, token_id, token_id_hex) in &expired_listings {
         let now = Utc::now().timestamp();
@@ -256,16 +256,17 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
         WHERE NOW() - interval '2 minutes' > to_timestamp(end_date);
     "#;
 
-    let expired_offers: Vec<(String, String, String)> = match sqlx::query_as(select_expired_offers_query)
-        .fetch_all(pool)
-        .await
-    {
-        Ok(rows) => rows,
-        Err(e) => {
-            tracing::error!("Failed to select expired offers: {}", e);
-            return;
-        }
-    };
+    let expired_offers: Vec<(String, String, String)> =
+        match sqlx::query_as(select_expired_offers_query)
+            .fetch_all(pool)
+            .await
+        {
+            Ok(rows) => rows,
+            Err(e) => {
+                tracing::error!("Failed to select expired offers: {}", e);
+                return;
+            }
+        };
 
     for (contract_address, chain_id, token_id) in &expired_offers {
         // Fetch token_id_hex from the token table
