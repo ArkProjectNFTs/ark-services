@@ -607,6 +607,7 @@ impl DatabaseAccess for PgPool {
                 token.metadata as token_metadata,
                 contract.contract_name as name,
                 contract.is_verified,
+                contract.contract_address as address,
                 {},
                 {},
                 {}

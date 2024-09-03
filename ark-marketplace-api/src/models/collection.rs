@@ -60,6 +60,7 @@ pub struct CollectionActivityData {
     pub token_id: Option<String>,
     pub token_metadata: Option<JsonValue>,
     pub name: Option<String>,
+    pub address: String,
     pub is_verified: Option<bool>,
 }
 
