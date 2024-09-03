@@ -82,31 +82,34 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     let db_access = db_pool.get_ref();
     let mut redis_con_ref = redis_con.get_ref().lock().await;
     let mut token_ids = None;
+
     if let Some(filters_param) = &query_parameters.filters {
-        let decoded_filters = decode(filters_param).expect("Failed to decode filters");
-        let filters_map: HashMap<String, serde_json::Value> =
-            serde_json::from_str(&decoded_filters).expect("Failed to parse JSON");
+        if !filters_param.is_empty() {
+            let decoded_filters = decode(filters_param).expect("Failed to decode filters");
+            let filters_map: HashMap<String, serde_json::Value> =
+                serde_json::from_str(&decoded_filters).expect("Failed to parse JSON");
 
-        if let Some(traits) = filters_map.get("traits") {
-            // for now we dont want to cache results with traits
-            disable_cache = true;
-            let traits_map: HashMap<String, Vec<String>> =
-                serde_json::from_value(traits.clone()).expect("Failed to parse traits JSON");
+            if let Some(traits) = filters_map.get("traits") {
+                // for now we dont want to cache results with traits
+                disable_cache = true;
+                let traits_map: HashMap<String, Vec<String>> =
+                    serde_json::from_value(traits.clone()).expect("Failed to parse traits JSON");
 
-            let elasticsearch_manager = ElasticsearchManager::new(es_data.get_ref().clone());
+                let elasticsearch_manager = ElasticsearchManager::new(es_data.get_ref().clone());
 
-            let result = elasticsearch_manager
-                .search_tokens_by_traits(&normalized_address, CHAIN_ID, traits_map)
-                .await;
+                let result = elasticsearch_manager
+                    .search_tokens_by_traits(&normalized_address, CHAIN_ID, traits_map)
+                    .await;
 
-            token_ids = match result {
-                Ok(token_ids) => Some(token_ids),
-                Err(e) => {
-                    return HttpResponse::InternalServerError().json(json!({
-                        "error": format!("Failed to retrieve data: {}", e)
-                    }))
-                }
-            };
+                token_ids = match result {
+                    Ok(token_ids) => Some(token_ids),
+                    Err(e) => {
+                        return HttpResponse::InternalServerError().json(json!({
+                            "error": format!("Failed to retrieve data: {}", e)
+                        }))
+                    }
+                };
+            }
         }
     }
 
