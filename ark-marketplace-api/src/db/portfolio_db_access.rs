@@ -1,4 +1,4 @@
-use crate::models::token::{TokenActivityData, TokenEventType};
+use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
 
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
@@ -22,7 +22,7 @@ pub trait DatabaseAccess: Send + Sync {
         items_per_page: i64,
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
-    ) -> Result<(Vec<TokenActivityData>, bool, i64), Error>;
+    ) -> Result<(Vec<TokenPortfolioActivityData>, bool, i64), Error>;
 }
 
 #[async_trait]
@@ -35,7 +35,7 @@ impl DatabaseAccess for PgPool {
         items_per_page: i64,
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
-    ) -> Result<(Vec<TokenActivityData>, bool, i64), Error> {
+    ) -> Result<(Vec<TokenPortfolioActivityData>, bool, i64), Error> {
         let offset = (page - 1) * items_per_page;
 
         let types_filter = match types {
@@ -143,11 +143,12 @@ impl DatabaseAccess for PgPool {
             items_per_page,
             offset,
         );
-        let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
-            .bind(chain_id)
-            .bind(user_address)
-            .fetch_all(self)
-            .await?;
+        let token_activity_data: Vec<TokenPortfolioActivityData> =
+            sqlx::query_as(&activity_sql_query)
+                .bind(chain_id)
+                .bind(user_address)
+                .fetch_all(self)
+                .await?;
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
