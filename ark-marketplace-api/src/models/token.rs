@@ -292,5 +292,7 @@ pub struct TokenPortfolioActivityData {
     pub transaction_hash: Option<String>,
     pub token_id: Option<String>,
     pub collection_address: Option<String>,
+    pub collection_name: Option<String>,
+    pub collection_is_verified: Option<bool>,
     pub metadata: Option<JsonValue>,
 }
