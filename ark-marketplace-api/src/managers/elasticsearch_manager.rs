@@ -73,7 +73,7 @@ impl ElasticsearchManager {
                 // Update traits_map with the new batch of results
                 let new_traits_map = Self::process_elasticsearch_response(&json_response);
                 for (key, value_map) in new_traits_map {
-                    let entry = traits_map.entry(key).or_insert_with(HashMap::new);
+                    let entry = traits_map.entry(key).or_default();
                     for (value_key, count) in value_map {
                         *entry.entry(value_key).or_insert(0) += count;
                     }

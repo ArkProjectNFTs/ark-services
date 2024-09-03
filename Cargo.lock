@@ -613,6 +613,7 @@ dependencies = [
  "redis 0.25.4",
  "serde",
  "serde_json",
+ "sha2",
  "sqlx",
  "tokio 1.39.2",
  "tokio-native-tls",

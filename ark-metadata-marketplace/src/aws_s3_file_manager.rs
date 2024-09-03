@@ -36,7 +36,7 @@ impl FileManager for AWSFileManager {
                 Some(ext) if !ext.is_empty() && file.name.contains('.') => {
                     format!("{}.{}", hash, ext)
                 }
-                _ => format!("{}", hash),
+                _ => hash.to_string(),
             },
             |dir_path| match file_extension {
                 Some(ext) if !ext.is_empty() && file.name.contains('.') => {
