@@ -4,12 +4,12 @@ use chrono::Utc;
 use redis::aio::MultiplexedConnection;
 use redis::AsyncCommands;
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use sqlx::types::BigDecimal;
 use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::HashSet;
 use tracing::info;
-use uuid::Uuid;
 
 const CHAIN_ID: &str = "0x534e5f4d41494e";
 const ITEMS_PER_PAGE: i64 = 50;
@@ -55,13 +55,13 @@ async fn clear_collection_cache(
 pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
     // Insert expired listing events
     let select_expired_listings_query = r#"
-        SELECT DISTINCT contract_address, chain_id, token_id, token_id_hex
+        SELECT DISTINCT contract_address, chain_id, token_id, token_id_hex, listing_orderhash, listing_end_date
         FROM token
         WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
           AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
     "#;
 
-    let expired_listings: Vec<(String, String, String, String)> =
+    let expired_listings: Vec<(String, String, String, String, String, i64)> =
         match sqlx::query_as(select_expired_listings_query)
             .fetch_all(pool)
             .await
@@ -73,9 +73,16 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
             }
         };
 
-    for (contract_address, chain_id, token_id, token_id_hex) in &expired_listings {
+    for (contract_address, chain_id, token_id, token_id_hex, listing_orderhash, listing_end_date) in
+        &expired_listings
+    {
         let now = Utc::now().timestamp();
-        let token_event_id = Uuid::new_v4().to_string();
+        let combined = format!("{}{}", listing_orderhash, listing_end_date);
+        let mut hasher = Sha256::new();
+        hasher.update(combined);
+        let result = hasher.finalize();
+        let token_event_id = format!("0x{:x}", result);
+
         let insert_expired_listing_event_query = r#"
             INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
             VALUES ($6, $1, $2, $3, $4, $5, $7);
@@ -87,7 +94,7 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
             .bind(token_id)
             .bind(token_id_hex)
             .bind(EXPIRED_LISTING_EVENT)
-            .bind(token_event_id)
+            .bind(token_event_id.to_string())
             .bind(now)
             .execute(pool)
             .await
@@ -251,12 +258,12 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
 
 pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
     let select_expired_offers_query = r#"
-        SELECT DISTINCT contract_address, chain_id, token_id
+        SELECT DISTINCT contract_address, chain_id, token_id, order_hash, end_date
         FROM token_offer
         WHERE NOW() - interval '2 minutes' > to_timestamp(end_date);
     "#;
 
-    let expired_offers: Vec<(String, String, String)> =
+    let expired_offers: Vec<(String, String, String, String, i64)> =
         match sqlx::query_as(select_expired_offers_query)
             .fetch_all(pool)
             .await
@@ -268,7 +275,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
             }
         };
 
-    for (contract_address, chain_id, token_id) in &expired_offers {
+    for (contract_address, chain_id, token_id, order_hash, end_date) in &expired_offers {
         // Fetch token_id_hex from the token table
         let select_token_id_hex_query = r#"
             SELECT token_id_hex
@@ -293,8 +300,12 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
         };
 
         let now = Utc::now().timestamp();
-        let token_event_id = Uuid::new_v4().to_string();
 
+        let combined = format!("{}{}", order_hash, end_date);
+        let mut hasher = Sha256::new();
+        hasher.update(combined);
+        let result = hasher.finalize();
+        let token_event_id = format!("0x{:x}", result);
         // insert expired offer event
         let insert_expired_offer_event_query = r#"
             INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
@@ -307,7 +318,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
             .bind(token_id)
             .bind(token_id_hex)
             .bind(EXPIRED_OFFER_EVENT)
-            .bind(token_event_id)
+            .bind(token_event_id.to_string())
             .bind(now)
             .execute(pool)
             .await
@@ -425,7 +436,7 @@ pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
     // Clear the cache for each collection
     let collections: HashSet<String> = expired_offers
         .into_iter()
-        .map(|(contract_address, _, _)| contract_address)
+        .map(|(contract_address, _, _, _, _)| contract_address)
         .collect();
     for contract_address in &collections {
         match clear_collection_cache(con.clone(), contract_address).await {
