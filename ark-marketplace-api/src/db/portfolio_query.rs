@@ -1,5 +1,5 @@
 use crate::db::portfolio_db_access;
-use crate::models::token::{TokenActivityData, TokenEventType};
+use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
 
 #[allow(clippy::too_many_arguments)]
 pub async fn get_activity_data<D: portfolio_db_access::DatabaseAccess + Sync>(
@@ -10,7 +10,7 @@ pub async fn get_activity_data<D: portfolio_db_access::DatabaseAccess + Sync>(
     items_per_page: i64,
     direction: &str,
     types: &Option<Vec<TokenEventType>>,
-) -> Result<(Vec<TokenActivityData>, bool, i64), sqlx::Error> {
+) -> Result<(Vec<TokenPortfolioActivityData>, bool, i64), sqlx::Error> {
     db_access
         .get_activity_data(
             chain_id,
