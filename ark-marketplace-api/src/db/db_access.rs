@@ -814,21 +814,73 @@ impl DatabaseAccess for PgPool {
         let order_by = generate_order_by_clause(sort_field, sort_direction, sort_value.as_deref());
         let count = 0;
 
-        let token_ids_condition = match token_ids {
+        let (token_ids_condition, token_count) = match token_ids {
             Some(ids) if !ids.is_empty() => {
-                format!(
+                let condition = format!(
                     "AND token.token_id IN ({})",
                     ids.iter()
                         .map(|id| format!("'{}'", id))
                         .collect::<Vec<_>>()
                         .join(", ")
-                )
+                );
+
+                // calculate the token count
+                let token_count_query = format!(
+                    "
+                    SELECT COUNT(*)
+                    FROM token
+                    WHERE token.contract_address = $1
+                        AND token.chain_id = $2
+                        AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+                        {}
+                    ",
+                    condition
+                );
+
+                let token_count: i64 = sqlx::query_scalar(&token_count_query)
+                    .bind(contract_address)
+                    .bind(chain_id)
+                    .bind(buy_now)
+                    .fetch_one(self)
+                    .await?;
+
+                (condition, token_count)
             }
             Some(_) => {
                 // If the token_ids is empty, no result
-                "AND 1 = 0".to_string()
+                let condition = "AND 1 = 0".to_string();
+                (condition, 0)
             }
-            None => String::new(),
+            None => {
+                let condition = String::new();
+                // get fields from contract table to calculate token count
+                let contract_query = format!(
+                    "
+                    SELECT
+                        token_count,
+                        token_listed_count
+                    FROM contract
+                    WHERE contract_address = $1
+                    AND chain_id = $2
+                    "
+                );
+
+                let contract_data: (i64, i64) = sqlx::query_as(&contract_query)
+                    .bind(contract_address)
+                    .bind(chain_id)
+                    .fetch_one(self)
+                    .await?;
+
+                // if buy now is true, then token count is token_listed_count
+                // else token count is token_count - token_listed_count
+                let token_count = if buy_now {
+                    contract_data.1
+                } else {
+                    contract_data.0 - contract_data.1
+                };
+
+                (condition, token_count)
+            }
         };
 
         let tokens_data_query = format!(
@@ -885,25 +937,6 @@ impl DatabaseAccess for PgPool {
                 currency_address: token.currency_address,
             })
             .try_collect()
-            .await?;
-
-        let count_query = format!(
-            "
-               SELECT COUNT(*)
-               FROM token
-               WHERE token.contract_address = $1
-                   AND token.chain_id = $2
-                   AND ($3 = false OR token.listing_start_amount IS NOT NULL)
-                   {}
-            ",
-            token_ids_condition
-        );
-
-        let token_count: i64 = sqlx::query_scalar(&count_query)
-            .bind(contract_address)
-            .bind(chain_id)
-            .bind(buy_now)
-            .fetch_one(self)
             .await?;
 
         // Calculate if there is another page
