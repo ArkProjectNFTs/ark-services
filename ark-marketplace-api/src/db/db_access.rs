@@ -812,7 +812,6 @@ impl DatabaseAccess for PgPool {
         let sort_field = sort.as_deref().unwrap_or("price");
         let sort_direction = direction.as_deref().unwrap_or("asc");
         let order_by = generate_order_by_clause(sort_field, sort_direction, sort_value.as_deref());
-        let token_count = 0;
         let count = 0;
 
         let token_ids_condition = match token_ids {
@@ -886,6 +885,25 @@ impl DatabaseAccess for PgPool {
                 currency_address: token.currency_address,
             })
             .try_collect()
+            .await?;
+
+        let count_query = format!(
+            "
+               SELECT COUNT(*)
+               FROM token
+               WHERE token.contract_address = $1
+                   AND token.chain_id = $2
+                   AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+                   {}
+            ",
+            token_ids_condition
+        );
+
+        let token_count: i64 = sqlx::query_scalar(&count_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .bind(buy_now)
+            .fetch_one(self)
             .await?;
 
         // Calculate if there is another page
