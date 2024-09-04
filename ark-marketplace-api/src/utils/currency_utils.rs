@@ -1,5 +1,6 @@
 use bigdecimal::BigDecimal;
 use bigdecimal::Zero;
+use std::str::FromStr;
 
 pub fn compute_floor_difference(
     currency_amount: Option<BigDecimal>,
@@ -20,7 +21,9 @@ pub fn compute_floor_difference(
             None
         } else {
             let percentage_diff = (diff / floor_price) * BigDecimal::from(100);
-            let rounded_percentage_diff = percentage_diff.with_scale(0);
+            let percentage_diff_str = percentage_diff.to_string();
+            let trimmed_str = percentage_diff_str.trim_end_matches('0').trim_end_matches('.');
+            let rounded_percentage_diff = BigDecimal::from_str(trimmed_str).unwrap();
 
             Some(rounded_percentage_diff)
         }

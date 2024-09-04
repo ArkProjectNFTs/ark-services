@@ -22,7 +22,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::error;
-use tracing::info;
 use urlencoding::decode;
 
 #[derive(Deserialize)]
@@ -396,10 +395,6 @@ pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
                     }))
                 }
             }
-        }
-        Err(err) => {
-            tracing::error!("error query get_tokens_data: {}", err);
-            HttpResponse::InternalServerError().finish()
         }
     }
 }
