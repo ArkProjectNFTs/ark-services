@@ -10,6 +10,11 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
+        "/portfolio/{user_address}/offers",
+        web::get().to(portfolio_handler::get_offers::<PgPool>),
+    );
+
+    cfg.route(
         "/portfolio/{user_address}",
         web::get().to(token_handler::get_tokens_portfolio::<PgPool>),
     );

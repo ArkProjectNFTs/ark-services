@@ -1,4 +1,5 @@
 use super::utils::CHAIN_ID;
+use super::utils::extract_page_params;
 use crate::db::portfolio_db_access::DatabaseAccess;
 use crate::db::portfolio_query::get_activity_data;
 use crate::models::token::TokenEventType;
@@ -44,6 +45,52 @@ pub async fn get_activity<D: DatabaseAccess + Sync>(
         items_per_page,
         direction,
         &params.types,
+    )
+    .await
+    {
+        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("data not found"),
+        Ok((token_activity_data, has_next_page, count)) => {
+            (token_activity_data, has_next_page, count)
+        }
+        Err(err) => {
+            tracing::error!("error query get_token_activity_data: {}", err);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+    HttpResponse::Ok().json(json!({
+        "data": token_activity_data,
+        "next_page": if has_next_page { Some(page + 1)} else { None },
+        "count": count,
+    }))
+}
+
+
+pub async fn get_offers<D: DatabaseAccess + Sync>(
+    req: HttpRequest,
+    path: web::Path<String>,
+    db_pool: web::Data<D>,
+) -> impl Responder {
+    let user_address = path.into_inner();
+    let normalized_address = normalize_address(&user_address);
+    let db_access = db_pool.get_ref();
+
+    let (page, items_per_page) = match extract_page_params(req.query_string(), 1, 100) {
+        Err(msg) => return HttpResponse::BadRequest().json(msg),
+        Ok((page, items_per_page)) => (page, items_per_page),
+    };
+    if let Err(e) = params {
+        let msg = format!("Error when parsing query parameters: {}", e);
+        tracing::error!(msg);
+        return HttpResponse::BadRequest().json(msg);
+    }
+    let params = params.unwrap();
+
+    let (token_activity_data, has_next_page, count) = match get_offers_data(
+        db_access,
+        CHAIN_ID,
+        &normalized_address,
+        page,
+        items_per_page
     )
     .await
     {

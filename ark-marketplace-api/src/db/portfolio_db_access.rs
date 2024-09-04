@@ -1,4 +1,5 @@
 use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
+use crate::models::porftolio::{OffersData};
 
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
@@ -23,6 +24,15 @@ pub trait DatabaseAccess: Send + Sync {
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
     ) -> Result<(Vec<TokenPortfolioActivityData>, bool, i64), Error>;
+
+    async fn get_offers_data(
+        &self,
+        contract_address: &str,
+        chain_id: &str,
+        user_address: &str,
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<(Vec<OfferData>, bool, i64), Error>;
 }
 
 #[async_trait]
