@@ -20,7 +20,9 @@ pub fn compute_floor_difference(
             None
         } else {
             let percentage_diff = (diff / floor_price) * BigDecimal::from(100);
-            Some(percentage_diff)
+            let rounded_percentage_diff = percentage_diff.with_scale(0);
+
+            Some(rounded_percentage_diff)
         }
     }
 }
