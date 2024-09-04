@@ -21,6 +21,8 @@ use serde_qs;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::error;
+use tracing::info;
 use urlencoding::decode;
 
 #[derive(Deserialize)]
@@ -361,13 +363,19 @@ fn is_metadata_refreshing(token_data: &TokenInformationData) -> bool {
 
 pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
     body: web::Json<RefreshMetadataRequest>,
-    db_pool: web::Data<D>,
+    _db_pool: web::Data<D>,
+    write_db_pool: web::Data<D>,
 ) -> impl Responder {
-    let db_access = db_pool.get_ref();
+    let db_access = write_db_pool.get_ref();
     let normalized_address = normalize_address(&body.contract_address);
 
     match get_token_data(db_access, &normalized_address, CHAIN_ID, &body.token_id).await {
-        Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
+        Err(e) => {
+            error!("error: {:?}", e);
+            HttpResponse::NotFound().json(json!({
+                "message": "Token does not exist"
+            }))
+        }
         Ok(token_data) => {
             if is_metadata_refreshing(&token_data) {
                 return HttpResponse::Ok().json(json!({
