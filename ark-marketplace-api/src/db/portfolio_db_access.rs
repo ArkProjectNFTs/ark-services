@@ -1,5 +1,5 @@
+use crate::models::portfolio::OfferData;
 use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
-use crate::models::portfolio::{OfferData};
 use std::time::SystemTime;
 
 use crate::utils::db_utils::event_type_list;

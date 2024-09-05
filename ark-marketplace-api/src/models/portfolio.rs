@@ -26,4 +26,3 @@ pub struct OfferApiData {
     pub from_address: Option<String>,
     pub floor_difference: Option<BigDecimal>,
 }
-

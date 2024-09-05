@@ -1,15 +1,15 @@
-use super::utils::CHAIN_ID;
 use super::utils::extract_page_params;
+use super::utils::CHAIN_ID;
 use crate::db::portfolio_db_access::DatabaseAccess;
-use crate::db::portfolio_query::{get_activity_data ,get_offers_data};
+use crate::db::portfolio_query::{get_activity_data, get_offers_data};
+use crate::models::portfolio::OfferApiData;
 use crate::models::token::TokenEventType;
-use crate::models::portfolio::{OfferApiData};
+use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
-use crate::utils::currency_utils::compute_floor_difference;
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
 
@@ -24,7 +24,7 @@ struct ActivityQueryParameters {
 pub async fn get_activity<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<String>,
-    db_pools: web::Data<Arc<[PgPool; 2]>>
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
@@ -71,7 +71,7 @@ pub async fn get_activity<D: DatabaseAccess + Sync>(
 pub async fn get_offers<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<String>,
-    db_pools: web::Data<Arc<[PgPool; 2]>>
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
@@ -87,7 +87,7 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
         CHAIN_ID,
         &normalized_address,
         page,
-        items_per_page
+        items_per_page,
     )
     .await
     {

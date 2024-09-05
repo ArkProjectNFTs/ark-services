@@ -12,10 +12,10 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use sqlx::PgPool;
 
 #[derive(Deserialize)]
 pub struct CollectionQueryParameters {
@@ -38,7 +38,7 @@ struct ActivityQueryParameters {
 
 pub async fn get_collections<D: DatabaseAccess + Sync>(
     query_parameters: web::Query<CollectionQueryParameters>,
-    db_pools: web::Data<Arc<[PgPool; 2]>>
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);

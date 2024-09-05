@@ -399,7 +399,9 @@ pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pools: web::Data<Arc<[PgPool; 2]>>) -> impl Responder {
+pub async fn flush_all_data<D: DatabaseAccess + Sync>(
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
+) -> impl Responder {
     let db_access = &db_pools[0];
     match flush_all_data_query(db_access).await {
         Ok(result) => HttpResponse::Ok().json(result),
