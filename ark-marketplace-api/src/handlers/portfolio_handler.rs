@@ -12,6 +12,7 @@ use serde_json::json;
 use serde_qs;
 use sqlx::postgres::PgPool;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 #[derive(Deserialize, Debug)]
 struct ActivityQueryParameters {
@@ -82,12 +83,17 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
         Ok((page, items_per_page)) => (page, items_per_page),
     };
 
+    let query_string = req.query_string();
+    let query_params: HashMap<String, String> = serde_urlencoded::from_str(query_string).unwrap();
+
+    let type_offer = query_params.get("type").map(|s| s.as_str()).unwrap_or("");
     let (token_offers_data, has_next_page, count) = match get_offers_data(
         db_access,
         CHAIN_ID,
         &normalized_address,
         page,
         items_per_page,
+        type_offer,
     )
     .await
     {

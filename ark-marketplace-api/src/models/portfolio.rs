@@ -1,7 +1,8 @@
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, FromRow)]
 pub struct OfferData {
     pub offer_id: i32,
     pub amount: Option<BigDecimal>,

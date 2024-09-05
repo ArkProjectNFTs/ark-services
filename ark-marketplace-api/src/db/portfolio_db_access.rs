@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
+ use sqlx::Row;
 
 #[derive(FromRow)]
 struct Count {
@@ -32,6 +33,7 @@ pub trait DatabaseAccess: Send + Sync {
         user_address: &str,
         page: i64,
         items_per_page: i64,
+        type_offer: &str,
     ) -> Result<(Vec<OfferData>, bool, i64), Error>;
 }
 
@@ -173,6 +175,7 @@ impl DatabaseAccess for PgPool {
         user_address: &str,
         page: i64,
         items_per_page: i64,
+        type_offer: &str,
     ) -> Result<(Vec<OfferData>, bool, i64), Error> {
         // FIXME: pagination assume that all offers used the same currency
         let offset = (page - 1) * items_per_page;
@@ -181,25 +184,32 @@ impl DatabaseAccess for PgPool {
             Err(_) => 0,
         };
 
-        let total_count = sqlx::query!(
-            "SELECT COUNT(*)
+        let type_offer_query = match type_offer {
+            "made" => "token_offer.offer_maker = $2",
+            "received" => "token_offer.to_address = $2",
+            _ => "(token_offer.to_address = $2 OR token_offer.offer_maker = $2)",
+        };
+
+        let total_count_query = format!(
+            "SELECT COUNT(*) as count
             FROM token_offer
             WHERE token_offer.chain_id = $1
-                AND (token_offer.to_address = $2 or token_offer.offer_maker = $2)
+                AND {}
                 AND token_offer.status = 'PLACED'
-                AND end_date > $3
-            ",
-            chain_id,
-            user_address,
-            current_time
-        )
-        .fetch_one(self)
-        .await?;
+                AND end_date > $3",
+            type_offer_query
+        );
 
-        let count = total_count.count.unwrap_or(0);
+        let total_count = sqlx::query(&total_count_query)
+            .bind(chain_id)
+            .bind(user_address)
+            .bind(current_time)
+            .fetch_one(self)
+            .await?;
 
-        let token_offers_data = sqlx::query_as!(
-            OfferData,
+        let count: i64 = total_count.get::<i64, _>("count");
+
+        let token_offers_query = format!(
             "SELECT
                 token_offer_id AS offer_id,
                 hex_to_decimal(offer_amount) AS amount,
@@ -213,20 +223,22 @@ impl DatabaseAccess for PgPool {
             FROM token_offer
             LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
             WHERE token_offer.chain_id = $1
-                AND (token_offer.to_address = $2 or token_offer.offer_maker = $2)
+                AND {}
                 AND token_offer.status = 'PLACED'
                 AND end_date > $3
             ORDER BY amount DESC, expire_at ASC
-            LIMIT $4 OFFSET $5
-            ",
-            chain_id,
-            user_address,
-            current_time,
-            items_per_page,
-            offset
-        )
-        .fetch_all(self)
-        .await?;
+            LIMIT $4 OFFSET $5",
+            type_offer_query
+        );
+
+        let token_offers_data = sqlx::query_as::<_, OfferData>(&token_offers_query)
+            .bind(chain_id)
+            .bind(user_address)
+            .bind(current_time)
+            .bind(items_per_page)
+            .bind(offset)
+            .fetch_all(self)
+            .await?;
 
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
