@@ -1156,13 +1156,9 @@ impl OrderProvider {
                 .execute(&client.pool)
                 .await?;
 
-            let to_address = Self::get_current_owner(
-                client,
-                &contract_address,
-                &token_id,
-                &data.token_chain_id,
-            )
-            .await?;
+            let to_address =
+                Self::get_current_owner(client, &contract_address, &token_id, &data.token_chain_id)
+                    .await?;
 
             Self::insert_offers(
                 client,
