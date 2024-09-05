@@ -1,12 +1,12 @@
 extern crate openssl;
 extern crate openssl_probe;
 // Modules déclaration
-use warp::Filter;
+use futures_util::StreamExt;
+use serde::Serialize;
+use serde_json::Value;
 use std::sync::{Arc, RwLock};
 use tokio_tungstenite::connect_async;
-use futures_util::{StreamExt};
-use serde_json::Value;
-use serde::{Serialize};
+use warp::Filter;
 
 // Default alocator change
 #[global_allocator]
@@ -78,12 +78,12 @@ async fn main() {
                             Some("ETHUSDT") => {
                                 let mut prices = prices_clone.write().unwrap();
                                 prices.update_eth_usd(price);
-                            },
+                            }
                             Some("STRKUSDT") => {
                                 let mut prices = prices_clone.write().unwrap();
                                 prices.update_strk_usd(price);
-                            },
-                            _ => {},
+                            }
+                            _ => {}
                         }
                     }
                 }

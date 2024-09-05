@@ -854,8 +854,7 @@ impl DatabaseAccess for PgPool {
             None => {
                 let condition = String::new();
                 // get fields from contract table to calculate token count
-                let contract_query = format!(
-                    "
+                let contract_query = "
                     SELECT
                         token_count,
                         token_listed_count
@@ -863,7 +862,7 @@ impl DatabaseAccess for PgPool {
                     WHERE contract_address = $1
                     AND chain_id = $2
                     "
-                );
+                .to_string();
 
                 let contract_data: (i64, i64) = sqlx::query_as(&contract_query)
                     .bind(contract_address)
