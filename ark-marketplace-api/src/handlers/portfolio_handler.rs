@@ -10,6 +10,8 @@ use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
 use crate::utils::currency_utils::compute_floor_difference;
+use sqlx::postgres::PgPool;
+use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
 struct ActivityQueryParameters {
@@ -66,15 +68,14 @@ pub async fn get_activity<D: DatabaseAccess + Sync>(
     }))
 }
 
-
 pub async fn get_offers<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<String>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>
 ) -> impl Responder {
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
 
     let (page, items_per_page) = match extract_page_params(req.query_string(), 1, 100) {
         Err(msg) => return HttpResponse::BadRequest().json(msg),

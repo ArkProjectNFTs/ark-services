@@ -136,6 +136,8 @@ async fn main() -> std::io::Result<()> {
     es_config.insert("username".to_string(), elasticsearch_username);
     es_config.insert("password".to_string(), elasticsearch_password);
 
+    let db_pools = Arc::new([db_pool.clone(), write_db_pool.clone()]);
+
     HttpServer::new(move || {
         let cors = Cors::default()
             // Maybe we need to add some origin for security reason.
@@ -147,8 +149,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(cors)
             .wrap(DefaultHeaders::new().add(("X-GIT-REVISION", env!("GIT_HASH", "N/A"))))
-            .app_data(web::Data::new(db_pool.clone()))
-            .app_data(web::Data::new(write_db_pool.clone()))
+            .app_data(web::Data::new(db_pools.clone()))
             .app_data(web::Data::new(redis_conn.clone()))
             .app_data(web::Data::new(es_config.clone()))
             .configure(default::config)
