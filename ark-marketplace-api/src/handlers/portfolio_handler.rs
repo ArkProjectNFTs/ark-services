@@ -24,11 +24,11 @@ struct ActivityQueryParameters {
 pub async fn get_activity<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<String>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>
 ) -> impl Responder {
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
 
     let params = serde_qs::from_str::<ActivityQueryParameters>(req.query_string());
     if let Err(e) = params {
