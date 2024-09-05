@@ -182,6 +182,7 @@ pub struct OfferData {
     status: String,
     start_date: i64,
     end_date: i64,
+    to_address: String,
 }
 
 pub struct OfferExecutedInfo {
@@ -344,7 +345,8 @@ impl OrderProvider {
                         currency_chain_id,
                         currency_address,
                         start_date,
-                        end_date
+                        end_date,
+                        to_address
                 FROM token_offer
                 WHERE order_hash = $1;
             ";
@@ -364,6 +366,7 @@ impl OrderProvider {
             currency_address,
             start_date,
             end_date,
+            to_address,
         )) = sqlx::query_as::<
             _,
             (
@@ -381,6 +384,7 @@ impl OrderProvider {
                 String,
                 i64,
                 i64,
+                String,
             ),
         >(query)
         .bind(order_hash)
@@ -402,6 +406,7 @@ impl OrderProvider {
                 currency_address,
                 start_date,
                 end_date,
+                to_address,
             }))
         } else {
             Ok(None)
@@ -837,7 +842,7 @@ impl OrderProvider {
 
         let q = "
             INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);        
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         ";
 
         let _r = sqlx::query(q)
@@ -869,7 +874,7 @@ impl OrderProvider {
         let query = "
             SELECT
                 order_hash,
-                token_id, 
+                token_id,
                 token_id_hex,
                 contract_address,
                 chain_id,
@@ -1053,8 +1058,8 @@ impl OrderProvider {
 
         let insert_query = "
             INSERT INTO token_offer
-            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status, start_date, end_date, broker_id)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
+            (contract_address, token_id, chain_id, offer_maker, offer_amount, offer_quantity, offer_timestamp, order_hash, currency_chain_id, currency_address, status, start_date, end_date, broker_id, to_address)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
         ";
 
         sqlx::query(insert_query)
@@ -1072,6 +1077,7 @@ impl OrderProvider {
             .bind(offer_data.start_date)
             .bind(offer_data.end_date)
             .bind(&offer_data.broker_id)
+            .bind(&offer_data.to_address)
             .execute(&client.pool)
             .await?;
 
@@ -1150,6 +1156,14 @@ impl OrderProvider {
                 .execute(&client.pool)
                 .await?;
 
+            let to_address = Self::get_current_owner(
+                client,
+                &contract_address,
+                &token_id,
+                &data.token_chain_id,
+            )
+            .await?;
+
             Self::insert_offers(
                 client,
                 &OfferData {
@@ -1167,6 +1181,7 @@ impl OrderProvider {
                     status: OrderStatus::Placed.to_string(),
                     start_date: data.start_date as i64,
                     end_date: data.end_date as i64,
+                    to_address: to_address.unwrap_or_default(),
                 },
             )
             .await?;

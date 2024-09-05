@@ -1,13 +1,15 @@
 use super::utils::CHAIN_ID;
 use super::utils::extract_page_params;
 use crate::db::portfolio_db_access::DatabaseAccess;
-use crate::db::portfolio_query::get_activity_data;
+use crate::db::portfolio_query::{get_activity_data ,get_offers_data};
 use crate::models::token::TokenEventType;
+use crate::models::portfolio::{OfferApiData};
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
+use crate::utils::currency_utils::compute_floor_difference;
 
 #[derive(Deserialize, Debug)]
 struct ActivityQueryParameters {
@@ -78,14 +80,8 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
         Err(msg) => return HttpResponse::BadRequest().json(msg),
         Ok((page, items_per_page)) => (page, items_per_page),
     };
-    if let Err(e) = params {
-        let msg = format!("Error when parsing query parameters: {}", e);
-        tracing::error!(msg);
-        return HttpResponse::BadRequest().json(msg);
-    }
-    let params = params.unwrap();
 
-    let (token_activity_data, has_next_page, count) = match get_offers_data(
+    let (token_offers_data, has_next_page, count) = match get_offers_data(
         db_access,
         CHAIN_ID,
         &normalized_address,
@@ -103,8 +99,28 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
             return HttpResponse::InternalServerError().finish();
         }
     };
+
+    let token_offers_data: Vec<OfferApiData> = token_offers_data
+        .iter()
+        .map(|data| OfferApiData {
+            offer_id: data.offer_id,
+            price: data.amount.clone(), // TODO: handle currency conversion
+            from_address: data.source.clone(),
+            currency_address: data.currency_address.clone(),
+            to_address: data.to_address.clone(),
+            expire_at: data.expire_at,
+            hash: data.hash.clone(),
+            token_id: data.token_id.clone(),
+            floor_difference: compute_floor_difference(
+                data.amount.clone(),
+                data.currency_address.clone(),
+                data.collection_floor_price.clone(),
+            ),
+        })
+        .collect();
+
     HttpResponse::Ok().json(json!({
-        "data": token_activity_data,
+        "data": token_offers_data,
         "next_page": if has_next_page { Some(page + 1)} else { None },
         "count": count,
     }))

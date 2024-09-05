@@ -1,5 +1,6 @@
 use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
-use crate::models::porftolio::{OffersData};
+use crate::models::portfolio::{OfferData};
+use std::time::SystemTime;
 
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
@@ -27,7 +28,6 @@ pub trait DatabaseAccess: Send + Sync {
 
     async fn get_offers_data(
         &self,
-        contract_address: &str,
         chain_id: &str,
         user_address: &str,
         page: i64,
@@ -165,5 +165,72 @@ impl DatabaseAccess for PgPool {
         let has_next_page = page < total_pages;
 
         Ok((token_activity_data, has_next_page, count))
+    }
+
+    async fn get_offers_data(
+        &self,
+        chain_id: &str,
+        user_address: &str,
+        page: i64,
+        items_per_page: i64,
+    ) -> Result<(Vec<OfferData>, bool, i64), Error> {
+        // FIXME: pagination assume that all offers used the same currency
+        let offset = (page - 1) * items_per_page;
+        let current_time: i64 = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(d) => d.as_secs().try_into().unwrap(),
+            Err(_) => 0,
+        };
+
+        let total_count = sqlx::query!(
+            "SELECT COUNT(*)
+            FROM token_offer
+            WHERE token_offer.chain_id = $1
+                AND (token_offer.to_address = $2 or token_offer.offer_maker = $2)
+                AND token_offer.status = 'PLACED'
+                AND end_date > $3
+            ",
+            chain_id,
+            user_address,
+            current_time
+        )
+        .fetch_one(self)
+        .await?;
+
+        let count = total_count.count.unwrap_or(0);
+
+        let token_offers_data = sqlx::query_as!(
+            OfferData,
+            "SELECT
+                token_offer_id AS offer_id,
+                hex_to_decimal(offer_amount) AS amount,
+                end_date AS expire_at,
+                order_hash as hash,
+                currency_address,
+                to_address,
+                offer_maker as source,
+                token_id,
+                contract.floor_price as collection_floor_price
+            FROM token_offer
+            LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
+            WHERE token_offer.chain_id = $1
+                AND (token_offer.to_address = $2 or token_offer.offer_maker = $2)
+                AND token_offer.status = 'PLACED'
+                AND end_date > $3
+            ORDER BY amount DESC, expire_at ASC
+            LIMIT $4 OFFSET $5
+            ",
+            chain_id,
+            user_address,
+            current_time,
+            items_per_page,
+            offset
+        )
+        .fetch_all(self)
+        .await?;
+
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((token_offers_data, has_next_page, count))
     }
 }
