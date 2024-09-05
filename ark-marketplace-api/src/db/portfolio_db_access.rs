@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
- use sqlx::Row;
+use sqlx::Row;
 
 #[derive(FromRow)]
 struct Count {

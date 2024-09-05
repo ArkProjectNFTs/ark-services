@@ -11,8 +11,8 @@ use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
 use sqlx::postgres::PgPool;
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
 struct ActivityQueryParameters {
