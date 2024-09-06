@@ -768,7 +768,8 @@ impl OrderProvider {
                         .await
                     {
                         Ok(current_floor_opt) => {
-                            let current_floor = current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
+                            let current_floor =
+                                current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
                             if min_price < current_floor {
                                 let update_query = r#"
                                     UPDATE contract
@@ -784,11 +785,18 @@ impl OrderProvider {
                                     .await
                                 {
                                     Ok(_) => {
-                                        info!("Floor price updated for collection: {}", contract_address);
+                                        info!(
+                                            "Floor price updated for collection: {}",
+                                            contract_address
+                                        );
                                         Ok(())
                                     }
                                     Err(e) => {
-                                        tracing::error!("Failed to update floor price for collection {}: {}", contract_address, e);
+                                        tracing::error!(
+                                            "Failed to update floor price for collection {}: {}",
+                                            contract_address,
+                                            e
+                                        );
                                         Err(ProviderError::DatabaseError(e.to_string()))
                                     }
                                 }
@@ -797,7 +805,11 @@ impl OrderProvider {
                             }
                         }
                         Err(e) => {
-                            tracing::error!("Failed to fetch current floor price for collection {}: {}", contract_address, e);
+                            tracing::error!(
+                                "Failed to fetch current floor price for collection {}: {}",
+                                contract_address,
+                                e
+                            );
                             Err(ProviderError::DatabaseError(e.to_string()))
                         }
                     }
@@ -816,18 +828,29 @@ impl OrderProvider {
                         .await
                     {
                         Ok(_) => {
-                            info!("No tokens listed. Floor price set to NULL for collection: {}", contract_address);
+                            info!(
+                                "No tokens listed. Floor price set to NULL for collection: {}",
+                                contract_address
+                            );
                             Ok(())
                         }
                         Err(e) => {
-                            tracing::error!("Failed to set floor price to NULL for collection {}: {}", contract_address, e);
+                            tracing::error!(
+                                "Failed to set floor price to NULL for collection {}: {}",
+                                contract_address,
+                                e
+                            );
                             Err(ProviderError::DatabaseError(e.to_string()))
                         }
                     }
                 }
             }
             Err(e) => {
-                tracing::error!("Failed to recalculate floor price for collection {}: {}", contract_address, e);
+                tracing::error!(
+                    "Failed to recalculate floor price for collection {}: {}",
+                    contract_address,
+                    e
+                );
                 Err(ProviderError::DatabaseError(e.to_string()))
             }
         }
@@ -1495,8 +1518,12 @@ impl OrderProvider {
             )
             .await?;
 
-            Self::recalculate_floor_price(client, &token_data.contract_address, &token_data.chain_id)
-                .await?;
+            Self::recalculate_floor_price(
+                client,
+                &token_data.contract_address,
+                &token_data.chain_id,
+            )
+            .await?;
         }
 
         // if the order hash exists in token_offer table, then it is an offer

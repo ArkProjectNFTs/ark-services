@@ -201,7 +201,6 @@ pub async fn insert_floor_price(pool: &PgPool) {
     }
 }
 
-
 pub async fn empty_floor_price(pool: &PgPool) {
     let action_query = r#"
         WITH empty_collections AS (
@@ -228,10 +227,7 @@ pub async fn empty_floor_price(pool: &PgPool) {
           AND floor_price IS NOT NULL
     "#;
 
-    match sqlx::query(action_query)
-        .execute(pool)
-        .await
-    {
+    match sqlx::query(action_query).execute(pool).await {
         Ok(_) => info!("Successfully updated floor price for empty collections."),
         Err(e) => tracing::error!("Failed to update floor price for empty collections: {}", e),
     }
