@@ -883,7 +883,7 @@ impl OrderProvider {
                 block_timestamp,
                 from_address,
                 to_address,
-                CASE WHEN $2 THEN '' ELSE amount END as amount,
+                amount,
                 canceled_reason
             FROM token_event
             WHERE order_hash = $1
@@ -892,7 +892,6 @@ impl OrderProvider {
         ";
         if let Ok(mut event_history) = sqlx::query_as::<_, EventHistoryData>(query)
             .bind(order_hash)
-            .bind(is_listing) // we dont want to store price for cancel listing event
             .fetch_one(&client.pool)
             .await
         {
@@ -904,6 +903,11 @@ impl OrderProvider {
                 TokenEventType::Offer => TokenEventType::OfferCancelled,
                 _ => TokenEventType::Cancelled,
             };
+
+            // we dont want to store price for cancel listing event
+            if is_listing {
+                event_history.amount = None;
+            }
 
             Self::insert_event_history(client, &event_history).await?;
         }
