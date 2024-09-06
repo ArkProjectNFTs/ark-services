@@ -7,7 +7,7 @@ use clap::{App, Arg};
 use redis::aio::MultiplexedConnection;
 use redis::Client;
 use tasks::collections::{
-    insert_floor_price, update_collections_market_data, update_top_bid_collections,
+    insert_floor_price, update_collections_market_data, update_top_bid_collections, empty_floor_price
 };
 use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing::info;
@@ -90,9 +90,12 @@ async fn main() -> std::io::Result<()> {
             update_top_bid_collections(&db_pool).await;
             update_collections_market_data(&db_pool).await;
             insert_floor_price(&db_pool).await;
+        },
+        "task_set3" => {
+            empty_floor_price(&db_pool).await;
         }
         _ => {
-            tracing::error!("Invalid argument. Please use 'task_set1' or 'task_set2'");
+            tracing::error!("Invalid argument. Please use 'task_set1' or 'task_set2' or 'task_set3'");
         }
     }
     tracing::info!("Marketplace cron job completed");
