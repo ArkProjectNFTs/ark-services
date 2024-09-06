@@ -200,3 +200,35 @@ pub async fn insert_floor_price(pool: &PgPool) {
         Err(e) => tracing::error!("Failed to insert floor price for all collections: {}", e),
     }
 }
+
+pub async fn empty_floor_price(pool: &PgPool) {
+    let action_query = r#"
+        WITH empty_collections AS (
+            SELECT
+                contract_address,
+                chain_id
+            FROM
+                token
+            WHERE
+                listing_start_amount IS NULL
+                AND listing_end_amount IS NULL
+            GROUP BY
+                contract_address, chain_id
+            HAVING COUNT(*) = (
+                SELECT COUNT(*)
+                FROM token t
+                WHERE t.contract_address = token.contract_address
+                  AND t.chain_id = token.chain_id
+            )
+        )
+        UPDATE contract
+        SET floor_price = NULL
+        WHERE (contract_address, chain_id) IN (SELECT contract_address, chain_id FROM empty_collections)
+          AND floor_price IS NOT NULL
+    "#;
+
+    match sqlx::query(action_query).execute(pool).await {
+        Ok(_) => info!("Successfully updated floor price for empty collections."),
+        Err(e) => tracing::error!("Failed to update floor price for empty collections: {}", e),
+    }
+}

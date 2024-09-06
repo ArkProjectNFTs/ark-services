@@ -732,6 +732,130 @@ impl OrderProvider {
         Ok(())
     }
 
+    pub async fn recalculate_floor_price(
+        client: &SqlxCtxPg,
+        contract_address: &str,
+        chain_id: &str,
+    ) -> Result<(), ProviderError> {
+        let recalculate_query = r#"
+                SELECT MIN(hex_to_decimal(listing_start_amount)) AS min_price
+                FROM token
+                WHERE contract_address = $1
+                  AND chain_id = $2
+                  AND listing_start_date IS NOT NULL
+                  AND listing_end_date IS NOT NULL
+                GROUP BY contract_address
+            "#;
+
+        match sqlx::query_scalar::<_, BigDecimal>(recalculate_query)
+            .bind(contract_address)
+            .bind(chain_id)
+            .fetch_optional(&client.pool)
+            .await
+        {
+            Ok(new_floor_price) => {
+                if let Some(min_price) = new_floor_price {
+                    let current_floor_query = r#"
+                        SELECT floor_price
+                        FROM contract
+                        WHERE contract_address = $1
+                        AND chain_id = $2;
+                    "#;
+                    match sqlx::query_scalar::<_, BigDecimal>(current_floor_query)
+                        .bind(contract_address)
+                        .bind(chain_id)
+                        .fetch_optional(&client.pool)
+                        .await
+                    {
+                        Ok(current_floor_opt) => {
+                            let current_floor =
+                                current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
+                            if min_price < current_floor {
+                                let update_query = r#"
+                                    UPDATE contract
+                                    SET floor_price = $2
+                                    WHERE contract_address = $1
+                                    AND chain_id = $3;
+                                "#;
+                                match sqlx::query(update_query)
+                                    .bind(contract_address)
+                                    .bind(min_price)
+                                    .bind(chain_id)
+                                    .execute(&client.pool)
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        info!(
+                                            "Floor price updated for collection: {}",
+                                            contract_address
+                                        );
+                                        Ok(())
+                                    }
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "Failed to update floor price for collection {}: {}",
+                                            contract_address,
+                                            e
+                                        );
+                                        Err(ProviderError::DatabaseError(e.to_string()))
+                                    }
+                                }
+                            } else {
+                                Ok(())
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!(
+                                "Failed to fetch current floor price for collection {}: {}",
+                                contract_address,
+                                e
+                            );
+                            Err(ProviderError::DatabaseError(e.to_string()))
+                        }
+                    }
+                } else {
+                    // If no minimum price is found, set floor_price to NULL
+                    let update_query = r#"
+                        UPDATE contract
+                        SET floor_price = NULL
+                        WHERE contract_address = $1
+                          AND chain_id = $2;
+                    "#;
+                    match sqlx::query(update_query)
+                        .bind(contract_address)
+                        .bind(chain_id)
+                        .execute(&client.pool)
+                        .await
+                    {
+                        Ok(_) => {
+                            info!(
+                                "No tokens listed. Floor price set to NULL for collection: {}",
+                                contract_address
+                            );
+                            Ok(())
+                        }
+                        Err(e) => {
+                            tracing::error!(
+                                "Failed to set floor price to NULL for collection {}: {}",
+                                contract_address,
+                                e
+                            );
+                            Err(ProviderError::DatabaseError(e.to_string()))
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::error!(
+                    "Failed to recalculate floor price for collection {}: {}",
+                    contract_address,
+                    e
+                );
+                Err(ProviderError::DatabaseError(e.to_string()))
+            }
+        }
+    }
+
     pub async fn update_token_data_on_status_executed(
         client: &SqlxCtxPg,
         info: &OfferExecutedInfo,
@@ -1391,6 +1515,13 @@ impl OrderProvider {
                 client,
                 &token_data.contract_address,
                 &token_data.token_id,
+            )
+            .await?;
+
+            Self::recalculate_floor_price(
+                client,
+                &token_data.contract_address,
+                &token_data.chain_id,
             )
             .await?;
         }
