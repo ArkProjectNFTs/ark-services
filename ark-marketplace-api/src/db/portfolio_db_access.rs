@@ -1,5 +1,6 @@
 use crate::models::portfolio::OfferData;
 use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
+use crate::types::offer_type::OfferType;
 use std::time::SystemTime;
 
 use crate::utils::db_utils::event_type_list;
@@ -33,7 +34,7 @@ pub trait DatabaseAccess: Send + Sync {
         user_address: &str,
         page: i64,
         items_per_page: i64,
-        type_offer: &str,
+        type_offer: OfferType,
     ) -> Result<(Vec<OfferData>, bool, i64), Error>;
 }
 
@@ -175,7 +176,7 @@ impl DatabaseAccess for PgPool {
         user_address: &str,
         page: i64,
         items_per_page: i64,
-        type_offer: &str,
+        type_offer: OfferType,
     ) -> Result<(Vec<OfferData>, bool, i64), Error> {
         // FIXME: pagination assume that all offers used the same currency
         let offset = (page - 1) * items_per_page;
@@ -184,20 +185,22 @@ impl DatabaseAccess for PgPool {
             Err(_) => 0,
         };
 
-        let type_offer_query = match type_offer {
-            "made" => "token_offer.offer_maker = $2",
-            "received" => "token_offer.to_address = $2",
-            _ => "(token_offer.to_address = $2 OR token_offer.offer_maker = $2)",
-        };
+        let type_offer_query = type_offer.to_sql_condition();
+
+        // common where_clause
+        let where_clause = format!(
+            "token_offer.chain_id = $1
+             AND {}
+             AND token_offer.status = 'PLACED'
+             AND end_date > $3",
+            type_offer_query
+        );
 
         let total_count_query = format!(
             "SELECT COUNT(*) as count
             FROM token_offer
-            WHERE token_offer.chain_id = $1
-                AND {}
-                AND token_offer.status = 'PLACED'
-                AND end_date > $3",
-            type_offer_query
+            WHERE {}",
+            where_clause
         );
 
         let total_count = sqlx::query(&total_count_query)
@@ -222,13 +225,10 @@ impl DatabaseAccess for PgPool {
                 contract.floor_price as collection_floor_price
             FROM token_offer
             LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
-            WHERE token_offer.chain_id = $1
-                AND {}
-                AND token_offer.status = 'PLACED'
-                AND end_date > $3
+            WHERE {}
             ORDER BY amount DESC, expire_at ASC
             LIMIT $4 OFFSET $5",
-            type_offer_query
+            where_clause
         );
 
         let token_offers_data = sqlx::query_as::<_, OfferData>(&token_offers_query)

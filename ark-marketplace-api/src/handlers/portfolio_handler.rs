@@ -4,6 +4,7 @@ use crate::db::portfolio_db_access::DatabaseAccess;
 use crate::db::portfolio_query::{get_activity_data, get_offers_data};
 use crate::models::portfolio::OfferApiData;
 use crate::models::token::TokenEventType;
+use crate::types::offer_type::OfferType;
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
@@ -12,6 +13,7 @@ use serde_json::json;
 use serde_qs;
 use sqlx::postgres::PgPool;
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
@@ -86,7 +88,12 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
     let query_string = req.query_string();
     let query_params: HashMap<String, String> = serde_urlencoded::from_str(query_string).unwrap();
 
-    let type_offer = query_params.get("type").map(|s| s.as_str()).unwrap_or("");
+    let type_offer_str = query_params.get("type").map(|s| s.as_str()).unwrap_or("");
+    let type_offer = match OfferType::from_str(type_offer_str) {
+        Ok(t) => t,
+        Err(_) => return HttpResponse::BadRequest().json("Invalid type"),
+    };
+
     let (token_offers_data, has_next_page, count) = match get_offers_data(
         db_access,
         CHAIN_ID,
