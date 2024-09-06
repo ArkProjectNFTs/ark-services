@@ -869,6 +869,7 @@ impl OrderProvider {
         order_hash: String,
         block_timestamp: i64,
         reason: String,
+        is_listing: bool,
     ) -> Result<(), ProviderError> {
         // retrieve previous order hash event
         let query = "
@@ -902,6 +903,11 @@ impl OrderProvider {
                 TokenEventType::Offer => TokenEventType::OfferCancelled,
                 _ => TokenEventType::Cancelled,
             };
+
+            // we dont want to store price for cancel listing event
+            if is_listing {
+                event_history.amount = None;
+            }
 
             Self::insert_event_history(client, &event_history).await?;
         }
@@ -1361,7 +1367,7 @@ impl OrderProvider {
         data: &CancelledData,
     ) -> Result<(), ProviderError> {
         trace!("Registering cancelled order {:?}", data);
-
+        let mut is_listing = true;
         // if the order hash exists in token table, then it is a listing
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
@@ -1395,6 +1401,7 @@ impl OrderProvider {
             .is_some()
         {
             Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
+            is_listing = false;
         }
         // insert cancelled event
         Self::insert_cancel_event(
@@ -1402,6 +1409,7 @@ impl OrderProvider {
             data.order_hash.clone(),
             block_timestamp as i64,
             data.reason.clone(),
+            is_listing,
         )
         .await?;
 
