@@ -12,6 +12,7 @@ use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -37,13 +38,13 @@ struct ActivityQueryParameters {
 
 pub async fn get_collections<D: DatabaseAccess + Sync>(
     query_parameters: web::Query<CollectionQueryParameters>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let time_range = query_parameters.time_range.as_deref().unwrap_or("");
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     match get_collections_data(db_access, page, items_per_page, time_range).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(collection_data) => HttpResponse::Ok().json(collection_data),
@@ -56,13 +57,13 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
 
 pub async fn get_collection<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
     redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
 ) -> impl Responder {
     let (contract_address, chain_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     let mut redis_con_ref = redis_con.get_ref().lock().await;
     match get_collection_data(
         db_access,
@@ -86,7 +87,7 @@ pub async fn get_collection<D: DatabaseAccess + Sync>(
 pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<String>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let contract_address = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
@@ -105,7 +106,7 @@ pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
     let params = params.unwrap();
     let direction = params.direction.as_deref().unwrap_or("desc");
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
 
     match get_collection_activity_data(
         db_access,
@@ -134,14 +135,14 @@ pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
 pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
     query_parameters: web::Query<PortfolioCollectionQueryParameters>,
     path: web::Path<String>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let page = query_parameters.page.unwrap_or(1);
     let items_per_page = query_parameters.items_per_page.unwrap_or(100);
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     match get_portfolio_collections_data(db_access, &normalized_address, page, items_per_page).await
     {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
@@ -165,10 +166,10 @@ pub struct SearchQuery {
 
 pub async fn search_collections<D: DatabaseAccess + Sync>(
     query_parameters: web::Query<SearchQuery>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let query_search = query_parameters.q.as_deref();
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     let items = query_parameters.limit.unwrap_or(8);
 
     match search_collections_data(

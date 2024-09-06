@@ -864,18 +864,21 @@ impl DatabaseAccess for PgPool {
                     "
                 .to_string();
 
-                let contract_data: (i64, i64) = sqlx::query_as(&contract_query)
+                let contract_data: (Option<i64>, Option<i64>) = sqlx::query_as(&contract_query)
                     .bind(contract_address)
                     .bind(chain_id)
                     .fetch_one(self)
                     .await?;
 
+                let token_count = contract_data.0.unwrap_or(0);
+                let token_listed_count = contract_data.1.unwrap_or(0);
+
                 // if buy now is true, then token count is token_listed_count
                 // else token count is token_count - token_listed_count
                 let token_count = if buy_now {
-                    contract_data.1
+                    token_listed_count
                 } else {
-                    contract_data.0 - contract_data.1
+                    token_count - token_listed_count
                 };
 
                 (condition, token_count)

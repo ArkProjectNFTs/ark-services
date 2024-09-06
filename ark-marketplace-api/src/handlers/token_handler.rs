@@ -11,6 +11,7 @@ use crate::models::token::TokenOfferOneData;
 use crate::models::token::{TokenEventType, TokenInformationData};
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
+use sqlx::PgPool;
 
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
@@ -60,7 +61,7 @@ fn extract_query_params(
 pub async fn get_tokens<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String)>,
     query_parameters: web::Query<QueryParameters>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
     redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
     es_data: web::Data<HashMap<String, String>>,
 ) -> impl Responder {
@@ -80,7 +81,7 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     if sort_value.is_some() {
         disable_cache = true;
     }
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     let mut redis_con_ref = redis_con.get_ref().lock().await;
     let mut token_ids = None;
 
@@ -148,12 +149,12 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
 
 pub async fn get_token<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String, String)>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let (contract_address, chain_id, token_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     match get_token_data(db_access, &normalized_address, &chain_id, &token_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(json!({
@@ -168,12 +169,12 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
 
 pub async fn get_token_market<D: DatabaseAccess + Sync>(
     path: web::Path<(String, String, String)>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let (contract_address, chain_id, token_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     match get_token_marketdata(db_access, &normalized_address, &chain_id, &token_id).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
         Ok(token_data) => HttpResponse::Ok().json(json!({
@@ -189,7 +190,7 @@ pub async fn get_token_market<D: DatabaseAccess + Sync>(
 pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
     path: web::Path<String>,
     query_parameters: web::Query<QueryParameters>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let (page, items_per_page, buy_now, sort, direction) = extract_query_params(&query_parameters);
     let collection = query_parameters.collection.as_deref().unwrap_or("");
@@ -197,7 +198,7 @@ pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
     let user_address = path.into_inner();
     let normalized_address = normalize_address(&user_address);
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
 
     match get_tokens_portfolio_data(
         db_access,
@@ -227,7 +228,7 @@ pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
 pub async fn get_token_offers<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<(String, String, String)>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let (contract_address, chain_id, token_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
@@ -237,7 +238,7 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
         Ok((page, items_per_page)) => (page, items_per_page),
     };
 
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
     let floor_price = match get_collection_floor_price(db_access, &normalized_address, &chain_id)
         .await
     {
@@ -291,11 +292,11 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
 pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     req: HttpRequest,
     path: web::Path<(String, String, String)>,
-    db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
     let (contract_address, chain_id, token_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
-    let db_access = db_pool.get_ref();
+    let db_access = &db_pools[0];
 
     let params = serde_qs::from_str::<ActivityQueryParameters>(req.query_string());
     if let Err(e) = params {
@@ -362,10 +363,9 @@ fn is_metadata_refreshing(token_data: &TokenInformationData) -> bool {
 
 pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
     body: web::Json<RefreshMetadataRequest>,
-    _db_pool: web::Data<D>,
-    write_db_pool: web::Data<D>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
-    let db_access = write_db_pool.get_ref();
+    let db_access = &db_pools[1];
     let normalized_address = normalize_address(&body.contract_address);
 
     match get_token_data(db_access, &normalized_address, CHAIN_ID, &body.token_id).await {
@@ -399,8 +399,10 @@ pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn flush_all_data<D: DatabaseAccess + Sync>(db_pool: web::Data<D>) -> impl Responder {
-    let db_access = db_pool.get_ref();
+pub async fn flush_all_data<D: DatabaseAccess + Sync>(
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
+) -> impl Responder {
+    let db_access = &db_pools[0];
     match flush_all_data_query(db_access).await {
         Ok(result) => HttpResponse::Ok().json(result),
         Err(_) => HttpResponse::InternalServerError().finish(),

@@ -1,10 +1,14 @@
+use crate::models::portfolio::OfferData;
 use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
+use crate::types::offer_type::OfferType;
+use std::time::SystemTime;
 
 use crate::utils::db_utils::event_type_list;
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
+use sqlx::Row;
 
 #[derive(FromRow)]
 struct Count {
@@ -23,6 +27,15 @@ pub trait DatabaseAccess: Send + Sync {
         direction: &str,
         types: &Option<Vec<TokenEventType>>,
     ) -> Result<(Vec<TokenPortfolioActivityData>, bool, i64), Error>;
+
+    async fn get_offers_data(
+        &self,
+        chain_id: &str,
+        user_address: &str,
+        page: i64,
+        items_per_page: i64,
+        type_offer: OfferType,
+    ) -> Result<(Vec<OfferData>, bool, i64), Error>;
 }
 
 #[async_trait]
@@ -155,5 +168,81 @@ impl DatabaseAccess for PgPool {
         let has_next_page = page < total_pages;
 
         Ok((token_activity_data, has_next_page, count))
+    }
+
+    async fn get_offers_data(
+        &self,
+        chain_id: &str,
+        user_address: &str,
+        page: i64,
+        items_per_page: i64,
+        type_offer: OfferType,
+    ) -> Result<(Vec<OfferData>, bool, i64), Error> {
+        // FIXME: pagination assume that all offers used the same currency
+        let offset = (page - 1) * items_per_page;
+        let current_time: i64 = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+            Ok(d) => d.as_secs().try_into().unwrap(),
+            Err(_) => 0,
+        };
+
+        let type_offer_query = type_offer.to_sql_condition();
+
+        // common where_clause
+        let where_clause = format!(
+            "token_offer.chain_id = $1
+             AND {}
+             AND token_offer.status = 'PLACED'
+             AND end_date > $3",
+            type_offer_query
+        );
+
+        let total_count_query = format!(
+            "SELECT COUNT(*) as count
+            FROM token_offer
+            WHERE {}",
+            where_clause
+        );
+
+        let total_count = sqlx::query(&total_count_query)
+            .bind(chain_id)
+            .bind(user_address)
+            .bind(current_time)
+            .fetch_one(self)
+            .await?;
+
+        let count: i64 = total_count.get::<i64, _>("count");
+
+        let token_offers_query = format!(
+            "SELECT
+                token_offer_id AS offer_id,
+                hex_to_decimal(offer_amount) AS amount,
+                end_date AS expire_at,
+                order_hash as hash,
+                currency_address,
+                to_address,
+                offer_maker as source,
+                token_id,
+                contract.floor_price as collection_floor_price
+            FROM token_offer
+            LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
+            WHERE {}
+            ORDER BY amount DESC, expire_at ASC
+            LIMIT $4 OFFSET $5",
+            where_clause
+        );
+
+        let token_offers_data = sqlx::query_as::<_, OfferData>(&token_offers_query)
+            .bind(chain_id)
+            .bind(user_address)
+            .bind(current_time)
+            .bind(items_per_page)
+            .bind(offset)
+            .fetch_all(self)
+            .await?;
+
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((token_offers_data, has_next_page, count))
     }
 }
