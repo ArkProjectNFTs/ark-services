@@ -1033,6 +1033,20 @@ impl OrderProvider {
                 event_history.amount = None;
             }
 
+            // if we cancel an auction all existing offers should be deleted for this token
+            if event_history.event_type == TokenEventType::AuctionCancelled {
+                let delete_query = "
+                    DELETE FROM token_offer
+                    WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
+                ";
+                sqlx::query(delete_query)
+                    .bind(&event_history.contract_address)
+                    .bind(&event_history.token_id)
+                    .bind(&event_history.chain_id)
+                    .execute(&client.pool)
+                    .await?;
+            }
+
             Self::insert_event_history(client, &event_history).await?;
         }
         Ok(())
