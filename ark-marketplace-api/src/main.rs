@@ -1,3 +1,5 @@
+mod api_doc;
+
 use actix_cors::Cors;
 use actix_web::middleware::DefaultHeaders;
 use actix_web::{web, App, HttpServer};
@@ -17,6 +19,8 @@ use tracing_subscriber::EnvFilter;
 use utoipa::OpenApi;
 
 use ark_marketplace_api::handlers::default_handler;
+use ark_marketplace_api::handlers::collection_handler;
+
 use utoipa_swagger_ui::{SwaggerUi, Url};
 
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
@@ -96,33 +100,6 @@ async fn get_write_database_url() -> Result<String> {
     }
 }
 
-#[derive(ToSchema, Serialize)]
-struct HealthCheckResponse {
-    #[schema()]
-    status: String,
-}
-
-
-#[derive(ToSchema, Serialize)]
-struct HealthCheckResponseV1 {
-    #[schema()]
-    status_v1: String,
-}
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(default_handler::root, default_handler::health_check),
-    components(schemas(HealthCheckResponse))
-)]
-struct ApiDoc;
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(default_handler::health_check_v1),
-    components(schemas(HealthCheckResponseV1))
-)]
-struct ApiDocV1;
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
@@ -184,23 +161,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db_pools.clone()))
             .app_data(web::Data::new(redis_conn.clone()))
             .app_data(web::Data::new(es_config.clone()))
-            .configure(default::config)
-            .configure(collection::config)
+            //.configure(collection::config)
             .configure(portfolio::config)
             .configure(token::config)
-            .service(default_handler::health_check)
-            .service(default_handler::root)
+            .configure(default_handler::configure)
+            .service(collection_handler::get_collection)
             .service(web::scope("/v1").service(default_handler::health_check_v1))
-            .service(SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
-                (
-                    Url::new("apiv0", "/api-docs/openapi.json"),
-                    ApiDoc::openapi(),
-                ),
-                (
-                    Url::with_primary("apiv1", "/api-docs/openapi_v1.json", true),
-                    ApiDocV1::openapi(),
-                ),
-            ]))
+            .service(api_doc::configure_docs())
+
     })
     .bind("0.0.0.0:8080")?
     .run()

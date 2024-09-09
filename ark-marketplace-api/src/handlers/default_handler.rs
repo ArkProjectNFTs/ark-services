@@ -1,5 +1,5 @@
 use crate::types::default::{HealthCheckResponse, HealthCheckResponseV1};
-use actix_web::get;
+use actix_web::{get, web};
 use actix_web::{HttpResponse, Responder};
 
 #[utoipa::path(
@@ -37,4 +37,10 @@ pub async fn health_check_v1() -> impl Responder {
     HttpResponse::Ok().json(HealthCheckResponseV1 {
         status_v1: "okV1".to_string(),
     })
+}
+
+
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(health_check)
+       .service(root);
 }

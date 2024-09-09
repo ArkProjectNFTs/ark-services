@@ -9,6 +9,7 @@ use crate::managers::elasticsearch_manager::ElasticsearchManager;
 use crate::models::token::TokenEventType;
 use crate::utils::http_utils::normalize_address;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::get;
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
@@ -55,7 +56,13 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn get_collection<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    responses(
+        (status = 200, description = "Health Check", body = HealthCheckResponse)
+    )
+)]
+#[get("/collections/{contract_address}/{chain_id}")]
+pub async fn get_collection(
     path: web::Path<(String, String)>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
     redis_con: web::Data<Arc<Mutex<MultiplexedConnection>>>,
