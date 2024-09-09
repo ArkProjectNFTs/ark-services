@@ -665,7 +665,7 @@ impl DatabaseAccess for PgPool {
             "
                 SELECT
                     token.current_owner as owner,
-                    hex_to_decimal(token.last_price) as floor,
+                    c.floor_price as floor,
                     token.listing_timestamp as created_timestamp,
                     token.updated_timestamp as updated_timestamp,
                     (token.listing_start_amount IS NOT NULL) as is_listed,
