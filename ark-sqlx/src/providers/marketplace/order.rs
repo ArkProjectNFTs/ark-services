@@ -1600,7 +1600,18 @@ impl OrderProvider {
             .await?;
 
             Self::update_offer_status(client, &data.order_hash, OrderStatus::Fulfilled).await?;
+        } else if let Some(offer_data) =
+            Self::get_offer_data_by_order_hash(client, &data.order_hash).await?
+        {
+            Self::update_token_status(
+                client,
+                &offer_data.contract_address,
+                &offer_data.token_id,
+                OrderStatus::Fulfilled,
+            )
+            .await?;
         }
+
         Ok(())
     }
 
