@@ -53,6 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [package-ark-indexer-transactions-service]
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Download package from artifact
         uses: actions/download-artifact@v4
         with:
