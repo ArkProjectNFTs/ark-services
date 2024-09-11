@@ -1,0 +1,13 @@
+[Unit]
+AssertPathExists=/usr/bin/starknet-sequencer-adapter
+
+[Service]
+WorkingDirectory=~
+ExecStart=/usr/bin/starknet-sequencer-adapter
+Restart=always
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+Alias=starknet-sequencer-adapter
+WantedBy=default.target

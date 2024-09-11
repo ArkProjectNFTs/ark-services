@@ -1,41 +1,41 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date, status\n            FROM orderbook_token_offers\n            WHERE token_id = $1 AND token_address = $2\n            AND status = 'PLACED'\n            ORDER BY offer_timestamp DESC;",
+  "query": "SELECT event_type, event_timestamp, order_status,\n                    previous_owner, new_owner, amount, canceled_reason,\n                    start_date, end_date, end_amount\n             FROM orderbook_token_history\n             WHERE token_id = $1 AND token_address = $2\n             ORDER BY event_timestamp DESC",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "order_hash",
+        "name": "event_type",
         "type_info": "Text"
       },
       {
         "ordinal": 1,
-        "name": "offer_maker",
-        "type_info": "Text"
+        "name": "event_timestamp",
+        "type_info": "Int8"
       },
       {
         "ordinal": 2,
-        "name": "offer_amount",
+        "name": "order_status",
         "type_info": "Text"
       },
       {
         "ordinal": 3,
-        "name": "offer_quantity",
+        "name": "previous_owner",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
-        "name": "offer_timestamp",
-        "type_info": "Int8"
+        "name": "new_owner",
+        "type_info": "Text"
       },
       {
         "ordinal": 5,
-        "name": "currency_chain_id",
+        "name": "amount",
         "type_info": "Text"
       },
       {
         "ordinal": 6,
-        "name": "currency_address",
+        "name": "canceled_reason",
         "type_info": "Text"
       },
       {
@@ -50,7 +50,7 @@
       },
       {
         "ordinal": 9,
-        "name": "status",
+        "name": "end_amount",
         "type_info": "Text"
       }
     ],
@@ -64,14 +64,14 @@
       false,
       false,
       false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
     ]
   },
-  "hash": "4df0a951fbc88e7982f814d35451bf2fb405b69e1d703a4c7896c561a2a7c69a"
+  "hash": "7ba4a7143d088d7dc27bdfec92ad17b649e637915d8ef60e31d92da30d6a7699"
 }
