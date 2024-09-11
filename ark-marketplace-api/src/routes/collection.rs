@@ -15,27 +15,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     );
 
     cfg.route(
-        "/collections/{address}/activity",
-        web::get().to(collection_handler::get_collection_activity::<PgPool>),
-    );
-
-    /*cfg.route(
-        "/collections/{address}/{chain_id}",
-        web::get().to(collection_handler::get_collection::<PgPool>),
-    );*/
-
-    cfg.route(
         "/collections/{address}/traits",
         web::get().to(collection_handler::get_traits::<PgPool>),
-    );
-
-    cfg.route(
-        "/portfolio/{user_address}/collections",
-        web::get().to(collection_handler::get_portfolio_collections::<PgPool>),
-    );
-
-    cfg.route(
-        "/collections/search",
-        web::get().to(collection_handler::search_collections::<PgPool>),
     );
 }

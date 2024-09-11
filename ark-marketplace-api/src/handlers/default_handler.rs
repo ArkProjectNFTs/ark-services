@@ -39,8 +39,6 @@ pub async fn health_check_v1() -> impl Responder {
     })
 }
 
-
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(health_check)
-       .service(root);
+    cfg.service(health_check).service(root);
 }

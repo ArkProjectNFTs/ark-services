@@ -8,8 +8,8 @@ use crate::db::query::{
 use crate::managers::elasticsearch_manager::ElasticsearchManager;
 use crate::models::token::TokenEventType;
 use crate::utils::http_utils::normalize_address;
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use actix_web::get;
+use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
@@ -57,8 +57,10 @@ pub async fn get_collections<D: DatabaseAccess + Sync>(
 }
 
 #[utoipa::path(
+    tag = "Collections",
     responses(
-        (status = 200, description = "Health Check", body = HealthCheckResponse)
+        (status = 200, description = "Get collection data", body = CollectionResponse),
+        (status = 400, description = "Data not found", body = String),
     )
 )]
 #[get("/collections/{contract_address}/{chain_id}")]
@@ -91,7 +93,15 @@ pub async fn get_collection(
     }
 }
 
-pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Collections",
+    responses(
+        (status = 200, description = "Get collection activity", body = CollectionActivityResponse),
+        (status = 400, description = "Data not found", body = String),
+    )
+)]
+#[get("/collections/{contract_address}/activity")]
+pub async fn get_collection_activity(
     req: HttpRequest,
     path: web::Path<String>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -139,7 +149,15 @@ pub async fn get_collection_activity<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn get_portfolio_collections<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Collections",
+    responses(
+        (status = 200, description = "Get portfolio collections", body = CollectionPortfolioResponse),
+        (status = 400, description = "Data not found", body = String),
+    )
+)]
+#[get("/portfolio/{user_address}/collections")]
+pub async fn get_portfolio_collections(
     query_parameters: web::Query<PortfolioCollectionQueryParameters>,
     path: web::Path<String>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -171,7 +189,18 @@ pub struct SearchQuery {
     limit: Option<i64>,
 }
 
-pub async fn search_collections<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Collections",
+    responses(
+        (status = 200, description = "Search in a collection", body = CollectionSearchResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("q" = String, Query, description = "Can be a starknetId or a starknet user address"),
+    )
+)]
+#[get("/collections/search")]
+pub async fn search_collections(
     query_parameters: web::Query<SearchQuery>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
@@ -220,4 +249,8 @@ pub async fn get_traits<D: DatabaseAccess + Sync>(
             "error": format!("Failed to retrieve data: {}", e)
         })),
     }
+}
+
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_collection_activity).service(get_collection);
 }
