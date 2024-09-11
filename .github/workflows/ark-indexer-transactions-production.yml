@@ -71,6 +71,12 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SCALEWAY_PRICEENGINE_API_SSH_KEY }}
 
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          database-url: ${{ secrets.DATABASE_URL }}
+
       - name: Copy debian package to scaleway
         run: |
           scp -o StrictHostKeyChecking=no ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE}} github@${{ secrets.SCALEWAY_PRICEENGINE_API_IP }}:~/
