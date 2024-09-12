@@ -62,12 +62,24 @@ pub struct CollectionFloorPrice {
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct CollectionActivityData {
     pub activity_type: TokenEventType,
+    #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
     pub from: Option<String>,
     pub to: Option<String>,
     pub time_stamp: i64,
     pub transaction_hash: Option<String>,
     pub token_id: Option<String>,
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
     pub token_metadata: Option<JsonValue>,
     pub name: Option<String>,
     pub address: String,

@@ -1,13 +1,12 @@
 use super::utils::extract_page_params;
 use super::utils::CHAIN_ID;
-use crate::db::portfolio_db_access::DatabaseAccess;
 use crate::db::portfolio_query::{get_activity_data, get_offers_data};
 use crate::models::portfolio::OfferApiData;
 use crate::models::token::TokenEventType;
 use crate::types::offer_type::OfferType;
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, web, HttpRequest, HttpResponse, Responder};
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
@@ -24,7 +23,21 @@ struct ActivityQueryParameters {
     types: Option<Vec<TokenEventType>>,
 }
 
-pub async fn get_activity<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Portfolio",
+    responses(
+        (status = 200, description = "Get activity for a portfolio", body = PortfolioActivityResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("user_address" = String, Path, description = "Address of the user"),
+
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+    )
+)]
+#[get("/portfolio/{user_address}/activity")]
+pub async fn get_activity(
     req: HttpRequest,
     path: web::Path<String>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -71,7 +84,22 @@ pub async fn get_activity<D: DatabaseAccess + Sync>(
     }))
 }
 
-pub async fn get_offers<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Portfolio",
+    responses(
+        (status = 200, description = "Get offers for a portfolio", body = PortfolioOffersResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("user_address" = String, Path, description = "Address of the user"),
+
+        ("type" = Option<String>, Query, description = "'made' or 'received' to filter either made or received offers"),
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+    )
+)]
+#[get("/portfolio/{user_address}/offers")]
+pub async fn get_offers(
     req: HttpRequest,
     path: web::Path<String>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -142,4 +170,8 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
         "next_page": if has_next_page { Some(page + 1)} else { None },
         "count": count,
     }))
+}
+
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_activity).service(get_offers);
 }

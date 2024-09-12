@@ -3,6 +3,7 @@ use actix_web::{get, web};
 use actix_web::{HttpResponse, Responder};
 
 #[utoipa::path(
+    tag = "HealthCheck",
     responses(
         (status = 200, description = "Health Check", body = HealthCheckResponse)
     )
@@ -14,11 +15,6 @@ pub async fn health_check() -> impl Responder {
     })
 }
 
-#[utoipa::path(
-    responses(
-        (status = 200, description = "Health Check", body = HealthCheckResponse)
-    )
-)]
 #[get("/")]
 pub async fn root() -> impl Responder {
     HttpResponse::Ok().json(HealthCheckResponse {

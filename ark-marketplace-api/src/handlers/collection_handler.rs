@@ -41,6 +41,10 @@ struct ActivityQueryParameters {
     responses(
         (status = 200, description = "Get collections", body = CollectionsResponse),
         (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
     )
 )]
 #[get("/collections")]
@@ -105,6 +109,10 @@ pub async fn get_collection(
     responses(
         (status = 200, description = "Get collection activity", body = CollectionActivityResponse),
         (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
     )
 )]
 #[get("/collections/{contract_address}/activity")]
@@ -157,10 +165,14 @@ pub async fn get_collection_activity(
 }
 
 #[utoipa::path(
-    tag = "Collections",
+    tag = "Portfolio",
     responses(
         (status = 200, description = "Get portfolio collections", body = CollectionPortfolioResponse),
         (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
     )
 )]
 #[get("/portfolio/{user_address}/collections")]
