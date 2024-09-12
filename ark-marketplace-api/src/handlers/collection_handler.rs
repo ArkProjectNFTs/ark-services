@@ -1,6 +1,5 @@
 use super::utils::extract_page_params;
 use super::utils::CHAIN_ID;
-use crate::db::db_access::DatabaseAccess;
 use crate::db::query::{
     get_collection_activity_data, get_collection_data, get_collections_data,
     get_portfolio_collections_data, search_collections_data,
@@ -37,7 +36,15 @@ struct ActivityQueryParameters {
     types: Option<Vec<TokenEventType>>,
 }
 
-pub async fn get_collections<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Collections",
+    responses(
+        (status = 200, description = "Get collections", body = CollectionsResponse),
+        (status = 400, description = "Data not found", body = String),
+    )
+)]
+#[get("/collections")]
+pub async fn get_collections(
     query_parameters: web::Query<CollectionQueryParameters>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
@@ -229,7 +236,15 @@ pub async fn search_collections(
     }
 }
 
-pub async fn get_traits<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Collections",
+    responses(
+        (status = 200, description = "Get traits in a collection", body = AttributesResponse),
+        (status = 400, description = "Data not found", body = String),
+    )
+)]
+#[get("/collections/{address}/traits")]
+pub async fn get_traits(
     path: web::Path<String>,
     es_data: web::Data<HashMap<String, String>>,
 ) -> impl Responder {
@@ -252,5 +267,10 @@ pub async fn get_traits<D: DatabaseAccess + Sync>(
 }
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_collection_activity).service(get_collection);
+    cfg.service(get_collections)
+        .service(get_collection_activity)
+        .service(get_collection)
+        .service(get_portfolio_collections)
+        .service(get_traits)
+        .service(search_collections);
 }

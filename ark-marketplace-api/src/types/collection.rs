@@ -3,9 +3,15 @@ use crate::models::collection::{
     OwnerData,
 };
 use serde::Serialize;
+use std::collections::HashMap;
 
 #[derive(utoipa::ToSchema, Serialize)]
 pub struct CollectionResponse {
+    data: CollectionData,
+}
+
+#[derive(utoipa::ToSchema, Serialize)]
+pub struct CollectionsResponse {
     data: Vec<CollectionData>,
 }
 
@@ -31,4 +37,14 @@ pub struct CollectionPortfolioResponse {
 pub struct CollectionSearchResponse {
     collections: Vec<CollectionSearchData>,
     accounts: Vec<OwnerData>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct AttributesResponse {
+    pub data: HashMap<String, AttributeValues>,
+}
+
+#[derive(Serialize, utoipa::ToSchema)]
+pub struct AttributeValues {
+    pub values: HashMap<String, usize>,
 }

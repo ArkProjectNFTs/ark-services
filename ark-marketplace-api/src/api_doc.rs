@@ -5,8 +5,8 @@ use ark_marketplace_api::models::collection::{
     OwnerData,
 };
 use ark_marketplace_api::types::collection::{
-    CollectionActivityResponse, CollectionPortfolioResponse, CollectionResponse,
-    CollectionSearchResponse,
+    AttributeValues, AttributesResponse, CollectionActivityResponse, CollectionPortfolioResponse,
+    CollectionResponse, CollectionSearchResponse, CollectionsResponse,
 };
 use ark_marketplace_api::types::default::{HealthCheckResponse, HealthCheckResponseV1};
 use utoipa::OpenApi;
@@ -21,6 +21,8 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         collection_handler::get_collection_activity,
         collection_handler::get_portfolio_collections,
         collection_handler::search_collections,
+        collection_handler::get_traits,
+        collection_handler::get_collections,
     ),
     components(schemas(
         HealthCheckResponse,
@@ -32,7 +34,10 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         CollectionPortfolioResponse,
         CollectionSearchData,
         OwnerData,
-        CollectionSearchResponse
+        CollectionSearchResponse,
+        AttributesResponse,
+        AttributeValues,
+        CollectionsResponse
     ))
 )]
 pub struct ApiDoc;
