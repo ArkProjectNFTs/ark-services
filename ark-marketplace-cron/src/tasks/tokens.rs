@@ -171,44 +171,22 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
         {
             Ok(new_floor_price) => {
                 if let Some(min_price) = new_floor_price {
-                    let current_floor_query = r#"
-                        SELECT floor_price
-                        FROM contract
+                    let update_query = r#"
+                        UPDATE contract
+                        SET floor_price = $2
                         WHERE contract_address = $1;
                     "#;
-                    match sqlx::query_scalar::<_, BigDecimal>(current_floor_query)
+                    match sqlx::query(update_query)
                         .bind(collection)
-                        .fetch_optional(pool)
+                        .bind(min_price)
+                        .execute(pool)
                         .await
                     {
-                        Ok(current_floor_opt) => {
-                            let current_floor =
-                                current_floor_opt.unwrap_or_else(|| BigDecimal::from(0));
-                            if min_price < current_floor {
-                                let update_query = r#"
-                                    UPDATE contract
-                                    SET floor_price = $2
-                                    WHERE contract_address = $1;
-                                "#;
-                                match sqlx::query(update_query)
-                                    .bind(collection)
-                                    .bind(min_price)
-                                    .execute(pool)
-                                    .await
-                                {
-                                    Ok(_) => {
-                                        info!("Floor price updated for collection: {}", collection)
-                                    }
-                                    Err(e) => tracing::error!(
-                                        "Failed to update floor price for collection {}: {}",
-                                        collection,
-                                        e
-                                    ),
-                                }
-                            }
+                        Ok(_) => {
+                            info!("Floor price updated for collection: {}", collection)
                         }
                         Err(e) => tracing::error!(
-                            "Failed to fetch current floor price for collection {}: {}",
+                            "Failed to update floor price for collection {}: {}",
                             collection,
                             e
                         ),
