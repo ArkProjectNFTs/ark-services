@@ -1249,6 +1249,7 @@ impl OrderProvider {
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
+        let mut to_address = None;
         let token_id = match data.token_id {
             Some(ref token_id_hex) => {
                 let cleaned_token_id = token_id_hex.trim_start_matches("0x");
@@ -1300,7 +1301,7 @@ impl OrderProvider {
                 .execute(&client.pool)
                 .await?;
 
-            let to_address =
+            to_address =
                 Self::get_current_owner(client, &contract_address, &token_id, &data.token_chain_id)
                     .await?;
 
@@ -1321,7 +1322,7 @@ impl OrderProvider {
                     status: OrderStatus::Placed.to_string(),
                     start_date: data.start_date as i64,
                     end_date: data.end_date as i64,
-                    to_address: to_address.unwrap_or_default(),
+                    to_address: to_address.clone().unwrap_or_default(),
                 },
             )
             .await?;
@@ -1485,8 +1486,8 @@ impl OrderProvider {
                     chain_id: data.token_chain_id.clone(),
                     event_type,
                     block_timestamp: block_timestamp as i64,
-                    from_address: None,
-                    to_address: Some(data.offerer.clone()),
+                    from_address: Some(data.offerer.clone()),
+                    to_address: to_address.clone(),
                     amount: Some(data.start_amount.clone()),
                     canceled_reason: None,
                 },
