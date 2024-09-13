@@ -130,6 +130,10 @@ pub async fn get_offers<D: DatabaseAccess + Sync>(
                 data.currency_address.clone(),
                 data.collection_floor_price.clone(),
             ),
+            collection_address: data.collection_address.clone(),
+            collection_name: data.collection_name.clone(),
+            is_verified: data.is_verified,
+            metadata: data.metadata.clone(),
         })
         .collect();
 

@@ -218,13 +218,18 @@ impl DatabaseAccess for PgPool {
                 hex_to_decimal(offer_amount) AS amount,
                 end_date AS expire_at,
                 order_hash as hash,
-                currency_address,
+                token_offer.currency_address,
                 to_address,
                 offer_maker as source,
-                token_id,
-                contract.floor_price as collection_floor_price
+                token.token_id,
+                contract.floor_price as collection_floor_price,
+                contract.contract_address as collection_address,
+                contract.contract_name as collection_name,
+                contract.is_verified as is_verified,
+                token.metadata
             FROM token_offer
             LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
+            LEFT JOIN token ON token_offer.contract_address = token.contract_address AND token_offer.chain_id = token.chain_id and token_offer.token_id = token.token_id
             WHERE {}
             ORDER BY amount DESC, expire_at ASC
             LIMIT $4 OFFSET $5",
