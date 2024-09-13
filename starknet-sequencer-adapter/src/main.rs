@@ -11,6 +11,7 @@ use services::adapter::starknet_adapter::{
     fetch_block, get_latest_block_number, verify_blocks_task,
 };
 use services::storage::file::{is_block_saved, save_block};
+// use services::adapter::starknet_adapter::extract_events_task;
 // Standard Dependencies definitions
 
 use std::fs;
@@ -20,6 +21,7 @@ use std::sync::Arc;
 use reqwest::Client;
 use tokio::sync::{Mutex, Notify};
 use tokio::time::{interval, sleep, Duration, Instant};
+
 // Default alocator change
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -28,6 +30,7 @@ pub const BASE_URL: &str =
 
 #[tokio::main]
 async fn main() {
+    rayon::ThreadPoolBuilder::new().num_threads(4).build_global().unwrap();
     println!("Starting the block ingestion process...");
     match envy::prefixed("SKSQADAPTER_").from_env::<Config>() {
         Ok(config) => {
@@ -167,7 +170,7 @@ async fn main() {
                 });
             }
 
-            // // Task to extract events
+            // Task to extract events
             // {
             //     let events_state_path = Arc::clone(&events_state_path);
             //     tokio::spawn(async move {

@@ -13,6 +13,7 @@ envy = "0.4.2"
 openssl = "0.10.66"
 openssl-probe = "0.1.5"
 serde = { version = "1.0.204", features = ["derive"] }
+rayon = "1.10.0"
 
 [package.metadata.deb]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
@@ -23,6 +24,6 @@ section = "admin"
 priority = "optional"
 assets = [
  ["target/release/starknet-sequencer-adapter", "usr/bin/", "755"],
- ["debian/starknet-sequencer-adapter.service", "/lib/systemd/system/starknet-sequencer-adapter.service", "644"], 
+ ["debian/starknet-sequencer-adapter.service", "/lib/systemd/system/", "644"], 
 ]
 maintainer-scripts = "debian/scripts"

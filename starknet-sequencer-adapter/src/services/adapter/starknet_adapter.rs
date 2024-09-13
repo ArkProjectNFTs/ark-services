@@ -1,4 +1,4 @@
-use crate::interfaces::error::ArkError;
+use crate::interfaces::{error::ArkError, event::EventMap};
 use crate::services::storage::file::verify_block_format;
 
 use reqwest::Client;
@@ -11,6 +11,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
+use rayon::prelude::*;
 
 pub async fn get_latest_block_number(
     base_url: &str,
@@ -51,14 +52,37 @@ pub async fn fetch_block(
     Ok(json)
 }
 
-pub fn extract_events_from_block(_block: &Value) -> Vec<Value> {
-    // let transaction_receipts = block["transaction_receipts"].as_array();
-    let event_list = vec![];
-    // transaction_receipts.iter().map(|transaction| {
-    //     if let Some(events) = transaction["events"].as_array() {
-    //         event_list.push(events)
-    //     }
-    // });
+pub fn extract_events_from_block(block: &Value) -> Vec<(&str, EventMap<'_>)> {
+    let transaction_receipts = match block.get("transaction_receipts").and_then(|r| r.as_array()) {
+        Some(receipts) => receipts,
+        None => return Vec::new(),
+    };
+
+    let event_list = transaction_receipts
+        .par_iter()
+        .filter_map(|transaction| {
+            let transaction_hash = transaction.get("transaction_hash")?.as_str()?;
+
+            let events = transaction
+                .get("events")
+                .and_then(|e| e.as_array())
+                .map(|e| e.as_slice())
+                .unwrap_or(&[]);
+
+            let transaction_index = transaction.get("transaction_index");
+            let execution_status = transaction.get("execution_status");
+
+            Some((
+                transaction_hash,
+                EventMap {
+                    transaction_index,
+                    execution_status,
+                    events,
+                },
+            ))
+        })
+        .collect();
+
     event_list
 }
 
@@ -158,19 +182,23 @@ pub async fn extract_events_task(blocks_per_file: u64, state_path: Arc<PathBuf>)
                                             )
                                             .unwrap();
                                             let events = extract_events_from_block(&block_content);
-                                            for event in events {
+                                            for (i,(tx_hash, event)) in events.iter().enumerate() {
+
                                                 let folder = format!(
                                                     "/opt/fast-indexer/events/{}/",
                                                     block_number / blocks_per_file
                                                 );
                                                 fs::create_dir_all(&folder).unwrap();
                                                 let file_path = format!(
-                                                    "{}event_{}_{}.json",
-                                                    folder, block_number, event["id"]
+                                                    "{}event_{}_{}_{}.json",
+                                                    folder, block_number, tx_hash, i
                                                 );
+                                                
                                                 let mut file = File::create(file_path).unwrap();
-                                                file.write_all(event.to_string().as_bytes())
-                                                    .unwrap();
+
+                                                // Utilisation de serde_json pour sérialiser en JSON
+                                                let json_content = serde_json::to_string(&event).unwrap();
+                                                file.write_all(json_content.as_bytes()).unwrap();
                                             }
                                             extracted_blocks.insert(block_number, true);
                                         }
