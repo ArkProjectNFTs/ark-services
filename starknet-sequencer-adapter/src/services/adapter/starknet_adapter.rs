@@ -1,5 +1,5 @@
-use crate::interfaces::error::ArkError;
 use crate::services::storage::file::verify_block_format;
+use crate::{interfaces::error::ArkError, services::state::manager::StateManager};
 
 use reqwest::Client;
 use serde_json::Value;
@@ -62,17 +62,18 @@ pub fn extract_events_from_block(_block: &Value) -> Vec<Value> {
     event_list
 }
 
-pub async fn verify_blocks_task(state_path: Arc<PathBuf>) {
-    let mut state = HashMap::new();
+pub async fn verify_blocks_task(_state_path: Arc<PathBuf>) {
+    // let mut state = HashMap::new();
+    let state_manager = StateManager::new("/opt/fast-indexer/state").unwrap();
 
     // Load state from file
-    if state_path.exists() {
-        let state_file = File::open(&*state_path).unwrap();
-        state = serde_json::from_reader(state_file).unwrap();
-    }
+    // if state_path.exists() {
+    //     let state_file = File::open(&*state_path).unwrap();
+    //     state = serde_json::from_reader(state_file).unwrap();
+    // }
 
     loop {
-        let mut verified_blocks = state.clone();
+        // let mut verified_blocks = state.clone();
 
         for entry in fs::read_dir("/opt/fast-indexer/blocks").unwrap() {
             let entry = entry.unwrap();
@@ -86,19 +87,33 @@ pub async fn verify_blocks_task(state_path: Arc<PathBuf>) {
                             if let Ok(block_number) = file_name
                                 .trim_start_matches("block_")
                                 .trim_end_matches(".json")
-                                .parse::<u64>()
+                                .parse::<usize>()
                             {
-                                if !verified_blocks.contains_key(&block_number) {
-                                    match verify_block_format(&block_path) {
-                                        Ok(block_number) => {
-                                            verified_blocks.insert(block_number, true);
+                                match state_manager.get_block_state(block_number) {
+                                    Ok(state) => match verify_block_format(&block_path) {
+                                        Ok(_block_number_verified) => {
+                                            if !state {
+                                                state_manager
+                                                    .set_block_state(block_number, true)
+                                                    .unwrap();
+                                            }
                                         }
                                         Err(e) => {
+                                            state_manager
+                                                .set_block_state(block_number, false)
+                                                .unwrap();
                                             eprintln!(
                                                 "Failed to verify block format for {:?}: {}",
                                                 block_path, e
                                             );
                                         }
+                                    },
+                                    Err(e) => {
+                                        state_manager.set_block_state(block_number, false).unwrap();
+                                        eprintln!(
+                                            "Failed to verify state for {:?}: {}",
+                                            block_path, e
+                                        );
                                     }
                                 }
                             } else {
@@ -113,12 +128,12 @@ pub async fn verify_blocks_task(state_path: Arc<PathBuf>) {
             }
         }
 
-        state = verified_blocks.clone();
+        // state = verified_blocks.clone();
 
         // Save state to file
-        fs::create_dir_all(state_path.parent().unwrap()).unwrap();
-        let state_file = File::create(&*state_path).unwrap();
-        serde_json::to_writer(state_file, &state).unwrap();
+        // fs::create_dir_all(state_path.parent().unwrap()).unwrap();
+        // let state_file = File::create(&*state_path).unwrap();
+        // serde_json::to_writer(state_file, &state).unwrap();
 
         sleep(Duration::from_secs(60)).await; // Check every 60 seconds
     }

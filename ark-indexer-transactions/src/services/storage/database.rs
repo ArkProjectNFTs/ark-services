@@ -7,6 +7,7 @@ use sqlx::PgPool;
 
 use super::Storage;
 
+#[derive(Clone)]
 pub struct DatabaseStorage {
     pool: PgPool,
 }
@@ -96,7 +97,7 @@ impl Storage for DatabaseStorage {
     async fn store_transaction_info(
         &self,
         tx_info: TransactionInfo,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
         // println!("tx_info: {:?}", tx_info);
         sqlx::query_as!(
@@ -139,7 +140,10 @@ impl Storage for DatabaseStorage {
         Ok(())
     }
 
-    async fn store_nft_info(&self, nft_info: NFTInfo) -> Result<(), Box<dyn std::error::Error>> {
+    async fn store_nft_info(
+        &self,
+        nft_info: NFTInfo,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             INSERT INTO nft_info (
                 contract_address, token_id, name, symbol, metadata_uri, owner, chain_id, block_hash, indexed_at

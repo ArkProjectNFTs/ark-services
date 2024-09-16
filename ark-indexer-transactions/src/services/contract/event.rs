@@ -16,9 +16,13 @@ use starknet::{
 
 use starknet::providers::sequencer::models::Event;
 
-use super::manager::ContractManager;
+use super::{common::detect_erc_action, erc1155, erc1400, erc20, erc721, manager::ContractManager};
 
-impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> {
+impl<S, P> ContractManager<S, P>
+where
+    S: Storage + Send + Sync + 'static,
+    P: Provider + Send + Sync + 'static,
+{
     pub async fn handle_erc20_event(
         &self,
         event: Event,
@@ -27,9 +31,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = self.decode_erc20_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc20::decode(&event)? {
             match erc_event {
                 ERC20Event::Transfer { from, to, value } => {
                     let call_data = vec![];
@@ -83,7 +87,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     //     Some(value) => value.to_bigint().to_string(),
                     //     None => "0".to_owned(),
                     // };
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -99,7 +103,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         block_hash: felt_to_strk_string(block_hash),
                         action,
                     };
-
+                    // println!("TX INFO : {:?}", tx_info);
                     let storage = self.storage.lock().await;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -118,10 +122,10 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
         // println!("block_hash: {:?} - tx_hash: {:?} \n", block_hash, tx_hash);
-        if let Some((erc_event, erc_compliance)) = self.decode_erc721_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc721::decode(&event)? {
             match erc_event {
                 ERC721Event::Transfer { from, to, token_id } => {
                     // let contract_address = transfer_info.from;
@@ -238,7 +242,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         block_hash: felt_to_strk_string(block_hash),
                     };
                     // println!("Found NFT: {:?}", nft_info);
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -273,9 +277,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = self.decode_erc1400_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc1400::decode(&event)? {
             match erc_event {
                 ERC1400Event::Transfer { from, to, value } => {
                     let call_data = vec![];
@@ -319,7 +323,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     //     None => "0".to_owned(),
                     // };
 
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -352,9 +356,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = self.decode_erc1155_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc1155::decode(&event)? {
             match erc_event {
                 ERC1155Event::TransferSingle {
                     operator: _,
@@ -399,7 +403,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     //     None => "0".to_owned(),
                     // };
 
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -434,7 +438,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         _block_hash: Felt,
         _tx_hash: Felt,
         _block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // println!(
         //     "OTHER EVENT HANDLED\nCHAIN: {}\nEvent : {:?}\n",
         //     chain_id, event
