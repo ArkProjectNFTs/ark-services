@@ -1,8 +1,10 @@
+mod api_doc;
+
 use actix_cors::Cors;
 use actix_web::middleware::DefaultHeaders;
 use actix_web::{web, App, HttpServer};
 use anyhow::Result;
-use ark_marketplace_api::routes::{collection, default, portfolio, token};
+use ark_marketplace_api::routes::token;
 use aws_config::BehaviorVersion;
 use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
@@ -13,6 +15,10 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
+
+use ark_marketplace_api::handlers::{
+    collection_handler, default_handler, portfolio_handler, token_handler,
+};
 
 /// Initializes the logging, ensuring that the `RUST_LOG` environment
 /// variable is always considered first.
@@ -152,10 +158,13 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db_pools.clone()))
             .app_data(web::Data::new(redis_conn.clone()))
             .app_data(web::Data::new(es_config.clone()))
-            .configure(default::config)
-            .configure(collection::config)
-            .configure(portfolio::config)
             .configure(token::config)
+            .configure(default_handler::configure)
+            .configure(collection_handler::configure)
+            .configure(token_handler::configure)
+            .configure(portfolio_handler::configure)
+            .service(web::scope("/v1").service(default_handler::health_check_v1))
+            .service(api_doc::configure())
     })
     .bind("0.0.0.0:8080")?
     .run()

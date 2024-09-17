@@ -11,14 +11,13 @@ use crate::models::token::TokenOfferOneData;
 use crate::models::token::{TokenEventType, TokenInformationData};
 use crate::utils::currency_utils::compute_floor_difference;
 use crate::utils::http_utils::normalize_address;
-use sqlx::PgPool;
-
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{get, post, web, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use redis::aio::MultiplexedConnection;
 use serde::Deserialize;
 use serde_json::json;
 use serde_qs;
+use sqlx::PgPool;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -58,7 +57,26 @@ fn extract_query_params(
     (page, items_per_page, buy_now, sort, direction)
 }
 
-pub async fn get_tokens<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Tokens",
+    responses(
+        (status = 200, description = "Get tokens", body = TokensResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("address" = String, Path, description = "The contract address of the collection"),
+        ("chain_id" = String, Path, description = "The blockchain chain ID"),
+
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+        ("buy_now" = Option<String>, Query, description = "Filter tokens by 'buy now' status"),
+        ("sort" = Option<String>, Query, description = "Sort field, defaults to 'price'"),
+        ("direction" = Option<String>, Query, description = "Sort direction, 'asc' or 'desc', defaults to 'asc'"),
+        ("sort_value" = Option<String>, Query, description = "Specific value for sorting, used to refine results")
+    )
+)]
+#[get("/collections/{address}/{chain_id}/tokens")]
+pub async fn get_tokens(
     path: web::Path<(String, String)>,
     query_parameters: web::Query<QueryParameters>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -147,7 +165,20 @@ pub async fn get_tokens<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn get_token<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Tokens",
+    responses(
+        (status = 200, description = "Get a token information", body = TokensResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("address" = String, Path, description = "The contract address of the collection"),
+        ("chain_id" = String, Path, description = "The blockchain chain ID"),
+        ("token_id" = String, Path, description = "The token ID"),
+    )
+)]
+#[get("/tokens/{address}/{chain_id}/{token_id}")]
+pub async fn get_token(
     path: web::Path<(String, String, String)>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
@@ -167,7 +198,20 @@ pub async fn get_token<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn get_token_market<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Tokens",
+    responses(
+        (status = 200, description = "Get a token marketdata", body = TokenMarketDataResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("address" = String, Path, description = "The contract address of the collection"),
+        ("chain_id" = String, Path, description = "The blockchain chain ID"),
+        ("token_id" = String, Path, description = "The token ID"),
+    )
+)]
+#[get("/tokens/{address}/{chain_id}/{token_id}/marketdata")]
+pub async fn get_token_market(
     path: web::Path<(String, String, String)>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
@@ -187,7 +231,23 @@ pub async fn get_token_market<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Portfolio",
+    responses(
+        (status = 200, description = "Get tokens in a portfolio", body = TokenOffersResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("address" = String, Path, description = "The contract address of the collection"),
+        ("chain_id" = String, Path, description = "The blockchain chain ID"),
+        ("token_id" = String, Path, description = "The token ID"),
+
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+    )
+)]
+#[get("/portfolio/{user_address}")]
+pub async fn get_tokens_portfolio(
     path: web::Path<String>,
     query_parameters: web::Query<QueryParameters>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -225,7 +285,23 @@ pub async fn get_tokens_portfolio<D: DatabaseAccess + Sync>(
     }
 }
 
-pub async fn get_token_offers<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Tokens",
+    responses(
+        (status = 200, description = "Get token offers", body = TokenOffersResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("address" = String, Path, description = "The contract address of the collection"),
+        ("chain_id" = String, Path, description = "The blockchain chain ID"),
+        ("token_id" = String, Path, description = "The token ID"),
+
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+    )
+)]
+#[get("/tokens/{address}/{chain_id}/{token_id}/offers")]
+pub async fn get_token_offers(
     req: HttpRequest,
     path: web::Path<(String, String, String)>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -289,7 +365,23 @@ pub async fn get_token_offers<D: DatabaseAccess + Sync>(
     }))
 }
 
-pub async fn get_token_activity<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Tokens",
+    responses(
+        (status = 200, description = "Get token activities", body = TokenActivitiesResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("address" = String, Path, description = "The contract address of the collection"),
+        ("chain_id" = String, Path, description = "The blockchain chain ID"),
+        ("token_id" = String, Path, description = "The token ID"),
+
+        ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
+        ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+    )
+)]
+#[get("/tokens/{address}/{chain_id}/{token_id}/activity")]
+pub async fn get_token_activity(
     req: HttpRequest,
     path: web::Path<(String, String, String)>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
@@ -337,7 +429,7 @@ pub async fn get_token_activity<D: DatabaseAccess + Sync>(
     }))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct RefreshMetadataRequest {
     pub contract_address: String,
     pub token_id: String,
@@ -361,7 +453,19 @@ fn is_metadata_refreshing(token_data: &TokenInformationData) -> bool {
     false
 }
 
-pub async fn post_refresh_token_metadata<D: DatabaseAccess + Sync>(
+#[utoipa::path(
+    tag = "Tokens",
+    responses(
+        (status = 200, description = "Metadata refresh has been requested", body = String),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("contract_address" = String, Path, description = "The contract address of the collection"),
+        ("token_id" = String, Path, description = "The token ID"),
+    )
+)]
+#[post("/metadata/refresh")]
+pub async fn post_refresh_token_metadata(
     body: web::Json<RefreshMetadataRequest>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
@@ -407,4 +511,14 @@ pub async fn flush_all_data<D: DatabaseAccess + Sync>(
         Ok(result) => HttpResponse::Ok().json(result),
         Err(_) => HttpResponse::InternalServerError().finish(),
     }
+}
+
+pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.service(get_tokens)
+        .service(get_token)
+        .service(get_token_market)
+        .service(get_tokens_portfolio)
+        .service(get_token_offers)
+        .service(get_token_activity)
+        .service(post_refresh_token_metadata);
 }

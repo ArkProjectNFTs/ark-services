@@ -18,30 +18,44 @@ use sqlx::FromRow;
 ///      "listing": {
 ///        is_auction: false,
 ///      },
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct TokenDataListing {
     pub is_auction: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct TokenData {
     pub collection_address: Option<String>,
     pub token_id: Option<String>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
     pub floor_difference: Option<i32>,
     pub listed_at: Option<i64>,
     pub is_listed: Option<bool>,
     pub listing: Option<TokenDataListing>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,
     pub currency_address: Option<String>,
     pub buy_in_progress: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct TokenMarketData {
     pub owner: Option<String>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub floor: Option<BigDecimal>,
     pub created_timestamp: Option<i64>,
     pub updated_timestamp: Option<i64>,
@@ -50,46 +64,64 @@ pub struct TokenMarketData {
     pub buy_in_progress: Option<bool>,
     pub top_offer: Option<TopOffer>,
     pub listing: Option<Listing>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct TokenInformationData {
     pub token_id: String,
     pub collection_address: String,
+    #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub top_offer: Option<BigDecimal>,
     pub owner: Option<String>,
     pub collection_name: Option<String>,
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
     pub metadata: Option<JsonValue>,
     pub collection_image: Option<String>,
     pub metadata_updated_at: Option<i64>,
     pub metadata_status: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct TokenOneData {
     pub owner: Option<String>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub floor: Option<BigDecimal>,
     pub created_timestamp: Option<i64>,
     pub updated_timestamp: Option<i64>,
     pub is_listed: Option<bool>,
     pub has_offer: Option<bool>,
     pub buy_in_progress: Option<bool>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct TopOffer {
     pub order_hash: Option<String>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub amount: Option<BigDecimal>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
     pub currency_address: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct Listing {
     pub is_auction: Option<bool>,
     pub order_hash: Option<String>,
@@ -100,14 +132,24 @@ pub struct Listing {
     pub currency_address: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, FromRow)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct TokenPortfolioData {
     pub collection_address: Option<String>,
     pub token_id: Option<String>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub list_price: Option<BigDecimal>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub best_offer: Option<BigDecimal>,
     pub floor: Option<BigDecimal>,
     pub received_at: Option<i64>,
+    #[schema(example = json!({
+        "name": "Starknet ID: 154773638476",
+        "image": "https://starknet.id/api/identicons/154773638476",
+        "description": "This token represents an identity on StarkNet.",
+        "image_mime_type": "image/svg+xml",
+        "external_url": null,
+        "properties": null
+    }))]
     pub metadata: Option<JsonValue>,
     pub collection_name: Option<String>,
     pub currency_address: Option<String>,
@@ -123,17 +165,19 @@ pub struct TokenOfferOneDataDB {
     pub hash: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TokenOfferOneData {
     pub offer_id: i32,
+    #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
+    #[schema(value_type = String, example = "12345.6789")]
     pub floor_difference: Option<BigDecimal>,
     pub source: Option<String>,
     pub expire_at: i64,
     pub hash: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, utoipa::ToSchema)]
 pub enum TokenEventType {
     Listing,
     CollectionOffer,
@@ -268,23 +312,36 @@ pub struct TokenMetadataInfo {
     pub metadata_updated_at: i64,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow)]
+#[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct TokenActivityData {
     pub activity_type: TokenEventType,
+    #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
     pub from: Option<String>,
     pub to: Option<String>,
     pub time_stamp: i64,
     pub transaction_hash: Option<String>,
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
     pub metadata: Option<JsonValue>,
     pub collection_name: Option<String>,
     pub collection_is_verified: Option<bool>,
     pub collection_address: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow)]
+#[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct TokenPortfolioActivityData {
     pub activity_type: TokenEventType,
+    #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
     pub from: Option<String>,
     pub to: Option<String>,
@@ -294,5 +351,16 @@ pub struct TokenPortfolioActivityData {
     pub collection_address: Option<String>,
     pub collection_name: Option<String>,
     pub collection_is_verified: Option<bool>,
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
     pub metadata: Option<JsonValue>,
 }
