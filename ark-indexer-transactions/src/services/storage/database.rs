@@ -104,11 +104,11 @@ impl Storage for DatabaseStorage {
                 TransactionInfoModel,
                 r#"
                 INSERT INTO transaction_info (
-                    tx_hash, event_id, from_address, to_address, value, timestamp, token_id, contract_address, contract_type, block_hash, event_type, erc_compliance, erc_action, indexed_at
+                    tx_hash, event_id, from_address, to_address, value, timestamp, token_id, contract_address, contract_type, block_hash, event_type, erc_compliance, erc_action, indexed_at, sub_event_id
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
                 )
-                ON CONFLICT (tx_hash, event_id) DO UPDATE
+                ON CONFLICT (tx_hash, event_id, sub_event_id) DO UPDATE
                 SET from_address = EXCLUDED.from_address, 
                     to_address = EXCLUDED.to_address, 
                     value = EXCLUDED.value,
@@ -132,7 +132,8 @@ impl Storage for DatabaseStorage {
                 tx_info.event_type as EventType,  // Ensure event type is passed as a string
                 tx_info.compliance as ERCCompliance,  // Ensure compliance is passed as a string
                 tx_info.action as ErcAction,  // Ensure action is passed as a string
-                Utc::now()
+                Utc::now(),
+                tx_info.sub_event_id,
             )
             .execute(&self.pool)
             .await?;

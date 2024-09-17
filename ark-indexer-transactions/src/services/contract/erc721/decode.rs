@@ -1,6 +1,5 @@
 use crate::interfaces::contract::ERC721Event;
 use crate::interfaces::event::{self as EventInterface, ERCCompliance};
-use crate::services::contract::common::utils::parse_u256;
 use starknet::core::types::Felt;
 use starknet::providers::sequencer::models::Event;
 
@@ -23,22 +22,22 @@ fn decode_transfer(
     event: &Event,
 ) -> Result<Option<(ERC721Event, ERCCompliance)>, Box<dyn std::error::Error + Send + Sync>> {
     if event.keys.len() == 5 {
-        let token_id = parse_u256(&event.keys[3], &event.keys[4]);
         Ok(Some((
             ERC721Event::Transfer {
                 from: event.keys[1],
                 to: event.keys[2],
-                token_id,
+                token_id_low: event.keys[3],
+                token_id_high: event.keys[4],
             },
             ERCCompliance::OPENZEPPELIN,
         )))
     } else if event.keys.len() == 1 && event.data.len() == 4 {
-        let token_id = parse_u256(&event.data[2], &event.data[3]);
         Ok(Some((
             ERC721Event::Transfer {
                 from: event.data[0],
                 to: event.data[1],
-                token_id,
+                token_id_low: event.data[2],
+                token_id_high: event.data[3],
             },
             ERCCompliance::OTHER,
         )))
@@ -51,12 +50,12 @@ fn decode_approval(
     event: &Event,
 ) -> Result<Option<(ERC721Event, ERCCompliance)>, Box<dyn std::error::Error + Send + Sync>> {
     if event.keys.len() == 5 {
-        let token_id = parse_u256(&event.keys[3], &event.keys[4]);
         Ok(Some((
             ERC721Event::Approval {
                 owner: event.keys[1],
                 approved: event.keys[2],
-                token_id,
+                token_id_low: event.keys[3],
+                token_id_high: event.keys[4],
             },
             ERCCompliance::OPENZEPPELIN,
         )))

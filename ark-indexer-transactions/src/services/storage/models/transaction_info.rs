@@ -10,6 +10,7 @@ use crate::interfaces::{
 pub struct TransactionInfoModel {
     pub id: i32,
     pub tx_hash: String,
+    pub event_id: String,
     pub from: String,
     pub to: String,
     pub value: Option<String>,
@@ -21,7 +22,7 @@ pub struct TransactionInfoModel {
     pub contract_address: String,
     pub contract_type: ContractType,
     pub block_hash: String,
-    pub event_hash: String,
     #[serde(rename = "indexed_at")]
     pub indexed_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub sub_event_id: String,
 }

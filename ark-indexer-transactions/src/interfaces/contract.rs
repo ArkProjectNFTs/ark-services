@@ -60,6 +60,7 @@ pub struct TransactionInfo {
     pub contract_address: String,
     pub contract_type: ContractType,
     pub block_hash: String,
+    pub sub_event_id: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -81,12 +82,14 @@ pub enum ERC721Event {
     Transfer {
         from: Felt,
         to: Felt,
-        token_id: BigDecimal, // ERC721 et ERC1155
+        token_id_low: Felt,
+        token_id_high: Felt,
     },
     Approval {
         owner: Felt,
         approved: Felt,
-        token_id: BigDecimal,
+        token_id_low: Felt,
+        token_id_high: Felt,
     },
     ApprovalForAll {
         owner: Felt,
@@ -101,15 +104,16 @@ pub enum ERC1155Event {
         operator: Felt,
         from: Felt,
         to: Felt,
-        id: BigDecimal,
+        id_low: Felt,
+        id_high: Felt,
         value: BigDecimal,
     },
     TransferBatch {
         operator: Felt,
         from: Felt,
         to: Felt,
-        ids: Vec<Felt>,
-        values: Vec<Felt>,
+        ids: Vec<(Felt, Felt)>,
+        values: Vec<BigDecimal>,
     },
     ApprovalForAll {
         owner: Felt,

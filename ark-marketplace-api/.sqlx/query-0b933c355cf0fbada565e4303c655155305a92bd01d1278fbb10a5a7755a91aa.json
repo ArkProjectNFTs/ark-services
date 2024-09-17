@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    top_bid_order_hash as order_hash,\n                    top_bid_amount as amount,\n                    top_bid_start_date as start_date,\n                    top_bid_end_date as end_date,\n                    top_bid_currency_address as currency_address\n                FROM token\n                WHERE token.token_id = $1\n                AND token.contract_address = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "order_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "amount",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 2,
+        "name": "start_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
+        "name": "end_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "currency_address",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "0b933c355cf0fbada565e4303c655155305a92bd01d1278fbb10a5a7755a91aa"
+}

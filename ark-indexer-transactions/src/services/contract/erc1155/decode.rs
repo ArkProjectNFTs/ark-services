@@ -26,27 +26,29 @@ fn decode_transfer_single(
     event: &Event,
 ) -> Result<Option<(ERC1155Event, ERCCompliance)>, Box<dyn std::error::Error + Send + Sync>> {
     if event.keys.len() == 4 && event.data.len() == 4 {
-        let id = parse_u256(&event.data[0], &event.data[1]);
+        // let id = parse_u256(&event.data[0], &event.data[1]);
         let value = parse_u256(&event.data[2], &event.data[3]);
         Ok(Some((
             ERC1155Event::TransferSingle {
                 operator: event.keys[1],
                 from: event.keys[2],
                 to: event.keys[3],
-                id,
+                id_low: event.data[0],
+                id_high: event.data[1],
                 value,
             },
             ERCCompliance::OPENZEPPELIN,
         )))
     } else if event.keys.len() == 1 && event.data.len() == 7 {
-        let id = parse_u256(&event.data[3], &event.data[4]);
+        // let id = parse_u256(&event.data[3], &event.data[4]);
         let value = parse_u256(&event.data[5], &event.data[6]);
         Ok(Some((
             ERC1155Event::TransferSingle {
                 operator: event.data[0],
                 from: event.data[1],
                 to: event.data[2],
-                id,
+                id_low: event.data[3],
+                id_high: event.data[4],
                 value,
             },
             ERCCompliance::OTHER,
@@ -67,8 +69,18 @@ fn decode_transfer_batch(
             .ok_or("Invalid values_nb_elems")?;
 
         if ids_nb_elems == values_nb_elems {
-            let ids = event.data[1..(1 + 2 * ids_nb_elems)].to_vec();
-            let values = event.data[(values_nb_elems_idx + 1)..].to_vec();
+            let mut ids = Vec::with_capacity(ids_nb_elems);
+            let mut values = Vec::with_capacity(values_nb_elems);
+            // Process ids
+            for i in 0..ids_nb_elems {
+                let value = parse_u256(
+                    &event.data[values_nb_elems_idx + 2 * i + 1],
+                    &event.data[values_nb_elems_idx + 2 * i + 2],
+                );
+                ids.push((event.data[2 * i + 1], event.data[2 * i + 2]));
+                values.push(value);
+            }
+
             Ok(Some((
                 ERC1155Event::TransferBatch {
                     operator: event.keys[1],
