@@ -36,5 +36,16 @@ pub struct OfferApiData {
     pub collection_address: String,
     pub collection_name: Option<String>,
     pub is_verified: bool,
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
     pub metadata: Option<JsonValue>,
 }

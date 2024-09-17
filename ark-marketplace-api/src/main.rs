@@ -164,7 +164,7 @@ async fn main() -> std::io::Result<()> {
             .configure(token_handler::configure)
             .configure(portfolio_handler::configure)
             .service(web::scope("/v1").service(default_handler::health_check_v1))
-            .service(api_doc::configure_docs())
+            .service(api_doc::configure())
     })
     .bind("0.0.0.0:8080")?
     .run()

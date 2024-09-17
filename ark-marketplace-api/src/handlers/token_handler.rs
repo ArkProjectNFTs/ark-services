@@ -429,7 +429,7 @@ pub async fn get_token_activity(
     }))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, utoipa::ToSchema)]
 pub struct RefreshMetadataRequest {
     pub contract_address: String,
     pub token_id: String,

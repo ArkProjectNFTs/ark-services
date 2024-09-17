@@ -1,3 +1,4 @@
+use ark_marketplace_api::handlers::token_handler::RefreshMetadataRequest;
 use ark_marketplace_api::handlers::{
     collection_handler, default_handler, portfolio_handler, token_handler,
 };
@@ -79,6 +80,7 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         TokenPortfolioActivityData,
         PortfolioActivityResponse,
         PortfolioOffersResponse,
+        RefreshMetadataRequest
     ))
 )]
 pub struct ApiDoc;
@@ -88,14 +90,15 @@ pub struct ApiDoc;
     paths(default_handler::health_check_v1),
     components(schemas(HealthCheckResponseV1))
 )]
-pub struct ApiDocV1;
+pub struct _ApiDocV1;
 
-pub fn configure_docs() -> SwaggerUi {
+pub fn configure() -> SwaggerUi {
     SwaggerUi::new("/swagger-ui/{_:.*}").urls(vec![
-        (
+        // later usage
+        /*(
             Url::new("apiv1", "/api-docs/openapi_v1.json"),
             ApiDocV1::openapi(),
-        ),
+        ),*/
         (
             Url::with_primary("apiv0", "/api-docs/openapi.json", true),
             ApiDoc::openapi(),
