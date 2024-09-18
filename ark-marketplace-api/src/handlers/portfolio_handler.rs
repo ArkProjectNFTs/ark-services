@@ -1,6 +1,6 @@
 use super::utils::extract_page_params;
 use super::utils::CHAIN_ID;
-use crate::db::portfolio_query::{get_activity_data, get_offers_data};
+use crate::db::portfolio_query::{get_activity_data, get_offers_data, get_stats_data};
 use crate::models::portfolio::OfferApiData;
 use crate::models::token::TokenEventType;
 use crate::types::offer_type::OfferType;
@@ -172,6 +172,41 @@ pub async fn get_offers(
     }))
 }
 
+#[utoipa::path(
+    tag = "Portfolio",
+    responses(
+        (status = 200, description = "Get stats for a portfolio", body = PortfolioStatsResponse),
+        (status = 400, description = "Data not found", body = String),
+    ),
+    params(
+        ("user_address" = String, Path, description = "Address of the user"),
+    )
+)]
+#[get("/portfolio/{user_address}/stats")]
+pub async fn get_stats(
+    path: web::Path<String>,
+    db_pools: web::Data<Arc<[PgPool; 2]>>,
+) -> impl Responder {
+    let user_address = path.into_inner();
+    let normalized_address = normalize_address(&user_address);
+    let db_access = &db_pools[0];
+
+    let stats_data = match get_stats_data(db_access, CHAIN_ID, &normalized_address).await {
+        Err(sqlx::Error::RowNotFound) => return HttpResponse::NotFound().body("data not found"),
+        Ok(stats_data) => stats_data,
+        Err(err) => {
+            tracing::error!("error query get_stats: {}", err);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
+    HttpResponse::Ok().json(json!({
+        "data": stats_data,
+    }))
+}
+
 pub fn configure(cfg: &mut web::ServiceConfig) {
-    cfg.service(get_activity).service(get_offers);
+    cfg.service(get_activity)
+        .service(get_offers)
+        .service(get_stats);
 }

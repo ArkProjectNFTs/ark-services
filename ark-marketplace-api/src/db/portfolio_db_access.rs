@@ -1,4 +1,4 @@
-use crate::models::portfolio::OfferData;
+use crate::models::portfolio::{OfferData, StatsData};
 use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
 use crate::types::offer_type::OfferType;
 use std::time::SystemTime;
@@ -36,6 +36,8 @@ pub trait DatabaseAccess: Send + Sync {
         items_per_page: i64,
         type_offer: OfferType,
     ) -> Result<(Vec<OfferData>, bool, i64), Error>;
+
+    async fn get_stats_data(&self, chain_id: &str, user_address: &str) -> Result<StatsData, Error>;
 }
 
 #[async_trait]
@@ -249,5 +251,23 @@ impl DatabaseAccess for PgPool {
         let has_next_page = page < total_pages;
 
         Ok((token_offers_data, has_next_page, count))
+    }
+
+    async fn get_stats_data(&self, chain_id: &str, user_address: &str) -> Result<StatsData, Error> {
+        let query = r#"
+            SELECT SUM(contract.floor_price) AS total_value
+            FROM token
+            JOIN contract ON token.contract_address = contract.contract_address
+            WHERE token.chain_id = $1
+              AND token.current_owner = $2
+        "#;
+
+        let result = sqlx::query_as::<_, StatsData>(query)
+            .bind(chain_id)
+            .bind(user_address)
+            .fetch_one(self)
+            .await?;
+
+        Ok(result)
     }
 }

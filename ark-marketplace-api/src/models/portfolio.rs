@@ -49,3 +49,9 @@ pub struct OfferApiData {
     )]
     pub metadata: Option<JsonValue>,
 }
+
+#[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
+pub struct StatsData {
+    #[schema(value_type = String, example = "12345.6789")]
+    pub total_value: Option<BigDecimal>,
+}
