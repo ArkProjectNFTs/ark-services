@@ -152,6 +152,67 @@ pub async fn update_collections_market_data(pool: &PgPool) {
     }
 }
 
+pub async fn update_contract_marketdata(pool: &PgPool) {
+    let timeranges = ["10m", "1h", "6h", "1d", "7d", "30d"];
+    for &timerange in &timeranges {
+        let query = format!(
+            r#"
+            UPDATE contract
+            SET
+                volume = (
+                    SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
+                    FROM token_event
+                    WHERE token_event.contract_address = contract.contract_address
+                      AND token_event.chain_id = contract.chain_id
+                      AND token_event.event_type = 'Sale'
+                      AND to_timestamp(token_event.timestamp) >= (CURRENT_DATE - INTERVAL '{}')
+
+                ),
+                number_of_sales = (
+                    SELECT COUNT(*)
+                    FROM token_event
+                    WHERE token_event.contract_address = contract.contract_address
+                      AND token_event.chain_id = contract.chain_id
+                      AND token_event.event_type = 'Sale'
+                      AND to_timestamp(token_event.timestamp) >= (CURRENT_DATE - INTERVAL '{}')
+                ),
+                floor_percentage = (
+                    COALESCE(
+                            (
+                                SELECT
+                                    (contract.floor_price - fc.floor) / NULLIF(fc.floor, 0) * 100
+                                FROM
+                                    floor_collection fc
+                                WHERE
+                                    fc.contract_address = contract.contract_address
+                                  AND fc.chain_id = contract.chain_id
+                                  AND to_timestamp(fc.timestamp) >= (CURRENT_DATE - INTERVAL '{}')
+                                ORDER BY
+                                    fc.timestamp ASC
+                                LIMIT 1
+                            ),
+                            0
+                    )
+                )
+            WHERE contract.is_verified = true
+            "#,
+            timerange, timerange, timerange
+        );
+
+        match sqlx::query(&query).execute(pool).await {
+            Ok(_) => info!(
+                "Successfully updated contract_marketdata for timerange: {}",
+                timerange
+            ),
+            Err(e) => tracing::error!(
+                "Failed to update contract_marketdata for timerange {}: {}",
+                timerange,
+                e
+            ),
+        }
+    }
+}
+
 pub async fn insert_floor_price(pool: &PgPool) {
     let now = chrono::Utc::now();
     let current_hour = now.time().hour();

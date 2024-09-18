@@ -514,6 +514,20 @@ impl DatabaseAccess for PgPool {
         .fetch_one(self)
         .await?;
 
+        // Update the calculate_marketdata_timestamp to calculate market data in the crone
+        sqlx::query!(
+            r#"
+            UPDATE contract
+            SET calculate_marketdata_timestamp = EXTRACT(EPOCH FROM NOW())
+            WHERE contract_address = $1
+            AND chain_id = $2
+            "#,
+            contract_address,
+            chain_id
+        )
+        .execute(self)
+        .await?;
+
         Ok(collection_data)
     }
 
