@@ -280,9 +280,9 @@ pub async fn get_traits(
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(get_collections)
+        .service(get_traits)
         .service(get_collection_activity)
         .service(get_collection)
         .service(get_portfolio_collections)
-        .service(get_traits)
         .service(search_collections);
 }

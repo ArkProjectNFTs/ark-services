@@ -17,7 +17,8 @@ use ark_marketplace_api::types::collection::{
 };
 use ark_marketplace_api::types::default::{HealthCheckResponse, HealthCheckResponseV1};
 use ark_marketplace_api::types::portfolio::{
-    PortfolioActivityResponse, PortfolioOffersResponse, TokensPortfolioResponse,
+    PortfolioActivityResponse, PortfolioOffersResponse, PortfolioStatsResponse,
+    TokensPortfolioResponse,
 };
 use ark_marketplace_api::types::token::{
     TokenActivitiesResponse, TokenMarketDataResponse, TokenOffersResponse, TokenResponse,
@@ -45,6 +46,7 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         token_handler::post_refresh_token_metadata,
         portfolio_handler::get_activity,
         portfolio_handler::get_offers,
+        portfolio_handler::get_stats,
     ),
     components(schemas(
         HealthCheckResponse,
@@ -80,7 +82,8 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         TokenPortfolioActivityData,
         PortfolioActivityResponse,
         PortfolioOffersResponse,
-        RefreshMetadataRequest
+        RefreshMetadataRequest,
+        PortfolioStatsResponse
     ))
 )]
 pub struct ApiDoc;

@@ -1363,6 +1363,8 @@ impl OrderProvider {
                 listing_orderhash = EXCLUDED.listing_orderhash,
                 status = EXCLUDED.status,
                 updated_timestamp = EXCLUDED.updated_timestamp,
+                listing_currency_address = EXCLUDED.listing_currency_address,
+                listing_currency_chain_id = EXCLUDED.listing_currency_chain_id,
                 listing_type = EXCLUDED.listing_type;
             ";
 

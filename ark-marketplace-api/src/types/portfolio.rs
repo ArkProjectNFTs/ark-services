@@ -1,4 +1,4 @@
-use crate::models::portfolio::OfferApiData;
+use crate::models::portfolio::{OfferApiData, StatsData};
 use crate::models::token::{TokenPortfolioActivityData, TokenPortfolioData};
 use serde::Serialize;
 
@@ -21,4 +21,9 @@ pub struct PortfolioActivityResponse {
     data: Vec<TokenPortfolioActivityData>,
     token_count: i64,
     next_page: i64,
+}
+
+#[derive(utoipa::ToSchema, Serialize)]
+pub struct PortfolioStatsResponse {
+    data: StatsData,
 }
