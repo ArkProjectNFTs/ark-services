@@ -8,7 +8,7 @@ use redis::aio::MultiplexedConnection;
 use redis::Client;
 use tasks::collections::{
     empty_floor_price, insert_floor_price, update_collections_market_data,
-    update_top_bid_collections,
+    update_contract_marketdata, update_top_bid_collections,
 };
 use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing::info;
@@ -95,9 +95,12 @@ async fn main() -> std::io::Result<()> {
         "task_set3" => {
             empty_floor_price(&db_pool).await;
         }
+        "task_set4" => {
+            update_contract_marketdata(&db_pool).await;
+        }
         _ => {
             tracing::error!(
-                "Invalid argument. Please use 'task_set1' or 'task_set2' or 'task_set3'"
+                "Invalid argument. Please use 'task_set1' or 'task_set2' or 'task_set3' or 'task_set4'"
             );
         }
     }
