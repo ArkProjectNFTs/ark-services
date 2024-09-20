@@ -58,7 +58,7 @@ pub async fn get_collections(
 ) -> impl Responder {
     let page = query_params.page.unwrap_or(1);
     let items_per_page = query_params.items_per_page.unwrap_or(100);
-    let time_range = query_params.time_range.as_deref().unwrap_or("1D");
+    let time_range = query_params.time_range.as_deref().unwrap_or("1d");
     let sort = query_params.sort.as_deref().unwrap_or("volume");
     let direction = query_params.direction.as_deref().unwrap_or("desc");
 
