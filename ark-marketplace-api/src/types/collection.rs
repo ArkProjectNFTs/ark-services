@@ -1,6 +1,6 @@
 use crate::models::collection::{
-    CollectionActivityData, CollectionData, CollectionPortfolioData, CollectionSearchData,
-    OwnerData,
+    CollectionActivityData, CollectionData, CollectionFullData, CollectionPortfolioData,
+    CollectionSearchData, OwnerData,
 };
 use serde::Serialize;
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ pub struct CollectionResponse {
 
 #[derive(utoipa::ToSchema, Serialize)]
 pub struct CollectionsResponse {
-    data: Vec<CollectionData>,
+    data: Vec<CollectionFullData>,
 }
 
 #[derive(utoipa::ToSchema, Serialize)]

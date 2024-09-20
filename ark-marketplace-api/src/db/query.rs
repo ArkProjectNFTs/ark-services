@@ -5,8 +5,8 @@ use crate::utils::http_utils::{
 use regex::Regex;
 
 use crate::models::collection::{
-    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
-    CollectionSearchData, OwnerDataCompleted,
+    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionFullData,
+    CollectionPortfolioData, CollectionSearchData, OwnerDataCompleted,
 };
 use crate::models::token::{
     TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
@@ -19,9 +19,11 @@ pub async fn get_collections_data<D: DatabaseAccess + Sync>(
     page: i64,
     items_per_page: i64,
     time_range: &str,
-) -> Result<Vec<CollectionData>, sqlx::Error> {
+    sort: &str,
+    direction: &str,
+) -> Result<(Vec<CollectionFullData>, bool, i64), sqlx::Error> {
     db_access
-        .get_collections_data(page, items_per_page, time_range, None)
+        .get_collections_data(page, items_per_page, time_range, sort, direction)
         .await
 }
 

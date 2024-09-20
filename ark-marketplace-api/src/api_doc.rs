@@ -3,8 +3,8 @@ use ark_marketplace_api::handlers::{
     collection_handler, default_handler, portfolio_handler, token_handler,
 };
 use ark_marketplace_api::models::collection::{
-    CollectionActivityData, CollectionData, CollectionPortfolioData, CollectionSearchData,
-    OwnerData,
+    CollectionActivityData, CollectionData, CollectionFullData, CollectionPortfolioData,
+    CollectionSearchData, OwnerData,
 };
 use ark_marketplace_api::models::portfolio::OfferApiData;
 use ark_marketplace_api::models::token::{
@@ -83,7 +83,8 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         PortfolioActivityResponse,
         PortfolioOffersResponse,
         RefreshMetadataRequest,
-        PortfolioStatsResponse
+        PortfolioStatsResponse,
+        CollectionFullData
     ))
 )]
 pub struct ApiDoc;

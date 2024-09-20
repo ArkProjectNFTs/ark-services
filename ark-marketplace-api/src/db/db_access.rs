@@ -3,15 +3,15 @@ use futures_util::TryStreamExt;
 use std::time::SystemTime;
 
 use crate::models::collection::{
-    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionPortfolioData,
-    CollectionSearchData, OwnerData,
+    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionFullData,
+    CollectionPortfolioData, CollectionSearchData, OwnerData,
 };
 use crate::models::token::{
     Listing, TokenActivityData, TokenData, TokenDataListing, TokenEventType, TokenInformationData,
     TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
-use crate::utils::sql_utils::generate_order_by_clause;
+use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
 
 use async_trait::async_trait;
 use bigdecimal::BigDecimal;
@@ -106,8 +106,9 @@ pub trait DatabaseAccess: Send + Sync {
         page: i64,
         items_per_page: i64,
         time_range: &str,
-        user_address: Option<&str>,
-    ) -> Result<Vec<CollectionData>, Error>;
+        sort: &str,
+        direction: &str,
+    ) -> Result<(Vec<CollectionFullData>, bool, i64), Error>;
 
     async fn search_collections_data(
         &self,
@@ -330,30 +331,49 @@ impl DatabaseAccess for PgPool {
         page: i64,
         items_per_page: i64,
         time_range: &str,
-        user_address: Option<&str>,
-    ) -> Result<Vec<CollectionData>, Error> {
-        let user_clause = match user_address {
-            Some(address) => format!(" AND token.current_owner = '{}'", address),
-            None => String::new(),
-        };
+        sort: &str,
+        direction: &str,
+    ) -> Result<(Vec<CollectionFullData>, bool, i64), Error> {
+        let total_count = sqlx::query!(
+            "
+                SELECT count(*)
+                  FROM contract
+                "
+        )
+        .fetch_one(self)
+        .await?;
+
+        let count = total_count.count.unwrap_or(0);
+
+        const ALLOWED_SORTS: &[&str] = &[
+            "floor_price",
+            "floor_percentage",
+            "volume",
+            "top_bid",
+            "number_of_sales",
+            "marketcap",
+            "listed",
+        ];
+        const ALLOWED_DIRECTIONS: &[&str] = &["asc", "desc"];
+        if !ALLOWED_SORTS.contains(&sort) || !ALLOWED_DIRECTIONS.contains(&direction) {
+            tracing::error!("get_collections_data: Invalid sort or direction");
+        }
+        let order_by_clause = generate_order_by_clause_collections(sort, direction);
 
         let interval = match time_range {
             "10m" => "INTERVAL '10 minutes'",
             "1h" => "INTERVAL '1 hour'",
             "6h" => "INTERVAL '6 hours'",
-            "1D" => "INTERVAL '1 day'",
-            "7D" => "INTERVAL '7 days'",
-            "30D" => "INTERVAL '30 days'",
+            "1d" => "INTERVAL '1 day'",
+            "7d" => "INTERVAL '7 days'",
+            "30d" => "INTERVAL '30 days'",
             _ => "",
         };
 
         let contract_timestamp_clause: String = if interval.is_empty() {
             String::new()
         } else {
-            format!(
-                " AND contract.updated_timestamp >= (EXTRACT(EPOCH FROM NOW() - {})::BIGINT)",
-                interval
-            )
+            format!(" AND contract_marketdata.timerange = {}", interval)
         };
 
         let sql_query = format!(
@@ -362,25 +382,10 @@ impl DatabaseAccess for PgPool {
                     contract_image AS image,
                     contract_name AS name,
                     floor_price AS floor,
-                    COALESCE(
-                        (
-                            SELECT
-                                (contract.floor_price - fc.floor) / fc.floor * 100
-                            FROM
-                                floor_collection fc
-                            WHERE
-                                fc.contract_address = contract.contract_address
-                                AND fc.chain_id = contract.chain_id
-                                AND fc.timestamp >= EXTRACT(EPOCH FROM (CURRENT_DATE - INTERVAL '7 days'))
-                            ORDER BY
-                                fc.timestamp ASC
-                            LIMIT 1
-                        ),
-                        0
-                    ) AS floor_7d_percentage,
-                    volume_7d_eth,
+                    contract_marketdata.floor_percentage as floor_percentage,
+                    contract_marketdata.volume as volume,
                     top_bid as top_offer,
-                    sales_7d,
+                    contract_marketdata.number_of_sales as sales,
                     marketcap,
                     token_listed_count AS listed_items,
                     listed_percentage,
@@ -392,17 +397,19 @@ impl DatabaseAccess for PgPool {
                     FROM
                      contract
                      INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id
+                     LEFT JOIN contract_marketdata on contract.contract_address = contract_marketdata.contract_address and contract.chain_id = contract_marketdata.chain_id
                      WHERE 1=1
-                     {} {}
-               GROUP BY contract.contract_address, contract.chain_id
+                     {}
+               GROUP BY contract.contract_address, contract.chain_id, floor_percentage, volume, sales
+               {}
                LIMIT {} OFFSET {}
                ",
             contract_timestamp_clause,
-            user_clause,
+            order_by_clause,
             items_per_page,
             (page - 1) * items_per_page,
         );
-        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionData>(&sql_query)
+        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionFullData>(&sql_query)
             .fetch_all(self)
             .await
             .unwrap_or_else(|err| {
@@ -410,7 +417,11 @@ impl DatabaseAccess for PgPool {
                 std::process::exit(1);
             });
 
-        Ok(collection_data)
+        // Calculate if there is another page
+        let total_pages = (count + items_per_page - 1) / items_per_page;
+        let has_next_page = page < total_pages;
+
+        Ok((collection_data, has_next_page, count))
     }
 
     async fn get_portfolio_collections_data(
