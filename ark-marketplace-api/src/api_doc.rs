@@ -6,7 +6,7 @@ use ark_marketplace_api::models::collection::{
     CollectionActivityData, CollectionData, CollectionFullData, CollectionPortfolioData,
     CollectionSearchData, OwnerData,
 };
-use ark_marketplace_api::models::portfolio::OfferApiData;
+use ark_marketplace_api::models::portfolio::{OfferApiData, StatsData};
 use ark_marketplace_api::models::token::{
     Listing, TokenActivityData, TokenData, TokenDataListing, TokenEventType, TokenInformationData,
     TokenMarketData, TokenOfferOneData, TokenPortfolioActivityData, TokenPortfolioData, TopOffer,
@@ -84,6 +84,7 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         PortfolioOffersResponse,
         RefreshMetadataRequest,
         PortfolioStatsResponse,
+        StatsData,
         CollectionFullData
     ))
 )]
