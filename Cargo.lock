@@ -662,6 +662,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -810,6 +811,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -879,6 +881,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -2321,6 +2324,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4614,6 +4618,7 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -5374,6 +5379,7 @@ dependencies = [
 [[package]]
 name = "sana"
 version = "0.1.0"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
 dependencies = [
  "anyhow",
  "ark-metadata",
