@@ -43,7 +43,7 @@ cargo install sqlx-cli
 cd ark-services/ark-sqlx/migrations
 
 sqlx database reset \
-    --database-url postgres://postgres:123@localhost:5432/arkchain-marketplace --source orderbook
+    --database-url postgres://postgres:123@localhost:5432/arkchain-marketplace --source marketplace
 ```
 
 4. Run some commands to emit mocked events
