@@ -5,6 +5,31 @@ use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
 #[derive(Serialize, Deserialize, FromRow, Clone, utoipa::ToSchema)]
+pub struct CollectionFullData {
+    #[schema(value_type = String, example = "0x02acee8c430f62333cf0e0e7a94b2347b5513b4c25f699461dd8d7b23c072478")]
+    pub address: String,
+    pub image: Option<String>,
+    pub name: Option<String>,
+    #[schema(value_type = String, example = "1000000000000000")]
+    pub floor: Option<BigDecimal>,
+    pub volume: Option<i64>,
+    #[schema(value_type = String, example = "1000000000000000")]
+    pub top_offer: Option<BigDecimal>,
+    pub sales: Option<i64>,
+    #[schema(value_type = String, example = "1000000000000000")]
+    pub marketcap: Option<BigDecimal>,
+    pub listed_items: Option<i64>,
+    pub listed_percentage: Option<i64>,
+    pub token_count: Option<i64>,
+    pub owner_count: Option<i64>,
+    pub total_volume: Option<i64>,
+    pub total_sales: Option<i64>,
+    #[schema(value_type = String, example = "1000000000000000")]
+    pub floor_percentage: Option<i64>,
+    pub is_verified: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, FromRow, Clone, utoipa::ToSchema)]
 pub struct CollectionData {
     #[schema(value_type = String, example = "0x02acee8c430f62333cf0e0e7a94b2347b5513b4c25f699461dd8d7b23c072478")]
     pub address: String,

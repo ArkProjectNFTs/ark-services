@@ -22,6 +22,8 @@ pub struct CollectionQueryParameters {
     page: Option<i64>,
     items_per_page: Option<i64>,
     time_range: Option<String>,
+    sort: Option<String>,
+    direction: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -45,21 +47,29 @@ struct ActivityQueryParameters {
     params(
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+        ("sort" = Option<String>, Query, description = "Field to sort by, e.g., 'floor_price', 'floor_percentage', 'volume', 'top_bid', 'number_of_sales', 'marketcap', 'listed'"),
+        ("direction" = Option<String>, Query, description = "Direction to sort by, 'asc' or 'desc'")
     )
 )]
 #[get("/collections")]
 pub async fn get_collections(
-    query_parameters: web::Query<CollectionQueryParameters>,
+    query_params: web::Query<CollectionQueryParameters>,
     db_pools: web::Data<Arc<[PgPool; 2]>>,
 ) -> impl Responder {
-    let page = query_parameters.page.unwrap_or(1);
-    let items_per_page = query_parameters.items_per_page.unwrap_or(100);
-    let time_range = query_parameters.time_range.as_deref().unwrap_or("");
+    let page = query_params.page.unwrap_or(1);
+    let items_per_page = query_params.items_per_page.unwrap_or(100);
+    let time_range = query_params.time_range.as_deref().unwrap_or("1d");
+    let sort = query_params.sort.as_deref().unwrap_or("volume");
+    let direction = query_params.direction.as_deref().unwrap_or("desc");
 
     let db_access = &db_pools[0];
-    match get_collections_data(db_access, page, items_per_page, time_range).await {
+    match get_collections_data(db_access, page, items_per_page, time_range, sort, direction).await {
         Err(sqlx::Error::RowNotFound) => HttpResponse::NotFound().body("data not found"),
-        Ok(collection_data) => HttpResponse::Ok().json(collection_data),
+        Ok((collections_data, has_next_page, count)) => HttpResponse::Ok().json(json!({
+            "data": collections_data,
+            "count": count,
+            "next_page": if has_next_page { Some(page + 1) } else { None }
+        })),
         Err(err) => {
             tracing::error!("error query get_collections: {}", err);
             HttpResponse::InternalServerError().finish()

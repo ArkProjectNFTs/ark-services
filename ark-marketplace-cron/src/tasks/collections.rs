@@ -152,6 +152,108 @@ pub async fn update_collections_market_data(pool: &PgPool) {
     }
 }
 
+pub async fn update_contract_marketdata(pool: &PgPool) {
+    let update_old_timestamps_query = r#"
+        UPDATE contract
+        SET calculate_marketdata_timestamp = NULL
+        WHERE calculate_marketdata_timestamp < NOW() - INTERVAL '15 days';
+    "#;
+
+    match sqlx::query(update_old_timestamps_query).execute(pool).await {
+        Ok(_) => {
+            info!("Successfully updated calculate_marketdata_timestamp to NULL for old contracts.")
+        }
+        Err(e) => tracing::error!(
+            "Failed to update calculate_marketdata_timestamp for contracts: {}",
+            e
+        ),
+    }
+
+    let time_ranges = ["10m", "1h", "6h", "1d", "7d", "30d"];
+    for &time_range in &time_ranges {
+        let query = format!(
+            r#"
+            INSERT INTO contract_marketdata (
+                contract_address,
+                chain_id,
+                floor_percentage,
+                volume,
+                number_of_sales,
+                timerange
+            )
+            SELECT
+                contract.contract_address,
+                contract.chain_id,
+                COALESCE(
+                    (
+                        SELECT
+                            (contract.floor_price - fc.floor) / NULLIF(fc.floor, 0) * 100
+                        FROM
+                            floor_collection fc
+                        WHERE
+                            fc.contract_address = contract.contract_address
+                            AND fc.chain_id = contract.chain_id
+                            AND to_timestamp(fc.timestamp) >= (CURRENT_DATE - INTERVAL '{}')
+                        ORDER BY
+                            fc.timestamp ASC
+                        LIMIT 1
+                    ),
+                    0
+                ) AS floor_percentage,
+                COALESCE(
+                    (
+                        SELECT
+                            SUM(CAST(amount AS BIGINT))
+                        FROM
+                            token_event
+                        WHERE
+                            token_event.contract_address = contract.contract_address
+                            AND token_event.chain_id = contract.chain_id
+                            AND token_event.event_type = 'Sale'
+                            AND to_timestamp(token_event.block_timestamp) >= (CURRENT_DATE - INTERVAL '{}')
+                    ),
+                    0
+                ) AS volume,
+                (
+                    SELECT
+                        COUNT(*)
+                    FROM
+                        token_event
+                    WHERE
+                        token_event.contract_address = contract.contract_address
+                        AND token_event.chain_id = contract.chain_id
+                        AND token_event.event_type = 'Sale'
+                        AND to_timestamp(token_event.block_timestamp) >= (CURRENT_DATE - INTERVAL '{}')
+                ) AS number_of_sales,
+                '{}' AS timerange
+            FROM
+                contract
+            WHERE
+                contract.is_verified = true
+            OR contract.calculate_marketdata_timestamp is not null
+            ON CONFLICT (contract_address, chain_id, timerange)
+            DO UPDATE SET
+                floor_percentage = EXCLUDED.floor_percentage,
+                volume = EXCLUDED.volume,
+                number_of_sales = EXCLUDED.number_of_sales;
+            "#,
+            time_range, time_range, time_range, time_range
+        );
+
+        match sqlx::query(&query).execute(pool).await {
+            Ok(_) => info!(
+                "Successfully updated contract_marketdata for timerange: {}",
+                time_range
+            ),
+            Err(e) => tracing::error!(
+                "Failed to update contract_marketdata for timerange {}: {}",
+                time_range,
+                e
+            ),
+        }
+    }
+}
+
 pub async fn insert_floor_price(pool: &PgPool) {
     let now = chrono::Utc::now();
     let current_hour = now.time().hour();
