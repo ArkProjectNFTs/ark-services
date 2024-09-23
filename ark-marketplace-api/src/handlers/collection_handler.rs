@@ -48,7 +48,7 @@ struct ActivityQueryParameters {
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
         ("sort" = Option<String>, Query, description = "Field to sort by, e.g., 'floor_price', 'floor_percentage', 'volume', 'top_bid', 'number_of_sales', 'marketcap', 'listed'"),
-        ("direction" = Option<String>, Query, description = "Direction to sort by, 'asc' or 'desc'")
+        ("direction" = Option<String>, Query, description = "Direction to sort by, 'asc' or 'desc'"),
         ("time_range" = Option<String>, Query, description = "Time range for filtering data, e.g., '10m', '1h', '6h', '1d', '7d', '30d'"),
     )
 )]
