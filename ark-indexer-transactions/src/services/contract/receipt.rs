@@ -1,12 +1,51 @@
+use super::manager::ContractManager;
 use crate::services::storage::Storage;
+use futures::stream::{FuturesUnordered, StreamExt};
 use starknet::{
     core::types::Felt,
     providers::{sequencer::models::ConfirmedTransactionReceipt, Provider},
 };
 
-use super::manager::ContractManager;
+use std::error::Error;
+use tokio::task::JoinError;
 
-impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> {
+// Définissez un type d'erreur personnalisé qui implémente Send + Sync
+#[derive(Debug)]
+pub enum EventProcessingError {
+    ProcessError(String),
+    JoinError(JoinError),
+    ThreadError(String),
+}
+
+impl std::fmt::Display for EventProcessingError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EventProcessingError::ProcessError(e) => write!(f, "Processing error: {}", e),
+            EventProcessingError::JoinError(e) => write!(f, "Join error: {}", e),
+            EventProcessingError::ThreadError(msg) => write!(f, "Thread error: {}", msg),
+        }
+    }
+}
+
+impl Error for EventProcessingError {}
+
+impl From<JoinError> for EventProcessingError {
+    fn from(err: JoinError) -> Self {
+        EventProcessingError::JoinError(err)
+    }
+}
+
+impl From<Box<dyn Error + Send + Sync>> for EventProcessingError {
+    fn from(err: Box<dyn Error + Send + Sync>) -> Self {
+        EventProcessingError::ProcessError(err.to_string())
+    }
+}
+
+impl<S, P> ContractManager<S, P>
+where
+    S: Storage + Send + Sync + 'static,
+    P: Provider + Send + Sync + 'static,
+{
     // pub async fn process_invoke_receipt(
     //     &mut self,
     //     receipt: InvokeTransactionReceipt,
@@ -73,19 +112,31 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         chain_id: Felt,
         block_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), EventProcessingError> {
+        let mut futures = FuturesUnordered::new();
         // println!("start processing event for {:?} on chain  {:?}", block_hash, chain_id);
         for (event_id, event) in receipt.events.into_iter().enumerate() {
-            // println!("start processing event: {:?} on tx {:?}", event, receipt.transaction_hash);
-            self.process_event(
-                event,
-                event_id.try_into().unwrap(),
-                chain_id,
-                block_hash,
-                receipt.transaction_hash,
-                block_timestamp,
-            )
-            .await?;
+            let mut self_clone = self.clone();
+            futures.push(tokio::spawn(async move {
+                self_clone
+                    .process_event(
+                        event,
+                        event_id.try_into().unwrap(),
+                        chain_id,
+                        block_hash,
+                        receipt.transaction_hash,
+                        block_timestamp,
+                    )
+                    .await
+            }));
+        }
+
+        while let Some(result) = futures.next().await {
+            match result {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => return Err(e.into()),
+                Err(e) => return Err(EventProcessingError::ThreadError(e.to_string())),
+            }
         }
         Ok(())
     }

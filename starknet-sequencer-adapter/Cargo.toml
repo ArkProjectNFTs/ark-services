@@ -13,6 +13,7 @@ envy = "0.4.2"
 openssl = "0.10.66"
 openssl-probe = "0.1.5"
 serde = { version = "1.0.204", features = ["derive"] }
+rayon = "1.10.0"
 
 [package.metadata.deb]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"

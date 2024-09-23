@@ -2,8 +2,6 @@ pub mod helpers;
 pub mod interfaces;
 pub mod services;
 
-use std::sync::Arc;
-
 use helpers::app_config::AppConfig;
 use services::contract::manager::ContractManager;
 use services::storage::block::{get_latest_block_in_folder, get_latest_folder_path};
@@ -14,7 +12,6 @@ use starknet::providers::{
     jsonrpc::{HttpTransport, JsonRpcClient},
     Url,
 };
-use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
 // Default alocator change
@@ -32,10 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Url::parse(&config.rcp_provider).unwrap(),
             ));
 
-            let mut contract_manager = ContractManager::new(
-                Arc::new(Mutex::new(storage)),
-                Arc::new(Mutex::new(provider)),
-            );
+            let mut contract_manager = ContractManager::new(storage, provider);
             let chain_id = Felt::from_hex(&config.chain_id).unwrap_or(Felt::ZERO); // starknet mainnet chain ID
             loop {
                 let latest_folder = get_latest_folder_path(&config.base_path)?;

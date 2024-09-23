@@ -9,6 +9,7 @@ use crate::{
     },
     services::storage::Storage,
 };
+use bigdecimal::BigDecimal;
 use starknet::{
     core::types::{BlockId::Hash, Felt},
     providers::Provider,
@@ -16,9 +17,17 @@ use starknet::{
 
 use starknet::providers::sequencer::models::Event;
 
-use super::manager::ContractManager;
+use super::{
+    common::{detect_erc_action, utils::parse_u256},
+    erc1155, erc1400, erc20, erc721,
+    manager::ContractManager,
+};
 
-impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> {
+impl<S, P> ContractManager<S, P>
+where
+    S: Storage + Send + Sync + 'static,
+    P: Provider + Send + Sync + 'static,
+{
     pub async fn handle_erc20_event(
         &self,
         event: Event,
@@ -27,9 +36,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = self.decode_erc20_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc20::decode(&event)? {
             match erc_event {
                 ERC20Event::Transfer { from, to, value } => {
                     let call_data = vec![];
@@ -83,7 +92,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     //     Some(value) => value.to_bigint().to_string(),
                     //     None => "0".to_owned(),
                     // };
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -98,8 +107,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         contract_type: ContractType::ERC20,
                         block_hash: felt_to_strk_string(block_hash),
                         action,
+                        sub_event_id: format!("{}_O", event_id),
                     };
-
+                    // println!("TX INFO : {:?}", tx_info);
                     let storage = self.storage.lock().await;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -118,14 +128,19 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
         // println!("block_hash: {:?} - tx_hash: {:?} \n", block_hash, tx_hash);
-        if let Some((erc_event, erc_compliance)) = self.decode_erc721_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc721::decode(&event)? {
             match erc_event {
-                ERC721Event::Transfer { from, to, token_id } => {
+                ERC721Event::Transfer {
+                    from,
+                    to,
+                    token_id_low,
+                    token_id_high,
+                } => {
                     // let contract_address = transfer_info.from;
-                    let call_data = vec![Felt::from_dec_str(&token_id.to_string())?];
+                    let call_data = vec![];
                     let name = match self
                         .get_contract_property_string(
                             contract_origin,
@@ -184,11 +199,12 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         },
                     };
                     // println!("Symbol: {:?}", symbol);
+                    let call_data_uri = vec![token_id_low, token_id_high];
                     let metadata_uri = match self
                         .get_contract_property_string(
                             contract_origin,
                             "tokenURI",
-                            call_data.clone(),
+                            call_data_uri.clone(),
                             Hash(block_hash),
                         )
                         .await
@@ -200,7 +216,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                                     .get_contract_property_string(
                                         contract_origin,
                                         "token_uri",
-                                        call_data.clone(),
+                                        call_data_uri.clone(),
                                         Hash(block_hash),
                                     )
                                     .await
@@ -211,7 +227,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                                             .get_contract_property_string(
                                                 contract_origin,
                                                 "uri",
-                                                call_data.clone(),
+                                                call_data_uri.clone(),
                                                 Hash(block_hash),
                                             )
                                             .await
@@ -226,6 +242,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         },
                     };
                     // println!("Meta data URI: {:?}", metadata_uri);
+                    let token_id: BigDecimal = parse_u256(&token_id_low, &token_id_high);
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
@@ -238,7 +255,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         block_hash: felt_to_strk_string(block_hash),
                     };
                     // println!("Found NFT: {:?}", nft_info);
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -253,6 +270,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         event_type: EventType::Transfer,
                         compliance: erc_compliance,
                         action,
+                        sub_event_id: format!("{}_O", event_id),
                     };
                     let storage = self.storage.lock().await;
                     storage.store_nft_info(nft_info).await?;
@@ -273,9 +291,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = self.decode_erc1400_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc1400::decode(&event)? {
             match erc_event {
                 ERC1400Event::Transfer { from, to, value } => {
                     let call_data = vec![];
@@ -319,7 +337,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     //     None => "0".to_owned(),
                     // };
 
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -334,6 +352,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         event_type: EventType::Transfer,
                         compliance: erc_compliance,
                         action,
+                        sub_event_id: format!("{}_O", event_id),
                     };
                     let storage = self.storage.lock().await;
                     storage.store_transaction_info(tx_info).await?;
@@ -352,18 +371,19 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = self.decode_erc1155_event(event)? {
+        if let Some((erc_event, erc_compliance)) = erc1155::decode(&event)? {
             match erc_event {
                 ERC1155Event::TransferSingle {
                     operator: _,
                     from,
                     to,
-                    id,
+                    id_low,
+                    id_high,
                     value,
                 } => {
-                    let call_data = vec![Felt::from_dec_str(&id.to_string())?];
+                    let call_data = vec![id_low, id_high];
                     // if let Some(token_id) = transfer_info.clone().token_id {
                     //     call_data.push(Felt::from_hex(&id)?);
                     //     println!("Token ID: {:?}", token_id);
@@ -383,10 +403,11 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     };
 
                     // println!("URI: {:?}", uri);
+                    let token_id = parse_u256(&id_low, &id_high);
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
-                        token_id: id.clone(),
+                        token_id: token_id.clone(),
                         name: None,
                         symbol: None,
                         metadata_uri: Some(uri),
@@ -399,7 +420,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                     //     None => "0".to_owned(),
                     // };
 
-                    let action = self.detect_erc_action(from, to);
+                    let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
@@ -407,17 +428,102 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                         to: felt_to_strk_string(to),
                         value: Some(value),
                         timestamp: block_timestamp,
-                        token_id: Some(id),
+                        token_id: Some(token_id),
                         contract_address: felt_to_strk_string(contract_origin),
                         contract_type: ContractType::ERC1155,
                         block_hash: felt_to_strk_string(block_hash),
                         event_type: EventType::Transfer,
                         compliance: erc_compliance,
                         action,
+                        sub_event_id: format!("{}_O", event_id),
                     };
                     let storage = self.storage.lock().await;
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
+                    drop(storage);
+                }
+                ERC1155Event::TransferBatch {
+                    operator: _,
+                    from,
+                    to,
+                    ids,
+                    values,
+                } => {
+                    let mut nft_infos = Vec::new();
+                    let mut tx_infos = Vec::new();
+
+                    for (index, ((id_low, id_high), value)) in
+                        ids.into_iter().zip(values.iter()).enumerate()
+                    {
+                        let call_data = vec![id_low, id_high];
+                        let uri = match self
+                            .get_contract_property_string(
+                                contract_origin,
+                                "uri",
+                                call_data.clone(),
+                                Hash(block_hash),
+                            )
+                            .await
+                        {
+                            Ok(uri) => uri,
+                            Err(_) => "".to_owned(),
+                        };
+                        let token_id: BigDecimal = parse_u256(&id_low, &id_high);
+                        let nft_info = NFTInfo {
+                            tx_hash: felt_to_strk_string(tx_hash),
+                            contract_address: felt_to_strk_string(contract_origin),
+                            token_id: token_id.clone(),
+                            name: None,
+                            symbol: None,
+                            metadata_uri: Some(uri),
+                            owner: felt_to_strk_string(to),
+                            chain_id: felt_to_strk_string(chain_id),
+                            block_hash: felt_to_strk_string(block_hash),
+                        };
+
+                        let action = detect_erc_action(from, to);
+                        let tx_info = TransactionInfo {
+                            tx_hash: felt_to_strk_string(tx_hash),
+                            event_id,
+                            from: felt_to_strk_string(from),
+                            to: felt_to_strk_string(to),
+                            value: Some(value.clone()),
+                            timestamp: block_timestamp,
+                            token_id: Some(token_id),
+                            contract_address: felt_to_strk_string(contract_origin),
+                            contract_type: ContractType::ERC1155,
+                            block_hash: felt_to_strk_string(block_hash),
+                            event_type: EventType::TransferBatch,
+                            compliance: erc_compliance.clone(),
+                            action,
+                            sub_event_id: format!("{}_{}", event_id, index),
+                        };
+
+                        nft_infos.push(nft_info);
+                        tx_infos.push(tx_info);
+                    }
+
+                    let storage = self.storage.lock().await;
+
+                    // Utilisation de futures pour paralléliser les opérations d'enregistrement
+                    let store_nft_futures = nft_infos
+                        .into_iter()
+                        .map(|nft_info| storage.store_nft_info(nft_info));
+                    let store_tx_futures = tx_infos
+                        .into_iter()
+                        .map(|tx_info| storage.store_transaction_info(tx_info));
+
+                    // Exécution parallèle des futures
+                    let (nft_results, tx_results) = tokio::join!(
+                        futures::future::join_all(store_nft_futures),
+                        futures::future::join_all(store_tx_futures)
+                    );
+
+                    // Vérification des résultats
+                    for result in nft_results.into_iter().chain(tx_results) {
+                        result?;
+                    }
+
                     drop(storage);
                 }
                 _ => return Ok(()),
@@ -434,7 +540,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         _block_hash: Felt,
         _tx_hash: Felt,
         _block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // println!(
         //     "OTHER EVENT HANDLED\nCHAIN: {}\nEvent : {:?}\n",
         //     chain_id, event

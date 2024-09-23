@@ -25,19 +25,41 @@ const INPUT_TOO_LONG: &str = "0x496e70757420746f6f206c6f6e6720666f7220617267756d
 const FAILED_DESERIALIZE: &str = "0x4661696c656420746f20646573657269616c697a6520706172616d202331";
 const ENTRYPOINT_NOT_FOUND: &str = "not found in contract";
 
-pub struct ContractManager<S: Storage + Send + Sync, P: Provider + Send + Sync> {
+pub struct ContractManager<S, P>
+where
+    S: Storage + Send + Sync + 'static,
+    P: Provider + Send + Sync + 'static,
+{
     pub storage: Arc<Mutex<S>>,
-    pub provider: Arc<Mutex<P>>,
+    pub provider: Arc<P>,
     /// A cache with contract address mapped to its type.
-    pub cache: HashMap<Felt, ContractType>,
+    pub cache: Arc<Mutex<HashMap<Felt, ContractType>>>,
 }
 
-impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> {
-    pub fn new(storage: Arc<Mutex<S>>, provider: Arc<Mutex<P>>) -> Self {
+impl<S, P> Clone for ContractManager<S, P>
+where
+    S: Storage + Send + Sync + 'static,
+    P: Provider + Send + Sync + 'static,
+{
+    fn clone(&self) -> Self {
+        ContractManager {
+            storage: Arc::clone(&self.storage),
+            provider: Arc::clone(&self.provider),
+            cache: Arc::clone(&self.cache),
+        }
+    }
+}
+
+impl<S, P> ContractManager<S, P>
+where
+    S: Storage + Send + Sync + 'static,
+    P: Provider + Send + Sync + 'static,
+{
+    pub fn new(storage: S, provider: P) -> Self {
         Self {
-            storage,
-            provider,
-            cache: HashMap::new(),
+            storage: Arc::new(Mutex::new(storage)),
+            provider: Arc::new(provider),
+            cache: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
@@ -46,17 +68,19 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         &mut self,
         address: Felt,
         _chain_id: Felt,
-    ) -> Result<ContractType, Box<dyn std::error::Error>> {
-        if let Some(contract_type) = self.cache.get(&address) {
+    ) -> Result<ContractType, Box<dyn std::error::Error + Send + Sync>> {
+        let cache = self.cache.lock().await;
+        if let Some(contract_type) = cache.get(&address) {
             return Ok(contract_type.clone());
         }
+        drop(cache);
 
         info!("Cache miss for contract {:#064x}", address);
 
         let contract_type = self.detect_token_standard(address).await?;
-
-        self.cache.insert(address, contract_type.clone()); // Adding to the cache
-
+        let mut cache = self.cache.lock().await;
+        cache.insert(address, contract_type.clone()); // Adding to the cache
+        drop(cache);
         Ok(contract_type)
     }
 
@@ -166,7 +190,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         address: Felt,
         _block_timestamp: u64,
         chain_id: Felt,
-    ) -> Result<ContractType, Box<dyn std::error::Error>> {
+    ) -> Result<ContractType, Box<dyn std::error::Error + Send + Sync>> {
         match self.get_cached_or_fetch_info(address, chain_id).await {
             Ok(contract_type) => Ok(contract_type),
             Err(_) => {
@@ -175,8 +199,9 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
                 }
                 // If the contract info is not cached, identify and cache it.
                 let contract_type = self.detect_token_standard(address).await?;
-
-                self.cache.insert(address, contract_type.clone());
+                let mut cache = self.cache.lock().await;
+                cache.insert(address, contract_type.clone());
+                drop(cache);
                 let name = self
                     .get_contract_property_string(
                         address,
@@ -248,7 +273,7 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block: BlockId,
     ) -> Result<Vec<Felt>, StarknetClientError> {
         // println!("Call Contract ARGS: Adress: {:?}\n Selector: {:?}\n Call Data: {:?}, block: {:?}", contract_address, selector, calldata, block);
-        let provider = self.provider.lock().await;
+        let provider = self.provider.clone();
         let r = provider
             .call(
                 FunctionCall {
@@ -416,13 +441,14 @@ impl<S: Storage + Send + Sync, P: Provider + Send + Sync> ContractManager<S, P> 
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // println!("Processing {}", event_id);
         let contract_address = event.from_address;
         let contract_type = self
             .identify_contract(contract_address, block_timestamp, chain_id)
             .await?;
         // println!("contract-Type: {:?} for {:?}", contract_type, contract_address);
-
+        // println!("contract_type {}", contract_type);
         match contract_type {
             ContractType::ERC20 => {
                 // println!(
