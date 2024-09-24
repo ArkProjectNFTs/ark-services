@@ -361,20 +361,10 @@ impl DatabaseAccess for PgPool {
         }
         let order_by_clause = generate_order_by_clause_collections(sort, direction);
 
-        let interval = match time_range {
-            "10m" => "INTERVAL '10 minutes'",
-            "1h" => "INTERVAL '1 hour'",
-            "6h" => "INTERVAL '6 hours'",
-            "1d" => "INTERVAL '1 day'",
-            "7d" => "INTERVAL '7 days'",
-            "30d" => "INTERVAL '30 days'",
-            _ => "",
-        };
-
-        let contract_timestamp_clause: String = if interval.is_empty() {
+        let contract_timestamp_clause: String = if time_range.is_empty() {
             String::new()
         } else {
-            format!(" AND contract_marketdata.timerange = {}", interval)
+            format!(" AND contract_marketdata.timerange = {}", time_range)
         };
 
         let sql_query = format!(
