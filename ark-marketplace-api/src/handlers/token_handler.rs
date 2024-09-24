@@ -35,6 +35,7 @@ pub struct QueryParameters {
     disable_cache: Option<String>,
     filters: Option<String>,
     sort_value: Option<String>,
+    search: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -69,6 +70,7 @@ fn extract_query_params(
 
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
+        ("search" = Option<String>, Query, description = "Filter by token id"),
         ("buy_now" = Option<String>, Query, description = "Filter tokens by 'buy now' status"),
         ("sort" = Option<String>, Query, description = "Sort field, defaults to 'price'"),
         ("direction" = Option<String>, Query, description = "Sort direction, 'asc' or 'desc', defaults to 'asc'"),
@@ -90,6 +92,7 @@ pub async fn get_tokens(
     let buy_now = query_parameters.buy_now.as_deref() == Some("true");
     let sort = query_parameters.sort.as_deref().unwrap_or("price");
     let direction = query_parameters.direction.as_deref().unwrap_or("asc");
+    let search = query_parameters.search.as_deref().unwrap_or("");
     let mut disable_cache = query_parameters.disable_cache.as_deref() == Some("true");
     let sort_value = query_parameters
         .sort_value
@@ -102,6 +105,17 @@ pub async fn get_tokens(
     let db_access = &db_pools[0];
     let mut redis_con_ref = redis_con.get_ref().lock().await;
     let mut token_ids = None;
+    let mut token_id = None;
+
+    match search.parse::<String>() {
+        Ok(parsed_token_id) => {
+            disable_cache = true;
+            token_id = Some(parsed_token_id)
+        }
+        Err(_) => {
+            error!("get_tokens: error parsing search field");
+        }
+    }
 
     if let Some(filters_param) = &query_parameters.filters {
         if !filters_param.is_empty() {
@@ -146,6 +160,7 @@ pub async fn get_tokens(
         sort_value,
         disable_cache,
         token_ids,
+        token_id,
     )
     .await
     {

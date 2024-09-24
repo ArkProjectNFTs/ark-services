@@ -196,6 +196,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     sort_value: Option<String>,
     disable_cache: bool,
     token_ids: Option<Vec<String>>,
+    token_id: Option<String>,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
     // Generate a unique key for this query based on buy_now value
     let cache_key = if buy_now {
@@ -234,6 +235,7 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
                     Some(direction.to_string()),
                     sort_value,
                     token_ids,
+                    token_id,
                 )
                 .await?;
 
@@ -298,6 +300,7 @@ pub async fn get_tokens_data_by_id<D: DatabaseAccess + Sync>(
             Some(direction.to_string()),
             sort_value,
             token_ids,
+            None,
         )
         .await?;
 

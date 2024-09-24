@@ -65,6 +65,7 @@ pub trait DatabaseAccess: Send + Sync {
         direction: Option<String>,
         sort_value: Option<String>,
         token_ids: Option<Vec<String>>,
+        token_id: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error>;
 
     async fn get_token_data(
@@ -360,20 +361,10 @@ impl DatabaseAccess for PgPool {
         }
         let order_by_clause = generate_order_by_clause_collections(sort, direction);
 
-        let interval = match time_range {
-            "10m" => "INTERVAL '10 minutes'",
-            "1h" => "INTERVAL '1 hour'",
-            "6h" => "INTERVAL '6 hours'",
-            "1d" => "INTERVAL '1 day'",
-            "7d" => "INTERVAL '7 days'",
-            "30d" => "INTERVAL '30 days'",
-            _ => "",
-        };
-
-        let contract_timestamp_clause: String = if interval.is_empty() {
+        let contract_timestamp_clause: String = if time_range.is_empty() {
             String::new()
         } else {
-            format!(" AND contract_marketdata.timerange = {}", interval)
+            format!(" AND contract_marketdata.timerange = {}", time_range)
         };
 
         let sql_query = format!(
@@ -833,11 +824,19 @@ impl DatabaseAccess for PgPool {
         direction: Option<String>,
         sort_value: Option<String>,
         token_ids: Option<Vec<String>>,
+        token_id: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
         let sort_field = sort.as_deref().unwrap_or("price");
         let sort_direction = direction.as_deref().unwrap_or("asc");
         let order_by = generate_order_by_clause(sort_field, sort_direction, sort_value.as_deref());
         let count = 0;
+
+        // Additional condition for token_id if it's provided
+        let token_id_condition = if let Some(ref id) = token_id {
+            format!("AND token.token_id LIKE '%{}%'", id)
+        } else {
+            String::new()
+        };
 
         let (token_ids_condition, token_count) = match token_ids {
             Some(ids) if !ids.is_empty() => {
@@ -857,9 +856,9 @@ impl DatabaseAccess for PgPool {
                     WHERE token.contract_address = $1
                         AND token.chain_id = $2
                         AND ($3 = false OR token.listing_start_amount IS NOT NULL)
-                        {}
+                        {} {}
                     ",
-                    condition
+                    condition, token_id_condition
                 );
 
                 let token_count: i64 = sqlx::query_scalar(&token_count_query)
@@ -929,10 +928,10 @@ impl DatabaseAccess for PgPool {
                WHERE token.contract_address = $1
                    AND token.chain_id = $2
                    AND ($3 = false OR token.listing_start_amount IS NOT NULL)
-                   {}
+                   {} {}
                ORDER BY {}
                LIMIT $4 OFFSET $5",
-            token_ids_condition, order_by
+            token_ids_condition, token_id_condition, order_by
         );
 
         let query = sqlx::query_as(&tokens_data_query)
