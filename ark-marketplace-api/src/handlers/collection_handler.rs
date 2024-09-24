@@ -94,7 +94,7 @@ pub async fn get_collection(
     let (contract_address, chain_id) = path.into_inner();
     let normalized_address = normalize_address(&contract_address);
 
-    let db_access = &db_pools[0];
+    let db_access = &db_pools[1];
     let mut redis_con_ref = redis_con.get_ref().lock().await;
     match get_collection_data(
         db_access,
