@@ -364,7 +364,7 @@ impl DatabaseAccess for PgPool {
         let contract_timestamp_clause: String = if time_range.is_empty() {
             String::new()
         } else {
-            format!(" AND contract_marketdata.timerange = {}", time_range)
+            format!(" AND contract_marketdata.timerange = '{}'", time_range)
         };
 
         let sql_query = format!(
