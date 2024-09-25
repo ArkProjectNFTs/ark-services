@@ -121,7 +121,7 @@ pub struct TopOffer {
     pub currency_address: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
 pub struct Listing {
     pub is_auction: Option<bool>,
     pub order_hash: Option<String>,

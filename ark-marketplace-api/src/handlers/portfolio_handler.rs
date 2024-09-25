@@ -158,6 +158,8 @@ pub async fn get_offers(
                 data.currency_address.clone(),
                 data.collection_floor_price.clone(),
             ),
+            is_listed: data.is_listed.clone(),
+            listing: data.listing.clone(),
             collection_address: data.collection_address.clone(),
             collection_name: data.collection_name.clone(),
             is_verified: data.is_verified,
