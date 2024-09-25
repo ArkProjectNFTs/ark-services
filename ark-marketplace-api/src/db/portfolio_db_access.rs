@@ -228,7 +228,15 @@ impl DatabaseAccess for PgPool {
                 contract.contract_address as collection_address,
                 contract.contract_name as collection_name,
                 contract.is_verified as is_verified,
-                token.metadata
+                token.metadata,
+                (token.listing_start_amount IS NOT NULL) as is_listed,
+                (token.listing_type = 'Auction') as is_auction,
+                token.listing_orderhash as listing_order_hash,
+                token.listing_start_amount as listing_start_amount,
+                token.listing_end_amount as listing_end_amount,
+                token.listing_start_date as listing_start_date,
+                token.listing_end_date as listing_end_date,
+                token.listing_currency_address as listing_currency_address
             FROM token_offer
             LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
             LEFT JOIN token ON token_offer.contract_address = token.contract_address AND token_offer.chain_id = token.chain_id and token_offer.token_id = token.token_id
