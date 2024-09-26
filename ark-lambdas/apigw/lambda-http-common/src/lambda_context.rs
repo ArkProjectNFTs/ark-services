@@ -50,10 +50,6 @@ impl LambdaCtx {
             .first("stageName")
             .expect("stageName must be set in stage variables");
 
-        // let sqlx_url = &stage_vars
-        //     .first("sqlxUrl")
-        //     .expect("sqlxUrl must be set in stage variables");
-
         let pagination_db = &stage_vars
             .first("paginationCache")
             .expect("paginationCache must be set in stage variables");
