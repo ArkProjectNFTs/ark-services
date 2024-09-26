@@ -84,6 +84,7 @@ async fn main() -> std::io::Result<()> {
                 if should_cache_pages {
                     let _ = cache_collection_pages(&db_pool, con.clone()).await;
                 }
+                update_contract_marketdata(&db_pool).await;
             }
             Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
         },
@@ -94,9 +95,6 @@ async fn main() -> std::io::Result<()> {
         }
         "task_set3" => {
             empty_floor_price(&db_pool).await;
-        }
-        "task_set4" => {
-            update_contract_marketdata(&db_pool).await;
         }
         _ => {
             tracing::error!(
