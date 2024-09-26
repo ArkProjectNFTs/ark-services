@@ -1,0 +1,2 @@
+CREATE INDEX idx_transaction_info_contract_token ON transaction_info (contract_address, token_id);
+CREATE INDEX idx_transaction_info_timestamp_sequence ON transaction_info (timestamp DESC, sequence_id DESC);
