@@ -1,3 +1,4 @@
+use crate::models::default::LastSale;
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -11,4 +12,9 @@ pub struct HealthCheckResponseV1 {
 pub struct HealthCheckResponse {
     #[schema()]
     pub status: String,
+}
+
+#[derive(utoipa::ToSchema, Serialize)]
+pub struct LastSalesResponse {
+    data: Vec<LastSale>,
 }
