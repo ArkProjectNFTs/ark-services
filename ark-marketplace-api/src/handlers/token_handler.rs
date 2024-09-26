@@ -254,8 +254,6 @@ pub async fn get_token_market(
     ),
     params(
         ("address" = String, Path, description = "The contract address of the collection"),
-        ("chain_id" = String, Path, description = "The blockchain chain ID"),
-        ("token_id" = String, Path, description = "The token ID"),
 
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
