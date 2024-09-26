@@ -253,7 +253,7 @@ pub async fn get_token_market(
         (status = 400, description = "Data not found", body = String),
     ),
     params(
-        ("address" = String, Path, description = "The contract address of the collection"),
+        ("user_address" = String, Path, description = "The user address"),
 
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
