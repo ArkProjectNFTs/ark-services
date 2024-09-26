@@ -3,7 +3,7 @@
 use crate::LambdaHttpError;
 use crate::{params, HttpParamSource};
 use ark_dynamodb::{init_aws_dynamo_client, pagination::DynamoDbPaginator, DynamoDbCtx};
-use lambda_http::{request::RequestContext, Request, RequestExt};
+use lambda_http::{Request, RequestExt};
 use std::collections::HashMap;
 
 /// A common context for every http lambda.
@@ -108,10 +108,6 @@ impl LambdaCtx {
             multiple_exclusive_start_keys: lek_multiple,
         };
 
-        // let sqlx = SqlxCtx::new(sqlx_url).await?;
-
-        let (http_method, http_path, source_ip) = http_info_from_context(&event.request_context());
-
         Ok(Self {
             paginator,
             dynamodb,
@@ -123,43 +119,5 @@ impl LambdaCtx {
             function_name,
             stage_name: stage_name.to_string(),
         })
-    }
-}
-
-fn http_info_from_context(context: &RequestContext) -> (String, String, String) {
-    match context {
-        RequestContext::ApiGatewayV1(c) => {
-            let method = c.http_method.as_str().to_string();
-            let source_ip = if let Some(ip) = &c.identity.source_ip {
-                ip.to_string()
-            } else {
-                String::new()
-            };
-
-            let path = if let Some(p) = &c.path {
-                p.to_string()
-            } else {
-                String::new()
-            };
-
-            (method, path, source_ip)
-        }
-        RequestContext::ApiGatewayV2(c) => {
-            let method = c.http.method.as_str().to_string();
-            let source_ip = if let Some(ip) = &c.http.source_ip {
-                ip.to_string()
-            } else {
-                String::new()
-            };
-
-            let path = if let Some(p) = &c.http.path {
-                p.to_string()
-            } else {
-                String::new()
-            };
-
-            (method, path, source_ip)
-        }
-        _ => (String::new(), String::new(), String::new()),
     }
 }
