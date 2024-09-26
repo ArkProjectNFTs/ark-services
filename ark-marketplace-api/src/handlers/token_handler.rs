@@ -249,7 +249,7 @@ pub async fn get_token_market(
 #[utoipa::path(
     tag = "Portfolio",
     responses(
-        (status = 200, description = "Get tokens in a portfolio", body = TokenOffersResponse),
+        (status = 200, description = "Get tokens in a portfolio", body = TokensPortfolioResponse),
         (status = 400, description = "Data not found", body = String),
     ),
     params(
@@ -268,7 +268,7 @@ pub async fn get_tokens_portfolio(
     let (page, items_per_page, buy_now, sort, direction) = extract_query_params(&query_parameters);
     let collection = query_parameters.collection.as_deref().unwrap_or("");
 
-    let user_address = path.into_inner();
+    let user_address = path.into_inner().to_lowercase();
     let normalized_address = normalize_address(&user_address);
 
     let db_access = &db_pools[0];

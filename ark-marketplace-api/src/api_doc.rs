@@ -6,7 +6,7 @@ use ark_marketplace_api::models::collection::{
     CollectionActivityData, CollectionData, CollectionFullData, CollectionPortfolioData,
     CollectionSearchData, OwnerData,
 };
-use ark_marketplace_api::models::default::LastSale;
+use ark_marketplace_api::models::default::{LastSale, LiveAuction};
 use ark_marketplace_api::models::portfolio::{OfferApiData, StatsData};
 use ark_marketplace_api::models::token::{
     Listing, TokenActivityData, TokenData, TokenDataListing, TokenEventType, TokenInformationData,
@@ -17,7 +17,7 @@ use ark_marketplace_api::types::collection::{
     CollectionResponse, CollectionSearchResponse, CollectionsResponse,
 };
 use ark_marketplace_api::types::default::{
-    HealthCheckResponse, HealthCheckResponseV1, LastSalesResponse,
+    HealthCheckResponse, HealthCheckResponseV1, LastSalesResponse, LiveAuctionsResponse,
 };
 use ark_marketplace_api::types::portfolio::{
     PortfolioActivityResponse, PortfolioOffersResponse, PortfolioStatsResponse,
@@ -35,6 +35,7 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
     paths(
         default_handler::health_check,
         default_handler::last_sales,
+        default_handler::live_auctions,
         collection_handler::get_collection,
         collection_handler::get_collection_activity,
         collection_handler::get_portfolio_collections,
@@ -92,6 +93,8 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         CollectionFullData,
         LastSalesResponse,
         LastSale,
+        LiveAuctionsResponse,
+        LiveAuction,
     ))
 )]
 pub struct ApiDoc;
