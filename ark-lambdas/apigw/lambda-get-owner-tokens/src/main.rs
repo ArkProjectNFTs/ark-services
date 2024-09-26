@@ -40,13 +40,9 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     }
 
     match r {
-        Ok(lambda_rsp) => {
-            ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
-            Ok(lambda_rsp.inner)
-        }
+        Ok(lambda_rsp) => Ok(lambda_rsp.inner),
         Err(e) => {
             error!("Error: {:?}", e);
-            ctx.register_usage(req_params, None).await?;
             Err(e)
         }
     }
