@@ -25,3 +25,19 @@ pub struct LastSale {
     pub timestamp: Option<i64>,
     pub transaction_hash: Option<String>,
 }
+#[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
+pub struct LiveAuction {
+    #[schema(
+        value_type = Object,
+        example = r#"{
+            "name": "Starknet ID: 154773638476",
+            "image": "https://starknet.id/api/identicons/154773638476",
+            "description": "This token represents an identity on StarkNet.",
+            "image_mime_type": "image/svg+xml",
+            "external_url": null,
+            "properties": null
+        }"#
+    )]
+    pub metadata: Option<JsonValue>,
+    pub end_timestamp: Option<i64>,
+}
