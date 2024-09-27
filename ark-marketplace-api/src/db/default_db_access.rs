@@ -19,7 +19,7 @@ impl DatabaseAccess for PgPool {
                 t.metadata,
                 c.contract_name AS collection_name,
                 t.contract_address AS collection_address,
-                te.amount AS price,
+                hex_to_decimal(te.amount) AS price,
                 te.from_address AS from,
                 te.to_address AS to,
                 te.block_timestamp AS timestamp,
