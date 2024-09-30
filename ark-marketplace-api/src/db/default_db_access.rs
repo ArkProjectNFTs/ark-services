@@ -155,7 +155,7 @@ impl DatabaseAccess for PgPool {
         let mut trending_data: Vec<Trending> = Vec::with_capacity(5);
 
         // Retrieve preview NFTs for each collection
-        for collection in &mut collection_data {
+        for collection in collection_data {
             let preview_nft_sql = "SELECT
                     metadata
                  FROM
