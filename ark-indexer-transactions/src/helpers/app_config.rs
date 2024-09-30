@@ -9,6 +9,7 @@ pub struct AppConfig {
     pub base_path: String,
     pub parsing_state_path: String,
     pub chain_id: String,
+    pub start_from: u64
 }
 
 impl AppConfig {

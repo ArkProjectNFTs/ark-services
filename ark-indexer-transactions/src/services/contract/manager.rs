@@ -3,11 +3,13 @@ use std::sync::Arc;
 use crate::helpers::cairo_string_parser::parse_cairo_string;
 
 use crate::interfaces::contract::{ContractType, StarknetClientError};
-use crate::services::state::parsing::{load_parsing_state, save_parsing_state, ParsingState};
+use crate::services::state::manager::StateManager;
+// use crate::services::state::parsing::{load_parsing_state, save_parsing_state, ParsingState};
 use crate::services::storage::block::read_block_from_file;
 use crate::services::storage::block::BlockWrapper;
 use crate::services::storage::types::ContractInfo;
 use crate::services::storage::Storage;
+use num_traits::ToPrimitive;
 use starknet::core::types::{BlockId, BlockTag};
 use starknet::core::types::{Felt, FunctionCall, StarknetError};
 use starknet::core::utils::get_selector_from_name;
@@ -533,20 +535,64 @@ where
         parsing_state_path: &str,
         chain_id: Felt,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut parsing_state = match load_parsing_state(parsing_state_path) {
-            Ok(state) => state,
-            Err(_) => ParsingState::new(),
-        };
+        let state_manager = StateManager::new(parsing_state_path).unwrap();
 
-        for block_number in from_block..=to_block {
-            if parsing_state.is_block_indexed(block_number) {
+        // match parsing_state.get_block_state(block_number) {
+        //     Ok(state) => match verify_block_format(&block_path) {
+        //         Ok(_block_number_verified) => {
+        //             if !state {
+        //                 state_manager
+        //                     .set_block_state(block_number, true)
+        //                     .unwrap();
+        //             }
+        //         }
+        //         Err(e) => {
+        //             state_manager
+        //                 .set_block_state(block_number, false)
+        //                 .unwrap();
+        //             eprintln!(
+        //                 "Failed to verify block format for {:?}: {}",
+        //                 block_path, e
+        //             );
+        //         }
+        //     },
+        //     Err(e) => {
+        //         state_manager.set_block_state(block_number, false).unwrap();
+        //         eprintln!(
+        //             "Failed to verify state for {:?}: {}",
+        //             block_path, e
+        //         );
+        //     }
+        // };
+
+        // let mut parsing_state = match load_parsing_state(parsing_state_path) {
+        //     Ok(state) => state,
+        //     Err(_) => ParsingState::new(),
+        // };
+
+        let start_block = match state_manager.get_last_processed_block() {
+            Ok(last_block) => {
+                let last_block_u64 = last_block.to_u64().unwrap();
+                if from_block <= last_block_u64 {
+                    last_block_u64
+                } else {
+                    from_block
+                }
+            },
+            Err(_e) => {
+                from_block
+            }
+        };
+        
+        for block_number in start_block..=to_block {
+            if state_manager.get_block_state(block_number.to_usize().unwrap()).unwrap_or(false) {
                 continue;
             }
 
             match read_block_from_file(block_number) {
                 Ok(block) => {
                     self.process_block(block, chain_id).await?;
-                    parsing_state.mark_block_indexed(block_number);
+                    let _ = state_manager.set_block_state(block_number.try_into().unwrap(), true);
                 }
                 Err(e) => {
                     eprintln!(
@@ -555,8 +601,6 @@ where
                     );
                 }
             }
-
-            save_parsing_state(&parsing_state, parsing_state_path)?;
         }
 
         Ok(())

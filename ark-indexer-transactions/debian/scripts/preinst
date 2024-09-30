@@ -73,6 +73,7 @@ rcp_provider: "https://juno.mainnet.arkproject.dev/v0_7"
 base_path: "/opt/fast-indexer/blocks"
 parsing_state_path: "/opt/ark-indexer-transactions/state/parsing.json"
 chain_id: "0x534e5f4d41494e"
+start_from: 0
 EOF
         fi
     ;;

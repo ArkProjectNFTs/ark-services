@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 contract_manager
                     .index_blocks(
-                        0,
+                        config.start_from,
                         lastest_block_number,
                         &config.parsing_state_path,
                         chain_id,
