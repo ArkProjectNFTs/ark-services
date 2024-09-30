@@ -387,7 +387,6 @@ impl DatabaseAccess for PgPool {
                     is_verified
                     FROM
                      contract
-                     INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id
                      INNER JOIN contract_marketdata on contract.contract_address = contract_marketdata.contract_address and contract.chain_id = contract_marketdata.chain_id {}
                      WHERE contract_marketdata.volume > 0
                GROUP BY contract.contract_address, contract.chain_id, floor_percentage, volume, sales
