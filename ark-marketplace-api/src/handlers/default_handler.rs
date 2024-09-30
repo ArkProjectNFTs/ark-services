@@ -101,7 +101,7 @@ pub async fn trending(db_pools: web::Data<Arc<[PgPool; 2]>>) -> impl Responder {
             "data": data,
         })),
         Err(err) => {
-            tracing::error!("error query live_auctions: {}", err);
+            tracing::error!("error query trending: {}", err);
             HttpResponse::InternalServerError().finish()
         }
     }
