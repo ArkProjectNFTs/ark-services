@@ -1,6 +1,6 @@
 [package]
 name = "ark-indexer-transactions"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [dependencies]
@@ -13,15 +13,15 @@ futures-util = "0.3.30"
 envy = "0.4.2"
 chrono = { version = "0.4.38", features = ["serde"]}
 sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono", "bigdecimal"] }
-anyhow = "1.0.87"
-starknet = "0.11.0"
-async-trait = "0.1.82"
+anyhow = "1.0.89"
+starknet = "0.12.0"
+async-trait = "0.1.83"
 mockall = "0.13.0"
 tracing = "0.1.40"
-thiserror = "1.0.63"
+thiserror = "1.0.64"
 num-bigint = "0.4.6"
 num-traits = "0.2.19"
-starknet-crypto = "0.7.1"
+starknet-crypto = "0.7.2"
 bigdecimal = { version = "0.3", features = ["serde"] }
 config = "0.14.0"
 
