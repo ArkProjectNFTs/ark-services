@@ -1,4 +1,4 @@
-use crate::models::default::{LastSale, LiveAuction};
+use crate::models::default::{LastSale, LiveAuction, Trending};
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -22,4 +22,9 @@ pub struct LastSalesResponse {
 #[derive(utoipa::ToSchema, Serialize)]
 pub struct LiveAuctionsResponse {
     data: Vec<LiveAuction>,
+}
+
+#[derive(utoipa::ToSchema, Serialize)]
+pub struct TrendingResponse {
+    data: Vec<Trending>,
 }
