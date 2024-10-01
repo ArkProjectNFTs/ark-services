@@ -55,7 +55,7 @@ case "$1" in
 
             grep -q "^parsing_state_path:" "$CONFIG_FILE"
             if [ $? -ne 0 ]; then
-                echo 'parsing_state_path: "/opt/ark-indexer-transactions/state/parsing.json"' >> "$CONFIG_FILE"
+                echo 'parsing_state_path: "/opt/ark-indexer-transactions/state"' >> "$CONFIG_FILE"
             fi
 
             grep -q "^chain_id:" "$CONFIG_FILE"
