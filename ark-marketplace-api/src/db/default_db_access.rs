@@ -43,7 +43,7 @@ impl DatabaseAccess for PgPool {
         "#;
 
         // Execute the query
-        let last_sales = sqlx::query_as::<_, LastSale>(&recent_sales_query)
+        let last_sales = sqlx::query_as::<_, LastSale>(recent_sales_query)
             .fetch_all(self)
             .await?;
 
@@ -65,10 +65,9 @@ impl DatabaseAccess for PgPool {
             LIMIT 6
         "#;
 
-        let live_auctions_query = format!(
-            "{}",
-            live_auctions_query_template.replace("{}", LISTING_TYPE_AUCTION_STR)
-        );
+        let live_auctions_query = live_auctions_query_template
+            .replace("{}", LISTING_TYPE_AUCTION_STR)
+            .to_string();
         // Execute the query
         let live_auctions = sqlx::query_as::<_, LiveAuction>(&live_auctions_query)
             .fetch_all(self)
@@ -165,7 +164,7 @@ impl DatabaseAccess for PgPool {
                  AND chain_id = $2
                  LIMIT 3";
 
-            let preview_nfts: Vec<PreviewNft> = sqlx::query_as(&preview_nft_sql)
+            let preview_nfts: Vec<PreviewNft> = sqlx::query_as(preview_nft_sql)
                 .bind(&collection.collection_address)
                 .bind(CHAIN_ID)
                 .fetch_all(self)
@@ -177,7 +176,7 @@ impl DatabaseAccess for PgPool {
                 collection_name: collection.collection_name.clone(),
                 floor_price: collection.floor_price.clone(),
                 floor_difference: collection.floor_difference,
-                preview_nfts: preview_nfts,
+                preview_nfts,
             });
         }
 

@@ -66,6 +66,8 @@ pub struct TokenMarketData {
     pub listing: Option<Listing>,
     #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
+    pub symbol: Option<String>,
+    pub decimals: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
@@ -109,6 +111,8 @@ pub struct TokenOneData {
     pub buy_in_progress: Option<bool>,
     #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
+    pub symbol: Option<String>,
+    pub decimals: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
