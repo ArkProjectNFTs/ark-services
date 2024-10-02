@@ -32,14 +32,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     req_params.insert("owner_address".to_string(), owner_address.clone());
 
     match r {
-        Ok(lambda_rsp) => {
-            ctx.register_usage(req_params, Some(&lambda_rsp)).await?;
-            Ok(lambda_rsp.inner)
-        }
-        Err(e) => {
-            ctx.register_usage(req_params, None).await?;
-            Err(e)
-        }
+        Ok(lambda_rsp) => Ok(lambda_rsp.inner),
+        Err(e) => Err(e),
     }
 }
 
