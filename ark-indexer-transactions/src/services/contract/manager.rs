@@ -578,14 +578,15 @@ where
                 } else {
                     from_block
                 }
-            },
-            Err(_e) => {
-                from_block
             }
+            Err(_e) => from_block,
         };
-        
+
         for block_number in start_block..=to_block {
-            if state_manager.get_block_state(block_number.to_usize().unwrap()).unwrap_or(false) {
+            if state_manager
+                .get_block_state(block_number.to_usize().unwrap())
+                .unwrap_or(false)
+            {
                 continue;
             }
 

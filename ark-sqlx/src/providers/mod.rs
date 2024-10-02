@@ -1,3 +1,5 @@
+use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
+use crate::providers::orderbook::OrderProvider;
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
@@ -7,12 +9,18 @@ use redis::{aio::MultiplexedConnection, Client};
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use sqlx::{any::AnyPoolOptions, AnyPool, Error as SqlxError};
+use starknet::core::types::{BlockId, BlockTag, Felt, FunctionCall};
+use starknet::core::utils::parse_cairo_short_string;
+use starknet::macros::selector;
+use starknet::providers::{
+    jsonrpc::{HttpTransport, JsonRpcClient},
+    Provider, Url,
+};
 use std::error::Error;
+use std::future::Future;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-
-use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
-use crate::providers::orderbook::OrderProvider;
+use tracing::error;
 
 pub mod marketplace;
 pub mod metrics;
@@ -167,25 +175,89 @@ impl Storage for SqlxArkchainProvider {
 pub struct SqlxMarketplaceProvider {
     client: SqlxCtxPg,
     redis_conn: Arc<Mutex<MultiplexedConnection>>,
+    provider: JsonRpcClient<HttpTransport>,
 }
 
+pub trait ContractProvider {
+    fn call_contract_method<'a>(
+        &'a self,
+        contract_address: Felt,
+        selector: Felt,
+    ) -> impl Future<Output = Result<String, ProviderError>> + 'a + Send;
+}
+
+impl ContractProvider for JsonRpcClient<HttpTransport> {
+    fn call_contract_method<'a>(
+        &'a self,
+        contract_address: Felt,
+        selector: Felt,
+    ) -> impl Future<Output = Result<String, ProviderError>> + 'a + Send {
+        async move {
+            let call_result = self
+                .call(
+                    FunctionCall {
+                        contract_address,
+                        entry_point_selector: selector,
+                        calldata: vec![],
+                    },
+                    BlockId::Tag(BlockTag::Latest),
+                )
+                .await
+                .map_err(|_| ProviderError::ParsingError("Failed to call contract".to_string()))?;
+
+            let mut property: String;
+            if let Some(result) = call_result.first() {
+                match parse_cairo_short_string(result) {
+                    Ok(value) => {
+                        property = value;
+                    }
+                    Err(_) => {
+                        return Err(ProviderError::ParsingError(
+                            "Failed to parse short string".to_string(),
+                        ));
+                    }
+                }
+            } else {
+                return Err(ProviderError::ParsingError(
+                    "Failed call_result".to_string(),
+                ));
+            }
+
+            if selector == selector!("decimals") {
+                property = (property
+                    .chars()
+                    .next()
+                    .ok_or_else(|| ProviderError::ParsingError("Empty string".to_string()))?
+                    as u32)
+                    .to_string();
+            }
+
+            Ok(property)
+        }
+    }
+}
 impl SqlxMarketplaceProvider {
     pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
         let redis_conn = match connect_redis().await {
             Ok(con) => con,
             Err(e) => {
-                tracing::error!("Failed to connect to Redis: {}", e);
+                error!("Failed to connect to Redis: {}", e);
                 return Err(ProviderError::DatabaseError(
                     "Failed to connect to Redis".to_string(),
                 ));
             }
         };
 
+        let rpc_url =
+            std::env::var("ARKCHAIN_RPC_PROVIDER").expect("ARKCHAIN_RPC_PROVIDER not set");
+        let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url).unwrap()));
+
         let sqlx = SqlxCtxPg::new(sqlx_conn_str).await?;
 
         Ok(Self {
             client: sqlx,
             redis_conn,
+            provider,
         })
     }
 }
@@ -201,6 +273,7 @@ impl Storage for SqlxMarketplaceProvider {
         Ok(MarketplaceOrderProvider::register_placed(
             &self.client,
             self.redis_conn.clone(),
+            &self.provider,
             block_id,
             block_timestamp,
             data,

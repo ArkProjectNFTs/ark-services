@@ -662,7 +662,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.12#6b5766bdb63dc38fb4d46a6b4af5a63c381a5cf0"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -802,6 +802,7 @@ dependencies = [
  "serde_json",
  "serde_with 3.9.0",
  "sqlx",
+ "starknet 0.12.0",
  "thiserror",
  "tokio 1.40.0",
  "tracing",
@@ -811,7 +812,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.12#6b5766bdb63dc38fb4d46a6b4af5a63c381a5cf0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -881,7 +882,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.12#6b5766bdb63dc38fb4d46a6b4af5a63c381a5cf0"
 dependencies = [
  "alloy-primitives",
  "alloy-sol-types",
@@ -2343,7 +2344,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.12#6b5766bdb63dc38fb4d46a6b4af5a63c381a5cf0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4637,7 +4638,7 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.12#6b5766bdb63dc38fb4d46a6b4af5a63c381a5cf0"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -5418,7 +5419,7 @@ dependencies = [
 [[package]]
 name = "sana"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.11#c465667ec13ba21bc6b7d8f1d948ae5598c77923"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.12#6b5766bdb63dc38fb4d46a6b4af5a63c381a5cf0"
 dependencies = [
  "anyhow",
  "ark-metadata",

@@ -685,10 +685,13 @@ impl DatabaseAccess for PgPool {
                     (token.listing_start_amount IS NOT NULL) as is_listed,
                     has_bid as has_offer,
                     token.buy_in_progress as buy_in_progress,
-                    hex_to_decimal(token.last_price) as last_price
+                    hex_to_decimal(token.last_price) as last_price,
+                    cm.symbol,
+                    cm.decimals
                 FROM token
                 INNER JOIN contract as c ON c.contract_address = token.contract_address
                     AND c.chain_id = token.chain_id
+                LEFT JOIN currency_mapping cm on cm.currency_address = token.listing_currency_address and cm.chain_id = token.chain_id
                 WHERE token.contract_address = $1
                   AND token.chain_id = $2
                   AND token.token_id = $3
@@ -770,6 +773,8 @@ impl DatabaseAccess for PgPool {
             top_offer: Some(top_offer),
             listing: Some(listing),
             last_price: token_data.last_price,
+            decimals: token_data.decimals,
+            symbol: token_data.symbol,
         })
     }
 

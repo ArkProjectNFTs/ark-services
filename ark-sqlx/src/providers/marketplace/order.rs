@@ -4,8 +4,9 @@ use crate::providers::marketplace::types::{
     LISTING_STR, MINT_STR, OFFER_CANCELLED_STR, OFFER_EXPIRED_STR, OFFER_STR, ROLLBACK_STR,
     SALE_STR, TRANSFER_STR,
 };
-use crate::providers::{ProviderError, SqlxCtxPg};
+use crate::providers::{ContractProvider, ProviderError, SqlxCtxPg};
 
+use anyhow::Result;
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
@@ -16,9 +17,14 @@ use redis::aio::MultiplexedConnection;
 use redis::AsyncCommands;
 use sqlx::types::BigDecimal;
 use sqlx::Row;
+use starknet::core::types::Felt;
+use starknet::macros::selector;
+use starknet::providers::jsonrpc::HttpTransport;
+use starknet::providers::JsonRpcClient;
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
+
 use tokio::sync::Mutex;
 use tracing::{error, info, trace};
 
@@ -203,6 +209,7 @@ pub struct TokenData {
     chain_id: String,
     listing_start_amount: Option<String>,
     currency_chain_id: Option<String>,
+    currency_address: Option<String>,
 }
 
 impl OrderProvider {
@@ -418,7 +425,7 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, token_id_hex, contract_address, chain_id, COALESCE(listing_start_amount, ''), currency_chain_id
+            SELECT token_id, token_id_hex, contract_address, chain_id, COALESCE(listing_start_amount, ''), currency_chain_id, currency_address
             FROM token
             WHERE listing_orderhash = $1;
         ";
@@ -430,6 +437,7 @@ impl OrderProvider {
             chain_id,
             listing_start_amount,
             currency_chain_id,
+            currency_address,
         )) = sqlx::query_as::<
             _,
             (
@@ -437,6 +445,7 @@ impl OrderProvider {
                 String,
                 String,
                 String,
+                Option<String>,
                 Option<String>,
                 Option<String>,
             ),
@@ -452,6 +461,7 @@ impl OrderProvider {
                 chain_id,
                 listing_start_amount,
                 currency_chain_id,
+                currency_address,
             }))
         } else {
             Ok(None)
@@ -518,7 +528,7 @@ impl OrderProvider {
         chain_id: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, token_id_hex, contract_address, chain_id, COALESCE(listing_start_amount, ''), currency_chain_id
+            SELECT token_id, token_id_hex, contract_address, chain_id, COALESCE(listing_start_amount, ''), currency_chain_id, currency_address
             FROM token
             WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3;
         ";
@@ -530,6 +540,7 @@ impl OrderProvider {
             chain_id,
             listing_start_amount,
             currency_chain_id,
+            currency_address,
         )) = sqlx::query_as::<
             _,
             (
@@ -537,6 +548,7 @@ impl OrderProvider {
                 String,
                 String,
                 String,
+                Option<String>,
                 Option<String>,
                 Option<String>,
             ),
@@ -554,6 +566,7 @@ impl OrderProvider {
                 chain_id,
                 listing_start_amount,
                 currency_chain_id,
+                currency_address,
             }))
         } else {
             Ok(None)
@@ -1244,11 +1257,15 @@ impl OrderProvider {
     pub async fn register_placed(
         client: &SqlxCtxPg,
         redis_conn: Arc<Mutex<MultiplexedConnection>>,
+        provider: &JsonRpcClient<HttpTransport>,
         _block_id: u64,
         block_timestamp: u64,
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
+        let mut currency_chain_id = "".to_string();
+        let mut currency_address = "".to_string();
+
         let mut to_address = None;
         let token_id = match data.token_id {
             Some(ref token_id_hex) => {
@@ -1390,6 +1407,8 @@ impl OrderProvider {
                 .bind(OrderStatus::Placed.to_string())
                 .bind(event_type.to_string());
 
+            currency_chain_id = data.currency_chain_id.clone();
+            currency_address = data.currency_address.clone();
             let result = upsert_query_binded.execute(&client.pool).await;
 
             // check if the broker is missing
@@ -1495,6 +1514,44 @@ impl OrderProvider {
                 },
             )
             .await?;
+        }
+
+        // manage currency
+        if !currency_chain_id.is_empty() && !currency_address.is_empty() {
+            // Checking if currency mapping exists in the `currency_mapping` table
+            let currency_mapping_exists =
+                Self::check_currency_mapping_exists(client, &currency_chain_id, &currency_address)
+                    .await?;
+
+            if !currency_mapping_exists {
+                // Call method to interact with the contract address
+                let tst_token_address = Felt::from_str(&currency_address).map_err(|_| {
+                    ProviderError::ParsingError("Invalid currency address".to_string())
+                })?;
+                let decimals_selector = selector!("decimals");
+                let decimals = provider
+                    .call_contract_method(tst_token_address, decimals_selector)
+                    .await?;
+
+                let decimals: i16 = decimals.parse::<i16>().map_err(|_| {
+                    ProviderError::ParsingError("Failed to parse decimals".to_string())
+                })?;
+
+                let symbol_selector = selector!("symbol");
+                let symbol = provider
+                    .call_contract_method(tst_token_address, symbol_selector)
+                    .await?;
+
+                sqlx::query(
+                    "INSERT INTO currency_mapping (currency_address, chain_id, symbol, decimals) VALUES ($1, $2, $3, $4)"
+                )
+                    .bind(&currency_address)
+                    .bind(&currency_chain_id)
+                    .bind(&symbol)
+                    .bind(&decimals)
+                    .execute(&client.pool)
+                    .await?;
+            }
         }
 
         Ok(())
@@ -1728,10 +1785,9 @@ impl OrderProvider {
                         token_id: token_data.token_id.clone(),
                         to_address: fulfiller.clone().unwrap_or_default(),
                         price: token_data.listing_start_amount.clone().unwrap_or_default(),
-                        currency_chain_id: token_data.chain_id.clone(),
-                        currency_address: token_data.currency_chain_id.clone().unwrap_or_default(),
+                        currency_chain_id: token_data.currency_chain_id.clone().unwrap_or_default(),
+                        currency_address: token_data.currency_address.clone().unwrap_or_default(),
                     };
-
                     Self::update_token_data_on_status_executed(client, &params).await?;
                     Self::insert_event_history(
                         client,
@@ -1762,6 +1818,24 @@ impl OrderProvider {
             }
         }
         Ok(())
+    }
+
+    /// This function checks if a currency mapping exists in the database
+    pub async fn check_currency_mapping_exists(
+        client: &SqlxCtxPg,
+        currency_chain_id: &str,
+        currency_address: &str,
+    ) -> Result<bool, ProviderError> {
+        let query = "
+            SELECT COUNT(*) FROM currency_mapping WHERE chain_id = $1 AND currency_address = $2
+        ";
+        let count: i64 = sqlx::query_scalar(query)
+            .bind(currency_chain_id)
+            .bind(currency_address)
+            .fetch_one(&client.pool)
+            .await?;
+
+        Ok(count > 0)
     }
 
     pub async fn status_back_to_open(
