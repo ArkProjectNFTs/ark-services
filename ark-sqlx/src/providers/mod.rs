@@ -179,61 +179,59 @@ pub struct SqlxMarketplaceProvider {
 }
 
 pub trait ContractProvider {
-    fn call_contract_method<'a>(
-        &'a self,
+    fn call_contract_method(
+        &self,
         contract_address: Felt,
         selector: Felt,
-    ) -> impl Future<Output = Result<String, ProviderError>> + 'a + Send;
+    ) -> impl Future<Output = Result<String, ProviderError>> + Send;
 }
 
 impl ContractProvider for JsonRpcClient<HttpTransport> {
-    fn call_contract_method<'a>(
-        &'a self,
+    async fn call_contract_method(
+        &self,
         contract_address: Felt,
         selector: Felt,
-    ) -> impl Future<Output = Result<String, ProviderError>> + 'a + Send {
-        async move {
-            let call_result = self
-                .call(
-                    FunctionCall {
-                        contract_address,
-                        entry_point_selector: selector,
-                        calldata: vec![],
-                    },
-                    BlockId::Tag(BlockTag::Latest),
-                )
-                .await
-                .map_err(|_| ProviderError::ParsingError("Failed to call contract".to_string()))?;
+    ) -> Result<String, ProviderError> {
+        let call_result = self
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: selector,
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Latest),
+            )
+            .await
+            .map_err(|_| ProviderError::ParsingError("Failed to call contract".to_string()))?;
 
-            let mut property: String;
-            if let Some(result) = call_result.first() {
-                match parse_cairo_short_string(result) {
-                    Ok(value) => {
-                        property = value;
-                    }
-                    Err(_) => {
-                        return Err(ProviderError::ParsingError(
-                            "Failed to parse short string".to_string(),
-                        ));
-                    }
+        let mut property: String;
+        if let Some(result) = call_result.first() {
+            match parse_cairo_short_string(result) {
+                Ok(value) => {
+                    property = value;
                 }
-            } else {
-                return Err(ProviderError::ParsingError(
-                    "Failed call_result".to_string(),
-                ));
+                Err(_) => {
+                    return Err(ProviderError::ParsingError(
+                        "Failed to parse short string".to_string(),
+                    ));
+                }
             }
-
-            if selector == selector!("decimals") {
-                property = (property
-                    .chars()
-                    .next()
-                    .ok_or_else(|| ProviderError::ParsingError("Empty string".to_string()))?
-                    as u32)
-                    .to_string();
-            }
-
-            Ok(property)
+        } else {
+            return Err(ProviderError::ParsingError(
+                "Failed call_result".to_string(),
+            ));
         }
+
+        if selector == selector!("decimals") {
+            property = (property
+                .chars()
+                .next()
+                .ok_or_else(|| ProviderError::ParsingError("Empty string".to_string()))?
+                as u32)
+                .to_string();
+        }
+
+        Ok(property)
     }
 }
 impl SqlxMarketplaceProvider {

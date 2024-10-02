@@ -1548,7 +1548,7 @@ impl OrderProvider {
                     .bind(&currency_address)
                     .bind(&currency_chain_id)
                     .bind(&symbol)
-                    .bind(&decimals)
+                    .bind(decimals)
                     .execute(&client.pool)
                     .await?;
             }
