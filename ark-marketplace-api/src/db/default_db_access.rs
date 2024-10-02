@@ -176,7 +176,7 @@ impl DatabaseAccess for PgPool {
                 collection_name: collection.collection_name.clone(),
                 floor_price: collection.floor_price.clone(),
                 floor_difference: collection.floor_difference,
-                preview_nfts: preview_nfts,
+                preview_nfts,
             });
         }
 
