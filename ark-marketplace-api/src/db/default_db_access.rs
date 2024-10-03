@@ -54,7 +54,9 @@ impl DatabaseAccess for PgPool {
         let live_auctions_query_template = r#"
             SELECT
                 t.metadata,
-                t.listing_end_date as end_timestamp
+                t.listing_end_date as end_timestamp,
+                t.contract_address as collection_address,
+                t.token_id
             FROM
                 token t
             WHERE
