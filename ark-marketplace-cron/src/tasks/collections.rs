@@ -103,7 +103,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                      ) as owners
                 ),
                 total_volume = (
-                    SELECT COALESCE(SUM(CAST(amount AS INTEGER)), 0)
+                    SELECT COALESCE(SUM(CAST(amount AS BIGINT)), 0)
                      FROM token_event
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
