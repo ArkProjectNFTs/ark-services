@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT\n                    (t.listing_type = 'Auction') as is_auction,\n                    listing_orderhash as order_hash,\n                    listing_start_amount as start_amount,\n                    listing_end_amount as end_amount,\n                    listing_start_date as start_date,\n                    listing_end_date as end_date\n                FROM token t\n                WHERE t.token_id = $1\n                AND t.contract_address = $2\n                LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "is_auction",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "order_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "start_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "end_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "start_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "end_date",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a3ab10f6c3b23019ea1a643f530a7bb393106e1388f41a8addb8500524f63b35"
+}

@@ -1,4 +1,4 @@
-use crate::models::token::Listing;
+use crate::models::token::{Currency, Listing};
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -48,7 +48,11 @@ impl<'r> FromRow<'r, sqlx::postgres::PgRow> for OfferData {
                 end_amount: row.try_get("listing_end_amount")?,
                 start_date: row.try_get("listing_start_date")?,
                 end_date: row.try_get("listing_end_date")?,
-                currency_address: row.try_get("listing_currency_address")?,
+                currency: Option::from(Currency {
+                    contract: row.try_get("currency_address")?,
+                    symbol: row.try_get("currency_symbol")?,
+                    decimals: row.try_get("currency_decimals")?,
+                }),
             }),
         })
     }

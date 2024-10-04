@@ -73,7 +73,7 @@ pub async fn get_activity(
             (token_activity_data, has_next_page, count)
         }
         Err(err) => {
-            tracing::error!("error query get_token_activity_data: {}", err);
+            tracing::error!("error query portfolio get_activity: {}", err);
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -137,7 +137,7 @@ pub async fn get_offers(
             (token_activity_data, has_next_page, count)
         }
         Err(err) => {
-            tracing::error!("error query get_token_activity_data: {}", err);
+            tracing::error!("error query portfolio getoffers: {}", err);
             return HttpResponse::InternalServerError().finish();
         }
     };
