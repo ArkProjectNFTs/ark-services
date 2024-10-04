@@ -1,3 +1,4 @@
+use crate::models::token::TokenMarketData;
 use reqwest::Client;
 use serde_json::Value;
 
@@ -77,8 +78,12 @@ async fn test_get_token_market() {
         res.status()
     );
 
-    let body: Value = res.json().await.expect("Failed to parse response body");
-    println!("{:?}", body);
+    let body: serde_json::Value = res.json().await.expect("Failed to parse response body");
+    let data = &body["data"];
+    println!("{:?}", data);
+    // Check if the structure matches what we expect
+    let _data: TokenMarketData =
+        serde_json::from_value(data.clone()).expect("Failed to deserialize data field");
 }
 
 #[tokio::test]

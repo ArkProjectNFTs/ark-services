@@ -7,8 +7,9 @@ use crate::models::collection::{
     CollectionPortfolioData, CollectionSearchData, OwnerData,
 };
 use crate::models::token::{
-    Listing, TokenActivityData, TokenData, TokenDataListing, TokenEventType, TokenInformationData,
-    TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData, TopOffer,
+    Currency, Listing, ListingRaw, TokenActivityData, TokenData, TokenDataListing, TokenEventType,
+    TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData,
+    TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
 use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
@@ -685,13 +686,10 @@ impl DatabaseAccess for PgPool {
                     (token.listing_start_amount IS NOT NULL) as is_listed,
                     has_bid as has_offer,
                     token.buy_in_progress as buy_in_progress,
-                    hex_to_decimal(token.last_price) as last_price,
-                    cm.symbol,
-                    cm.decimals
+                    hex_to_decimal(token.last_price) as last_price
                 FROM token
                 INNER JOIN contract as c ON c.contract_address = token.contract_address
                     AND c.chain_id = token.chain_id
-                LEFT JOIN currency_mapping cm on cm.currency_address = token.listing_currency_address and cm.chain_id = token.chain_id
                 WHERE token.contract_address = $1
                   AND token.chain_id = $2
                   AND token.token_id = $3
@@ -730,9 +728,34 @@ impl DatabaseAccess for PgPool {
             currency_address: Some("".to_string()),
         });
 
+        // Fetch currency
+        let currency: Currency = sqlx::query_as!(
+            Currency,
+            "
+                SELECT
+                    cm.currency_address as contract,
+                    cm.symbol,
+                    cm.decimals
+                FROM token t
+                LEFT JOIN currency_mapping cm on cm.currency_address = t.listing_currency_address and cm.chain_id = t.chain_id
+                WHERE t.token_id = $1
+                AND t.contract_address = $2
+                LIMIT 1
+            ",
+            token_id,
+            contract_address
+        )
+        .fetch_one(self)
+        .await
+        .unwrap_or(Currency {
+            contract: Option::from("".to_string()),
+            symbol: Option::from("".to_string()),
+            decimals: Some(18)
+        });
+
         // Fetch Listing
-        let listing: Listing = sqlx::query_as!(
-            Listing,
+        let listing: ListingRaw = sqlx::query_as!(
+            ListingRaw,
             "
                 SELECT
                     (t.listing_type = 'Auction') as is_auction,
@@ -740,8 +763,7 @@ impl DatabaseAccess for PgPool {
                     listing_start_amount as start_amount,
                     listing_end_amount as end_amount,
                     listing_start_date as start_date,
-                    listing_end_date as end_date,
-                    listing_currency_address as currency_address
+                    listing_end_date as end_date
                 FROM token t
                 WHERE t.token_id = $1
                 AND t.contract_address = $2
@@ -752,14 +774,13 @@ impl DatabaseAccess for PgPool {
         )
         .fetch_one(self)
         .await
-        .unwrap_or(Listing {
+        .unwrap_or(ListingRaw {
             is_auction: Some(false),
             order_hash: Some("".to_string()),
             start_amount: None,
             end_amount: None,
             start_date: None,
             end_date: None,
-            currency_address: Some("".to_string()),
         });
 
         Ok(TokenMarketData {
@@ -771,10 +792,20 @@ impl DatabaseAccess for PgPool {
             has_offer: token_data.has_offer,
             buy_in_progress: token_data.buy_in_progress,
             top_offer: Some(top_offer),
-            listing: Some(listing),
+            listing: Some(Listing {
+                is_auction: listing.is_auction,
+                order_hash: listing.order_hash,
+                start_amount: listing.start_amount,
+                end_amount: listing.end_amount,
+                start_date: listing.start_date,
+                end_date: listing.end_date,
+                currency: Option::from(Currency {
+                    contract: currency.contract,
+                    symbol: currency.symbol,
+                    decimals: currency.decimals,
+                }),
+            }),
             last_price: token_data.last_price,
-            decimals: token_data.decimals,
-            symbol: token_data.symbol,
         })
     }
 

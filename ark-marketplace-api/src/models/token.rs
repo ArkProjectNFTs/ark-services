@@ -66,8 +66,6 @@ pub struct TokenMarketData {
     pub listing: Option<Listing>,
     #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
-    pub symbol: Option<String>,
-    pub decimals: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
@@ -111,8 +109,6 @@ pub struct TokenOneData {
     pub buy_in_progress: Option<bool>,
     #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
-    pub symbol: Option<String>,
-    pub decimals: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
@@ -126,6 +122,16 @@ pub struct TopOffer {
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
+pub struct ListingRaw {
+    pub is_auction: Option<bool>,
+    pub order_hash: Option<String>,
+    pub start_amount: Option<String>,
+    pub end_amount: Option<String>,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
 pub struct Listing {
     pub is_auction: Option<bool>,
     pub order_hash: Option<String>,
@@ -133,7 +139,14 @@ pub struct Listing {
     pub end_amount: Option<String>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
-    pub currency_address: Option<String>,
+    pub currency: Option<Currency>,
+}
+
+#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
+pub struct Currency {
+    pub contract: Option<String>,
+    pub symbol: Option<String>,
+    pub decimals: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]

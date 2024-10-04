@@ -236,10 +236,13 @@ impl DatabaseAccess for PgPool {
                 token.listing_end_amount as listing_end_amount,
                 token.listing_start_date as listing_start_date,
                 token.listing_end_date as listing_end_date,
-                token.listing_currency_address as listing_currency_address
+                cm.currency_address as currency_contract,
+                cm.symbol as currency_symbol,
+                cm.decimals as currency_decimals
             FROM token_offer
             LEFT JOIN contract ON token_offer.contract_address = contract.contract_address AND token_offer.chain_id = contract.chain_id
             LEFT JOIN token ON token_offer.contract_address = token.contract_address AND token_offer.chain_id = token.chain_id and token_offer.token_id = token.token_id
+            LEFT JOIN currency_mapping cm on cm.currency_address = token.listing_currency_address and cm.chain_id = token.chain_id
             WHERE {}
             ORDER BY amount DESC, expire_at ASC
             LIMIT $4 OFFSET $5",
