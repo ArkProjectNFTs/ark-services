@@ -13,15 +13,26 @@ use starknet::providers::{
     Url,
 };
 use tokio::time::{sleep, Duration};
+use clap::Parser;
 
 // Default alocator change
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+/// Microservice that parse indexed block and push transactions to databse
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Name of the person to greet
+    #[arg(short, long)]
+    config_path: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Args::parse();
+
     println!("starting the block indexer for transactions....");
-    let config = AppConfig::load_from_file();
+    let config = AppConfig::load_from_file(&args.config_path);
     match config {
         Ok(config) => {
             let storage = DatabaseStorage::new(&config.database_url).await?;

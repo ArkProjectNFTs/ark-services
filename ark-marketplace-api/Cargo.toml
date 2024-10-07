@@ -41,3 +41,20 @@ futures-util = "0.3.30"
 urlencoding = "2.1"
 serde_urlencoded = "0.7"
 chrono = "0.4"
+clap = { version = "4.5.19", features = ["derive"] }
+config = "0.14.0"
+tikv-jemallocator = "0.6.0"
+
+
+[package.metadata.deb]
+maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
+copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"
+extended-description = """ScreenshotLabs Ark marketplace API"""
+depends = "$auto, systemd"
+section = "admin"
+priority = "optional"
+assets = [
+ ["target/release/ark-marketplace-api", "usr/bin/", "755"],
+ ["debian/ark-marketplace-api@.service", "/lib/systemd/system/ark-marketplace-api@.service", "644"], 
+]
+maintainer-scripts = "debian/scripts"

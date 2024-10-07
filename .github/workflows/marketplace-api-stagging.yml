@@ -1,13 +1,15 @@
-name: Ark Indexer Transactions (Production) (Mainnet) (Scaleway)
+name: MKT API (Staging) (Mainnet) (Scaleway)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
+      - feature/dev-843-modify-ingest-indexer-ci
     paths:
-      - ".github/workflows/ark-indexer-transactions-production.yml"
-      - "ark-indexer-transactions/**"
+      - ".github/workflows/marketplace-api-staging.yml"
+      - "ark-marketplace-api/**"
+      - "ark-sqlx/providers/marketplace/**"
 
 jobs:
   discord-notification:
@@ -21,9 +23,9 @@ jobs:
         uses: ./.github/actions/discord-notification
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message: "🚢 Deploying Ark Indexer Transactions to BARE METAL PRODUCTION environment..."
-  
-  package-ark-indexer-transactions-service:
+          message: "🚢 Deploying Marketplace API to Mainnet environment..."
+
+  package-marketplace-api:
     runs-on: ubuntu-latest
     container: screenshotlabs/rust-ci-cd-toolchain:latest
     steps:
@@ -33,12 +35,12 @@ jobs:
       - name: Store Package Vars
         id: package-name
         run: |
-          echo "PACKAGE_NAME=$(cargo get --entry ark-indexer-transactions package.name)" >> package_name
-          echo "PACKAGE_VERSION=$(cargo get --entry ark-indexer-transactions package.version)" >> package_version
+          echo "PACKAGE_NAME=$(cargo get --entry ark-marketplace-api package.name)" >> package_name
+          echo "PACKAGE_VERSION=$(cargo get --entry ark-marketplace-api package.version)" >> package_version
 
       - name: Create debian service
         run: |
-          cargo deb -p ark-indexer-transactions
+          cargo deb -p ark-marketplace-api
 
       - name: Upload package to artifact
         uses: actions/upload-artifact@v4
@@ -51,7 +53,7 @@ jobs:
 
   deploy-to-scaleway:
     runs-on: ubuntu-latest
-    needs: [package-ark-indexer-transactions-service]
+    needs: [package-marketplace-api]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -78,7 +80,7 @@ jobs:
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          database-url: ${{ secrets.DATABASE_URL }}
+          database-url: ${{ secrets.DATABASE_URL_STAGING }}
 
       - name: Copy debian package to scaleway
         run: |
@@ -88,18 +90,15 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_PRICEENGINE_API_IP }} "
             sudo dpkg -i ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE_OUTPUT}} &&
-            sudo awk '\$1 == \"database_url:\" {\$2 = \"\\\"${{ secrets.DATABASE_URL }}\\\"\"} 1' /etc/ark-project/transaction.config.yml > /tmp/transaction.config.tmp &&
-            sudo mv /tmp/transaction.config.tmp /etc/ark-project/transaction.production.config.yml &&
             sudo chown -R github:github /etc/ark-project
-            sudo service ark-indexer-transactions@production restart &&
+            sudo service ark-marketplace-api@staging restart &&
             sleep 10
           "
-
 
       - name: Verify Deployment
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_PRICEENGINE_API_IP }} << EOF
-            sudo service ark-indexer-transactions@production status
+            sudo service ark-marketplace-api@staging status
           EOF
 
       - name: Send success notification to dev-updates channel
@@ -108,7 +107,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "✅ Successfully deployed Ark Indexer Transactions to Production environment."
+                  "content": "✅ Successfully deployed Marketplace API to Production environment."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -118,7 +117,6 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "❌ Failed to deploy Ark Indexer Transactions to Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+                  "content": "❌ Failed to deploy Marketplace API to Production environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
-

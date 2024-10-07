@@ -24,6 +24,7 @@ num-traits = "0.2.19"
 starknet-crypto = "0.7.2"
 bigdecimal = { version = "0.3", features = ["serde"] }
 config = "0.14.0"
+clap = { version = "4.5.18", features = ["derive"] }
 
 [package.metadata.deb]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
@@ -34,6 +35,6 @@ section = "admin"
 priority = "optional"
 assets = [
  ["target/release/ark-indexer-transactions", "usr/bin/", "755"],
- ["debian/ark-indexer-transactions.service", "/lib/systemd/system/ark-indexer-transactions.service", "644"], 
+ ["debian/ark-indexer-transactions@.service", "/lib/systemd/system/ark-indexer-transactions@.service", "644"], 
 ]
 maintainer-scripts = "debian/scripts"

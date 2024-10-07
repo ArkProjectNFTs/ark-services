@@ -4,9 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
+      - feature/dev-843-modify-ingest-indexer-ci
     paths:
-      - ".github/workflows/ark-indexer-transactions-production.yml"
+      - ".github/workflows/ark-indexer-transactions-staging.yml"
       - "ark-indexer-transactions/**"
 
 jobs:
@@ -78,7 +79,7 @@ jobs:
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          database-url: ${{ secrets.DATABASE_URL }}
+          database-url: ${{ secrets.DATABASE_URL_STAGING }}
 
       - name: Copy debian package to scaleway
         run: |
@@ -88,10 +89,10 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_PRICEENGINE_API_IP }} "
             sudo dpkg -i ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE_OUTPUT}} &&
-            sudo awk '\$1 == \"database_url:\" {\$2 = \"\\\"${{ secrets.DATABASE_URL }}\\\"\"} 1' /etc/ark-project/transaction.config.yml > /tmp/transaction.config.tmp &&
-            sudo mv /tmp/transaction.config.tmp /etc/ark-project/transaction.production.config.yml &&
+            sudo awk '\$1 == \"database_url:\" {\$2 = \"\\\"${{ secrets.DATABASE_URL_STAGING }}\\\"\"} 1' /etc/ark-project/transaction.config.yml > /tmp/transaction.config.tmp &&
+            sudo mv /tmp/transaction.config.tmp /etc/ark-project/transaction.config.staging.yml &&
             sudo chown -R github:github /etc/ark-project
-            sudo service ark-indexer-transactions@production restart &&
+            sudo service ark-indexer-transactions@staging restart &&
             sleep 10
           "
 
@@ -99,7 +100,7 @@ jobs:
       - name: Verify Deployment
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_PRICEENGINE_API_IP }} << EOF
-            sudo service ark-indexer-transactions@production status
+            sudo service ark-indexer-transactions@staging status
           EOF
 
       - name: Send success notification to dev-updates channel

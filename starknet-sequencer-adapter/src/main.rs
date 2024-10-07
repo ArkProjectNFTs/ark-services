@@ -152,6 +152,7 @@ async fn main() {
                             }
                             Err(e) => {
                                 eprintln!("Failed to fetch block {}: {}", block_number, e);
+                                tx.send(block_number).await.unwrap();
                                 notify.notify_one(); // Retry the block
                             }
                         }
