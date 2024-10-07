@@ -7,13 +7,13 @@ use services::contract::manager::ContractManager;
 use services::storage::block::{get_latest_block_in_folder, get_latest_folder_path};
 use services::storage::database::DatabaseStorage;
 
+use clap::Parser;
 use starknet::core::types::Felt;
 use starknet::providers::{
     jsonrpc::{HttpTransport, JsonRpcClient},
     Url,
 };
 use tokio::time::{sleep, Duration};
-use clap::Parser;
 
 // Default alocator change
 #[global_allocator]

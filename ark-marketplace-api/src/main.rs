@@ -8,7 +8,8 @@ use ark_marketplace_api::routes::token;
 use ark_marketplace_api::utils::app_config::AppConfig;
 use aws_config::meta::region::RegionProviderChain;
 use aws_config::{BehaviorVersion, Region};
-use aws_sdk_secretsmanager::config::{Credentials};
+use aws_sdk_secretsmanager::config::Credentials;
+use aws_sdk_secretsmanager::Client as AwsClient;
 use redis::{aio::MultiplexedConnection, Client};
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
@@ -18,7 +19,6 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
-use aws_sdk_secretsmanager::Client as AwsClient;
 
 use ark_marketplace_api::handlers::{
     collection_handler, default_handler, portfolio_handler, token_handler,
@@ -83,11 +83,7 @@ async fn get_database_url(client: AwsClient, secret: String) -> Result<String> {
     match std::env::var("DATABASE_URL") {
         Ok(url) => Ok(url),
         Err(_) => {
-            let secret_value = client
-                .get_secret_value()
-                .secret_id(secret)
-                .send()
-                .await?;
+            let secret_value = client.get_secret_value().secret_id(secret).send().await?;
             let result = secret_value.secret_string.unwrap();
 
             let creds: DatabaseCredentials = serde_json::from_str(&result)?;
@@ -105,11 +101,7 @@ async fn get_write_database_url(client: AwsClient, secret: String) -> Result<Str
     match std::env::var("WRITE_DATABASE_URL") {
         Ok(url) => Ok(url),
         Err(_) => {
-            let secret_value = client
-                .get_secret_value()
-                .secret_id(secret)
-                .send()
-                .await?;
+            let secret_value = client.get_secret_value().secret_id(secret).send().await?;
             let result = secret_value.secret_string.unwrap();
 
             let creds: DatabaseCredentials = serde_json::from_str(&result)?;
@@ -123,7 +115,6 @@ async fn get_write_database_url(client: AwsClient, secret: String) -> Result<Str
     }
 }
 
-
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let args = Args::parse();
@@ -134,40 +125,41 @@ async fn main() -> std::io::Result<()> {
             println!("starting api marketplace....");
             dotenv::dotenv().ok();
 
-            let region_provider = RegionProviderChain::first_try(Region::new(config.aws_default_region.clone()));
+            let region_provider =
+                RegionProviderChain::first_try(Region::new(config.aws_default_region.clone()));
             let credentials = Credentials::new(
                 &config.aws_access_key_id,
                 &config.aws_secret_access_key,
                 None,
                 None,
-                "api-marketplace"
+                "api-marketplace",
             );
             let aws_config = aws_config::defaults(BehaviorVersion::v2024_03_28())
-            .region(region_provider)
-            .credentials_provider(credentials)
-            .load()
-            .await;
+                .region(region_provider)
+                .credentials_provider(credentials)
+                .load()
+                .await;
             let client = aws_sdk_secretsmanager::Client::new(&aws_config);
 
-
             let database_url = get_database_url(client.clone(), config.aws_secret_read_db)
-            .await
-            .expect("Could not get the database URL");
-    
-            let write_database_url = get_write_database_url(client.clone(), config.aws_secret_write_db)
                 .await
                 .expect("Could not get the database URL");
-        
+
+            let write_database_url =
+                get_write_database_url(client.clone(), config.aws_secret_write_db)
+                    .await
+                    .expect("Could not get the database URL");
+
             let db_pool = PgPoolOptions::new()
                 .connect(&database_url)
                 .await
                 .expect("Could not connect to the database");
-        
+
             let write_db_pool = PgPoolOptions::new()
                 .connect(&write_database_url)
                 .await
                 .expect("Could not connect to the write database");
-        
+
             let redis_conn = match connect_redis(client.clone(), config.aws_secret_redis_db).await {
                 Ok(con) => con,
                 Err(e) => {
@@ -178,21 +170,22 @@ async fn main() -> std::io::Result<()> {
                     ));
                 }
             };
-        
-            let es_config = match get_elastic_config(client.clone(), config.aws_secret_eleasticsearch_db).await {
-                Ok(es_config) => es_config,
-                Err(e) => {
-                    tracing::error!("Failed to connect to Redis: {}", e);
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "Failed to get Elastic configuration",
-                    ));
-                }
-            };
-        
-        
+
+            let es_config =
+                match get_elastic_config(client.clone(), config.aws_secret_eleasticsearch_db).await
+                {
+                    Ok(es_config) => es_config,
+                    Err(e) => {
+                        tracing::error!("Failed to connect to Redis: {}", e);
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            "Failed to get Elastic configuration",
+                        ));
+                    }
+                };
+
             let db_pools = Arc::new([db_pool.clone(), write_db_pool.clone()]);
-        
+
             HttpServer::new(move || {
                 let cors = Cors::default()
                     // Maybe we need to add some origin for security reason.
@@ -200,7 +193,7 @@ async fn main() -> std::io::Result<()> {
                     .allow_any_method()
                     .allow_any_header()
                     .max_age(3600);
-        
+
                 App::new()
                     .wrap(cors)
                     .wrap(DefaultHeaders::new().add(("X-GIT-REVISION", env!("GIT_HASH", "N/A"))))
@@ -218,13 +211,15 @@ async fn main() -> std::io::Result<()> {
             .bind("0.0.0.0:8080")?
             .run()
             .await
-        },
+        }
         Err(error) => panic!("{:#?}", error),
     }
 }
 
-
-async fn get_elastic_config(client: AwsClient, secret_name: String) -> Result<HashMap<String, String>, Box<dyn Error>> {
+async fn get_elastic_config(
+    client: AwsClient,
+    secret_name: String,
+) -> Result<HashMap<String, String>, Box<dyn Error>> {
     let mut es_config: HashMap<String, String> = HashMap::new();
     let secret_value = client
         .get_secret_value()
@@ -233,19 +228,19 @@ async fn get_elastic_config(client: AwsClient, secret_name: String) -> Result<Ha
         .await?;
     let result = secret_value.secret_string.unwrap();
     let creds: ElasticCredentials = serde_json::from_str(&result)?;
-    let elasticsearch_url =
-                std::env::var("ELASTICSEARCH_URL").unwrap_or(creds.url);
-    let elasticsearch_username =
-                std::env::var("ELASTICSEARCH_USERNAME").unwrap_or(creds.username);
-    let elasticsearch_password =
-                std::env::var("ELASTICSEARCH_PASSWORD").unwrap_or(creds.password);
+    let elasticsearch_url = std::env::var("ELASTICSEARCH_URL").unwrap_or(creds.url);
+    let elasticsearch_username = std::env::var("ELASTICSEARCH_USERNAME").unwrap_or(creds.username);
+    let elasticsearch_password = std::env::var("ELASTICSEARCH_PASSWORD").unwrap_or(creds.password);
     es_config.insert("url".to_string(), elasticsearch_url);
     es_config.insert("username".to_string(), elasticsearch_username);
     es_config.insert("password".to_string(), elasticsearch_password);
     Ok(es_config)
 }
 
-async fn connect_redis(client: AwsClient, secret_name: String) -> Result<Arc<Mutex<MultiplexedConnection>>, Box<dyn Error>> {
+async fn connect_redis(
+    client: AwsClient,
+    secret_name: String,
+) -> Result<Arc<Mutex<MultiplexedConnection>>, Box<dyn Error>> {
     let secret_value = client
         .get_secret_value()
         .secret_id(secret_name)
