@@ -42,6 +42,8 @@ pub struct LiveAuction {
     )]
     pub metadata: Option<JsonValue>,
     pub end_timestamp: Option<i64>,
+    pub collection_address: Option<String>,
+    pub token_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
