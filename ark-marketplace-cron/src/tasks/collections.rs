@@ -77,8 +77,20 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         ), 0
                 ),
                 volume_7d_eth = (
-                    SELECT sum(hex_to_decimal(amount))
+                     SELECT
+                        COALESCE(
+                            ROUND(
+                                SUM(
+                                        CAST(amount AS NUMERIC) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                )::NUMERIC,
+                                2
+                            ),
+                            0
+                        )
                      FROM token_event
+                     LEFT JOIN currency_mapping cm
+                        ON te.contract_address = cm.currency_address
+                        AND te.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Sale'
@@ -103,7 +115,16 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                      ) as owners
                 ),
                 total_volume = (
-                    SELECT COALESCE(ROUND(SUM(CAST(amount AS NUMERIC) / 1e18), 2), 0) //@TODO : replace by decimals from matching table
+                    SELECT
+                        COALESCE(
+                            ROUND(
+                                SUM(
+                                        CAST(amount AS NUMERIC) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                )::NUMERIC,
+                                2
+                            ),
+                            0
+                        )
                      FROM token_event
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
