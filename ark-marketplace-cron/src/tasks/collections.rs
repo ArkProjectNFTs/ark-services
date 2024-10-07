@@ -89,8 +89,8 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         )
                      FROM token_event
                      LEFT JOIN currency_mapping cm
-                        ON te.contract_address = cm.currency_address
-                        AND te.chain_id = cm.chain_id
+                        ON token_event.contract_address = cm.currency_address
+                        AND token_event.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Sale'
@@ -126,6 +126,9 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                             0
                         )
                      FROM token_event
+                     LEFT JOIN currency_mapping cm
+                        ON token_event.contract_address = cm.currency_address
+                        AND token_event.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Sale'
