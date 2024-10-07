@@ -53,6 +53,7 @@ pub struct CollectionData {
     #[schema(value_type = String, example = "1000000000000000")]
     pub floor_7d_percentage: Option<BigDecimal>,
     pub is_verified: Option<bool>,
+    pub deployed_timestamp: Option<i64>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
