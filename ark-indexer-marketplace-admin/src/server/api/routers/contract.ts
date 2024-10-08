@@ -5,6 +5,7 @@ import { spawnMetadataIndexerTask } from "~/lib/aws";
 import {
   fetchContract,
   fetchRefreshingContracts,
+  getDefaultContracts,
   searchContracts,
   updateContract,
   updateIsRefreshingContract,
@@ -24,6 +25,17 @@ export const contractRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       await clearListedTokensCache(input.contractAddress);
     }),
+
+  getContracts: protectedProcedure.query(async () => {
+    try {
+      const contracts = await getDefaultContracts(MAINNET_CHAIN_ID);
+
+      console.log("Contracts found:", JSON.stringify(contracts, null, 2));
+      return contracts;
+    } catch (err) {
+      return [];
+    }
+  }),
 
   searchContracts: protectedProcedure
     .input(

@@ -53,11 +53,22 @@ export async function fetchContract(contractAddress: string, chainId: string) {
   return res.rows.length > 0 ? res.rows[0] : undefined;
 }
 
+export async function getDefaultContracts(chainId: string) {
+  const res = await pool.query<Contract>(
+    `SELECT contract_address, chain_id, updated_timestamp, contract_type, contract_name, contract_symbol, contract_image, metadata_ok, is_spam, is_nsfw, deployed_timestamp, is_verified, save_images, is_refreshing
+     FROM contract
+     WHERE contract_type = 'ERC721' AND is_spam = false AND chain_id = $1 AND contract_name != '' ORDER BY contract_name ASC LIMIT 50`,
+    [chainId],
+  );
+
+  return res.rows;
+}
+
 export async function searchContracts(contractName: string, chainId: string) {
   const res = await pool.query<Contract>(
     `SELECT contract_address, chain_id, updated_timestamp, contract_type, contract_name, contract_symbol, contract_image, metadata_ok, is_spam, is_nsfw, deployed_timestamp, is_verified, save_images, is_refreshing
      FROM contract
-     WHERE contract_type = 'ERC721' AND contract_name ILIKE $1 AND chain_id = $2 ORDER BY contract_image ASC LIMIT 50`,
+     WHERE contract_type = 'ERC721' AND contract_name ILIKE $1 AND chain_id = $2 ORDER BY contract_image ASC, contract_name ASC LIMIT 50`,
     ["%" + contractName + "%", chainId],
   );
 

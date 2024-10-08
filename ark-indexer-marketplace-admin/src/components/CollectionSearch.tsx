@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { Input } from "./ui/input";
 
-export default function CollectionSearch() {
-  const [text, setText] = useState<string>("");
+export default function CollectionSearch(props: { search?: string }) {
+  const [text, setText] = useState<string>(props.search ?? "");
   const router = useRouter();
 
   return (
@@ -21,7 +21,7 @@ export default function CollectionSearch() {
           }
         }}
         type="search"
-        placeholder="Search collection..."
+        placeholder="Type collection name..."
         className="md:w-[100px] lg:w-[300px]"
         value={text}
       />

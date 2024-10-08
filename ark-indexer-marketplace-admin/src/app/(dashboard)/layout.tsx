@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 
+import CollectionSearch from "~/components/CollectionSearch";
 import Header from "~/components/dashboard/Header";
 import { NetworkProvider } from "~/components/dashboard/NetworkProvider";
 import { ThemeProvider } from "~/components/ThemeProvider";
