@@ -164,6 +164,7 @@ impl DatabaseAccess for PgPool {
                  WHERE
                     contract_address = $1
                  AND chain_id = $2
+                 AND metadata is not null
                  LIMIT 3";
 
             let preview_nfts: Vec<PreviewNft> = sqlx::query_as(preview_nft_sql)
