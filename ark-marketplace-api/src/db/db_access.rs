@@ -336,6 +336,7 @@ impl DatabaseAccess for PgPool {
         sort: &str,
         direction: &str,
     ) -> Result<(Vec<CollectionFullData>, bool, i64), Error> {
+        const MIN_COLLECTION_COUNT: usize = 100;
         let total_count = sqlx::query!(
             "
                 SELECT count(*)
@@ -399,13 +400,123 @@ impl DatabaseAccess for PgPool {
             items_per_page,
             (page - 1) * items_per_page,
         );
-        let collection_data = sqlx::query_as::<sqlx::Postgres, CollectionFullData>(&sql_query)
+        let mut collection_data = sqlx::query_as::<sqlx::Postgres, CollectionFullData>(&sql_query)
             .fetch_all(self)
             .await
             .unwrap_or_else(|err| {
                 println!("Query error : {}", err);
                 std::process::exit(1);
             });
+
+        if collection_data.len() < MIN_COLLECTION_COUNT {
+            let missing_count = MIN_COLLECTION_COUNT - collection_data.len();
+
+            // Get the contract addresses already included in collection_data
+            let existing_addresses: Vec<&str> = collection_data
+                .iter()
+                .map(|data| data.address.as_str())
+                .collect();
+
+            let addresses_placeholder = existing_addresses
+                .iter()
+                .map(|address| format!("'{}'", address))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            let additional_sql_query = format!(
+                "SELECT
+                    contract.contract_address as address,
+                    contract_image AS image,
+                    contract_name AS name,
+                    floor_price AS floor,
+                    contract_marketdata.floor_percentage as floor_percentage,
+                    contract_marketdata.volume as volume,
+                    top_bid as top_offer,
+                    contract_marketdata.number_of_sales as sales,
+                    marketcap,
+                    token_listed_count AS listed_items,
+                    listed_percentage,
+                    token_count,
+                    owner_count,
+                    total_volume,
+                    total_sales,
+                    is_verified
+                    FROM
+                     contract
+                     INNER JOIN contract_marketdata on contract.contract_address = contract_marketdata.contract_address and contract.chain_id = contract_marketdata.chain_id
+                            AND contract_marketdata.timerange = '30d'
+                            AND contract_marketdata.volume > 0
+                WHERE contract.contract_address NOT IN ({})
+                GROUP BY contract.contract_address, contract.chain_id, floor_percentage, volume, sales
+                ORDER BY contract_marketdata.volume DESC NULLS LAST
+               LIMIT {}
+               ",
+                addresses_placeholder,
+                missing_count
+            );
+
+            println!("{:?}", additional_sql_query);
+
+            let additional_collections: Vec<CollectionFullData> =
+                sqlx::query_as(&additional_sql_query)
+                    .fetch_all(self)
+                    .await?;
+
+            collection_data.extend(additional_collections);
+
+            // if we still need some collection we collect use number of owner
+            if collection_data.len() < MIN_COLLECTION_COUNT {
+                let missing_count = MIN_COLLECTION_COUNT - collection_data.len();
+
+                // Get the contract addresses already included in collection_data
+                let existing_addresses: Vec<&str> = collection_data
+                    .iter()
+                    .map(|data| data.address.as_str())
+                    .collect();
+
+                let addresses_placeholder = existing_addresses
+                    .iter()
+                    .map(|address| format!("'{}'", address))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let additional_sql_query = format!(
+                    "SELECT
+                    contract.contract_address as address,
+                    contract_image AS image,
+                    contract_name AS name,
+                    floor_price AS floor,
+                    CAST(0 AS BIGINT) AS floor_percentage,
+                    CAST(0 AS BIGINT) AS volume,
+                    top_bid as top_offer,
+                    CAST(0 AS BIGINT) AS sales,
+                    marketcap,
+                    token_listed_count AS listed_items,
+                    listed_percentage,
+                    token_count,
+                    owner_count,
+                    total_volume,
+                    total_sales,
+                    is_verified
+                    FROM
+                     contract
+                WHERE contract.contract_address NOT IN ({})
+                  AND contract.owner_count > 0
+                GROUP BY contract.contract_address, contract.chain_id
+                ORDER BY owner_count desc
+               LIMIT {}
+               ",
+                    addresses_placeholder, missing_count
+                );
+
+                let additional_collections: Vec<CollectionFullData> =
+                    sqlx::query_as(&additional_sql_query)
+                        .fetch_all(self)
+                        .await?;
+
+                collection_data.extend(additional_collections);
+            }
+        }
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
