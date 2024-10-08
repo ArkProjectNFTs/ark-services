@@ -37,16 +37,20 @@ async fn main() {
             let processed_blocks = Arc::new(Mutex::new(0usize));
             let notify = Arc::new(Notify::new());
             let call_interval = Duration::from_millis(60_000 / config.max_calls_per_minute as u64);
-            let state_path = Arc::new(PathBuf::from("/opt/fast-indexer/state/state.json"));
+            let state_path = Arc::new(PathBuf::from(format!(
+                "{}/state/state.json",
+                config.storage_dir
+            )));
             // let events_state_path = Arc::new(PathBuf::from("/opt/fast-indexer/state/events_state.json"));
 
-            // Ensure the state and events directories exist
-            fs::create_dir_all("/opt/fast-indexer/state").unwrap();
-            fs::create_dir_all("/opt/fast-indexer/events").unwrap();
+            // Ensure the state, events and blocks directories exist
+            fs::create_dir_all(format!("{}/state", config.storage_dir)).unwrap();
+            fs::create_dir_all(format!("{}/events", config.storage_dir)).unwrap();
+            fs::create_dir_all(format!("{}/blocks", config.storage_dir)).unwrap();
 
             let initial_processed_blocks = {
                 let mut count = 0;
-                for entry in fs::read_dir("/opt/fast-indexer/blocks").unwrap() {
+                for entry in fs::read_dir(format!("{}/blocks", config.storage_dir)).unwrap() {
                     let entry = entry.unwrap();
                     let path = entry.path();
                     if path.is_dir() {
@@ -71,7 +75,11 @@ async fn main() {
             let (tx, rx) = tokio::sync::mpsc::channel(100);
             let rx = Arc::new(Mutex::new(rx));
 
+            let storage_dir = Arc::new(config.storage_dir.clone());
+            let storage_dir_verify = Arc::clone(&storage_dir);
+
             for i in 0..config.monitor_threads {
+                let storage_dir = Arc::clone(&storage_dir);
                 let client = Arc::clone(&client);
                 let latest_block_number = Arc::clone(&latest_block_number);
                 let tx = tx.clone();
@@ -100,7 +108,7 @@ async fn main() {
                         // drop(latest_block_number);
                         // println!("check with range {} to {}", range_start, range_end);
                         for block_number in range_start..=range_end {
-                            if !is_block_saved(config.blocks_per_file, block_number) {
+                            if !is_block_saved(&storage_dir, config.blocks_per_file, block_number) {
                                 println!("send to save {}", block_number);
                                 tx.send(block_number).await.unwrap();
                             }
@@ -134,9 +142,12 @@ async fn main() {
 
                         match fetch_block(BASE_URL, &client, block_number).await {
                             Ok(block) => {
-                                if let Err(e) =
-                                    save_block(config.blocks_per_file, block_number, &block)
-                                {
+                                if let Err(e) = save_block(
+                                    &storage_dir,
+                                    config.blocks_per_file,
+                                    block_number,
+                                    &block,
+                                ) {
                                     eprintln!("Failed to save block {}: {}", block_number, e);
                                 } else {
                                     println!("block: {} saved", block_number);
@@ -164,7 +175,7 @@ async fn main() {
             {
                 let state_path = Arc::clone(&state_path);
                 tokio::spawn(async move {
-                    verify_blocks_task(state_path).await;
+                    verify_blocks_task(&storage_dir_verify, state_path).await;
                 });
             }
 

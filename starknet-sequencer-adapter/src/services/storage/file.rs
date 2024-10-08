@@ -5,11 +5,13 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::Path;
 
-pub fn save_block(blocks_per_file: u64, block_number: u64, block: &Value) -> std::io::Result<()> {
-    let folder = format!(
-        "/opt/fast-indexer/blocks/{}/",
-        block_number / blocks_per_file
-    );
+pub fn save_block(
+    storage_dir: &str,
+    blocks_per_file: u64,
+    block_number: u64,
+    block: &Value,
+) -> std::io::Result<()> {
+    let folder = format!("{}/blocks/{}/", storage_dir, block_number / blocks_per_file);
     fs::create_dir_all(&folder)?;
     let file_path = format!("{}block_{}.json", folder, block_number);
     let mut file = File::create(file_path)?;
@@ -17,9 +19,10 @@ pub fn save_block(blocks_per_file: u64, block_number: u64, block: &Value) -> std
     Ok(())
 }
 
-pub fn is_block_saved(blocks_per_file: u64, block_number: u64) -> bool {
+pub fn is_block_saved(storage_dir: &str, blocks_per_file: u64, block_number: u64) -> bool {
     let file_path = format!(
-        "/opt/fast-indexer/blocks/{}/block_{}.json",
+        "{}/blocks/{}/block_{}.json",
+        storage_dir,
         block_number / blocks_per_file,
         block_number
     );
