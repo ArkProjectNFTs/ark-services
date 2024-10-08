@@ -455,8 +455,6 @@ impl DatabaseAccess for PgPool {
                 missing_count
             );
 
-            println!("{:?}", additional_sql_query);
-
             let additional_collections: Vec<CollectionFullData> =
                 sqlx::query_as(&additional_sql_query)
                     .fetch_all(self)
