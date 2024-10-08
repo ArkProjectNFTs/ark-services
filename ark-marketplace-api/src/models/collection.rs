@@ -48,7 +48,7 @@ pub struct CollectionData {
     pub listed_percentage: Option<i64>,
     pub token_count: Option<i64>,
     pub owner_count: Option<i64>,
-    pub total_volume: Option<i64>,
+    pub total_volume: Option<BigDecimal>,
     pub total_sales: Option<i64>,
     #[schema(value_type = String, example = "1000000000000000")]
     pub floor_7d_percentage: Option<BigDecimal>,
