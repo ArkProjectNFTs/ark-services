@@ -1,0 +1,1 @@
+ALTER COLUMN total_volume TYPE numeric;
