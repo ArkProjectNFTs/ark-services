@@ -1,6 +1,6 @@
 use crate::helpers::config::{
-    default_blocks_per_file, default_max_call_per_minute, default_monitor_threads,
-    default_progress_bar_width, default_storage_dir, default_threads,
+    default_blocks_per_file, default_from_block, default_max_call_per_minute,
+    default_monitor_threads, default_progress_bar_width, default_storage_dir, default_threads,
 };
 use serde::Deserialize;
 
@@ -18,4 +18,6 @@ pub struct Config {
     pub progress_bar_width: usize,
     #[serde(default = "default_storage_dir")]
     pub storage_dir: String,
+    #[serde(default = "default_from_block")]
+    pub from_block: u64,
 }
