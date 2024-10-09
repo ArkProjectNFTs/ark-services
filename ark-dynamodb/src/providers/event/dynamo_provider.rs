@@ -76,6 +76,7 @@ impl DynamoDbEventProvider {
                     marketplace_name: convert::attr_to_str(data, "MarketplaceName")?,
                     price: convert::attr_to_str(data, "Price")?,
                     quantity: convert::attr_to_u64(data, "Quantity")?,
+                    chain_id: "0x534e5f4d41494e".to_string(),
                 })
             }
             Err(_) => Err(ProviderError::ParsingError(
