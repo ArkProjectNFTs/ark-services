@@ -93,7 +93,7 @@ impl DatabaseAccess for PgPool {
                 ELSE hex_to_decimal(te.amount)
             END AS price
             ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+            event_type_list(&[TokenEventType::Fulfill])
         );
 
         let from_select_part = format!(
@@ -103,7 +103,7 @@ impl DatabaseAccess for PgPool {
                 ELSE te.from_address
             END AS from
             ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+            event_type_list(&[TokenEventType::Fulfill])
         );
 
         let to_select_part = format!(
@@ -113,7 +113,7 @@ impl DatabaseAccess for PgPool {
                 ELSE te.to_address
             END AS to
             ",
-            event_type_list(&[TokenEventType::Fulfill, TokenEventType::Executed])
+            event_type_list(&[TokenEventType::Fulfill])
         );
 
         let from_sql_query = format!(
