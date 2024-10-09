@@ -11,6 +11,7 @@ pub struct AppConfig {
     pub chain_id: String,
     pub start_from: u64,
     pub end_at: Option<u64>,
+    pub orderbooks: Vec<String>,
 }
 
 impl AppConfig {

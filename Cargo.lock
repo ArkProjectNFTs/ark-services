@@ -511,6 +511,7 @@ name = "ark-indexer-transactions"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "arkproject",
  "async-trait",
  "bigdecimal 0.4.6",
  "chrono",

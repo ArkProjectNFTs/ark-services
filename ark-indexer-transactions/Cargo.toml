@@ -27,6 +27,8 @@ config = "0.14.0"
 clap = { version = "4.5.18", features = ["derive"] }
 hex = "0.4.3"
 
+arkproject.workspace = true
+
 [package.metadata.deb]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
 copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"

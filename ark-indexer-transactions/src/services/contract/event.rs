@@ -11,7 +11,7 @@ use crate::{
 };
 use bigdecimal::BigDecimal;
 use starknet::{
-    core::types::{BlockId::Hash, Felt},
+    core::types::{BlockId::Hash, EmittedEvent, Felt},
     providers::Provider,
 };
 use std::str::FromStr;
@@ -23,6 +23,8 @@ use super::{
     erc1155, erc1400, erc20, erc721,
     manager::ContractManager,
 };
+
+use arkproject::orderbook;
 
 impl<S, P> ContractManager<S, P>
 where
@@ -685,6 +687,28 @@ where
                 _ => return Ok(()),
             }
         }
+        Ok(())
+    }
+
+    pub async fn handle_orderbook_event(
+        &self,
+        event: Event,
+        _event_id: u64,
+        _chain_id: Felt,
+        block_hash: Felt,
+        tx_hash: Felt,
+        _block_timestamp: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let emitted_event = EmittedEvent {
+            from_address: event.from_address,
+            keys: event.keys,
+            data: event.data,
+            block_hash: Some(block_hash),
+            block_number: None,
+            transaction_hash: tx_hash,
+        };
+        let orderbook_event: orderbook::Event = orderbook::Event::from(emitted_event);
+        println!("ORDERBOOK EVENT: {:?}", orderbook_event);
         Ok(())
     }
 
