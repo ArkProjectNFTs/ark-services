@@ -81,7 +81,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         COALESCE(
                             ROUND(
                                 SUM(
-                                        CAST(amount AS NUMERIC) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
                                 )::NUMERIC,
                                 2
                             ),
@@ -93,7 +93,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         AND token_event.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sale'
+                     AND token_event.event_type in ('Sale', 'Executed')
                      AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
                 ),
                 sales_7d = (
@@ -119,7 +119,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         COALESCE(
                             ROUND(
                                 SUM(
-                                        CAST(amount AS NUMERIC) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
                                 )::NUMERIC,
                                 2
                             ),
@@ -131,7 +131,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         AND token_event.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sale'
+                     AND token_event.event_type in ('Sale', 'Executed')
                 ),
                 total_sales = (
                     SELECT COUNT(*)
