@@ -36,7 +36,7 @@ impl DatabaseAccess for PgPool {
             LEFT JOIN contract c ON te.contract_address = c.contract_address
                     AND te.chain_id = c.chain_id
             WHERE
-                te.event_type = 'Sale'
+                te.event_type IN ('Sale', 'Executed')
             ORDER BY
                 te.block_timestamp DESC
             LIMIT 12
