@@ -81,7 +81,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         COALESCE(
                             ROUND(
                                 SUM(
-                                        CAST(amount AS NUMERIC) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
                                 )::NUMERIC,
                                 2
                             ),
@@ -119,7 +119,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         COALESCE(
                             ROUND(
                                 SUM(
-                                        CAST(amount AS NUMERIC) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
                                 )::NUMERIC,
                                 2
                             ),
