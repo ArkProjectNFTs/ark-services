@@ -66,7 +66,7 @@
       {
         "ordinal": 12,
         "name": "total_volume",
-        "type_info": "Int8"
+        "type_info": "Numeric"
       },
       {
         "ordinal": 13,
