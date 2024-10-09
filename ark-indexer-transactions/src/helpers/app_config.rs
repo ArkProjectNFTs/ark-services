@@ -10,6 +10,7 @@ pub struct AppConfig {
     pub parsing_state_path: String,
     pub chain_id: String,
     pub start_from: u64,
+    pub orderbooks: Vec<String>,
 }
 
 impl AppConfig {

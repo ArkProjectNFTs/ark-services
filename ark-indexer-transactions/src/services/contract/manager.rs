@@ -36,6 +36,7 @@ where
     pub provider: Arc<P>,
     /// A cache with contract address mapped to its type.
     pub cache: Arc<Mutex<HashMap<Felt, ContractType>>>,
+    pub orderbooks: Arc<Vec<Felt>>,
 }
 
 impl<S, P> Clone for ContractManager<S, P>
@@ -48,6 +49,7 @@ where
             storage: Arc::clone(&self.storage),
             provider: Arc::clone(&self.provider),
             cache: Arc::clone(&self.cache),
+            orderbooks: Arc::clone(&self.orderbooks),
         }
     }
 }
@@ -57,11 +59,12 @@ where
     S: Storage + Send + Sync + 'static,
     P: Provider + Send + Sync + 'static,
 {
-    pub fn new(storage: S, provider: P) -> Self {
+    pub fn new(storage: S, provider: P, orderbooks: Vec<Felt>) -> Self {
         Self {
             storage: Arc::new(Mutex::new(storage)),
             provider: Arc::new(provider),
             cache: Arc::new(Mutex::new(HashMap::new())),
+            orderbooks: Arc::new(orderbooks),
         }
     }
 
@@ -193,60 +196,66 @@ where
         _block_timestamp: u64,
         chain_id: &str,
     ) -> Result<ContractType, Box<dyn std::error::Error + Send + Sync>> {
-        match self.get_cached_or_fetch_info(address, chain_id).await {
-            Ok(contract_type) => Ok(contract_type),
-            Err(_) => {
-                if let Ok(contract_type) = self.get_cached_or_fetch_info(address, chain_id).await {
-                    return Ok(contract_type);
+        if self.orderbooks.contains(&address) {
+            Ok(ContractType::Orderbook)
+        } else {
+            match self.get_cached_or_fetch_info(address, chain_id).await {
+                Ok(contract_type) => Ok(contract_type),
+                Err(_) => {
+                    if let Ok(contract_type) =
+                        self.get_cached_or_fetch_info(address, chain_id).await
+                    {
+                        return Ok(contract_type);
+                    }
+                    // If the contract info is not cached, identify and cache it.
+                    let contract_type = self.detect_token_standard(address).await?;
+                    let mut cache = self.cache.lock().await;
+                    cache.insert(address, contract_type.clone());
+                    drop(cache);
+                    let name = self
+                        .get_contract_property_string(
+                            address,
+                            "name",
+                            vec![],
+                            BlockId::Tag(BlockTag::Pending),
+                        )
+                        .await
+                        .ok();
+                    let symbol = self
+                        .get_contract_property_string(
+                            address,
+                            "symbol",
+                            vec![],
+                            BlockId::Tag(BlockTag::Pending),
+                        )
+                        .await
+                        .ok();
+                    // println!(
+                    //     "Contract [0x{:064x}] details - Type: {}, Name: {:?}, Symbol: {:?}",
+                    //     address, contract_type, name, symbol
+                    // );
+
+                    let _info = ContractInfo {
+                        chain_id: chain_id.to_string(),
+                        contract_address: address.to_hex_string(),
+                        contract_type: contract_type.to_string(),
+                        name,
+                        symbol,
+                        image: None,
+                    };
+
+                    // if let Err(e) = self
+                    //     .storage
+                    //     .register_contract_info(&info, block_timestamp)
+                    //     .await
+                    // {
+                    //     error!(
+                    //         "Failed to store contract info for [0x{:064x}]: {:?}",
+                    //         address, e
+                    //     );
+                    // }
+                    Ok(contract_type)
                 }
-                // If the contract info is not cached, identify and cache it.
-                let contract_type = self.detect_token_standard(address).await?;
-                let mut cache = self.cache.lock().await;
-                cache.insert(address, contract_type.clone());
-                drop(cache);
-                let name = self
-                    .get_contract_property_string(
-                        address,
-                        "name",
-                        vec![],
-                        BlockId::Tag(BlockTag::Pending),
-                    )
-                    .await
-                    .ok();
-                let symbol = self
-                    .get_contract_property_string(
-                        address,
-                        "symbol",
-                        vec![],
-                        BlockId::Tag(BlockTag::Pending),
-                    )
-                    .await
-                    .ok();
-                // println!(
-                //     "Contract [0x{:064x}] details - Type: {}, Name: {:?}, Symbol: {:?}",
-                //     address, contract_type, name, symbol
-                // );
-
-                let _info = ContractInfo {
-                    chain_id: chain_id.to_string(),
-                    contract_address: address.to_hex_string(),
-                    contract_type: contract_type.to_string(),
-                    name,
-                    symbol,
-                    image: None,
-                };
-
-                // if let Err(e) = self
-                //     .storage
-                //     .register_contract_info(&info, block_timestamp)
-                //     .await
-                // {
-                //     error!(
-                //         "Failed to store contract info for [0x{:064x}]: {:?}",
-                //         address, e
-                //     );
-                // }
-                Ok(contract_type)
             }
         }
     }
@@ -503,6 +512,17 @@ where
                 //     contract_type, contract_address
                 // );
                 self.handle_erc1400_event(
+                    event,
+                    event_id,
+                    chain_id,
+                    block_hash,
+                    tx_hash,
+                    block_timestamp,
+                )
+                .await?
+            }
+            ContractType::Orderbook => {
+                self.handle_orderbook_event(
                     event,
                     event_id,
                     chain_id,

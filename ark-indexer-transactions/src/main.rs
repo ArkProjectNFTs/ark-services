@@ -12,6 +12,7 @@ use starknet::providers::{
     jsonrpc::{HttpTransport, JsonRpcClient},
     Url,
 };
+use starknet_crypto::Felt;
 use tokio::time::{sleep, Duration};
 
 // Default alocator change
@@ -38,8 +39,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let provider = JsonRpcClient::new(HttpTransport::new(
                 Url::parse(&config.rcp_provider).unwrap(),
             ));
-
-            let mut contract_manager = ContractManager::new(storage, provider);
+            let orderbooks: Vec<Felt> = config
+                .orderbooks
+                .iter()
+                .filter_map(|e| Felt::from_hex(&e).ok())
+                .collect();
+            let mut contract_manager = ContractManager::new(storage, provider, orderbooks);
             // let chain_id = Felt::from_hex(&config.chain_id).unwrap_or(Felt::ZERO); // starknet mainnet chain ID
             loop {
                 let latest_folder = get_latest_folder_path(&config.base_path)?;

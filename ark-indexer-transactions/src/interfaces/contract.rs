@@ -144,6 +144,7 @@ pub enum ContractType {
     ERC721,
     ERC1155,
     ERC1400,
+    Orderbook,
     Other,
 }
 
@@ -156,6 +157,7 @@ impl FromStr for ContractType {
             "ERC721" => Ok(ContractType::ERC721),
             "ERC1155" => Ok(ContractType::ERC1155),
             "ERC1400" => Ok(ContractType::ERC1400),
+            "Orderbook" => Ok(ContractType::Orderbook),
             _ => Ok(ContractType::Other),
         }
     }
@@ -169,6 +171,7 @@ impl std::fmt::Display for ContractType {
             ContractType::ERC1155 => write!(f, "ERC1155"),
             ContractType::ERC20 => write!(f, "ERC20"),
             ContractType::ERC1400 => write!(f, "ERC1400"),
+            ContractType::Orderbook => write!(f, "Orderbook"),
         }
     }
 }
@@ -181,6 +184,7 @@ impl AsRef<str> for ContractType {
             ContractType::ERC1155 => "ERC1155",
             ContractType::ERC20 => "ERC20",
             ContractType::ERC1400 => "ERC1400",
+            ContractType::Orderbook => "Orderbook",
         }
     }
 }
