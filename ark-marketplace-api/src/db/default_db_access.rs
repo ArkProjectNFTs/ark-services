@@ -26,7 +26,8 @@ impl DatabaseAccess for PgPool {
                 te.from_address AS from,
                 te.to_address AS to,
                 te.block_timestamp AS timestamp,
-                te.transaction_hash
+                te.transaction_hash,
+                te.token_id
             FROM
                 token_event te
             LEFT JOIN

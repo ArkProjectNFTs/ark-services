@@ -26,6 +26,7 @@ pub struct LastSale {
     pub to: String,
     pub timestamp: Option<i64>,
     pub transaction_hash: Option<String>,
+    pub token_id: Option<String>,
 }
 #[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
 pub struct LiveAuction {
