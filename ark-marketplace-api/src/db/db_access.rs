@@ -6,8 +6,9 @@ use crate::models::collection::{
     CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionFullData,
     CollectionPortfolioData, CollectionSearchData, OwnerData,
 };
+use crate::models::default::Currency;
 use crate::models::token::{
-    Currency, Listing, ListingRaw, TokenActivityData, TokenData, TokenDataListing, TokenEventType,
+    Listing, ListingRaw, TokenActivityData, TokenData, TokenDataListing, TokenEventType,
     TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData,
     TopOffer,
 };

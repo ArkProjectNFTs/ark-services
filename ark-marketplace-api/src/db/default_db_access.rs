@@ -1,10 +1,12 @@
 use crate::db::db_access::LISTING_TYPE_AUCTION_STR;
 use crate::handlers::utils::CHAIN_ID;
-use crate::models::default::{CollectionInfo, LastSale, LiveAuction, PreviewNft, Trending};
+use crate::models::default::{
+    CollectionInfo, Currency, LastSale, LastSaleDB, LiveAuction, PreviewNft, Trending,
+};
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
-
+use tracing::info;
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
 pub trait DatabaseAccess: Send + Sync {
@@ -17,6 +19,16 @@ pub trait DatabaseAccess: Send + Sync {
 #[async_trait]
 impl DatabaseAccess for PgPool {
     async fn get_last_sales(&self) -> Result<Vec<LastSale>, Error> {
+        let currencies: Vec<Currency> = sqlx::query_as!(
+            Currency,
+            r#"
+            SELECT currency_address as contract, symbol, decimals
+            FROM public.currency_mapping
+            "#
+        )
+        .fetch_all(self)
+        .await?;
+
         let recent_sales_query = r#"
             SELECT
                 t.metadata,
@@ -27,7 +39,8 @@ impl DatabaseAccess for PgPool {
                 te.to_address AS to,
                 te.block_timestamp AS timestamp,
                 te.transaction_hash,
-                te.token_id
+                te.token_id,
+                te.currency_address
             FROM
                 token_event te
             LEFT JOIN
@@ -44,9 +57,31 @@ impl DatabaseAccess for PgPool {
         "#;
 
         // Execute the query
-        let last_sales = sqlx::query_as::<_, LastSale>(recent_sales_query)
+        let last_sales_db = sqlx::query_as::<_, LastSaleDB>(recent_sales_query)
             .fetch_all(self)
             .await?;
+
+        let last_sales: Vec<LastSale> = last_sales_db
+            .into_iter()
+            .map(|sale| {
+                let currency = currencies
+                    .iter()
+                    .find(|c| c.contract == sale.currency_address)
+                    .cloned();
+                LastSale {
+                    metadata: sale.metadata,
+                    collection_name: sale.collection_name,
+                    collection_address: sale.collection_address,
+                    price: sale.price,
+                    from: sale.from,
+                    to: sale.to,
+                    timestamp: sale.timestamp,
+                    transaction_hash: sale.transaction_hash,
+                    token_id: sale.token_id,
+                    currency,
+                }
+            })
+            .collect();
 
         Ok(last_sales)
     }

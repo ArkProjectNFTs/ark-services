@@ -4,6 +4,27 @@ use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 use sqlx::Row;
 
+#[derive(Serialize, Deserialize, Debug, FromRow, utoipa::ToSchema, Clone)]
+pub struct Currency {
+    pub contract: Option<String>,
+    pub symbol: Option<String>,
+    pub decimals: Option<i16>,
+}
+
+#[derive(FromRow)]
+pub struct LastSaleDB {
+    pub metadata: Option<JsonValue>,
+    pub collection_name: String,
+    pub collection_address: String,
+    pub price: Option<BigDecimal>,
+    pub from: String,
+    pub to: String,
+    pub timestamp: Option<i64>,
+    pub transaction_hash: Option<String>,
+    pub token_id: Option<String>,
+    pub currency_address: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
 pub struct LastSale {
     #[schema(
@@ -27,7 +48,12 @@ pub struct LastSale {
     pub timestamp: Option<i64>,
     pub transaction_hash: Option<String>,
     pub token_id: Option<String>,
+    #[schema(
+        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
+    )]
+    pub currency: Option<Currency>,
 }
+
 #[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
 pub struct LiveAuction {
     #[schema(
