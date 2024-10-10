@@ -1800,9 +1800,9 @@ impl OrderProvider {
                             chain_id: token_data.chain_id,
                             event_type: TokenEventType::Executed,
                             canceled_reason: None,
-                            to_address: None,
+                            to_address: data.to.clone(),
                             amount: token_data.listing_start_amount,
-                            from_address: None,
+                            from_address: data.from.clone(),
                         },
                     )
                     .await?;
