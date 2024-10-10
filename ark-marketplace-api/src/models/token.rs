@@ -323,6 +323,21 @@ pub struct TokenMetadataInfo {
     pub metadata_updated_at: i64,
 }
 
+#[derive(Debug, Deserialize, Serialize, FromRow)]
+pub struct TokenActivityDataDB {
+    pub activity_type: TokenEventType,
+    pub price: Option<BigDecimal>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub time_stamp: i64,
+    pub transaction_hash: Option<String>,
+    pub metadata: Option<JsonValue>,
+    pub collection_name: Option<String>,
+    pub collection_is_verified: Option<bool>,
+    pub collection_address: Option<String>,
+    pub currency_address: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct TokenActivityData {
     pub activity_type: TokenEventType,
@@ -347,6 +362,7 @@ pub struct TokenActivityData {
     pub collection_name: Option<String>,
     pub collection_is_verified: Option<bool>,
     pub collection_address: Option<String>,
+    pub currency_address: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]

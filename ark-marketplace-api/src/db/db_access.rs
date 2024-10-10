@@ -8,9 +8,9 @@ use crate::models::collection::{
 };
 use crate::models::default::Currency;
 use crate::models::token::{
-    Listing, ListingRaw, TokenActivityData, TokenData, TokenDataListing, TokenEventType,
-    TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData, TokenPortfolioData,
-    TopOffer,
+    Listing, ListingRaw, TokenActivityData, TokenActivityDataDB, TokenData, TokenDataListing,
+    TokenEventType, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData,
+    TokenPortfolioData, TopOffer,
 };
 use crate::utils::db_utils::event_type_list;
 use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
@@ -1420,6 +1420,7 @@ impl DatabaseAccess for PgPool {
                 contract.contract_name as collection_name,
                 contract.is_verified as collection_is_verified,
                 contract.contract_address as collection_address,
+                te.currency_address,
                 {price_select},
                 {from_select},
                 {to_select}
@@ -1433,7 +1434,7 @@ impl DatabaseAccess for PgPool {
             to_select = to_select_part,
         );
 
-        let token_activity_data: Vec<TokenActivityData> = sqlx::query_as(&activity_sql_query)
+        let token_activity_data: Vec<TokenActivityDataDB> = sqlx::query_as(&activity_sql_query)
             .bind(contract_address)
             .bind(chain_id)
             .bind(token_id)
