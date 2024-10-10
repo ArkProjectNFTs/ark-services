@@ -3,8 +3,8 @@ use futures_util::TryStreamExt;
 use std::time::SystemTime;
 
 use crate::models::collection::{
-    CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionFullData,
-    CollectionPortfolioData, CollectionSearchData, OwnerData,
+    CollectionActivityData, CollectionActivityDataDB, CollectionData, CollectionFloorPrice,
+    CollectionFullData, CollectionPortfolioData, CollectionSearchData, OwnerData,
 };
 use crate::models::default::Currency;
 use crate::models::token::{
@@ -716,6 +716,7 @@ impl DatabaseAccess for PgPool {
                 te.block_timestamp AS time_stamp,
                 te.transaction_hash,
                 te.token_id,
+                te.currency_address,
                 token.metadata as token_metadata,
                 contract.contract_name as name,
                 contract.is_verified,
@@ -736,12 +737,43 @@ impl DatabaseAccess for PgPool {
             offset,
         );
 
-        let collection_activity_data: Vec<CollectionActivityData> =
+        let collection_activity_data_db: Vec<CollectionActivityDataDB> =
             sqlx::query_as(&activity_sql_query)
                 .bind(contract_address)
                 .bind(chain_id)
                 .fetch_all(self)
                 .await?;
+
+        let currencies: Vec<Currency> = sqlx::query_as!(
+            Currency,
+            r#"SELECT currency_address as contract, symbol, decimals FROM public.currency_mapping"#
+        )
+        .fetch_all(self)
+        .await?;
+
+        let collection_activity_data: Vec<CollectionActivityData> = collection_activity_data_db
+            .into_iter()
+            .map(|sale| {
+                let currency = currencies
+                    .iter()
+                    .find(|c| c.contract == sale.currency_address)
+                    .cloned();
+                CollectionActivityData {
+                    activity_type: sale.activity_type,
+                    price: sale.price,
+                    from: sale.from,
+                    to: sale.to,
+                    time_stamp: sale.time_stamp,
+                    transaction_hash: sale.transaction_hash,
+                    token_id: sale.token_id,
+                    token_metadata: sale.token_metadata,
+                    name: sale.name,
+                    address: sale.address,
+                    is_verified: sale.is_verified,
+                    currency: currency,
+                }
+            })
+            .collect();
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

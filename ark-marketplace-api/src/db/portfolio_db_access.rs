@@ -1,5 +1,8 @@
+use crate::models::default::Currency;
 use crate::models::portfolio::{OfferData, StatsData};
-use crate::models::token::{TokenEventType, TokenPortfolioActivityData};
+use crate::models::token::{
+    TokenEventType, TokenPortfolioActivityData, TokenPortfolioActivityDataDB,
+};
 use crate::types::offer_type::OfferType;
 use std::time::SystemTime;
 
@@ -140,6 +143,7 @@ impl DatabaseAccess for PgPool {
                 te.transaction_hash,
                 te.token_id,
                 te.contract_address as collection_address,
+                te.currency_address,
                 token.metadata,
                 contract.contract_name as collection_name,
                 contract.is_verified as collection_is_verified,
@@ -158,12 +162,44 @@ impl DatabaseAccess for PgPool {
             items_per_page,
             offset,
         );
-        let token_activity_data: Vec<TokenPortfolioActivityData> =
+
+        let token_activity_data_db: Vec<TokenPortfolioActivityDataDB> =
             sqlx::query_as(&activity_sql_query)
                 .bind(chain_id)
                 .bind(user_address)
                 .fetch_all(self)
                 .await?;
+
+        let currencies: Vec<Currency> = sqlx::query_as!(
+            Currency,
+            r#"SELECT currency_address as contract, symbol, decimals FROM public.currency_mapping"#
+        )
+        .fetch_all(self)
+        .await?;
+
+        let token_activity_data: Vec<TokenPortfolioActivityData> = token_activity_data_db
+            .into_iter()
+            .map(|sale| {
+                let currency = currencies
+                    .iter()
+                    .find(|c| c.contract == sale.currency_address)
+                    .cloned();
+                TokenPortfolioActivityData {
+                    collection_name: sale.collection_name,
+                    collection_address: sale.collection_address,
+                    collection_is_verified: sale.collection_is_verified,
+                    activity_type: sale.activity_type,
+                    price: sale.price,
+                    from: sale.from,
+                    to: sale.to,
+                    time_stamp: sale.time_stamp,
+                    transaction_hash: sale.transaction_hash,
+                    token_id: sale.token_id,
+                    metadata: sale.metadata,
+                    currency,
+                }
+            })
+            .collect();
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;

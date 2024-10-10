@@ -368,6 +368,22 @@ pub struct TokenActivityData {
     pub currency: Option<Currency>,
 }
 
+#[derive(Deserialize, Serialize, FromRow)]
+pub struct TokenPortfolioActivityDataDB {
+    pub activity_type: TokenEventType,
+    pub price: Option<BigDecimal>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub time_stamp: i64,
+    pub transaction_hash: Option<String>,
+    pub token_id: Option<String>,
+    pub collection_address: Option<String>,
+    pub collection_name: Option<String>,
+    pub collection_is_verified: Option<bool>,
+    pub metadata: Option<JsonValue>,
+    pub currency_address: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct TokenPortfolioActivityData {
     pub activity_type: TokenEventType,
@@ -393,4 +409,8 @@ pub struct TokenPortfolioActivityData {
         }"#
     )]
     pub metadata: Option<JsonValue>,
+    #[schema(
+        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
+    )]
+    pub currency: Option<Currency>,
 }
