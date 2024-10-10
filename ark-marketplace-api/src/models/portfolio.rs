@@ -1,4 +1,5 @@
-use crate::models::token::{Currency, Listing};
+use super::default::Currency;
+use crate::models::token::Listing;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;

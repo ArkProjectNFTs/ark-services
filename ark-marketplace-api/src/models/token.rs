@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use super::default::Currency;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -140,13 +141,6 @@ pub struct Listing {
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
     pub currency: Option<Currency>,
-}
-
-#[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
-pub struct Currency {
-    pub contract: Option<String>,
-    pub symbol: Option<String>,
-    pub decimals: Option<i16>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
