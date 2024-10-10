@@ -6,7 +6,7 @@ use crate::models::default::{
 use async_trait::async_trait;
 use sqlx::Error;
 use sqlx::PgPool;
-use tracing::info;
+
 #[async_trait]
 #[allow(clippy::too_many_arguments)]
 pub trait DatabaseAccess: Send + Sync {
