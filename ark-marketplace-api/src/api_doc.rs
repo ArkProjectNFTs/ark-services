@@ -38,6 +38,7 @@ use utoipa_swagger_ui::{SwaggerUi, Url};
         default_handler::last_sales,
         default_handler::live_auctions,
         default_handler::trending,
+        default_handler::event_filters,
         collection_handler::get_collection,
         collection_handler::get_collection_activity,
         collection_handler::get_portfolio_collections,

@@ -1,11 +1,11 @@
 use crate::db::default_query::{get_last_sales, get_live_auctions, get_trending};
+use crate::models::token::get_event_types;
 use crate::types::default::{HealthCheckResponse, HealthCheckResponseV1};
 use actix_web::{get, web};
 use actix_web::{HttpResponse, Responder};
 use serde_json::json;
 use sqlx::PgPool;
 use std::sync::Arc;
-
 #[utoipa::path(
     tag = "HealthCheck",
     responses(
@@ -64,6 +64,20 @@ pub async fn last_sales(db_pools: web::Data<Arc<[PgPool; 2]>>) -> impl Responder
 #[utoipa::path(
     tag = "Collections",
     responses(
+        (status = 200, description = "Get event filters", body = LastSalesResponse),
+        (status = 400, description = "Data not found", body = String),
+    )
+)]
+#[get("/event-filters")]
+pub async fn event_filters() -> impl Responder {
+    HttpResponse::Ok().json(json!({
+        "data": get_event_types(),
+    }))
+}
+
+#[utoipa::path(
+    tag = "Collections",
+    responses(
         (status = 200, description = "Get the 6 last live auctions", body = LiveAuctionsResponse),
         (status = 400, description = "Data not found", body = String),
     )
@@ -112,5 +126,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(root)
         .service(last_sales)
         .service(live_auctions)
-        .service(trending);
+        .service(trending)
+        .service(event_filters);
 }

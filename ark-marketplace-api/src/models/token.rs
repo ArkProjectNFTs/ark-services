@@ -420,3 +420,23 @@ pub struct TokenPortfolioActivityData {
     pub metadata: Option<JsonValue>,
     pub currency: Currency,
 }
+
+const EVENT_TYPES: [&str; 13] = [
+    LISTING_STR,
+    COLLECTION_OFFER_STR,
+    OFFER_STR,
+    AUCTION_STR,
+    CANCELLED_STR,
+    SALE_STR,
+    MINT_STR,
+    TRANSFER_STR,
+    LISTING_CANCELLED_STR,
+    AUCTION_CANCELLED_STR,
+    OFFER_CANCELLED_STR,
+    LISTING_EXPIRED_STR,
+    OFFER_EXPIRED_STR,
+];
+
+pub fn get_event_types() -> &'static [&'static str; 13] {
+    &EVENT_TYPES
+}
