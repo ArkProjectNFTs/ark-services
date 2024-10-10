@@ -362,7 +362,10 @@ pub struct TokenActivityData {
     pub collection_name: Option<String>,
     pub collection_is_verified: Option<bool>,
     pub collection_address: Option<String>,
-    pub currency_address: Option<String>,
+    #[schema(
+        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
+    )]
+    pub currency: Option<Currency>,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]

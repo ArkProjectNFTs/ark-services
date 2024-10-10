@@ -1434,12 +1434,42 @@ impl DatabaseAccess for PgPool {
             to_select = to_select_part,
         );
 
-        let token_activity_data: Vec<TokenActivityDataDB> = sqlx::query_as(&activity_sql_query)
+        let token_activity_data_db: Vec<TokenActivityDataDB> = sqlx::query_as(&activity_sql_query)
             .bind(contract_address)
             .bind(chain_id)
             .bind(token_id)
             .fetch_all(self)
             .await?;
+
+        let currencies: Vec<Currency> = sqlx::query_as!(
+            Currency,
+            r#"SELECT currency_address as contract, symbol, decimals FROM public.currency_mapping"#
+        )
+        .fetch_all(self)
+        .await?;
+
+        let token_activity_data: Vec<TokenActivityData> = token_activity_data_db
+            .into_iter()
+            .map(|sale| {
+                let currency = currencies
+                    .iter()
+                    .find(|c| c.contract == sale.currency_address)
+                    .cloned();
+                TokenActivityData {
+                    time_stamp: sale.time_stamp,
+                    transaction_hash: sale.transaction_hash,
+                    activity_type: sale.activity_type,
+                    metadata: sale.metadata,
+                    collection_name: sale.collection_name,
+                    collection_is_verified: sale.collection_is_verified,
+                    collection_address: sale.collection_address,
+                    price: sale.price,
+                    from: sale.from,
+                    to: sale.to,
+                    currency,
+                }
+            })
+            .collect();
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
