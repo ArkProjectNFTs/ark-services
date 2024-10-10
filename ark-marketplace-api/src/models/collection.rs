@@ -1,3 +1,4 @@
+use super::default::Currency;
 use crate::models::token::TokenEventType;
 use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
@@ -85,6 +86,22 @@ pub struct CollectionFloorPrice {
     pub value: Option<BigDecimal>,
 }
 
+#[derive(Deserialize, Serialize, FromRow)]
+pub struct CollectionActivityDataDB {
+    pub activity_type: TokenEventType,
+    pub price: Option<BigDecimal>,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub time_stamp: i64,
+    pub transaction_hash: Option<String>,
+    pub token_id: Option<String>,
+    pub token_metadata: Option<JsonValue>,
+    pub name: Option<String>,
+    pub address: String,
+    pub is_verified: Option<bool>,
+    pub currency_address: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct CollectionActivityData {
     pub activity_type: TokenEventType,
@@ -110,6 +127,10 @@ pub struct CollectionActivityData {
     pub name: Option<String>,
     pub address: String,
     pub is_verified: Option<bool>,
+    #[schema(
+        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
+    )]
+    pub currency: Option<Currency>,
 }
 
 #[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
