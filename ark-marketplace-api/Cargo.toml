@@ -58,3 +58,17 @@ assets = [
  ["debian/ark-marketplace-api@.service", "/lib/systemd/system/ark-marketplace-api@.service", "644"], 
 ]
 maintainer-scripts = "debian/scripts"
+
+[package.metadata.deb.variants.production]
+assets = [
+ ["target/release/ark-marketplace-api", "usr/bin/ark-marketplace-api-production", "755"],
+ ["debian/ark-marketplace-api-production.service", "/lib/systemd/system/ark-marketplace-api-production.service", "644"], 
+]
+maintainer-scripts = "debian/scripts/production"
+
+[package.metadata.deb.variants.staging]
+assets = [
+ ["target/release/ark-marketplace-api", "usr/bin/ark-marketplace-api-staging", "755"],
+ ["debian/ark-marketplace-api-staging.service", "/lib/systemd/system/ark-marketplace-api-staging.service", "644"], 
+]
+maintainer-scripts = "debian/scripts/staging"

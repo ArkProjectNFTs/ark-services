@@ -38,3 +38,17 @@ assets = [
  ["debian/ark-indexer-transactions@.service", "/lib/systemd/system/ark-indexer-transactions@.service", "644"], 
 ]
 maintainer-scripts = "debian/scripts"
+
+[package.metadata.deb.variants.production]
+assets = [
+ ["target/release/ark-indexer-transactions", "usr/bin/ark-indexer-transactions-production", "755"],
+ ["debian/ark-indexer-transactions-production.service", "/lib/systemd/system/ark-indexer-transactions-production.service", "644"], 
+]
+maintainer-scripts = "debian/scripts/production"
+
+[package.metadata.deb.variants.staging]
+assets = [
+ ["target/release/ark-indexer-transactions", "usr/bin/ark-indexer-transactions-staging", "755"],
+ ["debian/ark-indexer-transactions-staging.service", "/lib/systemd/system/ark-indexer-transactions-staging.service", "644"], 
+]
+maintainer-scripts = "debian/scripts/staging"

@@ -1,4 +1,4 @@
-name: MKT SQL Migrations (Scaleway)
+name: MKT SQL Migrations Staging (Scaleway)
 
 on:
   workflow_dispatch:

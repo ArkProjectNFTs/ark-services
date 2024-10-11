@@ -39,7 +39,7 @@ jobs:
 
       - name: Create debian service
         run: |
-          cargo deb -p ark-marketplace-api
+          cargo deb -p ark-marketplace-api --variant=production
 
       - name: Upload package to artifact
         uses: actions/upload-artifact@v4
@@ -89,15 +89,15 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_MARKETPLACE_API_IP }} "
             sudo dpkg -i ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE_OUTPUT}} &&
-            sudo chown -R github:github /etc/ark-project
-            sudo service ark-marketplace-api@staging restart &&
+            sudo chown -R github:github /etc/ark-project &&
+            sudo service ark-marketplace-api@production restart &&
             sleep 10
           "
 
       - name: Verify Deployment
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_MARKETPLACE_API_IP }} << EOF
-            sudo service ark-marketplace-api@staging status
+            sudo service ark-marketplace-api@production status
           EOF
 
       - name: Send success notification to dev-updates channel

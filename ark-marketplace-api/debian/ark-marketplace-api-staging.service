@@ -1,0 +1,17 @@
+[Unit]
+Description=Ark MarketPlace API staging
+AssertPathExists=/usr/bin/ark-marketplace-api-staging
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=~
+ExecStart=/usr/bin/ark-marketplace-api-staging --config-path /etc/ark-project/api-marketplace.config.staging.yml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
