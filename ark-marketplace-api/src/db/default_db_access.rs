@@ -139,13 +139,8 @@ impl DatabaseAccess for PgPool {
             contract_timestamp_clause,
         );
 
-        let mut collection_data: Vec<CollectionInfo> = sqlx::query_as(&sql_query)
-            .fetch_all(self)
-            .await
-            .unwrap_or_else(|err| {
-                println!("Query error : {}", err);
-                std::process::exit(1);
-            });
+        let mut collection_data: Vec<CollectionInfo> =
+            sqlx::query_as(&sql_query).fetch_all(self).await?;
 
         // Check if we have less than 5 results and fill up if necessary
         if collection_data.len() < 5 {
