@@ -338,14 +338,9 @@ impl DatabaseAccess for PgPool {
         direction: &str,
     ) -> Result<(Vec<CollectionFullData>, bool, i64), Error> {
         const MIN_COLLECTION_COUNT: usize = 100;
-        let total_count = sqlx::query!(
-            "
-                SELECT count(*)
-                  FROM contract
-                "
-        )
-        .fetch_one(self)
-        .await?;
+        let total_count = sqlx::query!("SELECT count(*) FROM contract")
+            .fetch_one(self)
+            .await?;
 
         let count = total_count.count.unwrap_or(0);
 
@@ -403,11 +398,7 @@ impl DatabaseAccess for PgPool {
         );
         let mut collection_data = sqlx::query_as::<sqlx::Postgres, CollectionFullData>(&sql_query)
             .fetch_all(self)
-            .await
-            .unwrap_or_else(|err| {
-                println!("Query error : {}", err);
-                std::process::exit(1);
-            });
+            .await?;
 
         if collection_data.len() < MIN_COLLECTION_COUNT {
             let missing_count = MIN_COLLECTION_COUNT - collection_data.len();
