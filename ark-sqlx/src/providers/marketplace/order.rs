@@ -171,6 +171,7 @@ struct EventHistoryData {
     to_address: Option<String>,
     amount: Option<String>,
     canceled_reason: Option<String>,
+    currency_address: Option<String>,
 }
 
 pub struct OfferData {
@@ -978,8 +979,8 @@ impl OrderProvider {
         let token_event_id = format!("{}_{}", &event_data.order_hash, event_data.block_timestamp);
 
         let q = "
-            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason, currency_address)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
         ";
 
         let _r = sqlx::query(q)
@@ -995,6 +996,7 @@ impl OrderProvider {
             .bind(event_data.to_address.clone().unwrap_or_default())
             .bind(event_data.amount.clone().unwrap_or_default())
             .bind(event_data.canceled_reason.clone().unwrap_or_default())
+            .bind(event_data.currency_address.clone())
             .execute(&client.pool)
             .await?;
 
@@ -1511,6 +1513,7 @@ impl OrderProvider {
                     to_address: to_address.clone(),
                     amount: Some(data.start_amount.clone()),
                     canceled_reason: None,
+                    currency_address: Some(currency_address.clone()),
                 },
             )
             .await?;
@@ -1661,6 +1664,7 @@ impl OrderProvider {
                     to_address: None,
                     amount: None,
                     from_address: Some(data.fulfiller.clone()),
+                    currency_address: None,
                 },
             )
             .await?;
@@ -1748,7 +1752,8 @@ impl OrderProvider {
                         canceled_reason: None,
                         to_address,
                         from_address,
-                        amount: None,
+                        amount: Some(offer_data.offer_amount.clone()),
+                        currency_address: Some(offer_data.currency_address.clone()),
                     },
                 )
                 .await?;
@@ -1803,6 +1808,7 @@ impl OrderProvider {
                             to_address: data.to.clone(),
                             amount: token_data.listing_start_amount,
                             from_address: data.from.clone(),
+                            currency_address: token_data.currency_address.clone(),
                         },
                     )
                     .await?;
@@ -1869,6 +1875,7 @@ impl OrderProvider {
                     to_address: None,
                     amount: None,
                     from_address: None,
+                    currency_address: None,
                 },
             )
             .await?;
