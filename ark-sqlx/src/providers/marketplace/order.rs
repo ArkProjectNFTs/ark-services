@@ -995,7 +995,7 @@ impl OrderProvider {
             .bind(event_data.from_address.clone().unwrap_or_default())
             .bind(event_data.to_address.clone().unwrap_or_default())
             .bind(event_data.amount.clone().unwrap_or_default())
-            .bind(event_data.canceled_reason.clone().unwrap_or_default())
+            .bind(event_data.canceled_reason.as_ref())
             .bind(event_data.currency_address.clone())
             .execute(&client.pool)
             .await?;
@@ -1664,7 +1664,7 @@ impl OrderProvider {
                     to_address: None,
                     amount: None,
                     from_address: Some(data.fulfiller.clone()),
-                    currency_address: None,
+                    currency_address: token_data.currency_address,
                 },
             )
             .await?;
