@@ -33,7 +33,6 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
         <Logo className="h-8 w-auto" />
         <DashboardNav />
         <div className="flex-grow" />
-        <CollectionSearch />
         <NetworkSelector />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -64,31 +63,10 @@ export default function DashboardHeader({ user }: DashboardHeaderProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <Link href="/dashboard">
-                <DropdownMenuItem className="cursor-pointer">
-                  Dashboard
-                </DropdownMenuItem>
-              </Link>
-              <Link href="/metadata">
-                <DropdownMenuItem className="cursor-pointer">
-                  Metadata
-                </DropdownMenuItem>
-              </Link>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
               <div className="flex items-center justify-between px-2 py-[6px]">
                 <span className="text-sm">Theme</span>
                 <ThemeSelect />
               </div>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <Link href="/home" target="_blank">
-                <DropdownMenuItem className="flex cursor-pointer justify-between">
-                  ArkProject.dev
-                </DropdownMenuItem>
-              </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
