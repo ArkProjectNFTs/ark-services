@@ -763,7 +763,7 @@ impl DatabaseAccess for PgPool {
                     name: sale.name,
                     address: sale.address,
                     is_verified: sale.is_verified,
-                    currency: currency,
+                    currency,
                 }
             })
             .collect();
