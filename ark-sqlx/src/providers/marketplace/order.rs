@@ -426,9 +426,9 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, token_id_hex, contract_address, chain_id, COALESCE(listing_start_amount, ''), currency_chain_id, currency_address
-            FROM token
-            WHERE listing_orderhash = $1;
+            SELECT token_id, token_id_hex, contract_address, chain_id, amount, chain_id, currency_address
+            FROM token_event
+            WHERE order_hash = $1 AND event_type = 'Listing';
         ";
 
         if let Some((
@@ -1513,7 +1513,7 @@ impl OrderProvider {
                     to_address: to_address.clone(),
                     amount: Some(data.start_amount.clone()),
                     canceled_reason: None,
-                    currency_address: Some(currency_address.clone()),
+                    currency_address: Some(data.currency_address.clone()),
                 },
             )
             .await?;
