@@ -1,7 +1,3 @@
-/// required to use map on stream
-use futures_util::TryStreamExt;
-use std::time::SystemTime;
-
 use crate::models::collection::{
     CollectionActivityData, CollectionActivityDataDB, CollectionData, CollectionFloorPrice,
     CollectionFullData, CollectionPortfolioData, CollectionSearchData, OwnerData,
@@ -14,14 +10,16 @@ use crate::models::token::{
 };
 use crate::utils::db_utils::event_type_list;
 use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
-
 use async_trait::async_trait;
 use bigdecimal::BigDecimal;
+/// required to use map on stream
+use futures_util::TryStreamExt;
 use serde_json::Value as JsonValue;
 use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
+use std::time::SystemTime;
 
 pub const LISTING_TYPE_AUCTION_STR: &str = "Auction";
 
@@ -606,7 +604,11 @@ impl DatabaseAccess for PgPool {
                  total_sales,
                  floor_7d_percentage,
                  is_verified,
-                 deployed_timestamp
+                 deployed_timestamp,
+                 website,
+                 twitter,
+                 discord,
+                 description
              FROM contract
              WHERE contract.contract_address = $1
              AND contract.chain_id = $2
@@ -761,7 +763,7 @@ impl DatabaseAccess for PgPool {
                     name: sale.name,
                     address: sale.address,
                     is_verified: sale.is_verified,
-                    currency: currency,
+                    currency,
                 }
             })
             .collect();
