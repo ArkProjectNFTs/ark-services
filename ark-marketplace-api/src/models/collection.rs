@@ -55,6 +55,10 @@ pub struct CollectionData {
     pub floor_7d_percentage: Option<BigDecimal>,
     pub is_verified: Option<bool>,
     pub deployed_timestamp: Option<i64>,
+    pub website: Option<String>,
+    pub description: Option<String>,
+    pub twitter: Option<String>,
+    pub discord: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
