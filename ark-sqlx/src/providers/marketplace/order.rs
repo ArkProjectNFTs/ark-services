@@ -171,6 +171,7 @@ struct EventHistoryData {
     to_address: Option<String>,
     amount: Option<String>,
     canceled_reason: Option<String>,
+    currency_address: Option<String>,
 }
 
 pub struct OfferData {
@@ -425,9 +426,9 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<TokenData>, sqlx::Error> {
         let query = "
-            SELECT token_id, token_id_hex, contract_address, chain_id, COALESCE(listing_start_amount, ''), currency_chain_id, currency_address
-            FROM token
-            WHERE listing_orderhash = $1;
+            SELECT token_id, token_id_hex, contract_address, chain_id, amount, chain_id, currency_address
+            FROM token_event
+            WHERE order_hash = $1 AND event_type = 'Listing';
         ";
 
         if let Some((
@@ -978,8 +979,8 @@ impl OrderProvider {
         let token_event_id = format!("{}_{}", &event_data.order_hash, event_data.block_timestamp);
 
         let q = "
-            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
+            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason, currency_address)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
         ";
 
         let _r = sqlx::query(q)
@@ -991,10 +992,11 @@ impl OrderProvider {
             .bind(&event_data.chain_id)
             .bind(event_data.event_type.to_string())
             .bind(event_data.block_timestamp)
-            .bind(event_data.from_address.clone().unwrap_or_default())
-            .bind(event_data.to_address.clone().unwrap_or_default())
-            .bind(event_data.amount.clone().unwrap_or_default())
-            .bind(event_data.canceled_reason.clone().unwrap_or_default())
+            .bind(event_data.from_address.as_ref())
+            .bind(event_data.to_address.as_ref())
+            .bind(event_data.amount.as_ref())
+            .bind(event_data.canceled_reason.as_ref())
+            .bind(event_data.currency_address.clone())
             .execute(&client.pool)
             .await?;
 
@@ -1511,6 +1513,7 @@ impl OrderProvider {
                     to_address: to_address.clone(),
                     amount: Some(data.start_amount.clone()),
                     canceled_reason: None,
+                    currency_address: Some(data.currency_address.clone()),
                 },
             )
             .await?;
@@ -1661,6 +1664,7 @@ impl OrderProvider {
                     to_address: None,
                     amount: None,
                     from_address: Some(data.fulfiller.clone()),
+                    currency_address: token_data.currency_address,
                 },
             )
             .await?;
@@ -1748,7 +1752,8 @@ impl OrderProvider {
                         canceled_reason: None,
                         to_address,
                         from_address,
-                        amount: None,
+                        amount: Some(offer_data.offer_amount.clone()),
+                        currency_address: Some(offer_data.currency_address.clone()),
                     },
                 )
                 .await?;
@@ -1803,6 +1808,7 @@ impl OrderProvider {
                             to_address: data.to.clone(),
                             amount: token_data.listing_start_amount,
                             from_address: data.from.clone(),
+                            currency_address: token_data.currency_address.clone(),
                         },
                     )
                     .await?;
@@ -1869,6 +1875,7 @@ impl OrderProvider {
                     to_address: None,
                     amount: None,
                     from_address: None,
+                    currency_address: None,
                 },
             )
             .await?;
