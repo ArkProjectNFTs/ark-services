@@ -1941,7 +1941,6 @@ impl OrderProvider {
             .json::<Vec<TokenPrice>>()
             .await?;
         if let Some(token_price) = response.first() {
-            println!(" debuggg  {:?}", token_price);
             Ok(token_price.price_in_eth.unwrap())
         } else {
             Ok(0f64)
