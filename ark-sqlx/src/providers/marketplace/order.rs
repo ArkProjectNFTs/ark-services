@@ -23,7 +23,6 @@ use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use std::fmt;
-use std::fmt::Write;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -231,12 +230,19 @@ struct TokenPrice {
     decimals: u8,
 }
 
-fn eth_to_wei_hex(price_in_eth: f64) -> String {
+fn eth_to_wei(price_in_eth: f64) -> u128 {
     let wei_value = (price_in_eth * 1e18) as u128;
+    format!("{:x}", wei_value);
+    wei_value
+}
 
-    let mut hex_value = String::new();
-    write!(&mut hex_value, "0x{:064x}", wei_value).unwrap();
-    hex_value
+fn hex_to_wei(hex_str: Option<String>) -> Option<u128> {
+    let hex_str = hex_str?;
+    let cleaned_hex = hex_str.trim_start_matches("0x");
+    match u128::from_str_radix(cleaned_hex, 16) {
+        Ok(value) => Some(value),
+        Err(_) => None,
+    }
 }
 
 const CURRENCY_ADDRESS_ETH: &str =
@@ -1006,18 +1012,25 @@ impl OrderProvider {
         }
 
         let token_event_id = format!("{}_{}", &event_data.order_hash, event_data.block_timestamp);
-        let eth_amount: String;
+        let eth_amount: Option<String>;
         if event_data.currency_address == Some(CURRENCY_ADDRESS_ETH.to_string())
             || event_data.currency_address.is_none()
         {
-            eth_amount = event_data.amount.clone().unwrap_or_else(|| "0".to_string());
+            eth_amount = hex_to_wei(event_data.amount.clone()).map(|value| value.to_string());
         } else {
-            match Self::get_token_price(event_data.amount.as_ref().unwrap()).await {
+            match Self::get_token_price(event_data.currency_address.as_ref().unwrap()).await {
                 Ok(price) => {
-                    eth_amount = eth_to_wei_hex(price);
+                    if let Some(amount_in_wei) = hex_to_wei(event_data.amount.clone()) {
+                        let price_in_wei = eth_to_wei(price);
+                        let eth_value = price_in_wei * amount_in_wei;
+                        eth_amount = Some(eth_value.to_string());
+                    } else {
+                        eth_amount = None;
+                    }
                 }
                 Err(_e) => {
-                    eth_amount = event_data.amount.clone().unwrap_or_else(|| "0".to_string());
+                    eth_amount =
+                        hex_to_wei(event_data.amount.clone()).map(|value| value.to_string());
                 }
             }
         }
@@ -1040,7 +1053,7 @@ impl OrderProvider {
             .bind(event_data.amount.as_ref())
             .bind(event_data.canceled_reason.as_ref())
             .bind(event_data.currency_address.clone())
-            .bind(eth_amount)
+            .bind(eth_amount.as_ref())
             .execute(&client.pool)
             .await?;
 
