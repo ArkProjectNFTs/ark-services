@@ -5,7 +5,6 @@ use crate::providers::marketplace::types::{
     SALE_STR, TRANSFER_STR,
 };
 use crate::providers::{ContractProvider, ProviderError, SqlxCtxPg};
-
 use anyhow::Result;
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
@@ -15,6 +14,8 @@ use num_bigint::BigInt;
 use num_traits::Num;
 use redis::aio::MultiplexedConnection;
 use redis::AsyncCommands;
+use reqwest::Client;
+use serde::Deserialize;
 use sqlx::types::BigDecimal;
 use sqlx::Row;
 use starknet::core::types::Felt;
@@ -24,7 +25,6 @@ use starknet::providers::JsonRpcClient;
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Arc;
-
 use tokio::sync::Mutex;
 use tracing::{error, info, trace};
 
@@ -212,6 +212,41 @@ pub struct TokenData {
     currency_chain_id: Option<String>,
     currency_address: Option<String>,
 }
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+struct TokenPrice {
+    #[allow(dead_code)]
+    address: String,
+
+    #[allow(dead_code)]
+    #[serde(rename = "priceInUSD")]
+    price_in_usd: Option<f64>,
+
+    #[serde(rename = "priceInETH")]
+    price_in_eth: Option<f64>,
+
+    #[allow(dead_code)]
+    decimals: u8,
+}
+
+fn eth_to_wei(price_in_eth: f64) -> u128 {
+    let wei_value = (price_in_eth * 1e18) as u128;
+    format!("{:x}", wei_value);
+    wei_value
+}
+
+fn hex_to_wei(hex_str: Option<String>) -> Option<u128> {
+    let hex_str = hex_str?;
+    let cleaned_hex = hex_str.trim_start_matches("0x");
+    match u128::from_str_radix(cleaned_hex, 16) {
+        Ok(value) => Some(value),
+        Err(_) => None,
+    }
+}
+
+const CURRENCY_ADDRESS_ETH: &str =
+    "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
 
 impl OrderProvider {
     async fn clear_tokens_cache(
@@ -977,10 +1012,31 @@ impl OrderProvider {
         }
 
         let token_event_id = format!("{}_{}", &event_data.order_hash, event_data.block_timestamp);
-
+        let eth_amount: Option<String>;
+        if event_data.currency_address == Some(CURRENCY_ADDRESS_ETH.to_string())
+            || event_data.currency_address.is_none()
+        {
+            eth_amount = hex_to_wei(event_data.amount.clone()).map(|value| value.to_string());
+        } else {
+            match Self::get_token_price(event_data.currency_address.as_ref().unwrap()).await {
+                Ok(price) => {
+                    if let Some(amount_in_wei) = hex_to_wei(event_data.amount.clone()) {
+                        let price_in_wei = eth_to_wei(price);
+                        let eth_value = price_in_wei * amount_in_wei;
+                        eth_amount = Some(eth_value.to_string());
+                    } else {
+                        eth_amount = None;
+                    }
+                }
+                Err(_e) => {
+                    eth_amount =
+                        hex_to_wei(event_data.amount.clone()).map(|value| value.to_string());
+                }
+            }
+        }
         let q = "
-            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason, currency_address)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13);
+            INSERT INTO token_event (token_event_id, order_hash, token_id, token_id_hex, contract_address, chain_id, event_type, block_timestamp, from_address, to_address, amount, canceled_reason, currency_address, eth_amount)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
         ";
 
         let _r = sqlx::query(q)
@@ -997,6 +1053,7 @@ impl OrderProvider {
             .bind(event_data.amount.as_ref())
             .bind(event_data.canceled_reason.as_ref())
             .bind(event_data.currency_address.clone())
+            .bind(eth_amount.as_ref())
             .execute(&client.pool)
             .await?;
 
@@ -1881,5 +1938,25 @@ impl OrderProvider {
             .await?;
         }
         Ok(())
+    }
+
+    async fn get_token_price(token_address: &str) -> Result<f64, reqwest::Error> {
+        let client = Client::new();
+        let url = format!(
+            "https://starknet.impulse.avnu.fi/v1/tokens/prices?token={}",
+            token_address
+        );
+        let response = client
+            .get(&url)
+            .header("accept", "*/*")
+            .send()
+            .await?
+            .json::<Vec<TokenPrice>>()
+            .await?;
+        if let Some(token_price) = response.first() {
+            Ok(token_price.price_in_eth.unwrap())
+        } else {
+            Ok(0f64)
+        }
     }
 }
