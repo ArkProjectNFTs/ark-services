@@ -19,6 +19,7 @@ use sqlx::Error;
 use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
+use std::collections::HashMap;
 use std::time::SystemTime;
 
 pub const LISTING_TYPE_AUCTION_STR: &str = "Auction";
@@ -1118,36 +1119,49 @@ impl DatabaseAccess for PgPool {
             token_ids_condition, token_id_condition, order_by
         );
 
-        let query = sqlx::query_as(&tokens_data_query)
+        let token_data_query_result: Vec<TokenDataDB> = sqlx::query_as(&tokens_data_query)
             .bind(contract_address)
             .bind(chain_id)
             .bind(buy_now)
             .bind(items_per_page)
-            .bind((page - 1) * items_per_page);
-
-        let tokens_data: Vec<TokenData> = query
-            .fetch(self)
-            .map_ok(|token: TokenDataDB| TokenData {
-                collection_address: token.collection_address,
-                token_id: token.token_id,
-                last_price: token.last_price,
-                floor_difference: token.floor_difference,
-                listed_at: token.listed_at,
-                is_listed: token.is_listed,
-                buy_in_progress: token.buy_in_progress,
-                listing: token
-                    .listing_type
-                    .as_ref()
-                    .map(|listing_type| TokenDataListing {
-                        is_auction: Some(listing_type == LISTING_TYPE_AUCTION_STR),
-                    }),
-                metadata: token.metadata,
-                price: token.price,
-                owner: token.owner,
-                currency_address: token.currency_address,
-            })
-            .try_collect()
+            .bind((page - 1) * items_per_page)
+            .fetch_all(self)
             .await?;
+
+        let currencies = self.get_currencies().await?;
+        let currencies_map: HashMap<String, Currency> = currencies
+            .into_iter()
+            .filter_map(|c| c.contract.clone().map(|contract| (contract, c)))
+            .collect();
+
+        let tokens_data: Vec<TokenData> = token_data_query_result
+            .into_iter()
+            .map(|token_data| TokenData {
+                collection_address: token_data.collection_address,
+                token_id: token_data.token_id,
+                last_price: token_data.last_price,
+                floor_difference: token_data.floor_difference,
+                listed_at: token_data.listed_at,
+                is_listed: token_data.is_listed,
+                listing: token_data.listing_type.as_ref().and_then(|listing_type| {
+                    token_data
+                        .currency_address
+                        .as_ref()
+                        .and_then(|currency_address| {
+                            currencies_map
+                                .get(currency_address)
+                                .map(|currency| TokenDataListing {
+                                    is_auction: Some(listing_type == LISTING_TYPE_AUCTION_STR),
+                                    currency: currency.clone(),
+                                })
+                        })
+                }),
+                price: token_data.price,
+                metadata: token_data.metadata,
+                owner: token_data.owner,
+                buy_in_progress: token_data.buy_in_progress,
+            })
+            .collect();
 
         // Calculate if there is another page
         let total_pages = (count + items_per_page - 1) / items_per_page;
