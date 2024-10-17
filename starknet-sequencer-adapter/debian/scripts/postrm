@@ -1,5 +1,5 @@
 #!/bin/sh
-# postrm script for rvm
+# postrm script for Starknet-Sequencer Adapter
 #
 # see: dh_installdeb(1)
 
@@ -31,7 +31,6 @@ case "$1" in
     if [ "$1" = "remove" ]; then
         if [ -x "/usr/bin/deb-systemd-helper" ]; then
             deb-systemd-helper mask starknet-sequencer-adapter.service >/dev/null
-            rm -Rf /usr/share/rvm
             rm -Rf /usr/share/starknet-sequencer-adapter
         fi
     fi
