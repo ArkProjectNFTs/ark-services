@@ -21,7 +21,7 @@ case "$1" in
     upgrade|deconfigure)
     ;;
     remove)
-        deb-systemd-invoke stop ark-indexer-transactions@.service
+        deb-systemd-invoke stop ark-indexer-transactions-staging.service
     ;;
 
     failed-upgrade)
