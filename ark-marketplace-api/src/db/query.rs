@@ -1,18 +1,18 @@
 use crate::db::db_access::DatabaseAccess;
-use crate::utils::http_utils::{
-    get_address_from_starknet_id, get_image_from_starknet_address, get_starknet_id_from_address,
-};
-use regex::Regex;
-
 use crate::models::collection::{
     CollectionActivityData, CollectionData, CollectionFloorPrice, CollectionFullData,
     CollectionPortfolioData, CollectionSearchData, OwnerDataCompleted,
 };
+use crate::models::default::Currency;
 use crate::models::token::{
     TokenActivityData, TokenData, TokenEventType, TokenInformationData, TokenMarketData,
     TokenOfferOneDataDB, TokenPortfolioData,
 };
+use crate::utils::http_utils::{
+    get_address_from_starknet_id, get_image_from_starknet_address, get_starknet_id_from_address,
+};
 use redis::AsyncCommands;
+use regex::Regex;
 
 pub async fn get_collections_data<D: DatabaseAccess + Sync>(
     db_access: &D,
@@ -343,6 +343,23 @@ pub async fn get_token_offers_data<D: DatabaseAccess + Sync>(
     db_access
         .get_token_offers_data(contract_address, chain_id, token_id, page, items_per_page)
         .await
+}
+
+pub async fn get_currencies<D: DatabaseAccess + Sync>(
+    db_access: &D,
+) -> Result<Vec<Currency>, sqlx::Error> {
+    db_access.get_currencies().await
+}
+
+pub async fn get_currency<D: DatabaseAccess + Sync>(
+    db_access: &D,
+    currency_contract_address: Option<String>,
+) -> Result<Currency, sqlx::Error> {
+    let currencies = db_access.get_currencies().await?;
+    let currency = db_access
+        .get_currency(currencies, currency_contract_address)
+        .await;
+    Ok(currency)
 }
 
 #[allow(clippy::too_many_arguments)]

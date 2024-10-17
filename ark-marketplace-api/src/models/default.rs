@@ -3,16 +3,27 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 use sqlx::Row;
-
-#[derive(Serialize, Deserialize, Debug, FromRow, utoipa::ToSchema, Clone)]
-pub struct Currency {
-    pub contract: Option<String>,
-    pub symbol: Option<String>,
-    pub decimals: Option<i16>,
-}
+use utoipa::ToSchema;
 
 const CURRENCY_ADDRESS_ETH: &str =
     "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
+
+#[derive(Serialize, Deserialize, FromRow, ToSchema, Clone)]
+#[schema(example = json!({
+        "contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7",
+        "symbol": "ETH",
+        "decimals": 18
+    }))]
+pub struct Currency {
+    #[schema(example = "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7")]
+    pub contract: Option<String>,
+
+    #[schema(example = "ETH")]
+    pub symbol: Option<String>,
+
+    #[schema(example = 18)]
+    pub decimals: Option<i16>,
+}
 
 impl Currency {
     fn default() -> Self {
@@ -67,9 +78,6 @@ pub struct LastSale {
     pub timestamp: Option<i64>,
     pub transaction_hash: Option<String>,
     pub token_id: Option<String>,
-    #[schema(
-        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
-    )]
     pub currency: Option<Currency>,
 }
 
