@@ -146,6 +146,8 @@ pub trait DatabaseAccess: Send + Sync {
         chain_id: &str,
     ) -> Result<CollectionFloorPrice, Error>;
 
+    async fn get_currency(&self, contract_address: String) -> Result<Currency, Error>;
+
     async fn get_token_activity_data(
         &self,
         contract_address: &str,
@@ -790,6 +792,32 @@ impl DatabaseAccess for PgPool {
         Ok(floor_price)
     }
 
+    async fn get_currency(&self, contract_address: String) -> Result<Currency, Error> {
+        let currencies: Vec<Currency> = sqlx::query_as!(
+            Currency,
+            r#"SELECT currency_address as contract, symbol, decimals FROM public.currency_mapping"#
+        )
+        .fetch_all(self)
+        .await?;
+
+        let currency = currencies
+            .iter()
+            .find(|c| c.contract.as_ref() == Some(&contract_address))
+            .or_else(|| {
+                currencies
+                    .iter()
+                    .find(|c| c.symbol.as_ref() == Some(&"ETH".to_string()))
+            })
+            .cloned()
+            .unwrap_or_else(|| Currency {
+                contract: Some("".to_string()),
+                symbol: Some("".to_string()),
+                decimals: Some(18),
+            });
+
+        Ok(currency)
+    }
+
     async fn get_token_marketdata(
         &self,
         contract_address: &str,
@@ -850,30 +878,7 @@ impl DatabaseAccess for PgPool {
             currency_address: Some("".to_string()),
         });
 
-        // Fetch currency
-        let currency: Currency = sqlx::query_as!(
-            Currency,
-            "
-                SELECT
-                    cm.currency_address as contract,
-                    cm.symbol,
-                    cm.decimals
-                FROM token t
-                LEFT JOIN currency_mapping cm on cm.currency_address = t.listing_currency_address and cm.chain_id = t.chain_id
-                WHERE t.token_id = $1
-                AND t.contract_address = $2
-                LIMIT 1
-            ",
-            token_id,
-            contract_address
-        )
-        .fetch_one(self)
-        .await
-        .unwrap_or(Currency {
-            contract: Option::from("".to_string()),
-            symbol: Option::from("".to_string()),
-            decimals: Some(18)
-        });
+        let currency: Currency = self.get_currency(contract_address.to_string()).await?;
 
         // Fetch Listing
         let listing: ListingRaw = sqlx::query_as!(
