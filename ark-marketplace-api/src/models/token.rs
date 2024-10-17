@@ -22,6 +22,7 @@ use sqlx::FromRow;
 #[derive(Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct TokenDataListing {
     pub is_auction: Option<bool>,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, Clone, utoipa::ToSchema)]
@@ -49,7 +50,6 @@ pub struct TokenData {
     )]
     pub metadata: Option<JsonValue>,
     pub owner: Option<String>,
-    pub currency_address: Option<String>,
     pub buy_in_progress: Option<bool>,
 }
 
