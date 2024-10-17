@@ -3,13 +3,15 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
-    pub database_url: String,
-    pub log_level: String,
-    pub rcp_provider: String,
-    pub base_path: String,
-    pub parsing_state_path: String,
-    pub chain_id: String,
-    pub start_from: u64,
+    pub port: u64,
+    pub aws_access_key_id: String,
+    pub aws_secret_access_key: String,
+    pub aws_default_region: String,
+    pub rust_log: String,
+    pub aws_secret_read_db: String,
+    pub aws_secret_write_db: String,
+    pub aws_secret_redis_db: String,
+    pub aws_secret_eleasticsearch_db: String,
 }
 
 impl AppConfig {
