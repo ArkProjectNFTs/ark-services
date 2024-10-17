@@ -49,11 +49,11 @@ impl<'r> FromRow<'r, sqlx::postgres::PgRow> for OfferData {
                 end_amount: row.try_get("listing_end_amount")?,
                 start_date: row.try_get("listing_start_date")?,
                 end_date: row.try_get("listing_end_date")?,
-                currency: Option::from(Currency {
+                currency: Currency {
                     contract: row.try_get("currency_address")?,
                     symbol: row.try_get("currency_symbol")?,
                     decimals: row.try_get("currency_decimals")?,
-                }),
+                },
             }),
         })
     }

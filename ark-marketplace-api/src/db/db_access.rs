@@ -6,7 +6,7 @@ use crate::models::default::Currency;
 use crate::models::token::{
     Listing, ListingRaw, TokenActivityData, TokenActivityDataDB, TokenData, TokenDataListing,
     TokenEventType, TokenInformationData, TokenMarketData, TokenOfferOneDataDB, TokenOneData,
-    TokenPortfolioData, TopOffer,
+    TokenPortfolioData, TopOffer, TopOfferQueryResult,
 };
 use crate::utils::db_utils::event_type_list;
 use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
@@ -146,7 +146,13 @@ pub trait DatabaseAccess: Send + Sync {
         chain_id: &str,
     ) -> Result<CollectionFloorPrice, Error>;
 
-    async fn get_currency(&self, contract_address: String) -> Result<Currency, Error>;
+    async fn get_currency(
+        &self,
+        currencies: Vec<Currency>,
+        contract_address: Option<String>,
+    ) -> Currency;
+
+    async fn get_currencies(&self) -> Result<Vec<Currency>, Error>;
 
     async fn get_token_activity_data(
         &self,
@@ -792,7 +798,7 @@ impl DatabaseAccess for PgPool {
         Ok(floor_price)
     }
 
-    async fn get_currency(&self, contract_address: String) -> Result<Currency, Error> {
+    async fn get_currencies(&self) -> Result<Vec<Currency>, Error> {
         let currencies: Vec<Currency> = sqlx::query_as!(
             Currency,
             r#"SELECT currency_address as contract, symbol, decimals FROM public.currency_mapping"#
@@ -800,22 +806,29 @@ impl DatabaseAccess for PgPool {
         .fetch_all(self)
         .await?;
 
-        let currency = currencies
+        Ok(currencies)
+    }
+
+    async fn get_currency(
+        &self,
+        currencies: Vec<Currency>,
+        contract_address: Option<String>,
+    ) -> Currency {
+        let address = match contract_address {
+            Some(addr) => addr,
+            None => return Currency::default(),
+        };
+
+        currencies
             .iter()
-            .find(|c| c.contract.as_ref() == Some(&contract_address))
+            .find(|c| c.contract.as_deref() == Some(&address))
             .or_else(|| {
                 currencies
                     .iter()
-                    .find(|c| c.symbol.as_ref() == Some(&"ETH".to_string()))
+                    .find(|c| c.symbol.as_deref() == Some("ETH"))
             })
             .cloned()
-            .unwrap_or_else(|| Currency {
-                contract: Some("".to_string()),
-                symbol: Some("".to_string()),
-                decimals: Some(18),
-            });
-
-        Ok(currency)
+            .unwrap_or_else(Currency::default)
     }
 
     async fn get_token_marketdata(
@@ -824,6 +837,8 @@ impl DatabaseAccess for PgPool {
         chain_id: &str,
         token_id: &str,
     ) -> Result<TokenMarketData, Error> {
+        let currencies = self.get_currencies().await?;
+
         // Fetch TokenOneData
         let token_data: TokenOneData = sqlx::query_as!(
             TokenOneData,
@@ -852,8 +867,8 @@ impl DatabaseAccess for PgPool {
         .await?;
 
         // Fetch TopOffer
-        let top_offer: TopOffer = sqlx::query_as!(
-            TopOffer,
+        let top_offer_result = sqlx::query_as!(
+            TopOfferQueryResult,
             "
                 SELECT
                     top_bid_order_hash as order_hash,
@@ -869,16 +884,28 @@ impl DatabaseAccess for PgPool {
             contract_address
         )
         .fetch_one(self)
-        .await
-        .unwrap_or(TopOffer {
-            order_hash: Some("".to_string()),
-            amount: None,
-            start_date: None,
-            end_date: None,
-            currency_address: Some("".to_string()),
-        });
+        .await;
 
-        let currency: Currency = self.get_currency(contract_address.to_string()).await?;
+        let top_offer = match top_offer_result {
+            Ok(top_offer_query_result) => {
+                let top_offer_currency = self
+                    .get_currency(currencies.clone(), top_offer_query_result.currency_address)
+                    .await;
+
+                Some(TopOffer {
+                    order_hash: top_offer_query_result.order_hash,
+                    amount: top_offer_query_result.amount,
+                    start_date: top_offer_query_result.start_date,
+                    end_date: top_offer_query_result.end_date,
+                    currency: top_offer_currency,
+                })
+            }
+            _ => Option::None,
+        };
+
+        let listing_currency = self
+            .get_currency(currencies.clone(), Some(contract_address.to_string()))
+            .await;
 
         // Fetch Listing
         let listing: ListingRaw = sqlx::query_as!(
@@ -918,7 +945,7 @@ impl DatabaseAccess for PgPool {
             is_listed: token_data.is_listed,
             has_offer: token_data.has_offer,
             buy_in_progress: token_data.buy_in_progress,
-            top_offer: Some(top_offer),
+            top_offer,
             listing: Some(Listing {
                 is_auction: listing.is_auction,
                 order_hash: listing.order_hash,
@@ -926,11 +953,7 @@ impl DatabaseAccess for PgPool {
                 end_amount: listing.end_amount,
                 start_date: listing.start_date,
                 end_date: listing.end_date,
-                currency: Option::from(Currency {
-                    contract: currency.contract,
-                    symbol: currency.symbol,
-                    decimals: currency.decimals,
-                }),
+                currency: listing_currency,
             }),
             last_price: token_data.last_price,
         })
