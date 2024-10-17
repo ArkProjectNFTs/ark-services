@@ -552,6 +552,7 @@ where
         &mut self,
         from_block: u64,
         to_block: u64,
+        base_path: &str,
         parsing_state_path: &str,
         chain_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -610,7 +611,7 @@ where
                 continue;
             }
 
-            match read_block_from_file(block_number) {
+            match read_block_from_file(base_path, block_number) {
                 Ok(block) => {
                     self.process_block(block, chain_id).await?;
                     let _ = state_manager.set_block_state(block_number.try_into().unwrap(), true);

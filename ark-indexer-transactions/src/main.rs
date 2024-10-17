@@ -54,6 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .index_blocks(
                         config.start_from,
                         lastest_block_number,
+                        &config.base_path,
                         &config.parsing_state_path,
                         &config.chain_id,
                     )
