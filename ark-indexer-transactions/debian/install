@@ -1,1 +1,1 @@
-target/release-lto/ark-priceengine usr/bin
+target/release-lto/ark-indexer-transaction usr/bin
