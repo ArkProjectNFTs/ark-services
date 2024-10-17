@@ -1,5 +1,5 @@
 #!/bin/sh
-# postrm script for ark-indexer-transactions
+# postrm script for ark-marketplace-api
 #
 # see: dh_installdeb(1)
 
@@ -30,9 +30,7 @@ case "$1" in
     remove|purge|disappear)
     if [ "$1" = "remove" ]; then
         if [ -x "/usr/bin/deb-systemd-helper" ]; then
-            deb-systemd-helper mask ark-indexer-transactions@.service >/dev/null
-            rm -Rf /usr/share/ark-indexer-transactions
-            rm -Rf /opt/ark-indexer-transactions
+            deb-systemd-helper mask ark-marketplace-api-production.service >/dev/null
         fi
     fi
     ;;

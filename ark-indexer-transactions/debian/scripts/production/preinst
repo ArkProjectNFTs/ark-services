@@ -1,5 +1,5 @@
 #!/bin/sh
-# preinst script for ark-indexer-transactions
+# preinst script for ark-indexer-transactions-production
 #
 # see: dh_installdeb(1)
 
@@ -16,18 +16,10 @@ set -e
 
 case "$1" in
     install|upgrade)
-        mkdir -p /usr/share/ark-indexer-transactions/src/ark-indexer-transactions/ark-indexer-transactions-test
         mkdir -p /etc/ark-project
-        mkdir -p /opt/ark-indexer-transactions/state
+        mkdir -p /opt/ark-indexer-transactions/state/production
 
-        CONFIG_FILE="/etc/ark-project/transaction.config.yml"
-        STATE_FILE="/opt/ark-indexer-transactions/state/parsing.json"
-
-        # Create the state file if it does not exist (like touch)
-        if [ ! -f "$STATE_FILE" ]; then
-            echo "Creating empty $STATE_FILE..."
-            touch "$STATE_FILE"
-        fi
+        CONFIG_FILE="/etc/ark-project/transaction.config.production.yml"
 
         if [ -f "$CONFIG_FILE" ]; then
             echo "Patching existing $CONFIG_FILE..."
@@ -71,7 +63,7 @@ database_url: "postgres://user:database@localhost/arkproject"
 log_level: "info"
 rcp_provider: "https://juno.mainnet.arkproject.dev/v0_7"
 base_path: "/opt/fast-indexer/blocks"
-parsing_state_path: "/opt/ark-indexer-transactions/state/parsing.json"
+parsing_state_path: "/opt/ark-indexer-transactions/state/production"
 chain_id: "0x534e5f4d41494e"
 start_from: 0
 EOF
