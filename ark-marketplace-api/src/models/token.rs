@@ -112,6 +112,15 @@ pub struct TokenOneData {
     pub last_price: Option<BigDecimal>,
 }
 
+#[derive(Serialize, Deserialize, Debug, FromRow)]
+pub struct TopOfferQueryResult {
+    pub order_hash: Option<String>,
+    pub amount: Option<BigDecimal>,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
+    pub currency_address: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
 pub struct TopOffer {
     pub order_hash: Option<String>,
@@ -119,7 +128,7 @@ pub struct TopOffer {
     pub amount: Option<BigDecimal>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
-    pub currency_address: Option<String>,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema, Clone)]
@@ -140,7 +149,7 @@ pub struct Listing {
     pub end_amount: Option<String>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
-    pub currency: Option<Currency>,
+    pub currency: Currency,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
