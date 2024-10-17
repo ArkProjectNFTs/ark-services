@@ -1,0 +1,17 @@
+[Unit]
+Description=Ark Indexer Transaction for %i
+AssertPathExists=/usr/bin/ark-indexer-transactions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=~
+ExecStart=/usr/bin/ark-indexer-transactions --config-path /etc/ark-project/transaction.config.%i.yml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

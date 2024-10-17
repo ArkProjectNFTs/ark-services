@@ -1,5 +1,5 @@
 #!/bin/sh
-# prerm script for ark-indexer-transactions
+# prerm script for ark-marketplace-api
 #
 # see: dh_installdeb(1)
 
@@ -21,7 +21,7 @@ case "$1" in
     upgrade|deconfigure)
     ;;
     remove)
-        deb-systemd-invoke stop ark-indexer-transactions@.service
+        deb-systemd-invoke stop ark-marketplace-api@.service
     ;;
 
     failed-upgrade)
