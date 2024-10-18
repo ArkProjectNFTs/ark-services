@@ -55,6 +55,13 @@ pub trait DatabaseAccess: Send + Sync {
         token_id: &str,
     ) -> Result<(), Error>;
 
+    async fn get_token_top_offer(
+        &self,
+        token_id: &str,
+        contract_address: &str,
+        currencies: &[Currency],
+    ) -> Result<Option<TopOffer>, Error>;
+
     async fn get_tokens_data(
         &self,
         contract_address: &str,
@@ -832,6 +839,51 @@ impl DatabaseAccess for PgPool {
             .unwrap_or_else(Currency::default)
     }
 
+    async fn get_token_top_offer(
+        &self,
+        token_id: &str,
+        contract_address: &str,
+        currencies: &[Currency],
+    ) -> Result<Option<TopOffer>, Error> {
+        let top_offer_result = sqlx::query_as!(
+            TopOfferQueryResult,
+            r#"
+            SELECT
+                top_bid_order_hash as order_hash,
+                top_bid_amount as amount,
+                top_bid_start_date as start_date,
+                top_bid_end_date as end_date,
+                top_bid_currency_address as currency_address
+            FROM token
+            WHERE token.token_id = $1
+            AND token.contract_address = $2
+            "#,
+            token_id,
+            contract_address
+        )
+        .fetch_optional(self)
+        .await?;
+
+        if let Some(result) = top_offer_result {
+            if result.order_hash.is_some() {
+                let currency = self
+                    .get_currency(currencies.to_vec(), result.currency_address)
+                    .await;
+                Ok(Some(TopOffer {
+                    order_hash: result.order_hash,
+                    amount: result.amount,
+                    start_date: result.start_date,
+                    end_date: result.end_date,
+                    currency,
+                }))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
     async fn get_token_marketdata(
         &self,
         contract_address: &str,
@@ -869,42 +921,9 @@ impl DatabaseAccess for PgPool {
         .fetch_one(self)
         .await?;
 
-        // Fetch TopOffer
-        let top_offer_result = sqlx::query_as!(
-            TopOfferQueryResult,
-            "
-                SELECT
-                    top_bid_order_hash as order_hash,
-                    top_bid_amount as amount,
-                    top_bid_start_date as start_date,
-                    top_bid_end_date as end_date,
-                    top_bid_currency_address as currency_address
-                FROM token
-                WHERE token.token_id = $1
-                AND token.contract_address = $2
-            ",
-            token_id,
-            contract_address
-        )
-        .fetch_one(self)
-        .await;
-
-        let top_offer = match top_offer_result {
-            Ok(top_offer_query_result) => {
-                let top_offer_currency = self
-                    .get_currency(currencies.clone(), top_offer_query_result.currency_address)
-                    .await;
-
-                Some(TopOffer {
-                    order_hash: top_offer_query_result.order_hash,
-                    amount: top_offer_query_result.amount,
-                    start_date: top_offer_query_result.start_date,
-                    end_date: top_offer_query_result.end_date,
-                    currency: top_offer_currency,
-                })
-            }
-            _ => Option::None,
-        };
+        let top_offer = self
+            .get_token_top_offer(token_id, contract_address, &currencies)
+            .await?;
 
         let listing_currency = self
             .get_currency(currencies.clone(), token_data.listing_currency_address)
