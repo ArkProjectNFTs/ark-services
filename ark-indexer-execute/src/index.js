@@ -1,4 +1,4 @@
-import { config as dotenvConfig } from "https://deno.land/x/dotenv/mod.ts";
+// import { config as dotenvConfig } from "https://deno.land/x/dotenv/mod.ts";
 import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
 
 const CONTRACT_ADDRESS = "0x007b42945bc47001db92fe1b9739d753925263f2f1036c2ae1f87536c916ee6a";
