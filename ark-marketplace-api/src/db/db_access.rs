@@ -846,6 +846,8 @@ impl DatabaseAccess for PgPool {
             "
                 SELECT
                     token.current_owner as owner,
+                    token.listing_currency_address as listing_currency_address,
+                    token.listing_currency_chain_id as listing_currency_chain_id,
                     c.floor_price as floor,
                     token.listing_timestamp as created_timestamp,
                     token.updated_timestamp as updated_timestamp,
@@ -905,7 +907,7 @@ impl DatabaseAccess for PgPool {
         };
 
         let listing_currency = self
-            .get_currency(currencies.clone(), Some(contract_address.to_string()))
+            .get_currency(currencies.clone(), token_data.listing_currency_address)
             .await;
 
         // Fetch Listing

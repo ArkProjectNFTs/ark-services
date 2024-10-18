@@ -110,6 +110,8 @@ pub struct TokenOneData {
     pub buy_in_progress: Option<bool>,
     #[schema(value_type = String, example = "12345.6789")]
     pub last_price: Option<BigDecimal>,
+    pub listing_currency_address: Option<String>,
+    pub listing_currency_chain_id: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, FromRow)]
