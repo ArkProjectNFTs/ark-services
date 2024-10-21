@@ -1,5 +1,5 @@
 Launch app:
 
 ```
-apibara run src/index.js --allow-env .env --allow-net --allow-read
+apibara run --allow-env=.env index.ts --allow-net
 ```
