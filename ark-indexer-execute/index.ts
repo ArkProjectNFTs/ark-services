@@ -1,19 +1,16 @@
-// import { config as dotenvConfig } from "https://deno.land/x/dotenv/mod.ts";
 import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
 
-const CONTRACT_ADDRESS = "0x007b42945bc47001db92fe1b9739d753925263f2f1036c2ae1f87536c916ee6a";
-const STREAM_URL = "https://mainnet-v2.starknet.a5a.ch";
-const STARTING_BLOCK = 786737;
-const AUTH_TOKEN = "dna_wfWzg25bnZPKK25fAZMj";
-const SELECTOR = "0xf10f06595d3d707241f604672ec4b6ae50eb82728ec2f3c65f6789e897760";
-const DATABASE_URL = "postgresql://admin:dbpassword@localhost:5432/arkproject"
-
-console.log("Connecting to database...");
+const CONTRACT_ADDRESS = Deno.env.get("CONTRACT_ADDRESS");
+const STREAM_URL = Deno.env.get("STREAM_URL");
+const STARTING_BLOCK = Deno.env.get("STARTING_BLOCK");
+const AUTH_TOKEN = Deno.env.get("AUTH_TOKEN");
+const SELECTOR = Deno.env.get("SELECTOR");
+const DATABASE_URL = Deno.env.get("DATABASE_URL");
 const client = new Client(DATABASE_URL);
 
 export const config = {
   streamUrl: STREAM_URL,
-  startingBlock: STARTING_BLOCK,
+  startingBlock: STARTING_BLOCK ? parseInt(STARTING_BLOCK) : undefined,
   network: "starknet",
   authToken: AUTH_TOKEN,
   finality: "DATA_STATUS_ACCEPTED",
@@ -33,12 +30,12 @@ export const config = {
   sinkOptions: {},
 };
 
-async function updateDatabase(orderhash) {
+async function updateDatabase(orderhash: string) {
   console.log(`Updating database for orderhash: ${orderhash}`);
   try {
     const updateQuery = `
       UPDATE token
-      SET 
+      SET
         listing_start_amount = NULL,
         listing_start_date = NULL,
         listing_currency_address = NULL,
@@ -64,7 +61,13 @@ async function updateDatabase(orderhash) {
   }
 }
 
-export default async function transform({ header, events }) {
+export default async function transform({
+  header,
+  events,
+}: {
+  header: { blockNumber: number };
+  events: Array<{ event: { keys: string[] } }>;
+}) {
   console.log(`Processing block: ${header.blockNumber}`);
 
   if (!client.connected) {
