@@ -1885,14 +1885,6 @@ impl OrderProvider {
                         },
                     )
                     .await?;
-
-                    /* Self::update_token_status(
-                        client,
-                        &token_data.contract_address,
-                        &token_data.token_id,
-                        OrderStatus::Executed,
-                    )
-                    .await?; */
                 }
             }
         }
