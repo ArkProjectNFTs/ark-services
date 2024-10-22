@@ -78,11 +78,11 @@ async fn main() -> std::io::Result<()> {
 
     match task_set {
         "task_set1" => match connect_redis().await {
-            Ok(con) => {
-                update_listed_tokens(&db_pool, con.clone()).await;
-                update_top_bid_tokens(&db_pool, con.clone()).await;
+            Ok(mut con) => {
+                update_listed_tokens(&db_pool, &mut con).await;
+                update_top_bid_tokens(&db_pool, &mut con).await;
                 if should_cache_pages {
-                    let _ = cache_collection_pages(&db_pool, con.clone()).await;
+                    let _ = cache_collection_pages(&db_pool, &mut con).await;
                 }
                 update_contract_marketdata(&db_pool).await;
             }
