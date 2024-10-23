@@ -1129,13 +1129,15 @@ impl OrderProvider {
                 FROM token_offer
                 WHERE order_hash = $1 AND offer_timestamp = $2
                 LIMIT 1
-            );
+            )
         ";
+
         let exists: bool = sqlx::query_scalar(query)
             .bind(order_hash)
             .bind(offer_timestamp)
             .fetch_one(&client.pool)
             .await?;
+
         Ok(exists)
     }
 
