@@ -12,8 +12,6 @@ use crate::utils::db_utils::event_type_list;
 use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
 use async_trait::async_trait;
 use bigdecimal::BigDecimal;
-/// required to use map on stream
-use futures_util::TryStreamExt;
 use serde_json::Value as JsonValue;
 use sqlx::Error;
 use sqlx::FromRow;
