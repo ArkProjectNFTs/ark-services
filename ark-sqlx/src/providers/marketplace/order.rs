@@ -284,20 +284,17 @@ impl OrderProvider {
         chain_id: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
-            SELECT CASE
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM token
-                    WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3
-                )
-                THEN 1
-                ELSE 0
-            END;
+            SELECT EXISTS (
+                SELECT 1
+                FROM token
+                WHERE contract_address = $1 AND token_id = $2 AND chain_id = $3
+                LIMIT 1
+            );
         ";
         let exists: i32 = sqlx::query_scalar(query)
             .bind(contract_address)
-            .bind(token_id.to_string())
-            .bind(chain_id.to_string())
+            .bind(token_id)
+            .bind(chain_id)
             .fetch_one(&client.pool)
             .await?;
         Ok(exists != 0)
@@ -308,21 +305,18 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
-            SELECT CASE
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM token
-                    WHERE listing_orderhash = $1
-                )
-                THEN 1
-                ELSE 0
-            END;
+            SELECT EXISTS (
+                SELECT 1
+                FROM token
+                WHERE listing_orderhash = $1
+                LIMIT 1
+            );
         ";
-        let exists: i32 = sqlx::query_scalar(query)
+        let exists: bool = sqlx::query_scalar(query)
             .bind(order_hash)
             .fetch_one(&client.pool)
             .await?;
-        Ok(exists != 0)
+        Ok(exists)
     }
 
     pub async fn get_contract(
@@ -1130,22 +1124,19 @@ impl OrderProvider {
         offer_timestamp: i64,
     ) -> Result<bool, ProviderError> {
         let query = "
-            SELECT CASE
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM token_offer
-                    WHERE order_hash = $1 AND offer_timestamp = $2
-                )
-                THEN 1
-                ELSE 0
-            END;
+            SELECT EXISTS (
+                SELECT 1
+                FROM token_offer
+                WHERE order_hash = $1 AND offer_timestamp = $2
+                LIMIT 1
+            );
         ";
-        let exists: i32 = sqlx::query_scalar(query)
+        let exists: bool = sqlx::query_scalar(query)
             .bind(order_hash)
             .bind(offer_timestamp)
             .fetch_one(&client.pool)
             .await?;
-        Ok(exists != 0)
+        Ok(exists)
     }
 
     async fn handle_broker_foreign_key_violation(
