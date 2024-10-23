@@ -15,7 +15,7 @@ pub fn detect_erc_action(from: Felt, to: Felt) -> ErcAction {
 pub fn has_function(class: &ContractClass, function_name: &str) -> bool {
     match class {
         ContractClass::Sierra(sierra_class) => {
-            sierra_class.entry_points_by_type.constructor.iter().any(|entry| {
+            sierra_class.entry_points_by_type.external.iter().any(|entry| {
                 entry.selector == starknet::core::utils::get_selector_from_name(function_name).unwrap()
             })
         }
