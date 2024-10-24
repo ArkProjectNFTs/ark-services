@@ -1,3 +1,8 @@
+ALTER TABLE token_event DROP CONSTRAINT IF EXISTS token_event_pkey;
+
+ALTER TABLE token_event 
+    ADD CONSTRAINT token_event_pkey 
+    PRIMARY KEY (token_event_id, token_sub_event_id);
 -- Vérifier et ajouter token_sub_event_id si nécessaire
 DO $$
 BEGIN
@@ -102,11 +107,13 @@ WITH source_tokens AS (
         END as token_id_hex,
         ti.timestamp as block_timestamp
     FROM transaction_info ti
+    JOIN contract c ON ti.contract_address = c.contract_address
     LEFT JOIN token t ON 
         t.contract_address = ti.contract_address AND
         t.chain_id = '0x534e5f4d41494e' AND
         t.token_id = COALESCE(CAST(ti.token_id as TEXT), '0')
     WHERE t.contract_address IS NULL
+    AND c.contract_type IN ('ERC721', 'ERC1155')
 ),
 missing_tokens AS (
     -- Dédupliquer les tokens
@@ -158,13 +165,13 @@ DECLARE
 BEGIN
     -- Créer une table temporaire pour stocker les données dédupliquées
     CREATE TEMP TABLE temp_token_events AS
-    SELECT DISTINCT ON (event_id)
-        event_id as token_event_id,
-        contract_address,
+    SELECT DISTINCT ON (ti.event_id)
+        ti.event_id as token_event_id,
+        ti.contract_address,
         '0x534e5f4d41494e' as chain_id,
-        COALESCE(CAST(token_id as TEXT), '0') as token_id,
+        COALESCE(CAST(ti.token_id as TEXT), '0') as token_id,
         CASE 
-            WHEN token_id IS NOT NULL THEN 
+            WHEN ti.token_id IS NOT NULL THEN 
                 '0x' || LPAD(
                     UPPER(
                         TRIM(
@@ -181,14 +188,16 @@ BEGIN
                 )
             ELSE '0x' || LPAD('0', 64, '0')
         END as token_id_hex,
-        CAST(event_type as TEXT) as event_type,
-        timestamp as block_timestamp,
-        tx_hash as transaction_hash,
-        to_address,
-        from_address,
-        CAST(value as TEXT) as amount,
-        sub_event_id as token_sub_event_id
-    FROM transaction_info
+        CAST(ti.event_type as TEXT) as event_type,
+        ti.timestamp as block_timestamp,
+        ti.tx_hash as transaction_hash,
+        ti.to_address,
+        ti.from_address,
+        CAST(ti.value as TEXT) as amount,
+        ti.sub_event_id as token_sub_event_id
+    FROM transaction_info ti 
+    JOIN contract c ON ti.contract_address = c.contract_address
+    WHERE c.contract_type IN ('ERC721', 'ERC1155')
     ORDER BY event_id, sequence_id DESC;
 
     SELECT COUNT(*) INTO total_rows FROM temp_token_events;
