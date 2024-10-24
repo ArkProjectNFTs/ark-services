@@ -6,6 +6,7 @@ use crate::{
             NFTInfo, StarknetClientError, TransactionInfo,
         },
         event::EventType,
+        orderbook::OrderbookTransactionInfo,
     },
     services::storage::Storage,
 };
@@ -693,11 +694,11 @@ where
     pub async fn handle_orderbook_event(
         &self,
         event: Event,
-        _event_id: u64,
-        _chain_id: Felt,
+        event_id: u64,
+        chain_id: Felt,
         block_hash: Felt,
         tx_hash: Felt,
-        _block_timestamp: u64,
+        block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let emitted_event = EmittedEvent {
             from_address: event.from_address,
@@ -707,8 +708,21 @@ where
             block_number: None,
             transaction_hash: tx_hash,
         };
-        let orderbook_event: orderbook::Event = orderbook::Event::from(emitted_event);
-        println!("ORDERBOOK EVENT: {:?}", orderbook_event);
+        let orderbook_event = orderbook::Event::from(emitted_event);
+        let orderbook_transaction_info = OrderbookTransactionInfo {
+            chain_id: felt_to_strk_string(chain_id),
+            tx_hash: felt_to_strk_string(tx_hash),
+            event_id,
+            block_hash: felt_to_strk_string(block_hash),
+            timestamp: block_timestamp,
+            from: felt_to_strk_string(event.from_address),
+            event: orderbook_event,
+        };
+        let storage = self.storage.lock().await;
+        storage
+            .store_orderbook_transaction_info(orderbook_transaction_info)
+            .await?;
+        drop(storage);
         Ok(())
     }
 

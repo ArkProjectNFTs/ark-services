@@ -32,7 +32,7 @@ arkproject.workspace = true
 [package.metadata.deb]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
 copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"
-extended-description = """ScreenshotLabs price engine API"""
+extended-description = """ScreenshotLabs Ark indexer transactions"""
 depends = "$auto, systemd"
 section = "admin"
 priority = "optional"
