@@ -8,7 +8,7 @@ use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
 
-use super::Storage;
+use super::{NFTInfoStorage, Storage, TransactionInfoStorage};
 
 trait BigDecimalHex {
     fn to_hex_string(&self) -> String;
@@ -41,6 +41,10 @@ impl DatabaseStorage {
     pub async fn new(database_url: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let pool = PgPool::connect(database_url).await?;
         Ok(DatabaseStorage { pool })
+    }
+
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
     }
 }
 
@@ -118,7 +122,7 @@ impl DatabaseStorage {
 }
 
 #[async_trait::async_trait]
-impl Storage for DatabaseStorage {
+impl TransactionInfoStorage for DatabaseStorage {
     async fn store_transaction_info(
         &self,
         tx_info: TransactionInfo,
@@ -165,7 +169,10 @@ impl Storage for DatabaseStorage {
 
         Ok(())
     }
+}
 
+#[async_trait::async_trait]
+impl NFTInfoStorage for DatabaseStorage {
     async fn store_nft_info(
         &self,
         nft_info: NFTInfo,
@@ -293,3 +300,5 @@ impl Storage for DatabaseStorage {
         Ok(())
     }
 }
+
+impl Storage for DatabaseStorage {}
