@@ -1,6 +1,7 @@
 use crate::helpers::config::{
     default_blocks_per_file, default_from_block, default_max_call_per_minute,
-    default_monitor_threads, default_progress_bar_width, default_storage_dir, default_threads,
+    default_monitor_threads, default_progress_bar_width, default_sequencer_url,
+    default_storage_dir, default_threads,
 };
 use serde::Deserialize;
 
@@ -20,4 +21,6 @@ pub struct Config {
     pub storage_dir: String,
     #[serde(default = "default_from_block")]
     pub from_block: u64,
+    #[serde(default = "default_sequencer_url")]
+    pub sequencer_url: String,
 }
