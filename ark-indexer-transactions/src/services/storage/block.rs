@@ -64,7 +64,10 @@ fn get_block_file_path(base_path: &str, block_number: u64) -> PathBuf {
     PathBuf::from(path)
 }
 
-pub fn read_block_from_file(base_path: &str, block_number: u64) -> Result<BlockWrapper, Box<dyn std::error::Error>> {
+pub fn read_block_from_file(
+    base_path: &str,
+    block_number: u64,
+) -> Result<BlockWrapper, Box<dyn std::error::Error>> {
     let path = get_block_file_path(base_path, block_number);
     println!("Block number: {:?}", block_number);
     let file = fs::File::open(path)?;
