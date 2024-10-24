@@ -23,8 +23,6 @@ use tokio::time::{interval, sleep, Duration, Instant};
 // Default alocator change
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
-pub const BASE_URL: &str =
-    "https://alpha-mainnet.starknet.io/feeder_gateway/get_block?blockNumber=";
 
 #[tokio::main]
 async fn main() {
@@ -42,7 +40,8 @@ async fn main() {
                 config.storage_dir
             )));
             // let events_state_path = Arc::new(PathBuf::from("/opt/fast-indexer/state/events_state.json"));
-
+            let get_block_url =
+                Arc::new(format!("{}/get_block?blockNumber=", config.sequencer_url));
             // Ensure the state, events and blocks directories exist
             fs::create_dir_all(format!("{}/state", config.storage_dir)).unwrap();
             fs::create_dir_all(format!("{}/events", config.storage_dir)).unwrap();
@@ -84,11 +83,12 @@ async fn main() {
                 let latest_block_number = Arc::clone(&latest_block_number);
                 let tx = tx.clone();
                 let _notify = Arc::clone(&notify);
+                let get_block_url = Arc::clone(&get_block_url);
 
                 tokio::spawn(async move {
                     loop {
                         let latest_block_number_value =
-                            match get_latest_block_number(BASE_URL, &client).await {
+                            match get_latest_block_number(&get_block_url, &client).await {
                                 Ok(number) => number,
                                 Err(e) => {
                                     eprintln!("Failed to get latest block number: {}", e);
@@ -105,10 +105,10 @@ async fn main() {
                         } else {
                             latest_block_number_value - from
                         };
-                        let range_start =
-                            i as u64 * (range / config.monitor_threads as u64) + from;
+                        let range_start = i as u64 * (range / config.monitor_threads as u64) + from;
                         let range_end = ((i + 1) as u64
-                            * (latest_block_number_value / config.monitor_threads as u64) + from)
+                            * (latest_block_number_value / config.monitor_threads as u64)
+                            + from)
                             .min(latest_block_number_value);
                         // drop(latest_block_number);
                         // println!("check with range {} to {}", range_start, range_end);
@@ -132,6 +132,7 @@ async fn main() {
                 //let latest_block_number = Arc::clone(&latest_block_number);
                 let rx = Arc::clone(&rx);
                 let notify = Arc::clone(&notify);
+                let get_block_url = Arc::clone(&get_block_url);
 
                 tokio::spawn(async move {
                     let mut last_update = Instant::now();
@@ -145,7 +146,7 @@ async fn main() {
                             rx.recv().await.unwrap()
                         };
 
-                        match fetch_block(BASE_URL, &client, block_number).await {
+                        match fetch_block(&get_block_url, &client, block_number).await {
                             Ok(block) => {
                                 if let Err(e) = save_block(
                                     &storage_dir,

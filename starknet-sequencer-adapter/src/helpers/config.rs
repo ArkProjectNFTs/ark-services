@@ -7,6 +7,7 @@ const PROGRESS_BAR_WIDTH: usize = 50;
 
 const STORAGE_ROOT_DIR: &str = "/opt/fast-indexer";
 const FROM_BLOCK: u64 = 0;
+const DEFAULT_SEQUENCER_URL: &str = "https://alpha-mainnet.starknet.io/feeder_gateway";
 
 pub fn default_max_call_per_minute() -> u32 {
     MAX_CALLS_PER_MINUTE
@@ -34,4 +35,8 @@ pub fn default_storage_dir() -> String {
 
 pub fn default_from_block() -> u64 {
     FROM_BLOCK
+}
+
+pub fn default_sequencer_url() -> String {
+    DEFAULT_SEQUENCER_URL.to_owned()
 }
