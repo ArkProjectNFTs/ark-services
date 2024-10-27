@@ -31,24 +31,45 @@ pub trait DatabaseAccess: Send + Sync {
 
 #[async_trait]
 impl DatabaseAccess for PgPool {
+    /// Retrieves detailed token data for a specific token
+    ///
+    /// # Arguments
+    /// * `token_address` - The address of the token contract
+    /// * `token_id` - The unique identifier of the token
+    ///
+    /// # Returns
+    /// * Result containing TokenData or an Error
     async fn get_token_data(
         &self,
         token_address: &str,
         token_id: &str,
     ) -> Result<TokenData, Error> {
+        // Fetch all token data including listing status, offers, and bid information
         let token_data = sqlx::query_as!(
             RawTokenData,
-            "SELECT
-                t.order_hash, t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,
-                (
-                    t.start_date IS NOT NULL AND t.end_date IS NOT NULL
-                    AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
-                    AND t.status != 'CANCELLED'
-                ) AS is_listed,
-                EXISTS(
+            r#"
+                SELECT
+                    t.order_hash, 
+                    t.token_chain_id, 
+                    t.token_id, 
+                    t.token_address, 
+                    t.listed_timestamp,
+                    t.updated_timestamp, 
+                    t.current_owner, 
+                    t.last_price,
+                    t.quantity, 
+                    t.start_amount, 
+                    t.end_amount, 
+                    t.start_date, 
+                    t.end_date,
+                    t.broker_id,
+                    (
+                        t.start_date IS NOT NULL 
+                        AND t.end_date IS NOT NULL
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN t.start_date AND t.end_date
+                        AND t.status != 'CANCELLED'
+                    ) AS is_listed,
+                    EXISTS(
                         SELECT 1
                         FROM orderbook_token_offers o
                         WHERE o.token_id = t.token_id
@@ -56,24 +77,47 @@ impl DatabaseAccess for PgPool {
                         AND o.status not in ('CANCELLED', 'FULFILLED', 'EXECUTED')
                         AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN o.start_date AND o.end_date
                     ) AS has_offer,
-                t.currency_chain_id, t.currency_address,
-                (SELECT offer_amount FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_amount,
-                (SELECT order_hash FROM orderbook_token_offers WHERE token_id = t.token_id AND token_address = t.token_address AND status = 'PLACED' AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date ORDER BY offer_amount DESC LIMIT 1) AS top_bid_order_hash,
-                t.status,
-                t.buy_in_progress
-            FROM
-                orderbook_token t
-            LEFT JOIN
-                orderbook_token_history th ON th.token_id = t.token_id AND th.token_address = t.token_address
-            WHERE
-                t.token_address = $1 AND t.token_id = $2
-            GROUP BY
-                t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
-                t.updated_timestamp, t.current_owner, t.last_price,
-                t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
-                t.broker_id,th.event_type, th.event_timestamp
-            ORDER BY
-                th.event_timestamp DESC;",
+                    t.currency_chain_id, 
+                    t.currency_address,
+                    (
+                        SELECT offer_amount 
+                        FROM orderbook_token_offers 
+                        WHERE token_id = t.token_id 
+                        AND token_address = t.token_address 
+                        AND status = 'PLACED' 
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date 
+                        ORDER BY offer_amount DESC 
+                        LIMIT 1
+                    ) AS top_bid_amount,
+                    (
+                        SELECT order_hash 
+                        FROM orderbook_token_offers 
+                        WHERE token_id = t.token_id 
+                        AND token_address = t.token_address 
+                        AND status = 'PLACED' 
+                        AND EXTRACT(EPOCH FROM CURRENT_TIMESTAMP) BETWEEN start_date AND end_date 
+                        ORDER BY offer_amount DESC 
+                        LIMIT 1
+                    ) AS top_bid_order_hash,
+                    t.status,
+                    t.buy_in_progress
+                FROM
+                    orderbook_token t
+                LEFT JOIN
+                    orderbook_token_history th 
+                    ON th.token_id = t.token_id 
+                    AND th.token_address = t.token_address
+                WHERE
+                    t.token_address = $1 
+                    AND t.token_id = $2
+                GROUP BY
+                    t.token_chain_id, t.token_id, t.token_address, t.listed_timestamp,
+                    t.updated_timestamp, t.current_owner, t.last_price,
+                    t.quantity, t.start_amount, t.end_amount, t.start_date, t.end_date,
+                    t.broker_id, th.event_type, th.event_timestamp
+                ORDER BY
+                    th.event_timestamp DESC
+            "#,
             token_address,
             token_id
         ).fetch_one(self).await?;
