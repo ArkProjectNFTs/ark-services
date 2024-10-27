@@ -645,6 +645,7 @@ impl OrderProvider {
         // Execute the query and retrieve the token information
         let token_info: Option<TokenInfo> = sqlx::query_as(select_query)
             .bind(order_hash)
+            .bind(status.to_string())
             .fetch_optional(&client.pool)
             .await?;
 
@@ -682,38 +683,50 @@ impl OrderProvider {
                 "#;
 
                 let valid_offer: Result<Offer, _> = sqlx::query_as(select_valid_offers_query)
-                    .bind(contract_address.clone())
-                    .bind(token_id.clone())
-                    .bind(chain_id.clone())
+                    .bind(contract_address)
+                    .bind(token_id)
+                    .bind(chain_id)
                     .fetch_one(&client.pool)
                     .await;
 
-                // Update `top_bid` fields based on whether a valid offer exists
-                let update_top_bid_query = match valid_offer {
-                    Ok(offer) => format!(
-                        r#"
+                // Update top_bid fields based on whether a valid offer exists
+                match valid_offer {
+                    Ok(offer) => {
+                        sqlx::query(
+                            r#"
                         UPDATE token
-                        SET top_bid_amount = '{}',
-                            top_bid_order_hash = '{}',
-                            top_bid_start_date = '{}',
-                            top_bid_end_date = '{}',
-                            top_bid_currency_address = '{}',
+                        SET top_bid_amount = $1,
+                            top_bid_order_hash = $2,
+                            top_bid_start_date = $3,
+                            top_bid_end_date = $4,
+                            top_bid_currency_address = $5,
                             has_bid = true
-                        WHERE contract_address = '{}'
-                          AND chain_id = '{}'
-                          AND token_id = '{}';
-                        "#,
-                        offer.offer_amount.unwrap_or(0.0),
-                        offer.order_hash.unwrap_or_default(),
-                        offer.start_date.unwrap_or(0),
-                        offer.end_date.unwrap_or(0),
-                        offer.currency_address.unwrap_or_default(),
-                        contract_address.clone(),
-                        chain_id.clone(),
-                        token_id.clone()
-                    ),
-                    _ => format!(
-                        r#"
+                        WHERE contract_address = $6
+                          AND chain_id = $7
+                          AND token_id = $8;
+                    "#,
+                        )
+                        .bind(offer.offer_amount.unwrap_or(0.0))
+                        .bind(offer.order_hash.unwrap_or_default())
+                        .bind(offer.start_date.unwrap_or(0))
+                        .bind(offer.end_date.unwrap_or(0))
+                        .bind(offer.currency_address.unwrap_or_default())
+                        .bind(contract_address)
+                        .bind(chain_id)
+                        .bind(token_id)
+                        .execute(&client.pool)
+                        .await
+                        .map_err(|e| {
+                            error!(
+                                "Failed to update top_bid fields for token {}: {}",
+                                token_id, e
+                            );
+                            ProviderError::DatabaseError(e.to_string())
+                        })?;
+                    }
+                    _ => {
+                        sqlx::query(
+                            r#"
                         UPDATE token
                         SET top_bid_amount = NULL,
                             top_bid_order_hash = NULL,
@@ -722,29 +735,24 @@ impl OrderProvider {
                             top_bid_currency_address = NULL,
                             top_bid_broker_id = NULL,
                             has_bid = false
-                        WHERE contract_address = '{}'
-                          AND chain_id = '{}'
-                          AND token_id = '{}';
+                        WHERE contract_address = $1
+                          AND chain_id = $2
+                          AND token_id = $3;
                     "#,
-                        contract_address.clone(),
-                        chain_id.clone(),
-                        token_id.clone()
-                    ),
-                };
-
-                match sqlx::query(&update_top_bid_query)
-                    .execute(&client.pool)
-                    .await
-                {
-                    Ok(_) => info!(
-                        "Update of top_bid fields successful for token: {}",
-                        token_id
-                    ),
-                    Err(e) => tracing::error!(
-                        "Failed to update top_bid fields for token {}: {}",
-                        token_id,
-                        e
-                    ),
+                        )
+                        .bind(contract_address)
+                        .bind(chain_id)
+                        .bind(token_id)
+                        .execute(&client.pool)
+                        .await
+                        .map_err(|e| {
+                            error!(
+                                "Failed to clear top_bid fields for token {}: {}",
+                                token_id, e
+                            );
+                            ProviderError::DatabaseError(e.to_string())
+                        })?;
+                    }
                 }
             }
         }
@@ -906,16 +914,30 @@ impl OrderProvider {
         let query = "
             UPDATE token
             SET
-                current_owner = $3, updated_timestamp = $4,
+                current_owner = $3, 
+                updated_timestamp = $4,
                 last_price = $5,
-                currency_chain_id = $6, currency_address = $7,
-                listing_orderhash = null,
+                currency_chain_id = $6, 
+                currency_address = $7,
+                listing_start_amount = null, 
                 listing_start_date = null,
+                listing_currency_address = null,
+                listing_currency_chain_id = null,
+                listing_timestamp = null,
+                listing_broker_id = null,
+                listing_orderhash = null,
+                listing_end_amount = null,
                 listing_end_date = null,
-                listing_start_amount = null, listing_end_amount = null,
-                top_bid_amount = null, top_bid_start_date = null, top_bid_end_date = null, top_bid_currency_address = null,
+                top_bid_currency_address = null,
+                top_bid_amount = null, 
+                top_bid_broker_id = null,
                 top_bid_order_hash = null,
-                held_timestamp = $8
+                top_bid_start_date = null, 
+                top_bid_end_date = null,
+                held_timestamp = $8,
+                status = $9,
+                buy_in_progress = false,
+                has_bid = false
             WHERE contract_address = $1 AND token_id = $2;
         ";
 
@@ -928,6 +950,7 @@ impl OrderProvider {
             .bind(&info.currency_chain_id)
             .bind(&info.currency_address)
             .bind(info.block_timestamp as i64)
+            .bind(EXECUTED_STR)
             .execute(&client.pool)
             .await?;
 
@@ -1860,14 +1883,6 @@ impl OrderProvider {
                             from_address: data.from.clone(),
                             currency_address: token_data.currency_address.clone(),
                         },
-                    )
-                    .await?;
-
-                    Self::update_token_status(
-                        client,
-                        &token_data.contract_address,
-                        &token_data.token_id,
-                        OrderStatus::Executed,
                     )
                     .await?;
                 }
