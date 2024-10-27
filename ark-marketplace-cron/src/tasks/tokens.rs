@@ -13,11 +13,14 @@ use tracing::info;
 
 const CHAIN_ID: &str = "0x534e5f4d41494e";
 const ITEMS_PER_PAGE: i64 = 50;
-const EXPIRED_OFFER_EVENT: &str = "OfferExpired";
-const EXPIRED_LISTING_EVENT: &str = "ListingExpired";
+const REDIS_CACHE_TTL_SECONDS: u64 = 60;
+const MAX_PAGES_TO_CACHE: i64 = 5;
+const EXPIRED_OFFER_EVENT_TYPE: &str = "OfferExpired";
+const EXPIRED_LISTING_EVENT_TYPE: &str = "ListingExpired";
 
 #[derive(sqlx::FromRow)]
-struct Offer {
+struct TokenOffer {
+    broker_id: String,
     offer_amount: Option<f64>,
     order_hash: Option<String>,
     start_date: Option<i64>,
@@ -25,35 +28,45 @@ struct Offer {
     currency_address: Option<String>,
 }
 
+struct ExpiredOffer {
+    contract_address: String,
+    chain_id: String,
+    token_id: String,
+    order_hash: String,
+    end_date: i64,
+}
+
+struct TokenEvent {
+    token_event_id: String,
+    token_id_hex: String,
+    timestamp: i64,
+}
+
 async fn clear_collection_cache(
-    mut con: MultiplexedConnection,
+    con: &mut MultiplexedConnection,
     contract_address: &str,
 ) -> redis::RedisResult<()> {
-    // Create a pattern for matching keys
-    let pattern = format!("*{}_*", contract_address);
+    let cache_key_pattern = format!("*{}_*", contract_address);
 
-    // Collect keys matching the pattern
     let mut cmd = redis::cmd("SCAN");
     cmd.cursor_arg(0);
-    cmd.arg("MATCH").arg(pattern);
+    cmd.arg("MATCH").arg(cache_key_pattern);
     let mut keys: Vec<String> = vec![];
     {
-        let mut iter = cmd.iter_async::<_>(&mut con).await?;
+        let mut iter = cmd.iter_async::<_>(con).await?;
         while let Some(key) = iter.next().await {
             keys.push(key);
         }
     }
 
-    // Delete keys and log the results
     if !keys.is_empty() {
-        con.del(keys.clone()).await?;
+        con.del(&keys).await?;
     }
 
     Ok(())
 }
 
-pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
-    // Insert expired listing events
+pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection) {
     let select_expired_listings_query = r#"
         SELECT DISTINCT contract_address, chain_id, token_id, token_id_hex, listing_orderhash, listing_end_date
         FROM token
@@ -85,16 +98,16 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
 
         let insert_expired_listing_event_query = r#"
             INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
-            VALUES ($6, $1, $2, $3, $4, $5, $7);
+            VALUES ($1, $2, $3, $4, $5, $6, $7);
         "#;
 
         match sqlx::query(insert_expired_listing_event_query)
+            .bind(&token_event_id)
             .bind(contract_address)
             .bind(chain_id)
             .bind(token_id)
             .bind(token_id_hex)
-            .bind(EXPIRED_LISTING_EVENT)
-            .bind(token_event_id.to_string())
+            .bind(EXPIRED_LISTING_EVENT_TYPE)
             .bind(now)
             .execute(pool)
             .await
@@ -108,14 +121,16 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
         }
     }
 
-    let select_collections_query = r#"
+    let collections: Vec<String> = match sqlx::query(
+        r#"
         SELECT DISTINCT contract_address
         FROM token
         WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
           AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
-    "#;
-
-    let collections: Vec<String> = match sqlx::query(select_collections_query).fetch_all(pool).await
+        "#,
+    )
+    .fetch_all(pool)
+    .await
     {
         Ok(rows) => rows.iter().map(|row| row.get::<String, _>(0)).collect(),
         Err(e) => {
@@ -124,97 +139,90 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
         }
     };
 
-    let collections_clone = collections.clone();
-    // loop through collections and clear cache
-    for collection in &collections_clone {
-        match clear_collection_cache(con.clone(), collection).await {
-            Ok(_) => info!("Cache cleared for collection: {}", collection),
-            Err(e) => tracing::error!("Failed to clear cache for collection {}: {}", collection, e),
+    for collection in &collections {
+        if let Err(e) = clear_collection_cache(con, collection).await {
+            tracing::error!("Failed to clear cache for collection {}: {}", collection, e);
+            continue;
         }
-    }
 
-    let clean_dates_query = r#"
-        UPDATE token
-        SET listing_start_date = NULL,
-            listing_end_date = NULL,
-            listing_timestamp = NULL,
-            listing_start_amount = NULL,
-            listing_end_amount = NULL,
-            listing_currency_address = NULL,
-            listing_currency_chain_id = NULL,
-            listing_type = NULL,
-            listing_orderhash = NULL
-        WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
-          AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
-    "#;
+        let clean_dates_query = r#"
+            UPDATE token
+            SET listing_start_date = NULL,
+                listing_end_date = NULL,
+                listing_timestamp = NULL,
+                listing_start_amount = NULL,
+                listing_end_amount = NULL,
+                listing_currency_address = NULL,
+                listing_currency_chain_id = NULL,
+                listing_broker_id = NULL,
+                listing_type = NULL,
+                listing_orderhash = NULL
+            WHERE contract_address = $1
+              AND NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
+              AND listing_start_date IS NOT NULL 
+              AND listing_end_date IS NOT NULL;
+        "#;
 
-    match sqlx::query(clean_dates_query).execute(pool).await {
-        Ok(_) => info!("Cleanup of listing dates successful."),
-        Err(e) => tracing::error!("Failed to clean up listing dates: {}", e),
-    }
-
-    // cache collections
-    for collection in &collections_clone {
-        let recalculate_query = r#"
-                SELECT MIN(hex_to_decimal(listing_start_amount)) AS min_price
-                FROM token
-                WHERE contract_address = $1
-                  AND listing_start_date IS NOT NULL
-                  AND listing_end_date IS NOT NULL
-                GROUP BY contract_address
-            "#;
-
-        match sqlx::query_scalar::<_, BigDecimal>(recalculate_query)
+        if let Err(e) = sqlx::query(clean_dates_query)
             .bind(collection)
-            .fetch_optional(pool)
+            .execute(pool)
             .await
         {
-            Ok(new_floor_price) => {
-                if let Some(min_price) = new_floor_price {
-                    let update_query = r#"
-                        UPDATE contract
-                        SET floor_price = $2
-                        WHERE contract_address = $1;
-                    "#;
-                    match sqlx::query(update_query)
-                        .bind(collection)
-                        .bind(min_price)
-                        .execute(pool)
-                        .await
-                    {
-                        Ok(_) => {
-                            info!("Floor price updated for collection: {}", collection)
-                        }
-                        Err(e) => tracing::error!(
-                            "Failed to update floor price for collection {}: {}",
-                            collection,
-                            e
-                        ),
-                    }
-                } else {
-                    // If no minimum price is found, set floor_price to NULL
-                    let update_query = r#"
-                        UPDATE contract
-                        SET floor_price = NULL
-                        WHERE contract_address = $1;
-                    "#;
-                    match sqlx::query(update_query)
-                        .bind(collection)
-                        .execute(pool)
-                        .await
-                    {
-                        Ok(_) => {
-                            info!(
-                                "No tokens listed. Floor price set to NULL for collection: {}",
-                                collection
-                            )
-                        }
-                        Err(e) => tracing::error!(
-                            "Failed to set floor price to NULL for collection {}: {}",
-                            collection,
-                            e
-                        ),
-                    }
+            tracing::error!("Failed to clean up listing dates: {}", e);
+            continue;
+        }
+
+        match sqlx::query_scalar::<_, BigDecimal>(
+            r#"
+            SELECT MIN(hex_to_decimal(listing_start_amount)) AS min_price
+            FROM token
+            WHERE contract_address = $1
+              AND listing_start_date IS NOT NULL
+              AND listing_end_date IS NOT NULL
+            GROUP BY contract_address
+            "#,
+        )
+        .bind(collection)
+        .fetch_optional(pool)
+        .await
+        {
+            Ok(Some(min_price)) => {
+                if let Err(e) = sqlx::query(
+                    r#"
+                    UPDATE contract
+                    SET floor_price = $2
+                    WHERE contract_address = $1;
+                    "#,
+                )
+                .bind(collection)
+                .bind(min_price)
+                .execute(pool)
+                .await
+                {
+                    tracing::error!(
+                        "Failed to update floor price for collection {}: {}",
+                        collection,
+                        e
+                    );
+                }
+            }
+            Ok(None) => {
+                if let Err(e) = sqlx::query(
+                    r#"
+                    UPDATE contract
+                    SET floor_price = NULL
+                    WHERE contract_address = $1;
+                    "#,
+                )
+                .bind(collection)
+                .execute(pool)
+                .await
+                {
+                    tracing::error!(
+                        "Failed to set floor price to NULL for collection {}: {}",
+                        collection,
+                        e
+                    );
                 }
             }
             Err(e) => tracing::error!(
@@ -223,226 +231,263 @@ pub async fn update_listed_tokens(pool: &PgPool, con: MultiplexedConnection) {
                 e
             ),
         }
-        match cache_collection_page(pool, &mut con.clone(), collection).await {
-            Ok(_) => info!("Cache updated for collection: {}", collection),
-            Err(e) => tracing::error!(
+
+        if let Err(e) = cache_collection_page(pool, con, collection).await {
+            tracing::error!(
                 "Failed to update cache for collection {}: {}",
                 collection,
                 e
-            ),
+            );
         }
     }
 }
 
-pub async fn update_top_bid_tokens(pool: &PgPool, con: MultiplexedConnection) {
-    let select_expired_offers_query = r#"
-        SELECT DISTINCT contract_address, chain_id, token_id, order_hash, end_date
-        FROM token_offer
-        WHERE NOW() - interval '2 minutes' > to_timestamp(end_date);
-    "#;
-
-    let expired_offers: Vec<(String, String, String, String, i64)> =
-        match sqlx::query_as(select_expired_offers_query)
-            .fetch_all(pool)
-            .await
-        {
-            Ok(rows) => rows,
-            Err(e) => {
-                tracing::error!("Failed to select expired offers: {}", e);
-                return;
-            }
-        };
-
-    for (contract_address, chain_id, token_id, order_hash, end_date) in &expired_offers {
-        // Fetch token_id_hex from the token table
-        let select_token_id_hex_query = r#"
-            SELECT token_id_hex
-            FROM token
-            WHERE contract_address = $1
-              AND chain_id = $2
-              AND token_id = $3;
-        "#;
-
-        let token_id_hex: String = match sqlx::query_scalar(select_token_id_hex_query)
-            .bind(contract_address)
-            .bind(chain_id)
-            .bind(token_id)
-            .fetch_one(pool)
-            .await
-        {
-            Ok(hex) => hex,
-            Err(e) => {
-                tracing::error!("Failed to fetch token_id_hex for token {}: {}", token_id, e);
-                return;
-            }
-        };
-
-        let now = Utc::now().timestamp();
-
-        let combined = format!("{}{}", order_hash, end_date);
-        let mut hasher = Sha256::new();
-        hasher.update(combined);
-        let result = hasher.finalize();
-        let token_event_id = format!("0x{:x}", result);
-        // insert expired offer event
-        let insert_expired_offer_event_query = r#"
-            INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
-            VALUES ($6, $1, $2, $3, $4, $5, $7);
-        "#;
-
-        match sqlx::query(insert_expired_offer_event_query)
-            .bind(contract_address)
-            .bind(chain_id)
-            .bind(token_id)
-            .bind(token_id_hex)
-            .bind(EXPIRED_OFFER_EVENT)
-            .bind(token_event_id.to_string())
-            .bind(now)
-            .execute(pool)
-            .await
-        {
-            Ok(_) => info!("Inserted expired offer event for token: {}", token_id),
-            Err(e) => tracing::error!(
-                "Failed to insert expired offer event for token {}: {}",
-                token_id,
-                e
-            ),
+pub async fn update_top_bid_tokens(db_pool: &PgPool, redis_conn: &mut MultiplexedConnection) {
+    let expired_offers = match get_expired_offers(db_pool).await {
+        Ok(offers) => offers,
+        Err(e) => {
+            tracing::error!("Failed to select expired offers: {}", e);
+            return;
         }
+    };
 
-        // Delete these offers from the `token_offer` table
-        let delete_expired_offers_query = r#"
-            DELETE FROM token_offer
-            WHERE contract_address = $1
-              AND chain_id = $3
-              AND token_id = $2
-              AND NOW() > to_timestamp(end_date);
-        "#;
-
-        match sqlx::query(delete_expired_offers_query)
-            .bind(contract_address)
-            .bind(token_id)
-            .bind(chain_id)
-            .execute(pool)
-            .await
-        {
-            Ok(_) => info!("Deleted expired offers for token: {}", token_id),
-            Err(e) => tracing::error!(
-                "Failed to delete expired offers for token {}: {}",
-                token_id,
-                e
-            ),
-        }
-
-        // For each token whose offer has been deleted, check if there are valid offers left
-        let select_valid_offers_query = r#"
-            SELECT
-                CAST(hex_to_decimal(offer_amount) AS FLOAT8) as offer_amount,
-                order_hash,
-                start_date,
-                end_date,
-                currency_address,
-                broker_id
-            FROM token_offer
-            WHERE contract_address = $1
-              AND token_id = $2
-              AND chain_id = $3
-              AND NOW() <= to_timestamp(end_date)
-              AND STATUS = 'PLACED'
-            ORDER BY hex_to_decimal(offer_amount) DESC
-            LIMIT 1;
-        "#;
-
-        let valid_offer: Result<Offer, _> = sqlx::query_as(select_valid_offers_query)
-            .bind(contract_address)
-            .bind(token_id)
-            .bind(chain_id)
-            .fetch_one(pool)
-            .await;
-
-        // Update `top_bid` fields based on whether a valid offer exists
-        let update_top_bid_query = match valid_offer {
-            Ok(offer) => format!(
-                r#"
-                UPDATE token
-                SET top_bid_amount = '{}',
-                    top_bid_order_hash = '{}',
-                    top_bid_start_date = '{}',
-                    top_bid_end_date = '{}',
-                    top_bid_currency_address = '{}',
-                    has_bid = true
-                WHERE contract_address = '{}'
-                  AND token_id = '{}';
-                "#,
-                offer.offer_amount.unwrap_or(0.0),
-                offer.order_hash.unwrap_or_default(),
-                offer.start_date.unwrap_or(0),
-                offer.end_date.unwrap_or(0),
-                offer.currency_address.unwrap_or_default(),
-                contract_address,
-                token_id
-            ),
-            _ => format!(
-                r#"
-                UPDATE token
-                SET top_bid_amount = NULL,
-                    top_bid_order_hash = NULL,
-                    top_bid_start_date = NULL,
-                    top_bid_end_date = NULL,
-                    top_bid_currency_address = NULL,
-                    top_bid_broker_id = NULL,
-                    has_bid = false
-                WHERE contract_address = '{}'
-                  AND token_id = '{}';
-            "#,
-                contract_address, token_id
-            ),
-        };
-
-        match sqlx::query(&update_top_bid_query).execute(pool).await {
-            Ok(_) => info!(
-                "Update of top_bid fields successful for token: {}",
-                token_id
-            ),
-            Err(e) => tracing::error!(
-                "Failed to update top_bid fields for token {}: {}",
-                token_id,
-                e
-            ),
+    for offer in &expired_offers {
+        if let Err(e) = process_expired_offer(db_pool, offer).await {
+            tracing::error!("Failed to process expired offer: {}", e);
+            continue;
         }
     }
 
-    // Clear the cache for each collection
+    if let Err(e) = update_collections_cache(db_pool, redis_conn, &expired_offers).await {
+        tracing::error!("Failed to update collections cache: {}", e);
+    }
+}
+
+async fn get_expired_offers(pool: &PgPool) -> Result<Vec<ExpiredOffer>, sqlx::Error> {
+    sqlx::query_as!(
+        ExpiredOffer,
+        r#"
+        SELECT DISTINCT 
+            contract_address, 
+            chain_id, 
+            token_id, 
+            order_hash, 
+            end_date
+        FROM token_offer
+        WHERE NOW() - interval '2 minutes' > to_timestamp(end_date)
+        "#
+    )
+    .fetch_all(pool)
+    .await
+}
+
+async fn process_expired_offer(pool: &PgPool, offer: &ExpiredOffer) -> Result<(), sqlx::Error> {
+    let token_event = create_token_event(pool, offer).await?;
+
+    insert_expired_event(pool, offer, &token_event).await?;
+    delete_expired_offer(pool, offer).await?;
+    update_token_bids(pool, offer).await?;
+
+    Ok(())
+}
+
+async fn create_token_event(
+    pool: &PgPool,
+    offer: &ExpiredOffer,
+) -> Result<TokenEvent, sqlx::Error> {
+    let token_id_hex = sqlx::query_scalar!(
+        r#"
+        SELECT token_id_hex
+        FROM token
+        WHERE contract_address = $1
+          AND chain_id = $2
+          AND token_id = $3
+        "#,
+        offer.contract_address,
+        offer.chain_id,
+        offer.token_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    let token_event_id = {
+        let mut hasher = Sha256::new();
+        hasher.update(format!("{}{}", offer.order_hash, offer.end_date));
+        format!("0x{:x}", hasher.finalize())
+    };
+
+    Ok(TokenEvent {
+        token_event_id,
+        token_id_hex,
+        timestamp: Utc::now().timestamp(),
+    })
+}
+
+async fn update_token_with_bid(
+    pool: &PgPool,
+    offer: &ExpiredOffer,
+    bid: TokenOffer,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE token
+        SET top_bid_amount = $1,
+            top_bid_order_hash = $2,
+            top_bid_start_date = $3,
+            top_bid_end_date = $4,
+            top_bid_currency_address = $5,
+            top_bid_broker_id = $6,
+            has_bid = true
+        WHERE contract_address = $7
+          AND token_id = $8
+        "#,
+    )
+    .bind(bid.offer_amount)
+    .bind(bid.order_hash)
+    .bind(bid.start_date)
+    .bind(bid.end_date)
+    .bind(bid.currency_address)
+    .bind(bid.broker_id)
+    .bind(&offer.contract_address)
+    .bind(&offer.token_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+async fn clear_token_bid(pool: &PgPool, offer: &ExpiredOffer) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        UPDATE token
+        SET top_bid_amount = NULL,
+            top_bid_order_hash = NULL,
+            top_bid_start_date = NULL,
+            top_bid_end_date = NULL,
+            top_bid_currency_address = NULL,
+            top_bid_broker_id = NULL,
+            has_bid = false
+        WHERE contract_address = $1
+          AND token_id = $2
+        "#,
+    )
+    .bind(&offer.contract_address)
+    .bind(&offer.token_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+async fn insert_expired_event(
+    pool: &PgPool,
+    offer: &ExpiredOffer,
+    event: &TokenEvent,
+) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        INSERT INTO token_event (
+            token_event_id, contract_address, chain_id, token_id, 
+            token_id_hex, event_type, block_timestamp
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        "#,
+    )
+    .bind(&event.token_event_id)
+    .bind(&offer.contract_address)
+    .bind(&offer.chain_id)
+    .bind(&offer.token_id)
+    .bind(&event.token_id_hex)
+    .bind(EXPIRED_OFFER_EVENT_TYPE)
+    .bind(event.timestamp)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+async fn delete_expired_offer(pool: &PgPool, offer: &ExpiredOffer) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        r#"
+        DELETE FROM token_offer
+        WHERE contract_address = $1
+          AND chain_id = $2
+          AND token_id = $3
+          AND NOW() > to_timestamp(end_date)
+        "#,
+    )
+    .bind(&offer.contract_address)
+    .bind(&offer.chain_id)
+    .bind(&offer.token_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+async fn update_token_bids(pool: &PgPool, offer: &ExpiredOffer) -> Result<(), sqlx::Error> {
+    let active_offer = sqlx::query_as::<_, TokenOffer>(
+        r#"
+        SELECT *
+        FROM token_offer
+        WHERE contract_address = $1
+          AND token_id = $2
+          AND chain_id = $3
+          AND NOW() <= to_timestamp(end_date)
+          AND STATUS = 'PLACED'
+        ORDER BY hex_to_decimal(offer_amount) DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(&offer.contract_address)
+    .bind(&offer.token_id)
+    .bind(&offer.chain_id)
+    .fetch_optional(pool)
+    .await?;
+
+    match active_offer {
+        Some(bid) => update_token_with_bid(pool, offer, bid).await?,
+        None => clear_token_bid(pool, offer).await?,
+    }
+
+    Ok(())
+}
+
+async fn update_collections_cache(
+    pool: &PgPool,
+    redis_conn: &mut MultiplexedConnection,
+    expired_offers: &[ExpiredOffer],
+) -> Result<(), sqlx::Error> {
     let collections: HashSet<String> = expired_offers
-        .into_iter()
-        .map(|(contract_address, _, _, _, _)| contract_address)
+        .iter()
+        .map(|offer| offer.contract_address.clone())
         .collect();
+
     for contract_address in &collections {
-        match clear_collection_cache(con.clone(), contract_address).await {
-            Ok(_) => info!("Cache cleared for collection: {}", contract_address),
-            Err(e) => tracing::error!(
+        if let Err(e) = clear_collection_cache(redis_conn, contract_address).await {
+            tracing::error!(
                 "Failed to clear cache for collection {}: {}",
                 contract_address,
                 e
-            ),
+            );
+            continue;
         }
-    }
 
-    // Rebuild the cache for each collection
-    for contract_address in &collections {
-        match cache_collection_page(pool, &mut con.clone(), contract_address).await {
-            Ok(_) => info!("Cache updated for collection: {}", contract_address),
-            Err(e) => tracing::error!(
+        if let Err(e) = cache_collection_page(pool, redis_conn, contract_address).await {
+            tracing::error!(
                 "Failed to update cache for collection {}: {}",
                 contract_address,
                 e
-            ),
+            );
         }
     }
+
+    Ok(())
 }
 
 pub async fn cache_collection_pages(
-    pool: &PgPool,
-    con: MultiplexedConnection,
+    db_pool: &PgPool,
+    redis_conn: &mut MultiplexedConnection,
 ) -> redis::RedisResult<()> {
     let collections_to_cache = vec![
         "0x05dbdedc203e92749e2e746e2d40a768d966bd243df04a6b712e222bc040a9af",
@@ -451,21 +496,24 @@ pub async fn cache_collection_pages(
     ];
 
     for contract_address in collections_to_cache {
-        match cache_collection_page(pool, &mut con.clone(), contract_address).await {
-            Ok(_) => info!("Successfully cached collection page"),
-            Err(e) => tracing::error!("Failed to cache collection page: {}", e),
+        if let Err(e) = cache_collection_page(db_pool, redis_conn, contract_address).await {
+            tracing::error!("Failed to cache collection page: {}", e);
         }
     }
 
     Ok(())
 }
 
+fn calculate_total_pages(total_items: i64, items_per_page: i64) -> i64 {
+    (total_items + items_per_page - 1) / items_per_page
+}
+
 async fn cache_collection_page(
-    pool: &PgPool,
-    con: &mut MultiplexedConnection,
+    db_pool: &PgPool,
+    redis_conn: &mut MultiplexedConnection,
     contract_address: &str,
 ) -> redis::RedisResult<()> {
-    let total_token_count = sqlx::query!(
+    let token_count_query = sqlx::query!(
         "
             SELECT COUNT(*)
             FROM token
@@ -475,10 +523,10 @@ async fn cache_collection_page(
         contract_address,
         CHAIN_ID
     )
-    .fetch_one(pool)
+    .fetch_one(db_pool)
     .await;
 
-    let token_count = match total_token_count {
+    let token_count = match token_count_query {
         Ok(total_token_count) => total_token_count.count.unwrap_or(0),
         Err(e) => {
             tracing::error!("Failed to fetch token count: {}", e);
@@ -486,9 +534,9 @@ async fn cache_collection_page(
         }
     };
 
-    let total_pages = (token_count + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE;
+    let total_pages = calculate_total_pages(token_count, ITEMS_PER_PAGE);
 
-    for page in 1..=5 {
+    for page in 1..=MAX_PAGES_TO_CACHE {
         let has_next_page = page < total_pages;
 
         let tokens_data: Vec<TokenData> = sqlx::query_as!(
@@ -514,17 +562,17 @@ async fn cache_collection_page(
             contract_address,
             CHAIN_ID,
         )
-        .fetch_all(pool)
+        .fetch_all(db_pool)
         .await
         .unwrap_or_else(|err| {
             tracing::error!("Error fetching data: {}", err);
             Vec::new()
         });
         let json_data = json!((tokens_data, has_next_page, token_count));
-        let key = format!("all_tokens_{}_page_{}", contract_address, page);
+        let cache_key = format!("all_tokens_{}_page_{}", contract_address, page);
         // Store the JSON data in Redis
-        match con
-            .set_ex::<_, _, ()>(&key, json_data.to_string(), 60)
+        match redis_conn
+            .set_ex::<_, _, ()>(&cache_key, json_data.to_string(), REDIS_CACHE_TTL_SECONDS)
             .await
         {
             Ok(_) => info!("Successfully set key"),
