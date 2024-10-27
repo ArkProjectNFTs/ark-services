@@ -674,10 +674,10 @@ impl OrderProvider {
                         broker_id
                     FROM token_offer
                     WHERE contract_address = $1
-                    AND token_id = $2
-                    AND chain_id = $3
-                    AND NOW() <= to_timestamp(end_date)
-                    AND STATUS = 'PLACED'
+                      AND token_id = $2
+                      AND chain_id = $3
+                      AND NOW() <= to_timestamp(end_date)
+                      AND STATUS = 'PLACED'
                     ORDER BY hex_to_decimal(offer_amount) DESC
                     LIMIT 1;
                 "#;
