@@ -1055,6 +1055,34 @@ impl DatabaseAccess for PgPool {
         Ok(token_data)
     }
 
+    /// Fetches and returns paginated token data from the database for a given contract address and chain ID.
+    ///
+    /// This function retrieves token information including prices, listings, metadata, and ownership details.
+    /// It supports various filtering and sorting options, with protection against SQL injection.
+    ///
+    /// # Arguments
+    /// * `contract_address` - The address of the contract to query tokens from
+    /// * `chain_id` - The blockchain network identifier
+    /// * `page` - The page number for pagination (1-based)
+    /// * `items_per_page` - Number of items to return per page
+    /// * `buy_now` - If true, only returns listed tokens available for immediate purchase
+    /// * `sort` - Optional sorting field ("price", "token_id", or "listing_timestamp")
+    /// * `direction` - Optional sort direction ("asc" or "desc")
+    /// * `sort_value` - Optional value to sort by
+    /// * `token_ids` - Optional list of specific token IDs to filter by
+    /// * `token_id` - Optional single token ID to search for (supports partial matches)
+    ///
+    /// # Returns
+    /// Returns a Result containing a tuple with:
+    /// * Vec<TokenData> - List of token data matching the query criteria
+    /// * bool - Indicates if there are more pages available
+    /// * i64 - Total count of tokens matching the criteria
+    ///
+    /// # Error
+    /// Returns an Error if:
+    /// * Invalid sort field or direction is provided
+    /// * Database query fails
+    /// * Data transformation fails
     async fn get_tokens_data(
         &self,
         contract_address: &str,
@@ -1068,139 +1096,179 @@ impl DatabaseAccess for PgPool {
         token_ids: Option<Vec<String>>,
         token_id: Option<String>,
     ) -> Result<(Vec<TokenData>, bool, i64), Error> {
-        let sort_field = sort.as_deref().unwrap_or("price");
-        let sort_direction = direction.as_deref().unwrap_or("asc");
-        let order_by = generate_order_by_clause(sort_field, sort_direction, sort_value.as_deref());
+        // Validate and sanitize sort field to prevent SQL injection
+        let sort_field = match sort.as_deref() {
+            Some("price") | None => "price",
+            Some("token_id") => "token_id",
+            Some("listing_timestamp") => "listing_timestamp",
+            _ => return Err(Error::Protocol("Invalid sort field".into())),
+        };
+
+        // Validate and sanitize sort direction to prevent SQL injection
+        let sort_direction = match direction.as_deref() {
+            Some("asc") | None => "ASC",
+            Some("desc") => "DESC",
+            _ => return Err(Error::Protocol("Invalid sort direction".into())),
+        };
+
+        // Generate safe order by clause based on validated inputs
+        let order_by = match sort_value {
+            Some(_) => format!("{} {} NULLS LAST", sort_field, sort_direction),
+            None => format!("{} {}", sort_field, sort_direction),
+        };
+
         let count = 0;
+        let mut current_param = 6; // Starting from $6 as we already use $1-$5 in the base query
 
-        // Additional condition for token_id if it's provided
-        let token_id_condition = if let Some(ref id) = token_id {
-            format!("AND token.token_id LIKE '%{}%'", id)
+        // Build the base query with parameter placeholders
+        let mut base_conditions = vec![];
+        let mut query_params: Vec<String> = vec![];
+
+        // Add token_id condition if present
+        if token_id.is_some() {
+            base_conditions.push(format!("AND token.token_id LIKE ${}", current_param));
+            current_param += 1;
+        }
+
+        // Handle token_ids list and get token count
+        let (conditions, token_count) = if let Some(ids) = &token_ids {
+            if ids.is_empty() {
+                (vec!["AND 1 = 0".to_string()], 0)
+            } else {
+                let placeholders: Vec<String> = (0..ids.len())
+                    .map(|i| {
+                        let param = format!("${}", current_param + i);
+                        query_params.push(param.clone());
+                        param
+                    })
+                    .collect();
+
+                let mut conditions = base_conditions.clone();
+                if !placeholders.is_empty() {
+                    conditions.push(format!(
+                        "AND token.token_id IN ({})",
+                        placeholders.join(", ")
+                    ));
+                }
+
+                // Prepare and execute count query
+                let count_query = format!(
+                    "SELECT COUNT(*) FROM token 
+                    WHERE token.contract_address = $1 
+                    AND token.chain_id = $2 
+                    AND ($3 = false OR token.listing_start_amount IS NOT NULL) 
+                    {}",
+                    conditions.join(" ")
+                );
+
+                let mut count_query_builder = sqlx::query_scalar(&count_query)
+                    .bind(contract_address)
+                    .bind(chain_id)
+                    .bind(buy_now);
+
+                // Bind token_id if present
+                if let Some(tid) = &token_id {
+                    count_query_builder = count_query_builder.bind(format!("%{}%", tid));
+                }
+
+                // Bind all token_ids
+                for id in ids {
+                    count_query_builder = count_query_builder.bind(id);
+                }
+
+                let count: i64 = count_query_builder.fetch_one(self).await?;
+                (conditions, count)
+            }
         } else {
-            String::new()
+            // No token_ids filter case - get counts from contract table
+            let contract_data: (Option<i64>, Option<i64>) = sqlx::query_as(
+                "SELECT token_count, token_listed_count 
+                FROM contract 
+                WHERE contract_address = $1 
+                AND chain_id = $2",
+            )
+            .bind(contract_address)
+            .bind(chain_id)
+            .fetch_one(self)
+            .await?;
+
+            let total_count = contract_data.0.unwrap_or(0);
+            let listed_count = contract_data.1.unwrap_or(0);
+            let count = if buy_now {
+                listed_count
+            } else {
+                total_count - listed_count
+            };
+            (base_conditions, count)
         };
 
-        let (token_ids_condition, token_count) = match token_ids {
-            Some(ids) if !ids.is_empty() => {
-                let condition = format!(
-                    "AND token.token_id IN ({})",
-                    ids.iter()
-                        .map(|id| format!("'{}'", id))
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                );
-
-                // calculate the token count
-                let token_count_query = format!(
-                    "
-                    SELECT COUNT(*)
-                    FROM token
-                    WHERE token.contract_address = $1
-                        AND token.chain_id = $2
-                        AND ($3 = false OR token.listing_start_amount IS NOT NULL)
-                        {} {}
-                    ",
-                    condition, token_id_condition
-                );
-
-                let token_count: i64 = sqlx::query_scalar(&token_count_query)
-                    .bind(contract_address)
-                    .bind(chain_id)
-                    .bind(buy_now)
-                    .fetch_one(self)
-                    .await?;
-
-                (condition, token_count)
-            }
-            Some(_) => {
-                // If the token_ids is empty, no result
-                let condition = "AND 1 = 0".to_string();
-                (condition, 0)
-            }
-            None => {
-                let condition = String::new();
-                // get fields from contract table to calculate token count
-                let contract_query = "
-                    SELECT
-                        token_count,
-                        token_listed_count
-                    FROM contract
-                    WHERE contract_address = $1
-                    AND chain_id = $2
-                    "
-                .to_string();
-
-                let contract_data: (Option<i64>, Option<i64>) = sqlx::query_as(&contract_query)
-                    .bind(contract_address)
-                    .bind(chain_id)
-                    .fetch_one(self)
-                    .await?;
-
-                let token_count = contract_data.0.unwrap_or(0);
-                let token_listed_count = contract_data.1.unwrap_or(0);
-
-                // if buy now is true, then token count is token_listed_count
-                // else token count is token_count - token_listed_count
-                let token_count = if buy_now {
-                    token_listed_count
-                } else {
-                    token_count - token_listed_count
-                };
-
-                (condition, token_count)
-            }
-        };
-
-        let tokens_data_query = format!(
-            "
-                WITH latest_transaction AS (
-                    SELECT DISTINCT ON (contract_address, token_id) 
-                        contract_address, 
-                        token_id, 
-                        to_address
-                    FROM transaction_info
-                    WHERE contract_address = $1
-                    ORDER BY contract_address, token_id, timestamp DESC, sequence_id DESC
-                )
-               SELECT
-                   token.contract_address as collection_address,
-                   token.token_id,
-                   hex_to_decimal(token.last_price) as last_price,
-                   CAST(0 as INTEGER) as floor_difference,
-                   token.listing_timestamp as listed_at,
-                   (token.listing_start_amount IS NOT NULL) as is_listed,
-                   token.listing_type as listing_type,
-                   hex_to_decimal(token.listing_start_amount) as price,
-                   token.metadata as metadata,
-                    COALESCE(latest_transaction.to_address, token.current_owner) AS owner,
-                   token.listing_currency_address as currency_address,
-                   token.buy_in_progress
-               FROM token
-               LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address
-               WHERE token.contract_address = $1
-                   AND token.chain_id = $2
-                   AND ($3 = false OR token.listing_start_amount IS NOT NULL)
-                   {} {}
-               ORDER BY {}
-               LIMIT $4 OFFSET $5",
-            token_ids_condition, token_id_condition, order_by
+        // Main query construction
+        let main_query = format!(
+            "WITH latest_transaction AS (
+                SELECT DISTINCT ON (contract_address, token_id) 
+                    contract_address, 
+                    token_id, 
+                    to_address
+                FROM transaction_info
+                WHERE contract_address = $1
+                ORDER BY contract_address, token_id, timestamp DESC, sequence_id DESC
+            )
+            SELECT
+                token.contract_address as collection_address,
+                token.token_id,
+                hex_to_decimal(token.last_price) as last_price,
+                CAST(0 as INTEGER) as floor_difference,
+                token.listing_timestamp as listed_at,
+                (token.listing_start_amount IS NOT NULL) as is_listed,
+                token.listing_type as listing_type,
+                hex_to_decimal(token.listing_start_amount) as price,
+                token.metadata as metadata,
+                COALESCE(latest_transaction.to_address, token.current_owner) AS owner,
+                token.listing_currency_address as currency_address,
+                token.buy_in_progress
+            FROM token
+            LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address
+            WHERE token.contract_address = $1
+                AND token.chain_id = $2
+                AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+                {}
+            ORDER BY {}
+            LIMIT $4 OFFSET $5",
+            conditions.join(" "),
+            order_by
         );
 
-        let token_data_query_result: Vec<TokenDataDB> = sqlx::query_as(&tokens_data_query)
+        // Build the final query with all parameters
+        let mut query_builder = sqlx::query_as(&main_query)
             .bind(contract_address)
             .bind(chain_id)
             .bind(buy_now)
             .bind(items_per_page)
-            .bind((page - 1) * items_per_page)
-            .fetch_all(self)
-            .await?;
+            .bind((page - 1) * items_per_page);
 
+        // Bind token_id if present
+        if let Some(tid) = token_id {
+            query_builder = query_builder.bind(format!("%{}%", tid));
+        }
+
+        // Bind token_ids if present
+        if let Some(ids) = token_ids {
+            for id in ids {
+                query_builder = query_builder.bind(id);
+            }
+        }
+
+        // Execute query and get results
+        let token_data_query_result: Vec<TokenDataDB> = query_builder.fetch_all(self).await?;
+
+        // Get currencies
         let currencies = self.get_currencies().await?;
         let currencies_map: HashMap<String, Currency> = currencies
             .into_iter()
             .filter_map(|c| c.contract.clone().map(|contract| (contract, c)))
             .collect();
 
+        // Transform results
         let tokens_data: Vec<TokenData> = token_data_query_result
             .into_iter()
             .map(|token_data| TokenData {
@@ -1230,9 +1298,10 @@ impl DatabaseAccess for PgPool {
             })
             .collect();
 
-        // Calculate if there is another page
+        // Calculate pagination
         let total_pages = (count + items_per_page - 1) / items_per_page;
         let has_next_page = page < total_pages;
+
         Ok((tokens_data, has_next_page, token_count))
     }
 
