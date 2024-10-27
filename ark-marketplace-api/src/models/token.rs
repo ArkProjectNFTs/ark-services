@@ -5,7 +5,6 @@ use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
-use utoipa::openapi::schema;
 
 /// DEV-690: Expected format for Token Data
 /// {
