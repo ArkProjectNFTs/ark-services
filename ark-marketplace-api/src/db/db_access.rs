@@ -895,8 +895,18 @@ impl DatabaseAccess for PgPool {
         let token_data: TokenOneData = sqlx::query_as!(
             TokenOneData,
             "
+                WITH latest_transaction AS (
+                    SELECT DISTINCT ON (contract_address, token_id) 
+                        contract_address, 
+                        token_id, 
+                        to_address
+                    FROM transaction_info
+                    WHERE contract_address = $1
+                    AND token_id::text = $3
+                    ORDER BY contract_address, token_id, timestamp DESC, sequence_id DESC
+                )
                 SELECT
-                    token.current_owner as owner,
+                    COALESCE(latest_transaction.to_address, token.current_owner) AS owner,
                     token.listing_currency_address as listing_currency_address,
                     token.listing_currency_chain_id as listing_currency_chain_id,
                     c.floor_price as floor,
@@ -909,6 +919,8 @@ impl DatabaseAccess for PgPool {
                 FROM token
                 INNER JOIN contract as c ON c.contract_address = token.contract_address
                     AND c.chain_id = token.chain_id
+                LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address
+                AND latest_transaction.token_id::text = token.token_id
                 WHERE token.contract_address = $1
                   AND token.chain_id = $2
                   AND token.token_id = $3
@@ -989,25 +1001,37 @@ impl DatabaseAccess for PgPool {
         let token_data: TokenInformationData = sqlx::query_as!(
             TokenInformationData,
             "
-                    SELECT
-                        token_id,
-                        token.contract_address as collection_address,
-                        hex_to_decimal(token.listing_start_amount) as price,
-                        hex_to_decimal(token.last_price) as last_price,
-                        top_bid_amount as top_offer,
-                        token.current_owner as owner,
-                        c.contract_name as collection_name,
-                        token.metadata as metadata,
-                        c.contract_image as collection_image,
-                        metadata_updated_at,
-                        metadata_status
-                    FROM token
-                    INNER JOIN contract as c ON c.contract_address = token.contract_address
-                        AND c.chain_id = token.chain_id
-                    WHERE token.contract_address = $1
-                      AND token.chain_id = $2
-                      AND token.token_id = $3
-                    ",
+            WITH latest_transaction AS (
+                SELECT DISTINCT ON (contract_address, token_id) 
+                    contract_address, 
+                    token_id, 
+                    to_address
+                FROM transaction_info
+                WHERE contract_address = $1
+                AND token_id::text = $3
+                ORDER BY contract_address, token_id, timestamp DESC, sequence_id DESC
+            )
+            SELECT
+                token.token_id,
+                token.contract_address AS collection_address,
+                hex_to_decimal(token.listing_start_amount) AS price,
+                hex_to_decimal(token.last_price) AS last_price,
+                top_bid_amount AS top_offer,
+                COALESCE(latest_transaction.to_address, token.current_owner) AS owner,
+                c.contract_name AS collection_name,
+                token.metadata AS metadata,
+                c.contract_image AS collection_image,
+                metadata_updated_at,
+                metadata_status
+            FROM token
+            INNER JOIN contract AS c ON c.contract_address = token.contract_address
+                AND c.chain_id = token.chain_id
+            LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address
+            AND latest_transaction.token_id::text = token.token_id
+            WHERE token.contract_address = $1
+              AND token.chain_id = $2
+              AND token.token_id = $3
+            ",
             contract_address,
             chain_id,
             token_id
@@ -1116,6 +1140,15 @@ impl DatabaseAccess for PgPool {
 
         let tokens_data_query = format!(
             "
+                WITH latest_transaction AS (
+                    SELECT DISTINCT ON (contract_address, token_id) 
+                        contract_address, 
+                        token_id, 
+                        to_address
+                    FROM transaction_info
+                    WHERE contract_address = $1
+                    ORDER BY contract_address, token_id, timestamp DESC, sequence_id DESC
+                )
                SELECT
                    token.contract_address as collection_address,
                    token.token_id,
@@ -1126,10 +1159,11 @@ impl DatabaseAccess for PgPool {
                    token.listing_type as listing_type,
                    hex_to_decimal(token.listing_start_amount) as price,
                    token.metadata as metadata,
-                   current_owner as owner,
+                    COALESCE(latest_transaction.to_address, token.current_owner) AS owner,
                    token.listing_currency_address as currency_address,
                    token.buy_in_progress
                FROM token
+               LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address
                WHERE token.contract_address = $1
                    AND token.chain_id = $2
                    AND ($3 = false OR (token.listing_start_amount IS NOT NULL AND token.listing_type != 'Auction'))
