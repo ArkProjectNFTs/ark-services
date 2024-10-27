@@ -106,7 +106,7 @@ pub struct CollectionActivityDataDB {
     pub currency_address: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
+#[derive(Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct CollectionActivityData {
     pub activity_type: TokenEventType,
     #[schema(value_type = String, example = "12345.6789")]
@@ -131,9 +131,6 @@ pub struct CollectionActivityData {
     pub name: Option<String>,
     pub address: String,
     pub is_verified: Option<bool>,
-    #[schema(
-        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
-    )]
     pub currency: Option<Currency>,
 }
 

@@ -92,7 +92,6 @@ pub async fn get_activity(
     ),
     params(
         ("user_address" = String, Path, description = "Address of the user"),
-
         ("type" = Option<String>, Query, description = "'made' or 'received' to filter either made or received offers"),
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),

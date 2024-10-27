@@ -1,6 +1,7 @@
 use super::utils::extract_page_params;
 use super::utils::CHAIN_ID;
 use crate::db::db_access::DatabaseAccess;
+use crate::db::query::get_currencies;
 use crate::db::query::{
     flush_all_data_query, get_collection_floor_price, get_token_activity_data, get_token_data,
     get_token_marketdata, get_token_offers_data, get_tokens_data, get_tokens_portfolio_data,
@@ -67,7 +68,6 @@ fn extract_query_params(
     params(
         ("address" = String, Path, description = "The contract address of the collection"),
         ("chain_id" = String, Path, description = "The blockchain chain ID"),
-
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
         ("search" = Option<String>, Query, description = "Filter by token id"),
@@ -308,7 +308,6 @@ pub async fn get_tokens_portfolio(
         ("address" = String, Path, description = "The contract address of the collection"),
         ("chain_id" = String, Path, description = "The blockchain chain ID"),
         ("token_id" = String, Path, description = "The token ID"),
-
         ("page" = Option<i32>, Query, description = "Page number for pagination, defaults to 1"),
         ("items_per_page" = Option<i32>, Query, description = "Number of items per page, defaults to 100"),
     )
@@ -356,25 +355,44 @@ pub async fn get_token_offers(
             return HttpResponse::InternalServerError().finish();
         }
     };
+
+    let currencies = match get_currencies(db_access).await {
+        Ok(currencies) => currencies,
+        Err(err) => {
+            tracing::error!("error query get_currencies: {}", err);
+            return HttpResponse::InternalServerError().finish();
+        }
+    };
+
     let token_offers_data: Vec<TokenOfferOneData> = token_offers_data
-        .iter()
-        .map(|data| TokenOfferOneData {
-            offer_id: data.offer_id,
-            price: data.amount.clone(), // TODO: handle currency conversion
-            source: data.source.clone(),
-            expire_at: data.expire_at,
-            hash: data.hash.clone(),
-            floor_difference: compute_floor_difference(
-                data.amount.clone(),
-                data.currency_address.clone(),
-                floor_price.value.clone(),
-            ),
+        .into_iter()
+        .filter_map(|data| {
+            let currency = currencies
+                .iter()
+                .find(|c| c.contract.as_ref() == Some(&data.currency_address))
+                .cloned()
+                .unwrap_or_default();
+
+            Some(TokenOfferOneData {
+                offer_id: data.offer_id,
+                price: data.amount.clone(),
+                currency,
+                source: data.source,
+                expire_at: data.expire_at,
+                hash: data.hash,
+                floor_difference: compute_floor_difference(
+                    data.amount.clone(),
+                    data.currency_address,
+                    floor_price.value.clone(),
+                ),
+            })
         })
         .collect();
+
     HttpResponse::Ok().json(json!({
         "data": token_offers_data,
         "count": count,
-        "next_page": if has_next_page { Some(page + 1)} else { None}
+        "next_page": if has_next_page { Some(page + 1) } else { None }
     }))
 }
 

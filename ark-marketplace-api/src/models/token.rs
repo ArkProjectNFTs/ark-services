@@ -5,6 +5,7 @@ use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
+use utoipa::openapi::schema;
 
 /// DEV-690: Expected format for Token Data
 /// {
@@ -192,6 +193,7 @@ pub struct TokenOfferOneData {
     pub offer_id: i32,
     #[schema(value_type = String, example = "12345.6789")]
     pub price: Option<BigDecimal>,
+    pub currency: Currency,
     #[schema(value_type = String, example = "12345.6789")]
     pub floor_difference: Option<BigDecimal>,
     pub source: Option<String>,
@@ -349,7 +351,7 @@ pub struct TokenActivityDataDB {
     pub currency_address: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
+#[derive(Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct TokenActivityData {
     pub activity_type: TokenEventType,
     #[schema(value_type = String, example = "12345.6789")]
@@ -373,10 +375,7 @@ pub struct TokenActivityData {
     pub collection_name: Option<String>,
     pub collection_is_verified: Option<bool>,
     pub collection_address: Option<String>,
-    #[schema(
-        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
-    )]
-    pub currency: Option<Currency>,
+    pub currency: Currency,
 }
 
 #[derive(Deserialize, Serialize, FromRow)]
@@ -395,7 +394,7 @@ pub struct TokenPortfolioActivityDataDB {
     pub currency_address: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, FromRow, utoipa::ToSchema)]
+#[derive(Deserialize, Serialize, FromRow, utoipa::ToSchema)]
 pub struct TokenPortfolioActivityData {
     pub activity_type: TokenEventType,
     #[schema(value_type = String, example = "12345.6789")]
@@ -420,8 +419,5 @@ pub struct TokenPortfolioActivityData {
         }"#
     )]
     pub metadata: Option<JsonValue>,
-    #[schema(
-        example = r#"{"contract": "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7", "symbol": "ETH", "decimals": 18}"#
-    )]
-    pub currency: Option<Currency>,
+    pub currency: Currency,
 }

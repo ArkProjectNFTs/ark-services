@@ -155,7 +155,7 @@ pub trait DatabaseAccess: Send + Sync {
     async fn get_currency(
         &self,
         currencies: Vec<Currency>,
-        contract_address: Option<String>,
+        currency_contract_address: Option<String>,
     ) -> Currency;
 
     async fn get_currencies(&self) -> Result<Vec<Currency>, Error>;
@@ -818,9 +818,9 @@ impl DatabaseAccess for PgPool {
     async fn get_currency(
         &self,
         currencies: Vec<Currency>,
-        contract_address: Option<String>,
+        currency_contract_address: Option<String>,
     ) -> Currency {
-        let address = match contract_address {
+        let address = match currency_contract_address {
             Some(addr) => addr,
             None => return Currency::default(),
         };
@@ -1540,7 +1540,9 @@ impl DatabaseAccess for PgPool {
                 let currency = currencies
                     .iter()
                     .find(|c| c.contract == sale.currency_address)
-                    .cloned();
+                    .cloned()
+                    .unwrap_or_default();
+
                 TokenActivityData {
                     time_stamp: sale.time_stamp,
                     transaction_hash: sale.transaction_hash,

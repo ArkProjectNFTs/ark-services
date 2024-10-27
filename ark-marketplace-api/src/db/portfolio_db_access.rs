@@ -183,7 +183,9 @@ impl DatabaseAccess for PgPool {
                 let currency = currencies
                     .iter()
                     .find(|c| c.contract == sale.currency_address)
-                    .cloned();
+                    .cloned()
+                    .unwrap_or_default();
+
                 TokenPortfolioActivityData {
                     collection_name: sale.collection_name,
                     collection_address: sale.collection_address,
