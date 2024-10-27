@@ -366,14 +366,14 @@ pub async fn get_token_offers(
 
     let token_offers_data: Vec<TokenOfferOneData> = token_offers_data
         .into_iter()
-        .filter_map(|data| {
+        .map(|data| {
             let currency = currencies
                 .iter()
                 .find(|c| c.contract.as_ref() == Some(&data.currency_address))
                 .cloned()
                 .unwrap_or_default();
 
-            Some(TokenOfferOneData {
+            TokenOfferOneData {
                 offer_id: data.offer_id,
                 price: data.amount.clone(),
                 currency,
@@ -385,7 +385,7 @@ pub async fn get_token_offers(
                     data.currency_address,
                     floor_price.value.clone(),
                 ),
-            })
+            }
         })
         .collect();
 
