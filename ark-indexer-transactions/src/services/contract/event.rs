@@ -2,8 +2,8 @@ use crate::{
     helpers::common::felt_to_strk_string,
     interfaces::{
         contract::{
-            ContractType, ERC1155Event, ERC1400Event, ERC20Event, ERC721Event, NFTInfo,
-            StarknetClientError, TransactionInfo,
+            ContractInfo, ContractType, ERC1155Event, ERC1400Event, ERC20Event, ERC721Event,
+            NFTInfo, StarknetClientError, TransactionInfo,
         },
         event::EventType,
     },
@@ -14,6 +14,7 @@ use starknet::{
     core::types::{BlockId::Hash, Felt},
     providers::Provider,
 };
+use std::str::FromStr;
 
 use starknet::providers::sequencer::models::Event;
 
@@ -32,7 +33,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        _chain_id: Felt,
+        chain_id: Felt,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -43,7 +44,7 @@ where
                 ERC20Event::Transfer { from, to, value } => {
                     let call_data = vec![];
 
-                    let _name = match self
+                    let name = match self
                         .get_contract_property_string(
                             contract_origin,
                             "name",
@@ -58,7 +59,7 @@ where
 
                     // println!("Name: {:?}", name);
 
-                    let _symbol = match self
+                    let symbol = match self
                         .get_contract_property_string(
                             contract_origin,
                             "symbol",
@@ -96,21 +97,45 @@ where
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
+                        chain_id: felt_to_strk_string(chain_id),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         event_type: EventType::Transfer,
                         compliance: erc_compliance,
                         value: Some(value),
                         timestamp: block_timestamp,
-                        token_id: None,
+                        token_id: Some(BigDecimal::from_str("0")?),
                         contract_address: felt_to_strk_string(contract_origin),
                         contract_type: ContractType::ERC20,
                         block_hash: felt_to_strk_string(block_hash),
                         action,
                         sub_event_id: format!("{}_O", event_id),
                     };
+                    let _nft_info = NFTInfo {
+                        tx_hash: felt_to_strk_string(tx_hash),
+                        contract_address: felt_to_strk_string(contract_origin),
+                        token_id: None,
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        metadata_uri: None,
+                        owner: felt_to_strk_string(to),
+                        chain_id: felt_to_strk_string(chain_id),
+                        block_hash: felt_to_strk_string(block_hash),
+                        block_timestamp,
+                    };
+                    let contract_info = ContractInfo {
+                        chain_id: felt_to_strk_string(chain_id),
+                        contract_type: ContractType::ERC20,
+                        contract_address: felt_to_strk_string(contract_origin),
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        image: None,
+                    };
                     // println!("TX INFO : {:?}", tx_info);
                     let storage = self.storage.lock().await;
+                    storage.store_contract(contract_info).await?;
+                    // storage.store_token(nft_info.clone()).await?;
+                    // storage.store_token_event(tx_info.clone()).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
                 }
@@ -241,24 +266,34 @@ where
                             _ => "".to_owned(),
                         },
                     };
+                    let contract_info = ContractInfo {
+                        chain_id: felt_to_strk_string(chain_id),
+                        contract_type: ContractType::ERC721,
+                        contract_address: felt_to_strk_string(contract_origin),
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        image: None,
+                    };
                     // println!("Meta data URI: {:?}", metadata_uri);
                     let token_id: BigDecimal = parse_u256(&token_id_low, &token_id_high);
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
-                        token_id: token_id.clone(),
+                        token_id: Some(token_id.clone()),
                         name: Some(name),
                         symbol: Some(symbol),
                         metadata_uri: Some(metadata_uri),
                         owner: felt_to_strk_string(to),
                         chain_id: felt_to_strk_string(chain_id),
                         block_hash: felt_to_strk_string(block_hash),
+                        block_timestamp,
                     };
                     // println!("Found NFT: {:?}", nft_info);
                     let action = detect_erc_action(from, to);
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
+                        chain_id: felt_to_strk_string(chain_id),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         value: None,
@@ -273,6 +308,9 @@ where
                         sub_event_id: format!("{}_O", event_id),
                     };
                     let storage = self.storage.lock().await;
+                    storage.store_contract(contract_info).await?;
+                    storage.store_token(nft_info.clone()).await?;
+                    storage.store_token_event(tx_info.clone()).await?;
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -287,7 +325,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        _chain_id: Felt,
+        chain_id: Felt,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -302,7 +340,7 @@ where
                     //     println!("Token ID: {:?}", token_id);
                     // }
 
-                    let _name = match self
+                    let name = match self
                         .get_contract_property_string(
                             contract_origin,
                             "name",
@@ -317,7 +355,7 @@ where
 
                     // println!("Name: {:?}", name);
 
-                    let _symbol = match self
+                    let symbol = match self
                         .get_contract_property_string(
                             contract_origin,
                             "symbol",
@@ -341,11 +379,12 @@ where
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
+                        chain_id: felt_to_strk_string(chain_id),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         value: Some(value),
                         timestamp: block_timestamp,
-                        token_id: None,
+                        token_id: Some(BigDecimal::from_str("0")?),
                         contract_address: felt_to_strk_string(contract_origin),
                         contract_type: ContractType::ERC1400,
                         block_hash: felt_to_strk_string(block_hash),
@@ -354,7 +393,30 @@ where
                         action,
                         sub_event_id: format!("{}_O", event_id),
                     };
+                    let _nft_info = NFTInfo {
+                        tx_hash: felt_to_strk_string(tx_hash),
+                        contract_address: felt_to_strk_string(contract_origin),
+                        token_id: None,
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        metadata_uri: None,
+                        owner: felt_to_strk_string(to),
+                        chain_id: felt_to_strk_string(chain_id),
+                        block_hash: felt_to_strk_string(block_hash),
+                        block_timestamp,
+                    };
+                    let contract_info = ContractInfo {
+                        chain_id: felt_to_strk_string(chain_id),
+                        contract_type: ContractType::ERC1400,
+                        contract_address: felt_to_strk_string(contract_origin),
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        image: None,
+                    };
                     let storage = self.storage.lock().await;
+                    storage.store_contract(contract_info).await?;
+                    // storage.store_token(nft_info.clone()).await?;
+                    // storage.store_token_event(tx_info.clone()).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
                 }
@@ -402,18 +464,47 @@ where
                         Err(_) => "".to_owned(),
                     };
 
+                    let name = match self
+                        .get_contract_property_string(
+                            contract_origin,
+                            "name",
+                            call_data.clone(),
+                            Hash(block_hash),
+                        )
+                        .await
+                    {
+                        Ok(name) => name,
+                        Err(_) => "".to_owned(),
+                    };
+
+                    // println!("Name: {:?}", name);
+
+                    let symbol = match self
+                        .get_contract_property_string(
+                            contract_origin,
+                            "symbol",
+                            call_data.clone(),
+                            Hash(block_hash),
+                        )
+                        .await
+                    {
+                        Ok(symbol) => symbol,
+                        Err(_) => "".to_owned(),
+                    };
+
                     // println!("URI: {:?}", uri);
                     let token_id = parse_u256(&id_low, &id_high);
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
-                        token_id: token_id.clone(),
-                        name: None,
-                        symbol: None,
+                        token_id: Some(token_id.clone()),
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
                         metadata_uri: Some(uri),
                         owner: felt_to_strk_string(to),
                         chain_id: felt_to_strk_string(chain_id),
                         block_hash: felt_to_strk_string(block_hash),
+                        block_timestamp,
                     };
                     // let value = match transfer_info.amount {
                     //     Some(value) => value.to_bigint().to_string(),
@@ -421,9 +512,18 @@ where
                     // };
 
                     let action = detect_erc_action(from, to);
+                    let contract_info = ContractInfo {
+                        chain_id: felt_to_strk_string(chain_id),
+                        contract_type: ContractType::ERC1155,
+                        contract_address: felt_to_strk_string(contract_origin),
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        image: None,
+                    };
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
+                        chain_id: felt_to_strk_string(chain_id),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         value: Some(value),
@@ -438,6 +538,9 @@ where
                         sub_event_id: format!("{}_O", event_id),
                     };
                     let storage = self.storage.lock().await;
+                    storage.store_contract(contract_info).await?;
+                    storage.store_token(nft_info.clone()).await?;
+                    storage.store_token_event(tx_info.clone()).await?;
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -451,7 +554,44 @@ where
                 } => {
                     let mut nft_infos = Vec::new();
                     let mut tx_infos = Vec::new();
+                    let call_data = vec![];
 
+                    let name = match self
+                        .get_contract_property_string(
+                            contract_origin,
+                            "name",
+                            call_data.clone(),
+                            Hash(block_hash),
+                        )
+                        .await
+                    {
+                        Ok(name) => name,
+                        Err(_) => "".to_owned(),
+                    };
+
+                    // println!("Name: {:?}", name);
+
+                    let symbol = match self
+                        .get_contract_property_string(
+                            contract_origin,
+                            "symbol",
+                            call_data.clone(),
+                            Hash(block_hash),
+                        )
+                        .await
+                    {
+                        Ok(symbol) => symbol,
+                        Err(_) => "".to_owned(),
+                    };
+
+                    let contract_info = ContractInfo {
+                        chain_id: felt_to_strk_string(chain_id),
+                        contract_type: ContractType::ERC1155,
+                        contract_address: felt_to_strk_string(contract_origin),
+                        name: Some(name.clone()),
+                        symbol: Some(symbol.clone()),
+                        image: None,
+                    };
                     for (index, ((id_low, id_high), value)) in
                         ids.into_iter().zip(values.iter()).enumerate()
                     {
@@ -472,19 +612,21 @@ where
                         let nft_info = NFTInfo {
                             tx_hash: felt_to_strk_string(tx_hash),
                             contract_address: felt_to_strk_string(contract_origin),
-                            token_id: token_id.clone(),
+                            token_id: Some(token_id.clone()),
                             name: None,
                             symbol: None,
                             metadata_uri: Some(uri),
                             owner: felt_to_strk_string(to),
                             chain_id: felt_to_strk_string(chain_id),
                             block_hash: felt_to_strk_string(block_hash),
+                            block_timestamp,
                         };
 
                         let action = detect_erc_action(from, to);
                         let tx_info = TransactionInfo {
                             tx_hash: felt_to_strk_string(tx_hash),
                             event_id,
+                            chain_id: felt_to_strk_string(chain_id),
                             from: felt_to_strk_string(from),
                             to: felt_to_strk_string(to),
                             value: Some(value.clone()),
@@ -504,23 +646,37 @@ where
                     }
 
                     let storage = self.storage.lock().await;
-
+                    storage.store_contract(contract_info).await?;
                     // Utilisation de futures pour paralléliser les opérations d'enregistrement
                     let store_nft_futures = nft_infos
+                        .clone()
                         .into_iter()
                         .map(|nft_info| storage.store_nft_info(nft_info));
+                    let store_token_futures = nft_infos
+                        .into_iter()
+                        .map(|nft_info| storage.store_token(nft_info));
                     let store_tx_futures = tx_infos
+                        .clone()
                         .into_iter()
                         .map(|tx_info| storage.store_transaction_info(tx_info));
-
+                    let store_te_futures = tx_infos
+                        .into_iter()
+                        .map(|tx_info| storage.store_token_event(tx_info));
                     // Exécution parallèle des futures
-                    let (nft_results, tx_results) = tokio::join!(
+                    let (token_results, nft_results, te_results, tx_results) = tokio::join!(
+                        futures::future::join_all(store_token_futures),
                         futures::future::join_all(store_nft_futures),
+                        futures::future::join_all(store_te_futures),
                         futures::future::join_all(store_tx_futures)
                     );
 
                     // Vérification des résultats
-                    for result in nft_results.into_iter().chain(tx_results) {
+                    for result in nft_results
+                        .into_iter()
+                        .chain(tx_results)
+                        .chain(te_results)
+                        .chain(token_results)
+                    {
                         result?;
                     }
 
