@@ -26,7 +26,7 @@ pub struct ContractInfo {
 #[derive(Debug, Serialize, Deserialize, Clone, FromRow)]
 pub struct NFTInfo {
     pub contract_address: String,
-    pub token_id: BigDecimal,
+    pub token_id: Option<BigDecimal>,
     pub name: Option<String>,
     pub symbol: Option<String>,
     pub metadata_uri: Option<String>,
@@ -34,6 +34,7 @@ pub struct NFTInfo {
     pub chain_id: String,
     pub tx_hash: String,
     pub block_hash: String,
+    pub block_timestamp: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -49,6 +50,7 @@ pub struct TokenInfo {
 pub struct TransactionInfo {
     pub tx_hash: String,
     pub event_id: u64,
+    pub chain_id: String,
     pub from: String,
     pub to: String,
     pub value: Option<BigDecimal>,

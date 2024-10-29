@@ -1,6 +1,10 @@
 {
   "db_name": "PostgreSQL",
+<<<<<<<< HEAD:.sqlx/query-f325a31649b972545f346080113a2906c1ed2f36ec20df5a0cdc211e5ba7ceed.json
   "query": "\n             SELECT\n                 contract.contract_address as address,\n                 CASE\n                     WHEN contract_image = '' THEN NULL\n                     ELSE contract_image\n                 END AS image,\n                 contract_name AS name,\n                 contract.floor_price AS floor,\n                 volume_7d_eth,\n                 contract.top_bid AS top_offer,\n                 sales_7d,\n                 marketcap,\n                 token_listed_count AS listed_items,\n                 listed_percentage,\n                 token_count,\n                 owner_count,\n                 total_volume,\n                 total_sales,\n                 floor_7d_percentage,\n                 is_verified,\n                 deployed_timestamp,\n                 website,\n                 twitter,\n                 discord,\n                 description,\n                 market_data_enabled\n             FROM contract\n             WHERE contract.contract_address = $1\n             AND contract.chain_id = $2\n             ",
+========
+  "query": "\n             SELECT\n                 contract.contract_address as address,\n                 CASE\n                     WHEN contract_image = '' THEN NULL\n                     ELSE contract_image\n                 END AS image,\n                 contract_name AS name,\n                 contract.floor_price AS floor,\n                 volume_7d_eth,\n                 contract.top_bid AS top_offer,\n                 sales_7d,\n                 marketcap,\n                 token_listed_count AS listed_items,\n                 listed_percentage,\n                 token_count,\n                 owner_count,\n                 total_volume,\n                 total_sales,\n                 floor_7d_percentage,\n                 is_verified,\n                 deployed_timestamp,\n                 website,\n                 twitter,\n                 discord,\n                 description\n             FROM contract\n             WHERE contract.contract_address = $1\n             AND contract.chain_id = $2\n             ",
+>>>>>>>> d235a1a (feat(ark-sqlx): ingest save token events in token events (#654)):ark-marketplace-api/.sqlx/query-15ab7d2ef91fc3f31806cf86163dab4a64dc7a3a6766e08f2f3e91049634c6e7.json
   "describe": {
     "columns": [
       {
@@ -107,11 +111,14 @@
         "ordinal": 20,
         "name": "description",
         "type_info": "Text"
+<<<<<<<< HEAD:.sqlx/query-f325a31649b972545f346080113a2906c1ed2f36ec20df5a0cdc211e5ba7ceed.json
       },
       {
         "ordinal": 21,
         "name": "market_data_enabled",
         "type_info": "Bool"
+========
+>>>>>>>> d235a1a (feat(ark-sqlx): ingest save token events in token events (#654)):ark-marketplace-api/.sqlx/query-15ab7d2ef91fc3f31806cf86163dab4a64dc7a3a6766e08f2f3e91049634c6e7.json
       }
     ],
     "parameters": {
@@ -141,9 +148,16 @@
       true,
       true,
       true,
+<<<<<<<< HEAD:.sqlx/query-f325a31649b972545f346080113a2906c1ed2f36ec20df5a0cdc211e5ba7ceed.json
       true,
       false
     ]
   },
   "hash": "f325a31649b972545f346080113a2906c1ed2f36ec20df5a0cdc211e5ba7ceed"
+========
+      true
+    ]
+  },
+  "hash": "15ab7d2ef91fc3f31806cf86163dab4a64dc7a3a6766e08f2f3e91049634c6e7"
+>>>>>>>> d235a1a (feat(ark-sqlx): ingest save token events in token events (#654)):ark-marketplace-api/.sqlx/query-15ab7d2ef91fc3f31806cf86163dab4a64dc7a3a6766e08f2f3e91049634c6e7.json
 }
