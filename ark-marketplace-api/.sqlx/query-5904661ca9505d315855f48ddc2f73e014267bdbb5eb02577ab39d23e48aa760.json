@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH latest_transaction AS (\n                SELECT DISTINCT ON (contract_address, token_id) \n                    contract_address, \n                    token_id, \n                    to_address\n                FROM transaction_info\n                WHERE contract_address = $1\n                AND token_id::text = $3\n                ORDER BY contract_address, token_id, timestamp DESC, sequence_id DESC\n            )\n            SELECT\n                token.token_id,\n                token.contract_address AS collection_address,\n                hex_to_decimal(token.listing_start_amount) AS price,\n                hex_to_decimal(token.last_price) AS last_price,\n                top_bid_amount AS top_offer,\n                COALESCE(latest_transaction.to_address, token.current_owner) AS owner,\n                c.contract_name AS collection_name,\n                token.metadata AS metadata,\n                c.contract_image AS collection_image,\n                metadata_updated_at,\n                metadata_status\n            FROM token\n            INNER JOIN contract AS c ON c.contract_address = token.contract_address\n                AND c.chain_id = token.chain_id\n            LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address\n            AND latest_transaction.token_id::text = token.token_id\n            WHERE token.contract_address = $1\n              AND token.chain_id = $2\n              AND token.token_id = $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "collection_address",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "price",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 3,
+        "name": "last_price",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 4,
+        "name": "top_offer",
+        "type_info": "Numeric"
+      },
+      {
+        "ordinal": 5,
+        "name": "owner",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "collection_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "metadata",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "collection_image",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "metadata_updated_at",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 10,
+        "name": "metadata_status",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      null,
+      true,
+      null,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "5904661ca9505d315855f48ddc2f73e014267bdbb5eb02577ab39d23e48aa760"
+}
