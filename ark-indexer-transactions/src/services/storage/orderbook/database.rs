@@ -275,7 +275,7 @@ impl DatabaseStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
         INSERT INTO orders (
-            order_hash, created_at, route_type, order_type,
+            hash, timestamp, route_type, order_type,
             currency_address, currency_chain_id, offerer, 
             token_chain_id, token_address, token_id, 
             quantity, start_amount, end_amount,
