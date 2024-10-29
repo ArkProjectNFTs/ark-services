@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT token_id_hex\n        FROM token\n        WHERE contract_address = $1\n          AND chain_id = $2\n          AND token_id = $3\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token_id_hex",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a9c4eb2f2b68ab6f1a1f964caa1a63109c505ec5fcf74c6d8e12aac22d3e5105"
+}

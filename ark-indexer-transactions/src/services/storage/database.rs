@@ -1,12 +1,37 @@
 use chrono::Utc;
 
 use crate::interfaces::contract::ContractType;
-use crate::interfaces::contract::{NFTInfo, TransactionInfo};
+use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
 use crate::interfaces::event::{ERCCompliance, ErcAction, EventType};
+use bigdecimal::BigDecimal;
+use num_bigint::BigUint;
 use sqlx::PgPool;
+use std::str::FromStr;
 
 use super::Storage;
 
+trait BigDecimalHex {
+    fn to_hex_string(&self) -> String;
+}
+
+impl BigDecimalHex for BigDecimal {
+    fn to_hex_string(&self) -> String {
+        // Convertir BigDecimal en string sans notation scientifique
+        let decimal_str = self.to_string().replace(".0", "");
+
+        // Convertir en BigUint
+        if let Ok(big_uint) = BigUint::from_str(&decimal_str) {
+            // Convertir en bytes pour la représentation hex
+            let bytes = big_uint.to_bytes_be();
+
+            // Convertir en hex string avec padding à 64 caractères
+            let hex = hex::encode(bytes);
+            format!("0x{:0>64}", hex)
+        } else {
+            format!("0x{:0>64}", "0")
+        }
+    }
+}
 #[derive(Clone)]
 pub struct DatabaseStorage {
     pool: PgPool,
@@ -163,6 +188,103 @@ impl Storage for DatabaseStorage {
             .bind(&nft_info.owner)
             .bind(&nft_info.chain_id)
             .bind(&nft_info.block_hash)
+            .bind(Utc::now())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn store_token(
+        &self,
+        nft_info: NFTInfo,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            INSERT INTO token (
+                contract_address, chain_id, token_id, token_id_hex, current_owner, block_timestamp, updated_timestamp
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (contract_address, chain_id, token_id) DO UPDATE
+            SET current_owner = EXCLUDED.current_owner, chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, updated_timestamp = EXCLUDED.updated_timestamp
+        "#;
+        let mut token_id_hex: Option<String> = None;
+        if let Some(token_id) = nft_info.token_id.clone() {
+            token_id_hex = Some(token_id.to_hex_string())
+        } else {
+            println!("Invalid Token with info: {:?}", nft_info);
+        }
+
+        sqlx::query(query)
+            .bind(&nft_info.contract_address)
+            .bind(&nft_info.chain_id)
+            .bind(&nft_info.token_id)
+            .bind(token_id_hex)
+            .bind(&nft_info.owner)
+            .bind(nft_info.block_timestamp as i64)
+            .bind(Utc::now().timestamp())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn store_contract(
+        &self,
+        contract_info: ContractInfo,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            INSERT INTO contract (
+                contract_address, chain_id, contract_type, contract_name, contract_symbol, updated_timestamp
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (contract_address, chain_id) DO UPDATE
+            SET contract_type = EXCLUDED.contract_type, contract_name = EXCLUDED.contract_name, contract_symbol = EXCLUDED.contract_symbol, chain_id = EXCLUDED.chain_id, updated_timestamp = EXCLUDED.updated_timestamp
+        "#;
+
+        sqlx::query(query)
+            .bind(&contract_info.contract_address)
+            .bind(&contract_info.chain_id)
+            .bind(&contract_info.contract_type)
+            .bind(&contract_info.name)
+            .bind(&contract_info.symbol)
+            .bind(Utc::now().timestamp())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn store_token_event(
+        &self,
+        tx_info: TransactionInfo,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            INSERT INTO token_event (
+                token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp, transaction_hash, to_address, from_address, amount, token_sub_event_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (token_event_id, token_sub_event_id) DO UPDATE
+            SET chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, transaction_hash = EXCLUDED.transaction_hash
+        "#;
+
+        let mut token_id_hex: Option<String> = None;
+        if let Some(token_id) = tx_info.token_id.clone() {
+            token_id_hex = Some(token_id.to_hex_string())
+        } else {
+            println!("Invalid Token with info: {:?}", tx_info);
+        }
+        let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
+
+        sqlx::query(query)
+            .bind(event_id)
+            .bind(&tx_info.contract_address)
+            .bind(&tx_info.chain_id)
+            .bind(tx_info.token_id)
+            .bind(token_id_hex)
+            .bind(&tx_info.event_type)
+            .bind(tx_info.timestamp as i64)
+            .bind(&tx_info.tx_hash)
+            .bind(&tx_info.to)
+            .bind(&tx_info.from)
+            .bind(&tx_info.value)
+            .bind(&tx_info.sub_event_id)
             .bind(Utc::now())
             .execute(&self.pool)
             .await?;
