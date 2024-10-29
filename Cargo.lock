@@ -595,7 +595,7 @@ dependencies = [
 [[package]]
 name = "ark-metadata"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "anyhow",
  "ark-starknet",
@@ -746,7 +746,7 @@ dependencies = [
 [[package]]
 name = "ark-starknet"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -816,7 +816,7 @@ dependencies = [
 [[package]]
 name = "arkproject"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -2319,7 +2319,7 @@ dependencies = [
 [[package]]
 name = "diri"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4308,7 +4308,7 @@ dependencies = [
 [[package]]
 name = "orderbook"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "cainome",
  "num-bigint",
@@ -4610,7 +4610,7 @@ dependencies = [
 [[package]]
 name = "pontos"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "anyhow",
  "ark-metadata",
@@ -5358,7 +5358,7 @@ dependencies = [
 [[package]]
 name = "sana"
 version = "0.1.0"
-source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/contract-v2#446631dff95a3527e218710d235c8ca41a0687f9"
+source = "git+https://github.com/ArkProjectNFTs/ark-project?branch=feat/new-orderbook-indexer#03f183c8e9529c57284e430e758acb687c5f479c"
 dependencies = [
  "anyhow",
  "ark-metadata",
