@@ -4,6 +4,7 @@ use arkproject::orderbook::{
     OrderType, RouteType,
 };
 use sqlx::{postgres::PgArgumentBuffer, Encode, Postgres};
+use starknet_crypto::Felt;
 
 use crate::{
     interfaces::orderbook::OrderbookTransactionInfo, services::storage::database::DatabaseStorage,
@@ -100,6 +101,7 @@ enum CancelledReason {
     Ownership,
     Unknown,
 }
+
 impl AsRef<str> for CancelledReason {
     fn as_ref(&self) -> &str {
         match self {
@@ -109,6 +111,24 @@ impl AsRef<str> for CancelledReason {
             CancelledReason::Ownership => sql_cancelled_reason_type::OWNERSHIP,
             CancelledReason::Unknown => sql_cancelled_reason_type::UNKNOWN,
         }
+    }
+}
+
+impl From<Felt> for CancelledReason {
+    fn from(value: Felt) -> Self {
+        if value == orderbook::error::CANCELLED_USER {
+            return CancelledReason::User;
+        }
+        if value == orderbook::error::CANCELLED_BY_NEW_ORDER {
+            return CancelledReason::ByNewOrder;
+        }
+        if value == orderbook::error::CANCELLED_ASSET_FAULT {
+            return CancelledReason::AssetFault;
+        }
+        if value == orderbook::error::CANCELLED_OWNERSHIP {
+            return CancelledReason::Ownership;
+        }
+        CancelledReason::Unknown
     }
 }
 
@@ -178,7 +198,7 @@ impl DatabaseStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
         INSERT INTO orders (
-            hash, route_type, order_type,
+            hash, timestamp, route_type, order_type,
             currency_address, currency_chain_id, offerer, 
             token_chain_id, token_address, token_id, 
             quantity, start_amount, end_amount,
@@ -186,13 +206,13 @@ impl DatabaseStorage {
             broker_id,
             cancelled_order_hash
         ) VALUES (
-            $1, $2, $3, 
-            $4, $5, $6,
-            $7, $8, $9,
-            $10, $11, $12,
-            $13, $14,
-            $15,
-            $16
+            $1, $2, $3, $4,
+            $5, $6, $7,
+            $8, $9, $10,
+            $11, $12, $13,
+            $14, $15,
+            $16,
+            $17
         )
         "#;
         let order_hash = match order_placed {
@@ -212,6 +232,7 @@ impl DatabaseStorage {
 
                 sqlx::query(query)
                     .bind(order_hash.clone())
+                    .bind(orderbook_transaction_info.timestamp as i64)
                     .bind(route_type)
                     .bind(order_type)
                     .bind(order.currency_address.0.to_fixed_hex_string())
@@ -254,9 +275,7 @@ impl DatabaseStorage {
         let (order_hash, cancelled_reason) = match order_cancelled {
             OrderCancelled::V1(order_cancelled) => {
                 let order_hash = order_cancelled.order_hash.to_fixed_hex_string();
-                let cancelled_reason = match order_cancelled.reason.to_fixed_hex_string() {
-                    _ => Some(CancelledReason::Unknown),
-                };
+                let cancelled_reason = Some(CancelledReason::from(order_cancelled.reason));
                 (order_hash, cancelled_reason)
             }
         };

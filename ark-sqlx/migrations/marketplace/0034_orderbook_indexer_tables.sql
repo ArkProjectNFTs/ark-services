@@ -7,6 +7,7 @@ CREATE TYPE cancelled_reason_type AS ENUM ('CancelledUser', 'CancelledByNewOrder
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS orders (
     hash VARCHAR(66) NOT NULL,
+    timestamp BIGINT NOT NULL,
     route_type route_type NOT NULL,
     order_type order_type NOT NULL,
     currency_address VARCHAR(66) NOT NULL,
