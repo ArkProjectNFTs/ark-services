@@ -25,6 +25,7 @@ starknet-crypto = "0.7.2"
 bigdecimal = { version = "0.4.6", features = ["serde"] }
 config = "0.14.0"
 clap = { version = "4.5.18", features = ["derive"] }
+hex = "0.4.3"
 
 [package.metadata.deb]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"

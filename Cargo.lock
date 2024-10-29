@@ -519,6 +519,7 @@ dependencies = [
  "envy",
  "futures",
  "futures-util",
+ "hex",
  "mockall 0.13.1",
  "num-bigint",
  "num-traits",
