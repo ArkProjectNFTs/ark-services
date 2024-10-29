@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM _sqlx_migrations WHERE version > 0;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "deb9fcc5fa1a3548d54a3f6cfaea21bb2e0d0364a9baf5f84731ccb234b6524c"
+}

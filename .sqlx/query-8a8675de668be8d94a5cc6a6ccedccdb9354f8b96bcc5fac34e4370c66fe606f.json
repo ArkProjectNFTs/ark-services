@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT COUNT(DISTINCT contract.contract_address)\n                FROM contract\n                INNER JOIN token ON contract.contract_address = token.contract_address AND contract.chain_id = token.chain_id\n                WHERE token.current_owner = $1 and contract.is_verified = true\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8a8675de668be8d94a5cc6a6ccedccdb9354f8b96bcc5fac34e4370c66fe606f"
+}

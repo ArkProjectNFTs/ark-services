@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT order_hash, offer_maker, offer_amount, offer_quantity, offer_timestamp, currency_chain_id, currency_address, start_date, end_date, status\n            FROM orderbook_token_offers\n            WHERE token_id = $1 AND token_address = $2\n            AND status = 'PLACED'\n            ORDER BY offer_timestamp DESC;",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "order_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "offer_maker",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "offer_amount",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "offer_quantity",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "offer_timestamp",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "currency_chain_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "currency_address",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "start_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 8,
+        "name": "end_date",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "status",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "4df0a951fbc88e7982f814d35451bf2fb405b69e1d703a4c7896c561a2a7c69a"
+}
