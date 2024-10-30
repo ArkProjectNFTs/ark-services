@@ -44,6 +44,7 @@ chrono = "0.4"
 clap = { version = "4.5.19", features = ["derive"] }
 config = "0.14.0"
 tikv-jemallocator = "0.6.0"
+openssl = { version = "0.10", features = ["vendored"] }
 
 
 [package.metadata.deb]
