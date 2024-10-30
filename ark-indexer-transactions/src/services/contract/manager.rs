@@ -69,7 +69,7 @@ where
     pub async fn get_cached_or_fetch_info(
         &mut self,
         address: Felt,
-        _chain_id: Felt,
+        _chain_id: &str,
     ) -> Result<ContractType, Box<dyn std::error::Error + Send + Sync>> {
         let cache = self.cache.lock().await;
         if let Some(contract_type) = cache.get(&address) {
@@ -89,7 +89,7 @@ where
     pub async fn process_block(
         &mut self,
         block: BlockWrapper,
-        chain_id: Felt,
+        chain_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         for tx in block.block.transaction_receipts {
             if let Err(e) = self
@@ -121,7 +121,7 @@ where
     pub async fn process_transaction(
         &mut self,
         tx_receipt: ConfirmedTransactionReceipt,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -191,7 +191,7 @@ where
         &mut self,
         address: Felt,
         _block_timestamp: u64,
-        chain_id: Felt,
+        chain_id: &str,
     ) -> Result<ContractType, Box<dyn std::error::Error + Send + Sync>> {
         match self.get_cached_or_fetch_info(address, chain_id).await {
             Ok(contract_type) => Ok(contract_type),
@@ -439,7 +439,7 @@ where
         &mut self,
         event: Event,
         event_id: u64,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -533,7 +533,7 @@ where
         from_block: u64,
         to_block: u64,
         parsing_state_path: &str,
-        chain_id: Felt,
+        chain_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let state_manager = StateManager::new(parsing_state_path).unwrap();
 
