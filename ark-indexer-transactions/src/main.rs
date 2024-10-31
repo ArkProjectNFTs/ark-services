@@ -39,6 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let provider = JsonRpcClient::new(HttpTransport::new(
                 Url::parse(&config.rcp_provider).unwrap(),
             ));
+
             let orderbooks: Vec<Felt> = config
                 .orderbooks
                 .iter()

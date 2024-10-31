@@ -118,6 +118,7 @@ where
         for (event_id, event) in receipt.events.into_iter().enumerate() {
             let mut self_clone = self.clone();
             let chain_identifier = chain_id.to_owned();
+
             futures.push(tokio::spawn(async move {
                 self_clone
                     .process_event(
