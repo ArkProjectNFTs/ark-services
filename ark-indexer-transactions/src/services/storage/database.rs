@@ -201,8 +201,8 @@ impl Storage for DatabaseStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             INSERT INTO token (
-                contract_address, chain_id, token_id, token_id_hex, current_owner, block_timestamp, updated_timestamp
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (contract_address, chain_id, token_id) DO UPDATE
             SET current_owner = EXCLUDED.current_owner, chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, updated_timestamp = EXCLUDED.updated_timestamp
         "#;
@@ -218,6 +218,7 @@ impl Storage for DatabaseStorage {
             .bind(&nft_info.chain_id)
             .bind(&nft_info.token_id)
             .bind(token_id_hex)
+            .bind("TO_REFRESH")
             .bind(&nft_info.owner)
             .bind(nft_info.block_timestamp as i64)
             .bind(Utc::now().timestamp())
