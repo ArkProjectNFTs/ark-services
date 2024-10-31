@@ -109,7 +109,7 @@ where
     pub async fn common_receipt(
         &mut self,
         receipt: ConfirmedTransactionReceipt,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         block_timestamp: u64,
     ) -> Result<(), EventProcessingError> {
@@ -117,12 +117,13 @@ where
         // println!("start processing event for {:?} on chain  {:?}", block_hash, chain_id);
         for (event_id, event) in receipt.events.into_iter().enumerate() {
             let mut self_clone = self.clone();
+            let chain_identifier= chain_id.to_owned();
             futures.push(tokio::spawn(async move {
                 self_clone
                     .process_event(
                         event,
                         event_id.try_into().unwrap(),
-                        chain_id,
+                        &chain_identifier,
                         block_hash,
                         receipt.transaction_hash,
                         block_timestamp,

@@ -33,7 +33,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -97,7 +97,7 @@ where
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         event_type: EventType::Transfer,
@@ -119,12 +119,12 @@ where
                         symbol: Some(symbol.clone()),
                         metadata_uri: None,
                         owner: felt_to_strk_string(to),
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         block_hash: felt_to_strk_string(block_hash),
                         block_timestamp,
                     };
                     let contract_info = ContractInfo {
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         contract_type: ContractType::ERC20,
                         contract_address: felt_to_strk_string(contract_origin),
                         name: Some(name.clone()),
@@ -149,7 +149,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -267,7 +267,7 @@ where
                         },
                     };
                     let contract_info = ContractInfo {
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         contract_type: ContractType::ERC721,
                         contract_address: felt_to_strk_string(contract_origin),
                         name: Some(name.clone()),
@@ -284,7 +284,7 @@ where
                         symbol: Some(symbol),
                         metadata_uri: Some(metadata_uri),
                         owner: felt_to_strk_string(to),
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         block_hash: felt_to_strk_string(block_hash),
                         block_timestamp,
                     };
@@ -293,7 +293,7 @@ where
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         value: None,
@@ -325,7 +325,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -379,7 +379,7 @@ where
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         value: Some(value),
@@ -401,12 +401,12 @@ where
                         symbol: Some(symbol.clone()),
                         metadata_uri: None,
                         owner: felt_to_strk_string(to),
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         block_hash: felt_to_strk_string(block_hash),
                         block_timestamp,
                     };
                     let contract_info = ContractInfo {
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         contract_type: ContractType::ERC1400,
                         contract_address: felt_to_strk_string(contract_origin),
                         name: Some(name.clone()),
@@ -429,7 +429,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -502,7 +502,7 @@ where
                         symbol: Some(symbol.clone()),
                         metadata_uri: Some(uri),
                         owner: felt_to_strk_string(to),
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         block_hash: felt_to_strk_string(block_hash),
                         block_timestamp,
                     };
@@ -513,7 +513,7 @@ where
 
                     let action = detect_erc_action(from, to);
                     let contract_info = ContractInfo {
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         contract_type: ContractType::ERC1155,
                         contract_address: felt_to_strk_string(contract_origin),
                         name: Some(name.clone()),
@@ -523,7 +523,7 @@ where
                     let tx_info = TransactionInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         event_id,
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
                         value: Some(value),
@@ -585,7 +585,7 @@ where
                     };
 
                     let contract_info = ContractInfo {
-                        chain_id: felt_to_strk_string(chain_id),
+                        chain_id: chain_id.to_owned(),
                         contract_type: ContractType::ERC1155,
                         contract_address: felt_to_strk_string(contract_origin),
                         name: Some(name.clone()),
@@ -617,7 +617,7 @@ where
                             symbol: None,
                             metadata_uri: Some(uri),
                             owner: felt_to_strk_string(to),
-                            chain_id: felt_to_strk_string(chain_id),
+                            chain_id: chain_id.to_owned(),
                             block_hash: felt_to_strk_string(block_hash),
                             block_timestamp,
                         };
@@ -626,7 +626,7 @@ where
                         let tx_info = TransactionInfo {
                             tx_hash: felt_to_strk_string(tx_hash),
                             event_id,
-                            chain_id: felt_to_strk_string(chain_id),
+                            chain_id: chain_id.to_owned(),
                             from: felt_to_strk_string(from),
                             to: felt_to_strk_string(to),
                             value: Some(value.clone()),
@@ -692,7 +692,7 @@ where
         &self,
         _event: Event,
         _event_id: u64,
-        _chain_id: Felt,
+        _chain_id: &str,
         _block_hash: Felt,
         _tx_hash: Felt,
         _block_timestamp: u64,
