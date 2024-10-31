@@ -8,7 +8,6 @@ use services::storage::block::{get_latest_block_in_folder, get_latest_folder_pat
 use services::storage::database::DatabaseStorage;
 
 use clap::Parser;
-use starknet::core::types::Felt;
 use starknet::providers::{
     jsonrpc::{HttpTransport, JsonRpcClient},
     Url,
@@ -41,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             ));
 
             let mut contract_manager = ContractManager::new(storage, provider);
-            let chain_id = Felt::from_hex(&config.chain_id).unwrap_or(Felt::ZERO); // starknet mainnet chain ID
+            // let chain_id = Felt::from_hex(&config.chain_id).unwrap_or(Felt::ZERO); // starknet mainnet chain ID
             loop {
                 let latest_folder = get_latest_folder_path(&config.base_path)?;
                 let lastest_block_number = get_latest_block_in_folder(&latest_folder)?;
@@ -51,7 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         config.start_from,
                         lastest_block_number,
                         &config.parsing_state_path,
-                        chain_id,
+                        &config.chain_id,
                     )
                     .await?;
 
