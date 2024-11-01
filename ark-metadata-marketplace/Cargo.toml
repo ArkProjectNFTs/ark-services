@@ -35,3 +35,30 @@ sqlx = { version = "0.7", features = [
     "runtime-tokio-rustls",
     "tls-rustls",
 ] }
+
+[package.metadata.deb]
+maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
+copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"
+extended-description = """ScreenshotLabs Ark marketplace API"""
+depends = "$auto, systemd"
+section = "admin"
+priority = "optional"
+assets = [
+ ["target/release/ark-metadata-marketplace", "usr/bin/", "755"],
+ ["debian/ark-metadata-marketplace@.service", "/lib/systemd/system/ark-metadata-marketplace@.service", "644"], 
+]
+maintainer-scripts = "debian/scripts"
+
+[package.metadata.deb.variants.production]
+assets = [
+ ["target/release/ark-metadata-marketplace", "usr/bin/ark-metadata-marketplace-production", "755"],
+ ["debian/ark-metadata-marketplace-production.service", "/lib/systemd/system/ark-metadata-marketplace-production.service", "644"], 
+]
+maintainer-scripts = "debian/scripts/production"
+
+[package.metadata.deb.variants.staging]
+assets = [
+ ["target/release/ark-metadata-marketplace", "usr/bin/ark-metadata-marketplace-staging", "755"],
+ ["debian/ark-metadata-marketplace-staging.service", "/lib/systemd/system/ark-metadata-marketplace-staging.service", "644"], 
+]
+maintainer-scripts = "debian/scripts/staging"

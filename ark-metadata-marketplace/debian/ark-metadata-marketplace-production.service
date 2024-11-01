@@ -1,0 +1,17 @@
+[Unit]
+Description=Ark MarketPlace API production
+AssertPathExists=/usr/bin/ark-metadata-marketplace-production
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=~
+ExecStart=/usr/bin/ark-metadata-marketplace-production --config-path /etc/ark-project/api-marketplace.config.production.yml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
