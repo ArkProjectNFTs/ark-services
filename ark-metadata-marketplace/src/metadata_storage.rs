@@ -156,7 +156,7 @@ impl Storage for MetadataSqlStorage {
         filter: Option<(String, String)>,
         refresh_collection: bool,
     ) -> Result<Vec<TokenWithoutMetadata>, StorageError> {
-        let base_query = "SELECT t.contract_address, t.token_id, t.chain_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE c.is_spam = false AND c.is_nsfw  = false AND c.contract_type = 'ERC721'";
+        let base_query = "SELECT t.contract_address, t.token_id, t.chain_id, c.is_verified, c.save_images FROM token t INNER JOIN contract c on c.contract_address = t.contract_address and c.chain_id = t.chain_id  WHERE c.is_spam = false AND c.is_nsfw  = false AND (c.contract_type = 'ERC1155' or c.contract_type = 'ERC721')";
         let status = if refresh_collection {
             "COLLECTION_TO_REFRESH"
         } else {

@@ -28,6 +28,9 @@ thiserror = "1.0.32"
 openssl = "0.10.66"
 openssl-probe = "0.1.5"
 tikv-jemallocator = "0.6.0"
+clap = { version = "4.5.20", features = ["derive"] }
+config = "0.14.1"
+humantime = "2.1.0"
 
 [dev-dependencies]
 sqlx = { version = "0.7", features = [

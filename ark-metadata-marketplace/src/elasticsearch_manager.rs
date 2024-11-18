@@ -5,6 +5,14 @@ use arkproject::metadata::{
 use async_trait::async_trait;
 use reqwest::Client as ReqwestClient;
 use serde_json::json;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct EsConfig {
+    pub url: String,
+    pub username: String,
+    pub password: String,
+}
 
 pub struct EsManager {
     client: ReqwestClient,
