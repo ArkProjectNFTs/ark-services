@@ -6,6 +6,7 @@ use redis::AsyncCommands;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use sqlx::types::BigDecimal;
+use sqlx::FromRow;
 use sqlx::PgPool;
 use sqlx::Row;
 use std::collections::HashSet;
@@ -66,6 +67,16 @@ async fn clear_collection_cache(
     Ok(())
 }
 
+#[derive(FromRow)]
+struct ExpiredListing {
+    contract_address: String,
+    chain_id: String,
+    token_id: String,
+    token_id_hex: String,
+    listing_orderhash: Option<String>,
+    listing_end_date: i64,
+}
+
 pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection) {
     let select_expired_listings_query = r#"
         SELECT DISTINCT contract_address, chain_id, token_id, token_id_hex, listing_orderhash, listing_end_date
@@ -74,8 +85,8 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
           AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
     "#;
 
-    let expired_listings: Vec<(String, String, String, String, String, i64)> =
-        match sqlx::query_as(select_expired_listings_query)
+    let expired_listings: Vec<ExpiredListing> =
+        match sqlx::query_as::<_, ExpiredListing>(select_expired_listings_query)
             .fetch_all(pool)
             .await
         {
@@ -86,36 +97,40 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
             }
         };
 
-    for (contract_address, chain_id, token_id, token_id_hex, listing_orderhash, listing_end_date) in
-        &expired_listings
-    {
+    for expired_listing in &expired_listings {
         let now = Utc::now().timestamp();
-        let combined = format!("{}{}", listing_orderhash, listing_end_date);
+        let combined = format!(
+            "{:?}{}",
+            expired_listing.listing_orderhash, expired_listing.listing_end_date
+        );
         let mut hasher = Sha256::new();
         hasher.update(combined);
         let result = hasher.finalize();
         let token_event_id = format!("0x{:x}", result);
 
         let insert_expired_listing_event_query = r#"
-            INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
-            VALUES ($1, $2, $3, $4, $5, $6, $7);
-        "#;
+        INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6, $7);
+    "#;
 
         match sqlx::query(insert_expired_listing_event_query)
             .bind(&token_event_id)
-            .bind(contract_address)
-            .bind(chain_id)
-            .bind(token_id)
-            .bind(token_id_hex)
+            .bind(expired_listing.contract_address.clone())
+            .bind(expired_listing.chain_id.clone())
+            .bind(expired_listing.token_id.clone())
+            .bind(expired_listing.token_id_hex.clone())
             .bind(EXPIRED_LISTING_EVENT_TYPE)
             .bind(now)
             .execute(pool)
             .await
         {
-            Ok(_) => info!("Inserted expired listing event for token: {}", token_id),
+            Ok(_) => info!(
+                "Inserted expired listing event for token: {}",
+                expired_listing.token_id
+            ),
             Err(e) => tracing::error!(
                 "Failed to insert expired listing event for token {}: {}",
-                token_id,
+                expired_listing.token_id,
                 e
             ),
         }
@@ -123,11 +138,11 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
 
     let collections: Vec<String> = match sqlx::query(
         r#"
-        SELECT DISTINCT contract_address
-        FROM token
-        WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
-          AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
-        "#,
+    SELECT DISTINCT contract_address
+    FROM token
+    WHERE NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
+      AND listing_start_date IS NOT NULL AND listing_end_date IS NOT NULL;
+    "#,
     )
     .fetch_all(pool)
     .await
@@ -146,22 +161,22 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
         }
 
         let clean_dates_query = r#"
-            UPDATE token
-            SET listing_start_date = NULL,
-                listing_end_date = NULL,
-                listing_timestamp = NULL,
-                listing_start_amount = NULL,
-                listing_end_amount = NULL,
-                listing_currency_address = NULL,
-                listing_currency_chain_id = NULL,
-                listing_broker_id = NULL,
-                listing_type = NULL,
-                listing_orderhash = NULL
-            WHERE contract_address = $1
-              AND NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
-              AND listing_start_date IS NOT NULL 
-              AND listing_end_date IS NOT NULL;
-        "#;
+        UPDATE token
+        SET listing_start_date = NULL,
+            listing_end_date = NULL,
+            listing_timestamp = NULL,
+            listing_start_amount = NULL,
+            listing_end_amount = NULL,
+            listing_currency_address = NULL,
+            listing_currency_chain_id = NULL,
+            listing_broker_id = NULL,
+            listing_type = NULL,
+            listing_orderhash = NULL
+        WHERE contract_address = $1
+          AND NOW() - interval '2 minutes' > to_timestamp(listing_end_date)
+          AND listing_start_date IS NOT NULL 
+          AND listing_end_date IS NOT NULL;
+    "#;
 
         if let Err(e) = sqlx::query(clean_dates_query)
             .bind(collection)
@@ -174,13 +189,13 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
 
         match sqlx::query_scalar::<_, BigDecimal>(
             r#"
-            SELECT MIN(hex_to_decimal(listing_start_amount)) AS min_price
-            FROM token
-            WHERE contract_address = $1
-              AND listing_start_date IS NOT NULL
-              AND listing_end_date IS NOT NULL
-            GROUP BY contract_address
-            "#,
+        SELECT MIN(hex_to_decimal(listing_start_amount)) AS min_price
+        FROM token
+        WHERE contract_address = $1
+          AND listing_start_date IS NOT NULL
+          AND listing_end_date IS NOT NULL
+        GROUP BY contract_address
+        "#,
         )
         .bind(collection)
         .fetch_optional(pool)
@@ -189,10 +204,10 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
             Ok(Some(min_price)) => {
                 if let Err(e) = sqlx::query(
                     r#"
-                    UPDATE contract
-                    SET floor_price = $2
-                    WHERE contract_address = $1;
-                    "#,
+                UPDATE contract
+                SET floor_price = $2
+                WHERE contract_address = $1;
+                "#,
                 )
                 .bind(collection)
                 .bind(min_price)
@@ -209,10 +224,10 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
             Ok(None) => {
                 if let Err(e) = sqlx::query(
                     r#"
-                    UPDATE contract
-                    SET floor_price = NULL
-                    WHERE contract_address = $1;
-                    "#,
+                UPDATE contract
+                SET floor_price = NULL
+                WHERE contract_address = $1;
+                "#,
                 )
                 .bind(collection)
                 .execute(pool)
