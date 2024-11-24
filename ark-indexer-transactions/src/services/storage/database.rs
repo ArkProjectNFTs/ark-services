@@ -8,7 +8,7 @@ use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
 
-use super::{NFTInfoStorage, Storage, TransactionInfoStorage};
+use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage};
 
 trait BigDecimalHex {
     fn to_hex_string(&self) -> String;
@@ -169,6 +169,46 @@ impl TransactionInfoStorage for DatabaseStorage {
 
         Ok(())
     }
+
+    async fn store_token_event(
+        &self,
+        tx_info: TransactionInfo,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            INSERT INTO token_event (
+                token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp, transaction_hash, to_address, from_address, amount, token_sub_event_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ON CONFLICT (token_event_id, token_sub_event_id) DO UPDATE
+            SET chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, transaction_hash = EXCLUDED.transaction_hash
+        "#;
+
+        let mut token_id_hex: Option<String> = None;
+        if let Some(token_id) = tx_info.token_id.clone() {
+            token_id_hex = Some(token_id.to_hex_string())
+        } else {
+            println!("Invalid Token with info: {:?}", tx_info);
+        }
+        let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
+
+        sqlx::query(query)
+            .bind(event_id)
+            .bind(&tx_info.contract_address)
+            .bind(&tx_info.chain_id)
+            .bind(tx_info.token_id)
+            .bind(token_id_hex)
+            .bind(&tx_info.event_type)
+            .bind(tx_info.timestamp as i64)
+            .bind(&tx_info.tx_hash)
+            .bind(&tx_info.to)
+            .bind(&tx_info.from)
+            .bind(&tx_info.value)
+            .bind(&tx_info.sub_event_id)
+            .bind(Utc::now())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -234,7 +274,10 @@ impl NFTInfoStorage for DatabaseStorage {
 
         Ok(())
     }
+}
 
+#[async_trait::async_trait]
+impl ContractInfoStorage for DatabaseStorage {
     async fn store_contract(
         &self,
         contract_info: ContractInfo,
@@ -254,46 +297,6 @@ impl NFTInfoStorage for DatabaseStorage {
             .bind(&contract_info.name)
             .bind(&contract_info.symbol)
             .bind(Utc::now().timestamp())
-            .execute(&self.pool)
-            .await?;
-
-        Ok(())
-    }
-
-    async fn store_token_event(
-        &self,
-        tx_info: TransactionInfo,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            INSERT INTO token_event (
-                token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp, transaction_hash, to_address, from_address, amount, token_sub_event_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            ON CONFLICT (token_event_id, token_sub_event_id) DO UPDATE
-            SET chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, transaction_hash = EXCLUDED.transaction_hash
-        "#;
-
-        let mut token_id_hex: Option<String> = None;
-        if let Some(token_id) = tx_info.token_id.clone() {
-            token_id_hex = Some(token_id.to_hex_string())
-        } else {
-            println!("Invalid Token with info: {:?}", tx_info);
-        }
-        let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
-
-        sqlx::query(query)
-            .bind(event_id)
-            .bind(&tx_info.contract_address)
-            .bind(&tx_info.chain_id)
-            .bind(tx_info.token_id)
-            .bind(token_id_hex)
-            .bind(&tx_info.event_type)
-            .bind(tx_info.timestamp as i64)
-            .bind(&tx_info.tx_hash)
-            .bind(&tx_info.to)
-            .bind(&tx_info.from)
-            .bind(&tx_info.value)
-            .bind(&tx_info.sub_event_id)
-            .bind(Utc::now())
             .execute(&self.pool)
             .await?;
 
