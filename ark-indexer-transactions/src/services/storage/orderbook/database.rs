@@ -85,6 +85,35 @@ impl Encode<'_, Postgres> for OrderStatus {
     }
 }
 
+#[derive(Copy, Clone)]
+enum OrderStatus {
+    Open,
+    Executed,
+    Cancelled,
+}
+
+impl AsRef<str> for OrderStatus {
+    fn as_ref(&self) -> &str {
+        match self {
+            OrderStatus::Open => sql_order_status::OPEN,
+            OrderStatus::Executed => sql_order_status::EXECUTED,
+            OrderStatus::Cancelled => sql_order_status::CANCELLED,
+        }
+    }
+}
+
+impl sqlx::Type<Postgres> for OrderStatus {
+    fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name(sql_order_status::TYPE_NAME)
+    }
+}
+
+impl Encode<'_, Postgres> for OrderStatus {
+    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> sqlx::encode::IsNull {
+        <&str as Encode<Postgres>>::encode(self.as_ref(), buf)
+    }
+}
+
 struct RouteTypeWrapper(RouteType);
 
 impl AsRef<str> for RouteTypeWrapper {
