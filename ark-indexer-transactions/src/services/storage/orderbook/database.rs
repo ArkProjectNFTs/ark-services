@@ -273,9 +273,10 @@ impl DatabaseStorage {
         orderbook_transaction_info: &OrderbookTransactionInfo,
         order_placed: &OrderPlaced,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        println!("ORDER PLACED: {:?}", order_placed);
         let query = r#"
         INSERT INTO orders (
-            hash, timestamp, route_type, order_type,
+            order_hash, created_at, route_type, order_type,
             currency_address, currency_chain_id, offerer, 
             token_chain_id, token_address, token_id, 
             quantity, start_amount, end_amount,
