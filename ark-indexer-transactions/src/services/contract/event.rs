@@ -695,7 +695,7 @@ where
         &self,
         event: Event,
         event_id: u64,
-        chain_id: Felt,
+        chain_id: &str,
         block_hash: Felt,
         tx_hash: Felt,
         block_timestamp: u64,
@@ -710,7 +710,7 @@ where
         };
         let orderbook_event = orderbook::Event::from(emitted_event);
         let orderbook_transaction_info = OrderbookTransactionInfo {
-            chain_id: felt_to_strk_string(chain_id),
+            chain_id: chain_id.to_owned(),
             tx_hash: felt_to_strk_string(tx_hash),
             event_id,
             block_hash: felt_to_strk_string(block_hash),

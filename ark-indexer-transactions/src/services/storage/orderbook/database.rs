@@ -11,7 +11,10 @@ use crate::{
 };
 
 use super::{
-    constants::{sql_cancelled_reason_type, sql_order_event_type, sql_order_type, sql_route_type},
+    constants::{
+        sql_cancelled_reason_type, sql_order_event_type, sql_order_status, sql_order_type,
+        sql_route_type,
+    },
     OrderbookStorage,
 };
 
@@ -40,6 +43,35 @@ impl sqlx::Type<Postgres> for OrderEventType {
 }
 
 impl Encode<'_, Postgres> for OrderEventType {
+    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> sqlx::encode::IsNull {
+        <&str as Encode<Postgres>>::encode(self.as_ref(), buf)
+    }
+}
+
+#[derive(Copy, Clone)]
+enum OrderStatus {
+    Open,
+    Executed,
+    Cancelled,
+}
+
+impl AsRef<str> for OrderStatus {
+    fn as_ref(&self) -> &str {
+        match self {
+            OrderStatus::Open => sql_order_status::OPEN,
+            OrderStatus::Executed => sql_order_status::EXECUTED,
+            OrderStatus::Cancelled => sql_order_status::CANCELLED,
+        }
+    }
+}
+
+impl sqlx::Type<Postgres> for OrderStatus {
+    fn type_info() -> <Postgres as sqlx::Database>::TypeInfo {
+        sqlx::postgres::PgTypeInfo::with_name(sql_order_status::TYPE_NAME)
+    }
+}
+
+impl Encode<'_, Postgres> for OrderStatus {
     fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> sqlx::encode::IsNull {
         <&str as Encode<Postgres>>::encode(self.as_ref(), buf)
     }
@@ -145,6 +177,44 @@ impl Encode<'_, Postgres> for CancelledReason {
 }
 
 impl DatabaseStorage {
+    async fn remove_from_active_order(&self, order_hash: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            DELETE FROM active_orders WHERE order_hash = $1
+        "#;
+        sqlx::query(query).bind(order_hash).execute(self.pool()).await?;
+        Ok(())
+    }
+
+    async fn update_order_status(
+        &self,
+        order_hash: String,
+        order_status: OrderStatus,
+        timestamp: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            UPDATE orders
+                SET status = $2, updated_at = $3
+            WHERE order_hash = $1
+        "#;
+
+        sqlx::query(query)
+            .bind(order_hash.clone())
+            .bind(order_status)
+            .bind(timestamp as i64)
+            .execute(self.pool())
+            .await?;
+
+        // remove from active orders if needed
+        match order_status {
+            OrderStatus::Open => (),
+            OrderStatus::Executed | OrderStatus::Cancelled => {
+                self.remove_from_active_order(order_hash).await?
+            },
+        };
+
+        Ok(())
+    }
+
     async fn insert_orderbook_transaction_info(
         &self,
         transaction_info: &OrderbookTransactionInfo,
@@ -196,15 +266,18 @@ impl DatabaseStorage {
         orderbook_transaction_info: &OrderbookTransactionInfo,
         order_placed: &OrderPlaced,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        println!("ORDER PLACED: {:?}", order_placed);
         let query = r#"
         INSERT INTO orders (
-            hash, timestamp, route_type, order_type,
+            order_hash, created_at, route_type, order_type,
             currency_address, currency_chain_id, offerer, 
             token_chain_id, token_address, token_id, 
             quantity, start_amount, end_amount,
             start_date, end_date,
             broker_id,
-            cancelled_order_hash
+            cancelled_order_hash,
+            updated_at,
+            status
         ) VALUES (
             $1, $2, $3, $4,
             $5, $6, $7,
@@ -212,9 +285,12 @@ impl DatabaseStorage {
             $11, $12, $13,
             $14, $15,
             $16,
-            $17
+            $17,
+            $18, 
+            $19
         )
         "#;
+
         let order_hash = match order_placed {
             OrderPlaced::V1(order_placed) => {
                 let order_hash = order_placed.order_hash.to_fixed_hex_string();
@@ -248,6 +324,8 @@ impl DatabaseStorage {
                     .bind(order.end_date as i64)
                     .bind(order.broker_id.0.to_fixed_hex_string())
                     .bind(cancelled_order_hash)
+                    .bind(orderbook_transaction_info.timestamp as i64) // updated_at
+                    .bind(OrderStatus::Open)
                     .execute(self.pool())
                     .await?;
                 order_hash
@@ -279,6 +357,12 @@ impl DatabaseStorage {
                 (order_hash, cancelled_reason)
             }
         };
+        self.update_order_status(
+            order_hash.clone(),
+            OrderStatus::Cancelled,
+            transaction_info.timestamp,
+        )
+        .await?;
         self.insert_orderbook_transaction_info(
             transaction_info,
             order_hash,
@@ -343,6 +427,14 @@ impl DatabaseStorage {
                 Some(order_executed.to.0.to_fixed_hex_string()),
             ),
         };
+
+        self.update_order_status(
+            order_hash.clone(),
+            OrderStatus::Executed,
+            transaction_info.timestamp,
+        )
+        .await?;
+
         self.insert_orderbook_transaction_info(
             transaction_info,
             order_hash,

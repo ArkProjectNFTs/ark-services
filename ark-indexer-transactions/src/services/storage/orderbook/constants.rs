@@ -16,6 +16,14 @@ pub(crate) mod sql_order_type {
     pub const TYPE_NAME: &str = "order_type";
 }
 
+pub(crate) mod sql_order_status {
+    pub const OPEN: &str = "Open";
+    pub const EXECUTED: &str = "Executed";
+    pub const CANCELLED: &str = "Cancelled";
+    ///
+    pub const TYPE_NAME: &str = "order_status";
+}
+
 pub(crate) mod sql_route_type {
     pub const ERC20_TO_ERC721: &str = "Erc20ToErc721";
     pub const ERC721_TO_ERC20: &str = "Erc721ToErc20";
