@@ -177,11 +177,17 @@ impl Encode<'_, Postgres> for CancelledReason {
 }
 
 impl DatabaseStorage {
-    async fn remove_from_active_order(&self, order_hash: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn remove_from_active_order(
+        &self,
+        order_hash: String,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             DELETE FROM active_orders WHERE order_hash = $1
         "#;
-        sqlx::query(query).bind(order_hash).execute(self.pool()).await?;
+        sqlx::query(query)
+            .bind(order_hash)
+            .execute(self.pool())
+            .await?;
         Ok(())
     }
 
@@ -209,7 +215,7 @@ impl DatabaseStorage {
             OrderStatus::Open => (),
             OrderStatus::Executed | OrderStatus::Cancelled => {
                 self.remove_from_active_order(order_hash).await?
-            },
+            }
         };
 
         Ok(())
@@ -323,11 +329,26 @@ impl DatabaseStorage {
                     .bind(order.start_date as i64)
                     .bind(order.end_date as i64)
                     .bind(order.broker_id.0.to_fixed_hex_string())
-                    .bind(cancelled_order_hash)
+                    .bind(cancelled_order_hash.clone())
                     .bind(orderbook_transaction_info.timestamp as i64) // updated_at
                     .bind(OrderStatus::Open)
                     .execute(self.pool())
                     .await?;
+
+                // OrderCancelled event is not emitted when an order is cancelled by a new order
+                match cancelled_order_hash {
+                    Some(order_hash) => {
+                        self.remove_from_active_order(order_hash.clone()).await?;
+                        self.update_order_status(
+                            order_hash,
+                            OrderStatus::Cancelled,
+                            orderbook_transaction_info.timestamp,
+                        )
+                        .await?;
+                    }
+                    None => (),
+                };
+
                 order_hash
             }
         };
