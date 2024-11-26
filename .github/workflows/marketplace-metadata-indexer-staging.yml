@@ -1,10 +1,10 @@
-name: MKT Metadata Indexer (Production) (Mainnet) (AWS)
+name: MKT Metadata Indexer (Staging) (Mainnet) (AWS)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
     paths:
       - ".github/workflows/marketplace-metadata-indexer-staging.yml"
       - "infrastructure/cdk-ark-metadata-marketplace/**"
@@ -23,165 +23,103 @@ jobs:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           message: "🚀 Deploying Metadata Marketplace Indexer on Staging environment..."
 
-  push-marketplace-metadata-indexer-image:
+  package-marketplace-metadata:
     runs-on: ubuntu-latest
+    container: screenshotlabs/rust-ci-cd-toolchain:latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/checkout@v4
         with:
-          node-version: "18"
+          fetch-depth: 2
 
-      - name: Install pnpm
+      - name: Store Package Vars
+        id: package-name
         run: |
-          npm install -g pnpm
-          npm install -g aws-cdk
+          echo "PACKAGE_NAME=$(cargo get --entry ark-metadata-marketplace package.name)" >> package_name
+          echo "PACKAGE_VERSION=$(cargo get --entry ark-metadata-marketplace package.version)" >> package_version
 
-      - name: Deploy ECR Repository
+      - name: Create debian service
         run: |
-          cd infrastructure/cdk-ark-ecr
-          pnpm install
-          cdk deploy ark-ecr --outputs-file ./cdk-outputs.json
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          git config --global --add safe.directory /__w/ark-services/ark-services
+          echo "GIT_HASH=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          cargo deb -p ark-metadata-marketplace --variant=staging
 
-      - name: Output ECR Repository URL
-        id: set_ecr_url
-        run: |
-          cd infrastructure/cdk-ark-ecr
-          ECR_URL=$(jq -r '."ark-ecr".ECRRepositoryURL' ./cdk-outputs.json)
-          echo "ECR Repository URL: $ECR_URL"
-          echo "ECR_URL=$ECR_URL" >> $GITHUB_ENV
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
+      - name: Upload package to artifact
+        uses: actions/upload-artifact@v4
         with:
-          toolchain: stable
-          profile: minimal
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          mask-password: true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Build metadata indexer, tag, and push image to Amazon ECR
-        run: |
-          docker buildx create --use --name ecr-deploy-builder-indexer
-          docker buildx build --tag $ECR_URL:metadata-marketplace-production-latest --file docker/metadata-marketplace/Dockerfile . --load
-          docker push $ECR_URL:metadata-marketplace-production-latest
-        env:
-          ECR_URL: ${{ env.ECR_URL }}
-          AWS_NFT_IMAGE_BUCKET_NAME: ${{ secrets.AWS_NFT_IMAGE_BUCKET_NAME }}
-          RPC_PROVIDER: ${{ secrets.RPC_PROVIDER }}
-          METADATA_IPFS_TIMEOUT_IN_SEC: ${{ secrets.METADATA_IPFS_TIMEOUT_IN_SEC }}
-          METADATA_LOOP_DELAY_IN_SEC: ${{ secrets.METADATA_LOOP_DELAY_IN_SEC }}
-          IPFS_GATEWAY_URI: ${{ secrets.IPFS_GATEWAY_URI }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-
-      - name: Bootstrap Metadata Indexer Marketplace
-        run: |
-          cd infrastructure/cdk-ark-metadata-marketplace
-          pnpm cdk bootstrap -c isProductionEnvironment=true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          ELASTICSEARCH_URL: ${{ secrets.ELASTICSEARCH_URL }}
-          ELASTICSEARCH_USERNAME: ${{ secrets.ELASTICSEARCH_USERNAME }}
-          ELASTICSEARCH_PASSWORD: ${{ secrets.ELASTICSEARCH_PASSWORD }}
-
-      - name: Deploy Metadata Indexer Marketplace
-        run: |
-          cd infrastructure/cdk-ark-metadata-marketplace
-          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_CDK_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_CDK_SECRET_ACCESS_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_CDK_ACCOUNT_ID }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          ELASTICSEARCH_URL: ${{ secrets.ELASTICSEARCH_URL }}
-          ELASTICSEARCH_USERNAME: ${{ secrets.ELASTICSEARCH_USERNAME }}
-          ELASTICSEARCH_PASSWORD: ${{ secrets.ELASTICSEARCH_PASSWORD }}
-
-  deploy-marketplace-metadata-indexer:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18"
-
-      - name: Install Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-
-      - name: Cache Cargo registry
-        uses: actions/cache@v2
-        with:
+          name: package-artifact
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+            target/debian/*_amd64.deb
+            package_name
+            package_version
 
-      - name: Cache Cargo Dependencies
-        uses: Swatinem/rust-cache@v2
+  deploy-to-scaleway:
+    runs-on: ubuntu-latest
+    needs: [package-marketplace-metadata]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Cache Cargo target dir
-        uses: actions/cache@v2
+      - name: Download package from artifact
+        uses: actions/download-artifact@v4
         with:
-          path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-target-
-
-      - name: Build ark-metadata-marketplace
-        run: cargo build --release -p ark-metadata-marketplace
+          name: package-artifact
+    
+      - name: Extract variables from artifact
+        id: deployment-extracted-vars
+        run: |
+          echo "PACKAGE_NAME=$(cat package_name)" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_VERSION=$(cat package_version)" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_DEBIAN_FILE=$(find . -regex ".*.deb")" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_DEBIAN_FILE_OUTPUT=$(find target/debian/ -type f -regex ".*.deb" -printf "%f")" >> "$GITHUB_OUTPUT"
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.STARKNET_NODE_MAINNET_SSH_KEY }}
+          ssh-private-key: ${{ secrets.SCALEWAY_BARE_METAL_SECRET_KEY }}
 
       - name: Apply Marketplace SQL Migrations
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          database-url: ${{ secrets.DATABASE_URL }}
+          database-url: ${{ secrets.DATABASE_URL_STAGING }}
 
-      - name: Ensure deployment directory exists
-        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "mkdir -p /opt/marketplace-metadata-indexer"
+      - name: Copy debian package to scaleway
+        run: |
+          scp -o StrictHostKeyChecking=no ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE}} github@${{ secrets.SCALEWAY_BARE_METAL_IP }}:~/
 
-      - name: Stop the service
-        continue-on-error: true
-        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl stop marketplace-metadata-indexer.service"
+      - name: Deploy to Scaleway
+        run: |
+          ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_BARE_METAL_IP }} "
+            sudo dpkg -i ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE_OUTPUT}} &&
+            sudo chown -R github:github /etc/ark-project &&
+            sudo service ark-metadata-marketplace-staging restart &&
+            sleep 10
+          "
 
-      - name: Upload binary to Scaleway server
-        run: scp -o StrictHostKeyChecking=no target/release/ark-metadata-marketplace github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }}:/opt/marketplace-metadata-indexer/
+      - name: Verify Deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_BARE_METAL_IP }} << EOF
+            sudo service ark-metadata-marketplace-staging status
+          EOF
 
-      - name: Restart the service
-        run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl start marketplace-metadata-indexer.service"
+      - name: Send success notification to dev-updates channel
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "✅ Successfully deployed Marketplace metadata to Staging environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send failure notification to dev-updates channel
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "❌ Failed to deploy Marketplace metadata to Staging environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+

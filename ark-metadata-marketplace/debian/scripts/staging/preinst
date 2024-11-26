@@ -24,11 +24,6 @@ case "$1" in
         if [ -f "$CONFIG_FILE" ]; then
             echo "Patching existing $CONFIG_FILE..."
 
-            grep -q "^port:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'port: 8080' >> "$CONFIG_FILE"
-            fi
-
             # Add log_level if it does not exist
             grep -q "^aws_access_key_id:" "$CONFIG_FILE"
             if [ $? -ne 0 ]; then
@@ -45,6 +40,46 @@ case "$1" in
                 echo 'aws_default_region: ""' >> "$CONFIG_FILE"
             fi
 
+            grep -q "^aws_secret_bucket_name:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'aws_secret_bucket_name: "staging/ark-bucket-name"' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^rcp_provider:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'rcp_provider: "http://localhost:6060/v0_7"' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^chain_id:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'chain_id: "0x534e5f4d41494e"' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^ipfs_timeout_duration:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'ipfs_timeout_duration: "1m"' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^loop_delay_duration:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'loop_delay_duration: "1m"' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^ipfs_gateway_uri:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'ipfs_gateway_uri: "https://ipfs.arkproject.dev/ipfs/"' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^filter:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'filter: ""' >> "$CONFIG_FILE"
+            fi
+
+            grep -q "^refresh_contract_metadata:" "$CONFIG_FILE"
+            if [ $? -ne 0 ]; then
+                echo 'refresh_contract_metadata: "false"' >> "$CONFIG_FILE"
+            fi
+
             grep -q "^rust_log:" "$CONFIG_FILE"
             if [ $? -ne 0 ]; then
                 echo 'rust_log: "info,sqlx::query=trace"' >> "$CONFIG_FILE"
@@ -55,16 +90,6 @@ case "$1" in
                 echo 'aws_secret_read_db: "staging/ark-db-credentials-read-private"' >> "$CONFIG_FILE"
             fi
         
-            grep -q "^aws_secret_write_db:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_secret_write_db: "staging/ark-db-credentials"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^aws_secret_redis_db:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_secret_redis_db: "staging/ark-redis-credentials"' >> "$CONFIG_FILE"
-            fi
-
             grep -q "^aws_secret_eleasticsearch_db:" "$CONFIG_FILE"
             if [ $? -ne 0 ]; then
                 echo 'aws_secret_eleasticsearch_db: "staging/ark-elasticsearch-credentials"' >> "$CONFIG_FILE"
@@ -74,14 +99,19 @@ case "$1" in
             # Create the config file with default values if it doesn't exist
             echo "Creating $CONFIG_FILE with default values..."
             cat <<EOF > "$CONFIG_FILE"
-port: 8080
 aws_access_key_id: ""
 aws_secret_access_key: ""
 aws_default_region: ""
-rust_log: "info,sqlx::query=trace"
+aws_secret_bucket_name: "staging/ark-bucket-name"
+rcp_provider: "http://localhost:6060/v0_7"
+chain_id: "0x534e5f4d41494e"
+ipfs_timeout_duration: "1m"
+loop_delay_duration: "1m"
+ipfs_gateway_uri: "https://ipfs.arkproject.dev/ipfs/"
+filter:
+refresh_contract_metadata: false
+rust_log: "info"
 aws_secret_read_db: "staging/ark-db-credentials-read-private"
-aws_secret_write_db: "staging/ark-db-credentials"
-aws_secret_redis_db: "staging/ark-redis-credentials"
 aws_secret_eleasticsearch_db: "staging/ark-elasticsearch-credentials"
 
 EOF

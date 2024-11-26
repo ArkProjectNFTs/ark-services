@@ -7,7 +7,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=~
-ExecStart=/usr/bin/ark-metadata-marketplace-production --config-path /etc/ark-project/api-marketplace.config.production.yml
+ExecStart=/usr/bin/ark-metadata-marketplace-production --config-path /etc/ark-project/ark-metadata-marketplace.config.production.yml
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 PrivateTmp=true

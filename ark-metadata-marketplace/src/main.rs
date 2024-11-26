@@ -19,6 +19,7 @@ use arkproject::{
 use aws_config::{meta::region::RegionProviderChain, BehaviorVersion, Region};
 use aws_sdk_s3::config::Credentials;
 use aws_sdk_secretsmanager::Client as AwsClient;
+use clap::Parser;
 use elasticsearch_manager::EsConfig;
 use metadata_storage::MetadataSqlStorage;
 use serde::Deserialize;
@@ -26,7 +27,6 @@ use std::{error::Error, time::Duration};
 use tokio::time::sleep;
 use tracing::{debug, error, info, span, trace, warn, Level};
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
-use clap::Parser;
 
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -78,15 +78,15 @@ async fn get_elastic_config(
     let elasticsearch_url = std::env::var("ELASTICSEARCH_URL").unwrap_or(creds.url);
     let elasticsearch_username = std::env::var("ELASTICSEARCH_USERNAME").unwrap_or(creds.username);
     let elasticsearch_password = std::env::var("ELASTICSEARCH_PASSWORD").unwrap_or(creds.password);
-    Ok(EsConfig{
+    Ok(EsConfig {
         url: elasticsearch_url,
         username: elasticsearch_username,
-        password: elasticsearch_password
+        password: elasticsearch_password,
     })
 }
 #[derive(Debug, Deserialize, Clone)]
 pub struct BucketConfig {
-    pub name: String
+    pub name: String,
 }
 
 async fn get_bucket_config(
@@ -128,10 +128,17 @@ async fn main() -> std::io::Result<()> {
                 .load()
                 .await;
             let client = aws_sdk_secretsmanager::Client::new(&aws_config);
-            let database_uri = get_database_url(client.clone(), config.aws_secret_read_db).await.expect("Could not get the database URL");
-            let storage = MetadataSqlStorage::new_pg(database_uri.as_str()).await.expect("Could not get the Storage");
-            let starknet_client = StarknetClientHttp::new(&config.rcp_provider).expect("Could not get the RPC provider");
-            let bucket = get_bucket_config(client.clone(), config.aws_secret_bucket_name).await.expect("Could not get the bucket Name");
+            let database_uri = get_database_url(client.clone(), config.aws_secret_read_db)
+                .await
+                .expect("Could not get the database URL");
+            let storage = MetadataSqlStorage::new_pg(database_uri.as_str())
+                .await
+                .expect("Could not get the Storage");
+            let starknet_client = StarknetClientHttp::new(&config.rcp_provider)
+                .expect("Could not get the RPC provider");
+            let bucket = get_bucket_config(client.clone(), config.aws_secret_bucket_name)
+                .await
+                .expect("Could not get the bucket Name");
             let file_manager = AWSFileManager::new(bucket.name);
             let es_config =
                 match get_elastic_config(client.clone(), config.aws_secret_eleasticsearch_db).await
@@ -145,11 +152,8 @@ async fn main() -> std::io::Result<()> {
                         ));
                     }
                 };
-            let elasticsearch_manager = EsManager::new(
-                es_config.url,
-                es_config.username,
-                es_config.password,
-            );
+            let elasticsearch_manager =
+                EsManager::new(es_config.url, es_config.username, es_config.password);
 
             trace!(
                 "Initialized AWSFileManager, StarknetClientHttp, MetadataStorage and ElasticsearchManager"
@@ -160,7 +164,7 @@ async fn main() -> std::io::Result<()> {
                 &file_manager,
                 Some(&elasticsearch_manager),
             );
-        
+
             debug!("Starting main loop to check and refresh token metadata");
             if let Some((contract_address, chain_id)) = &config.filter {
                 if config.refresh_contract_metadata {
@@ -168,48 +172,61 @@ async fn main() -> std::io::Result<()> {
                         "♻️ Forcing Refresh for NFT collection: {{ contract_address: \"{}\", chain_id: \"{}\" }}",
                         contract_address, chain_id
                     );
-        
+
                     storage
                         .update_all_token_metadata_status(
                             contract_address,
                             chain_id,
                             "COLLECTION_TO_REFRESH",
                         )
-                        .await.expect("Error on update all token metadata Status");
+                        .await
+                        .expect("Error on update all token metadata Status");
                 }
             }
-        
+
             let mut total_tokens: u64 = 0;
             loop {
                 match storage
-                    .find_tokens_without_metadata(config.filter.clone(), config.refresh_contract_metadata)
+                    .find_tokens_without_metadata(
+                        config.filter.clone(),
+                        config.refresh_contract_metadata,
+                    )
                     .await
                 {
                     Ok(tokens) => {
                         if tokens.is_empty() {
                             if config.refresh_contract_metadata {
                                 info!("All collections metadata refreshed successfully");
-        
+
                                 if let Some((contract_address, chain_id)) = &config.filter {
                                     storage
-                                        .set_contract_refreshing_status(contract_address, chain_id, false)
-                                        .await.expect("Error when refreshing contract status");
+                                        .set_contract_refreshing_status(
+                                            contract_address,
+                                            chain_id,
+                                            false,
+                                        )
+                                        .await
+                                        .expect("Error when refreshing contract status");
                                 }
-        
+
                                 return Ok(());
                             }
-        
+
                             info!("No tokens found that require metadata refresh");
-                            sleep(humantime::parse_duration(&config.loop_delay_duration).unwrap_or(Duration::from_secs(60))).await;
+                            sleep(
+                                humantime::parse_duration(&config.loop_delay_duration)
+                                    .unwrap_or(Duration::from_secs(60)),
+                            )
+                            .await;
                         } else {
                             for token in tokens {
                                 total_tokens += 1;
-        
+
                                 info!(
                                     "🔄 Refreshing Token Metadata [{}]: Token: {:?}",
                                     total_tokens, token
                                 );
-        
+
                                 match metadata_manager
                                     .refresh_token_metadata(
                                         &token.contract_address,
@@ -217,7 +234,8 @@ async fn main() -> std::io::Result<()> {
                                         &token.chain_id,
                                         token.save_images,
                                         config.ipfs_gateway_uri.as_str(),
-                                        humantime::parse_duration(&config.ipfs_timeout_duration).unwrap_or(Duration::from_secs(60)),
+                                        humantime::parse_duration(&config.ipfs_timeout_duration)
+                                            .unwrap_or(Duration::from_secs(60)),
                                         "https://arkproject.dev",
                                     )
                                     .await
@@ -237,7 +255,7 @@ async fn main() -> std::io::Result<()> {
                                                 error!("❌ Error: {:?}", e);
                                             }
                                         }
-        
+
                                         let _ = storage
                                             .update_token_metadata_status(
                                                 &token.contract_address,
@@ -253,11 +271,15 @@ async fn main() -> std::io::Result<()> {
                     }
                     Err(e) => {
                         error!("Error: {:?}", e);
-                        sleep(humantime::parse_duration(&config.loop_delay_duration).unwrap_or(Duration::from_secs(60))).await;
+                        sleep(
+                            humantime::parse_duration(&config.loop_delay_duration)
+                                .unwrap_or(Duration::from_secs(60)),
+                        )
+                        .await;
                     }
                 }
             }
-        },
+        }
         Err(error) => panic!("{:#?}", error),
     }
 }
