@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS active_orders (
     currency_address u256_hex NOT NULL,
     broker_id u256_hex NOT NULL,
     created_at BIGINT NOT NULL,
-    PRIMARY KEY (token_address, token_id)
+    PRIMARY KEY (order_hash, token_address)
 );
 
 CREATE TABLE IF NOT EXISTS order_transaction_info (
@@ -115,13 +115,13 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER insert_active_orders
 AFTER INSERT ON orders
 FOR EACH ROW
-WHEN (NEW.order_type != 'Auction')
 EXECUTE FUNCTION insert_active_orders_function();
 
 -- Indexes for performance
-CREATE INDEX idx_active_orders_token ON active_orders(token_address);
+CREATE INDEX idx_active_orders_token ON active_orders(token_address, token_id);
+CREATE INDEX idx_active_orders_end_date ON active_orders(end_date);
+
 CREATE INDEX idx_orders_token ON orders(token_address, token_id);
 CREATE INDEX idx_orders_status ON orders(status);
 CREATE INDEX idx_orders_offerer ON orders(offerer);
 CREATE INDEX idx_order_events_timestamp ON order_transaction_info(timestamp);
-CREATE INDEX idx_active_orders_end_date ON active_orders(end_date);

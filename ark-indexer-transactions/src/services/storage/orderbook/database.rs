@@ -177,11 +177,17 @@ impl Encode<'_, Postgres> for CancelledReason {
 }
 
 impl DatabaseStorage {
-    async fn remove_from_active_order(&self, order_hash: String) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn remove_from_active_order(
+        &self,
+        order_hash: String,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             DELETE FROM active_orders WHERE order_hash = $1
         "#;
-        sqlx::query(query).bind(order_hash).execute(self.pool()).await?;
+        sqlx::query(query)
+            .bind(order_hash)
+            .execute(self.pool())
+            .await?;
         Ok(())
     }
 
@@ -209,7 +215,7 @@ impl DatabaseStorage {
             OrderStatus::Open => (),
             OrderStatus::Executed | OrderStatus::Cancelled => {
                 self.remove_from_active_order(order_hash).await?
-            },
+            }
         };
 
         Ok(())
@@ -266,7 +272,6 @@ impl DatabaseStorage {
         orderbook_transaction_info: &OrderbookTransactionInfo,
         order_placed: &OrderPlaced,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        println!("ORDER PLACED: {:?}", order_placed);
         let query = r#"
         INSERT INTO orders (
             order_hash, created_at, route_type, order_type,
