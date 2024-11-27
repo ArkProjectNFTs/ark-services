@@ -221,6 +221,7 @@ impl DatabaseStorage {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn insert_orderbook_transaction_info(
         &self,
         transaction_info: &OrderbookTransactionInfo,
@@ -300,14 +301,10 @@ impl DatabaseStorage {
             OrderPlaced::V1(order_placed) => {
                 let order_hash = order_placed.order_hash.to_fixed_hex_string();
                 let order = &order_placed.order;
-                let token_id = match order.token_id {
-                    Some(value) => Some(u256_to_hex(&value)),
-                    None => None,
-                };
-                let cancelled_order_hash = match order_placed.cancelled_order_hash {
-                    Some(value) => Some(value.to_fixed_hex_string()),
-                    None => None,
-                };
+                let token_id = order.token_id.map(|value| u256_to_hex(&value));
+                let cancelled_order_hash = order_placed
+                    .cancelled_order_hash
+                    .map(|value| value.to_fixed_hex_string());
                 let route_type = RouteTypeWrapper(RouteType::from(&order.route));
                 let order_type = OrderTypeWrapper(OrderType::from(&order_placed.order_type));
 
@@ -391,10 +388,9 @@ impl DatabaseStorage {
             OrderFulfilled::V1(order_fulfilled) => {
                 let order_hash = order_fulfilled.order_hash.to_fixed_hex_string();
                 let fulfiller = order_fulfilled.fulfiller.0.to_fixed_hex_string();
-                let related_order_hash = match order_fulfilled.related_order_hash {
-                    Some(value) => Some(value.to_fixed_hex_string()),
-                    None => None,
-                };
+                let related_order_hash = order_fulfilled
+                    .related_order_hash
+                    .map(|value| value.to_fixed_hex_string());
                 (order_hash, fulfiller, related_order_hash)
             }
         };
@@ -463,19 +459,19 @@ impl OrderbookStorage for DatabaseStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match transaction_info.event {
             orderbook::Event::OrderPlaced(ref order_placed) => {
-                self.handle_order_placed(&transaction_info, &order_placed)
+                self.handle_order_placed(&transaction_info, order_placed)
                     .await?
             }
             orderbook::Event::OrderCancelled(ref order_cancelled) => {
-                self.handle_order_cancelled(&transaction_info, &order_cancelled)
+                self.handle_order_cancelled(&transaction_info, order_cancelled)
                     .await?
             }
             orderbook::Event::OrderExecuted(ref order_executed) => {
-                self.handle_order_executed(&transaction_info, &order_executed)
+                self.handle_order_executed(&transaction_info, order_executed)
                     .await?
             }
             orderbook::Event::OrderFulfilled(ref order_fulfilled) => {
-                self.handle_order_fulfilled(&transaction_info, &order_fulfilled)
+                self.handle_order_fulfilled(&transaction_info, order_fulfilled)
                     .await?
             }
             _ => {
