@@ -43,8 +43,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // let chain_id = Felt::from_hex(&config.chain_id).unwrap_or(Felt::ZERO); // starknet mainnet chain ID
             loop {
                 let latest_folder = get_latest_folder_path(&config.base_path)?;
-                let lastest_block_number = get_latest_block_in_folder(&latest_folder)?;
-
+                let mut lastest_block_number = get_latest_block_in_folder(&latest_folder)?;
+                if let Some(end_at) = config.end_at {
+                    lastest_block_number = end_at
+                }
                 contract_manager
                     .index_blocks(
                         config.start_from,
