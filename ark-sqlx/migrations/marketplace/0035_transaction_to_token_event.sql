@@ -1,8 +1,5 @@
 ALTER TABLE token_event DROP CONSTRAINT IF EXISTS token_event_pkey;
 
-ALTER TABLE token_event 
-    ADD CONSTRAINT token_event_pkey 
-    PRIMARY KEY (token_event_id, token_sub_event_id);
 -- Vérifier et ajouter token_sub_event_id si nécessaire
 DO $$
 BEGIN
@@ -22,6 +19,10 @@ BEGIN
         ALTER TABLE token_event ALTER COLUMN token_sub_event_id SET NOT NULL;
     END IF;
 END $$;
+
+ALTER TABLE token_event 
+    ADD CONSTRAINT token_event_pkey 
+    PRIMARY KEY (token_event_id, token_sub_event_id);
 
 -- 1. Supprimer l'ancienne contrainte
 ALTER TABLE contract DROP CONSTRAINT IF EXISTS contract_contract_type_check;
