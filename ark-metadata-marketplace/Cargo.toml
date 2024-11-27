@@ -23,8 +23,8 @@ tokio.workspace = true
 starknet.workspace = true
 sqlx.workspace = true
 mime_guess = "2.0"
-reqwest = { version = "0.11", features = ["json", "native-tls-vendored"] }
-thiserror = "1.0.32"
+reqwest = { version = "0.12.9", features = ["json", "native-tls-vendored"] }
+thiserror = "2.0.3"
 openssl = "0.10.66"
 openssl-probe = "0.1.5"
 tikv-jemallocator = "0.6.0"
