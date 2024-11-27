@@ -237,7 +237,7 @@ impl Storage for DatabaseStorage {
                 contract_address, chain_id, contract_type, contract_name, contract_symbol, updated_timestamp
             ) VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (contract_address, chain_id) DO UPDATE
-            SET contract_type = EXCLUDED.contract_type, contract_name = EXCLUDED.contract_name, contract_symbol = EXCLUDED.contract_symbol, chain_id = EXCLUDED.chain_id, updated_timestamp = EXCLUDED.updated_timestamp
+            SET contract_type = EXCLUDED.contract_type, chain_id = EXCLUDED.chain_id, updated_timestamp = EXCLUDED.updated_timestamp
         "#;
 
         sqlx::query(query)

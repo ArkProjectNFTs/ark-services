@@ -378,7 +378,14 @@ impl DatabaseAccess for PgPool {
         };
 
         let sql_query = format!(
-            "SELECT
+            "
+            WITH token_amount AS (
+                SELECT COUNT(DISTINCT(contract_address, chain_id, token_id))
+                FROM token
+                where contract_address = contract_marketdata.contract_address
+                AND chain_id = contract_marketdata.chain_id
+            )
+            SELECT
                     contract.contract_address as address,
                     contract_image AS image,
                     contract_name AS name,
@@ -390,7 +397,7 @@ impl DatabaseAccess for PgPool {
                     marketcap,
                     token_listed_count AS listed_items,
                     listed_percentage,
-                    token_count,
+                    COALESCE(token_amount.count, contract.token_count) AS token_count,
                     owner_count,
                     total_volume,
                     total_sales,
@@ -428,7 +435,14 @@ impl DatabaseAccess for PgPool {
                 .join(", ");
 
             let additional_sql_query = format!(
-                "SELECT
+                "
+                WITH token_amount AS (
+                    SELECT COUNT(DISTINCT(contract_address, chain_id, token_id))
+                    FROM token
+                    where contract_address = contract_marketdata.contract_address
+                    AND chain_id = contract_marketdata.chain_id
+                )
+                SELECT
                     contract.contract_address as address,
                     contract_image AS image,
                     contract_name AS name,
@@ -440,7 +454,7 @@ impl DatabaseAccess for PgPool {
                     marketcap,
                     token_listed_count AS listed_items,
                     listed_percentage,
-                    token_count,
+                    COALESCE(token_amount.count, contract.token_count) AS token_count,
                     owner_count,
                     total_volume,
                     total_sales,
