@@ -10,6 +10,7 @@ pub struct AppConfig {
     pub parsing_state_path: String,
     pub chain_id: String,
     pub start_from: u64,
+    pub end_at: Option<u64>,
 }
 
 impl AppConfig {
