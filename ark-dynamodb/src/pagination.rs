@@ -136,12 +136,14 @@ impl DynamoDbPaginator {
                 }
             };
 
-            conn.hset(&hash_key, key, result)
+            let _: () = conn
+                .hset(&hash_key, key, result)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
         }
 
         let ttl = get_hash_ttl();
-        conn.expire(&hash_key, ttl)
+        let _: () = conn
+            .expire(&hash_key, ttl)
             .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
 
         Ok(Some(hash_key))
@@ -162,13 +164,15 @@ impl DynamoDbPaginator {
 
             for (lek_name, lek) in last_evaluated_keys {
                 if let Some(lek_key) = self.store_cursor(lek)? {
-                    conn.hset(hash_key.clone(), lek_name, lek_key)
+                    let _: () = conn
+                        .hset(hash_key.clone(), lek_name, lek_key)
                         .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
                 }
             }
 
             let ttl = get_hash_ttl();
-            conn.expire(hash_key.clone(), ttl)
+            let _: () = conn
+                .expire(hash_key.clone(), ttl)
                 .map_err(|e| ProviderError::PaginationCacheError(e.to_string()))?;
 
             Ok(Some(hash_key))

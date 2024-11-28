@@ -20,16 +20,21 @@ serde_with.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 uuid = "0.8"
-sqlx = { version = "0.7", features = ["postgres", "runtime-async-std", "bigdecimal"] }
+sqlx = { version = "0.8.2", features = [
+    "postgres",
+    "runtime-async-std",
+    "bigdecimal",
+] }
 num-bigint = "0.4.0"
 num-traits = "0.2.16"
 redis = { version = "0.25.4", features = ["aio", "tokio-comp"] }
 starknet = "0.12.0"
-reqwest = "0.11.27"
+reqwest = { version = "0.12.9", features = ["json"] }
+sqlx-core = "0.8.2"
 
 [dev-dependencies]
 mockall = "0.12.1"
-sqlx = { version = "0.7", features = [
+sqlx = { version = "0.8.2", features = [
     "postgres",
     "runtime-tokio-rustls",
     "tls-rustls",
