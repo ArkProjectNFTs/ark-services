@@ -6,9 +6,10 @@ use sqlx::{
     postgres::{PgArgumentBuffer, PgValueRef},
     Decode, Encode, FromRow, Postgres,
 };
+
 use starknet::core::types::Felt;
 // use starknet::core::types::String;
-use bigdecimal::BigDecimal;
+use sqlx::types::BigDecimal;
 use starknet::providers::ProviderError;
 
 use super::event::{ERCCompliance, ErcAction, EventType};
@@ -192,8 +193,12 @@ impl sqlx::Type<Postgres> for ContractType {
 }
 
 impl Encode<'_, Postgres> for ContractType {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
-        <&str as Encode<Postgres>>::encode(self.as_ref(), buf)
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+        let str_val = self.as_ref();
+        <&str as Encode<Postgres>>::encode(str_val, buf)
     }
 
     fn size_hint(&self) -> usize {
@@ -204,7 +209,12 @@ impl Encode<'_, Postgres> for ContractType {
 impl<'r> Decode<'r, Postgres> for ContractType {
     fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let s = <&str as Decode<Postgres>>::decode(value)?;
-        ContractType::from_str(s).map_err(|_| "Failed to decode ContractType".into())
+        Ok(ContractType::from_str(s).map_err(|_| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Failed to decode ContractType",
+            ))
+        })?)
     }
 }
 
