@@ -56,7 +56,6 @@ impl DynamoDbEventProvider {
                 };
 
                 Ok(TokenSaleEvent {
-                    chain_id: convert::attr_to_str(data, "ChainID")?,
                     event_id: convert::attr_to_str(data, "EventId")?,
                     event_type,
                     timestamp: convert::attr_to_u64(data, "Timestamp")?,

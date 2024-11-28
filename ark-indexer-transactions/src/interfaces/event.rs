@@ -59,9 +59,12 @@ impl sqlx::Type<Postgres> for ERCCompliance {
 }
 
 impl Encode<'_, Postgres> for ERCCompliance {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
-        <&str as Encode<Postgres>>::encode(&str_val, buf)
+        <&str as Encode<Postgres>>::encode(str_val, buf)
     }
 
     fn size_hint(&self) -> usize {
@@ -146,9 +149,12 @@ impl sqlx::Type<Postgres> for EventType {
 }
 
 impl Encode<'_, Postgres> for EventType {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
-        <&str as Encode<Postgres>>::encode(&str_val, buf)
+        <&str as Encode<Postgres>>::encode(str_val, buf)
     }
 
     fn size_hint(&self) -> usize {
@@ -199,9 +205,12 @@ impl sqlx::Type<Postgres> for ErcAction {
 }
 
 impl Encode<'_, Postgres> for ErcAction {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
-        <&str as Encode<Postgres>>::encode(&str_val, buf)
+        <&str as Encode<Postgres>>::encode(str_val, buf)
     }
 
     fn size_hint(&self) -> usize {

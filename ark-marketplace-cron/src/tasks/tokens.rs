@@ -61,7 +61,7 @@ async fn clear_collection_cache(
     }
 
     if !keys.is_empty() {
-        con.del(&keys).await?;
+        let _: () = con.del(&keys).await?;
     }
 
     Ok(())
