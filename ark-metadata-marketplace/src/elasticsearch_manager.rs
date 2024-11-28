@@ -49,7 +49,8 @@ impl ElasticsearchManager for EsManager {
                 "doc_as_upsert": true
             }))
             .send()
-            .await?;
+            .await
+            .map_err(|e| RequestError::Reqwest(e.to_string()))?;
 
         if response.status().is_success() {
             Ok(())

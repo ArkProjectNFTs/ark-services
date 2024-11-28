@@ -55,7 +55,7 @@ where
     &'r str: sqlx::Decode<'r, DB>,
 {
     fn decode(
-        value: <DB as sqlx::database::HasValueRef<'r>>::ValueRef,
+        value: <DB as sqlx::Database>::ValueRef<'r>,
     ) -> Result<Self, sqlx::error::BoxDynError> {
         if let Ok(e) = TokenEventTypeDB::decode(value) {
             match e {

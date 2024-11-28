@@ -13,7 +13,7 @@ futures-util = "0.3.30"
 envy = "0.4.2"
 chrono = { version = "0.4.38", features = ["serde"]}
 sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono", "bigdecimal"] }
-anyhow = "1.0.89"
+anyhow = "1.0.93"
 starknet = "0.12.0"
 async-trait = "0.1.83"
 mockall = "0.13.0"

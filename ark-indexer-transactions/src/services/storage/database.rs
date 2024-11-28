@@ -228,7 +228,7 @@ impl NFTInfoStorage for DatabaseStorage {
 
         sqlx::query(query)
             .bind(&nft_info.contract_address)
-            .bind(&nft_info.token_id)
+            .bind(nft_info.token_id.map(|id| id.to_string()))
             .bind(&nft_info.name)
             .bind(&nft_info.symbol)
             .bind(&nft_info.metadata_uri)
@@ -263,7 +263,7 @@ impl NFTInfoStorage for DatabaseStorage {
         sqlx::query(query)
             .bind(&nft_info.contract_address)
             .bind(&nft_info.chain_id)
-            .bind(&nft_info.token_id)
+            .bind(nft_info.token_id.map(|id| id.to_string()))
             .bind(token_id_hex)
             .bind("TO_REFRESH")
             .bind(&nft_info.owner)
