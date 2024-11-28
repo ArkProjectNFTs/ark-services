@@ -279,7 +279,6 @@ impl OrderProvider {
 
         // Delete keys and log the results
         if !keys.is_empty() {
-            // Explicitly specify the return type for del command
             let _: () = conn.del(keys.clone()).await?;
         }
 
