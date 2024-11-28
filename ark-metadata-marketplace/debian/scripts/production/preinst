@@ -1,104 +1,57 @@
 #!/bin/sh
-# preinst script for ark-metadata-marketplace
-#
-# see: dh_installdeb(1)
+set -ex
 
-set -e
+echo "Starting preinst script"
+echo "Running as user: $(whoami)"
+echo "Current directory: $(pwd)"
 
-# summary of how this script can be called:
-#        * <new-preinst> `install'
-#        * <new-preinst> `install' <old-version>
-#        * <new-preinst> `upgrade' <old-version>
-#        * <old-preinst> `abort-upgrade' <new-version>
-# for details, see http://www.debian.org/doc/debian-policy/ or
-# the debian-policy package
-
+# Vérification des permissions
+ls -ld /usr/share/ark-metadata-marketplace || true
+ls -ld /etc/ark-project || true
 
 case "$1" in
     install|upgrade)
-        mkdir -p /usr/share/ark-metadata-marketplace/src/ark-metadata-marketplace/ark-metadata-marketplace-test
-        mkdir -p /etc/ark-project
+        echo "Running install/upgrade case"
+        
+        mkdir -p /usr/share/ark-metadata-marketplace/src/ark-metadata-marketplace/ark-metadata-marketplace-test || {
+            echo "Failed to create marketplace test directory"
+            exit 1
+        }
+        mkdir -p /etc/ark-project || {
+            echo "Failed to create ark-project directory"
+            exit 1
+        }
 
         CONFIG_FILE="/etc/ark-project/api-marketplace.config.production.yml"
-
-        if [ -f "$CONFIG_FILE" ]; then
-            echo "Patching existing $CONFIG_FILE..."
-
-            # Add log_level if it does not exist
-            grep -q "^aws_access_key_id:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_access_key_id: ""' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^aws_secret_access_key:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_secret_access_key: ""' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^aws_default_region:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_default_region: ""' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^aws_secret_bucket_name:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_secret_bucket_name: "prod/ark-bucket-name"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^rcp_provider:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'rcp_provider: "http://localhost:6060/v0_7"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^chain_id:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'chain_id: "0x534e5f4d41494e"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^ipfs_timeout_duration:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'ipfs_timeout_duration: "1m"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^loop_delay_duration:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'loop_delay_duration: "1m"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^ipfs_gateway_uri:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'ipfs_gateway_uri: "https://ipfs.arkproject.dev/ipfs/"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^filter:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'filter: ""' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^refresh_contract_metadata:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'refresh_contract_metadata: "false"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^rust_log:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'rust_log: "info,sqlx::query=trace"' >> "$CONFIG_FILE"
-            fi
-
-            grep -q "^aws_secret_read_db:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_secret_read_db: "prod/ark-db-credentials-read-private"' >> "$CONFIG_FILE"
-            fi
+        ls -l "$CONFIG_FILE" 2>/dev/null || true
         
-            grep -q "^aws_secret_eleasticsearch_db:" "$CONFIG_FILE"
-            if [ $? -ne 0 ]; then
-                echo 'aws_secret_eleasticsearch_db: "prod/ark-elasticsearch-credentials"' >> "$CONFIG_FILE"
-            fi
-
+        if [ -f "$CONFIG_FILE" ]; then
+            echo "Config file exists, patching..."
+            # Vérification de chaque paramètre avec debug
+            for param in aws_access_key_id aws_secret_access_key aws_default_region aws_secret_bucket_name rcp_provider chain_id ipfs_timeout_duration loop_delay_duration ipfs_gateway_uri filter refresh_contract_metadata rust_log aws_secret_read_db aws_secret_eleasticsearch_db; do
+                echo "Checking $param..."
+                grep -q "^$param:" "$CONFIG_FILE" || {
+                    echo "Adding $param..."
+                    case "$param" in
+                        aws_access_key_id|aws_secret_access_key|aws_default_region|filter) echo "$param: \"\"" ;;
+                        aws_secret_bucket_name) echo "$param: \"prod/ark-bucket-name\"" ;;
+                        rcp_provider) echo "$param: \"http://localhost:6060/v0_7\"" ;;
+                        chain_id) echo "$param: \"0x534e5f4d41494e\"" ;;
+                        ipfs_timeout_duration|loop_delay_duration) echo "$param: \"1m\"" ;;
+                        ipfs_gateway_uri) echo "$param: \"https://ipfs.arkproject.dev/ipfs/\"" ;;
+                        refresh_contract_metadata) echo "$param: \"false\"" ;;
+                        rust_log) echo "$param: \"info,sqlx::query=trace\"" ;;
+                        aws_secret_read_db) echo "$param: \"prod/ark-db-credentials-read-private\"" ;;
+                        aws_secret_eleasticsearch_db) echo "$param: \"prod/ark-elasticsearch-credentials\"" ;;
+                    esac
+                } >> "$CONFIG_FILE" || {
+                    echo "Failed to append $param"
+                    exit 1
+                }
+            done
         else
-            # Create the config file with default values if it doesn't exist
-            echo "Creating $CONFIG_FILE with default values..."
-            cat <<EOF > "$CONFIG_FILE"
+            echo "Creating new config file..."
+            cat > "$CONFIG_FILE" << 'EOF' || exit 1
 aws_access_key_id: ""
 aws_secret_access_key: ""
 aws_default_region: ""
@@ -108,28 +61,20 @@ chain_id: "0x534e5f4d41494e"
 ipfs_timeout_duration: "1m"
 loop_delay_duration: "1m"
 ipfs_gateway_uri: "https://ipfs.arkproject.dev/ipfs/"
-filter:
+filter: ""
 refresh_contract_metadata: false
 rust_log: "info"
 aws_secret_read_db: "prod/ark-db-credentials-read-private"
 aws_secret_eleasticsearch_db: "prod/ark-elasticsearch-credentials"
-
 EOF
         fi
-    ;;
-
+        ;;
     abort-upgrade)
-    ;;
-
+        ;;
     *)
         echo "preinst called with unknown argument \`$1'" >&2
         exit 1
-    ;;
+        ;;
 esac
-
-# dh_installdeb will replace this with shell code automatically
-# generated by other debhelper scripts.
-
-#DEBHELPER#
 
 exit 0
