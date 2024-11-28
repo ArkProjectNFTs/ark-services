@@ -241,9 +241,9 @@ struct TokenPrice {
 }
 
 fn eth_to_wei(price_in_eth: f64) -> u128 {
-    let wei_value = (price_in_eth * 1e18) as u128;
-    format!("{:x}", wei_value);
-    wei_value
+    (price_in_eth * 1e18) as u128
+    // format!("{:x}", wei_value);
+    // wei_value
 }
 
 fn hex_to_wei(hex_str: Option<String>) -> Option<u128> {
@@ -281,7 +281,7 @@ impl OrderProvider {
 
         // Delete keys and log the results
         if !keys.is_empty() {
-            conn.del(keys.clone()).await?;
+            let _: () = conn.del(keys.clone()).await?;
         }
 
         Ok(())

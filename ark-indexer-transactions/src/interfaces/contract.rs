@@ -6,6 +6,7 @@ use sqlx::{
     postgres::{PgArgumentBuffer, PgValueRef},
     Decode, Encode, FromRow, Postgres,
 };
+
 use starknet::core::types::Felt;
 // use starknet::core::types::String;
 use sqlx::types::BigDecimal;
@@ -208,7 +209,12 @@ impl Encode<'_, Postgres> for ContractType {
 impl<'r> Decode<'r, Postgres> for ContractType {
     fn decode(value: PgValueRef<'r>) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let s = <&str as Decode<Postgres>>::decode(value)?;
-        ContractType::from_str(s).map_err(|_| "Failed to decode ContractType".into())
+        Ok(ContractType::from_str(s).map_err(|_| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "Failed to decode ContractType",
+            ))
+        })?)
     }
 }
 
