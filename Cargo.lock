@@ -453,34 +453,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ark-dynamodb"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arkproject",
- "async-trait",
- "aws-config",
- "aws-sdk-dynamodb",
- "aws-sdk-s3",
- "chrono",
- "log",
- "mockall 0.11.4",
- "mockall 0.12.1",
- "num-bigint",
- "redis 0.24.0",
- "serde",
- "serde_json",
- "serde_with 3.9.0",
- "starknet 0.10.0",
- "thiserror",
- "tokio 1.40.0",
- "tracing",
- "tracing-log 0.1.4",
- "tracing-subscriber",
- "uuid 0.8.2",
-]
-
-[[package]]
 name = "ark-ff"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -521,28 +493,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "ark-indexer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-dynamodb",
- "arkproject",
- "async-trait",
- "aws-config",
- "aws-sdk-lambda",
- "chrono",
- "dotenv",
- "regex",
- "serde",
- "serde_json",
- "starknet 0.10.0",
- "tokio 1.40.0",
- "tracing",
- "tracing-log 0.2.0",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -616,7 +566,8 @@ dependencies = [
  "env_logger 0.11.5",
  "futures-util",
  "num-bigint",
- "redis 0.25.4",
+ "openssl",
+ "redis",
  "regex",
  "reqwest 0.11.27",
  "serde",
@@ -647,7 +598,7 @@ dependencies = [
  "clap 3.2.25",
  "dotenv",
  "native-tls",
- "redis 0.25.4",
+ "redis",
  "serde",
  "serde_json",
  "sha2",
@@ -709,28 +660,6 @@ dependencies = [
  "tokio 1.40.0",
  "tracing",
  "tracing-log 0.2.0",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "ark-metadata-refresh"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-dynamodb",
- "arkproject",
- "async-trait",
- "aws-config",
- "aws-sdk-dynamodb",
- "aws-sdk-s3",
- "chrono",
- "dotenv",
- "regex",
- "sha256",
- "starknet 0.10.0",
- "tokio 1.40.0",
- "tracing",
- "tracing-log 0.1.4",
  "tracing-subscriber",
 ]
 
@@ -797,7 +726,7 @@ dependencies = [
  "mockall 0.12.1",
  "num-bigint",
  "num-traits",
- "redis 0.25.4",
+ "redis",
  "reqwest 0.11.27",
  "serde",
  "serde_json",
@@ -1057,28 +986,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-stream"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd56dd203fef61ac097dd65721a419ddccb106b2d2b70ba60a6b529f03961a51"
-dependencies = [
- "async-stream-impl",
- "futures-core",
- "pin-project-lite 0.2.14",
-]
-
-[[package]]
-name = "async-stream-impl"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16e62a023e7c117e27523144c5d2459f4397fcc3cab0085af8e2224f643a0193"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.72",
-]
-
-[[package]]
 name = "async-task"
 version = "4.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1203,29 +1110,6 @@ dependencies = [
  "pin-project-lite 0.2.14",
  "tracing",
  "uuid 1.10.0",
-]
-
-[[package]]
-name = "aws-sdk-dynamodb"
-version = "1.39.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2fdd26fcd839ffa0df7a589a34f5e1a2d4c4c6d8127fe18100bf8b4d57f5d4c"
-dependencies = [
- "aws-credential-types",
- "aws-runtime",
- "aws-smithy-async",
- "aws-smithy-http",
- "aws-smithy-json",
- "aws-smithy-runtime",
- "aws-smithy-runtime-api",
- "aws-smithy-types",
- "aws-types",
- "bytes 1.7.1",
- "fastrand 2.1.0",
- "http 0.2.12",
- "once_cell",
- "regex-lite",
- "tracing",
 ]
 
 [[package]]
@@ -1582,22 +1466,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "aws_lambda_events"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03611508dd1e514e311caec235b581c99a4cb66fa1771bd502819eed69894f12"
-dependencies = [
- "base64 0.21.7",
- "bytes 1.7.1",
- "http 0.2.12",
- "http-body 0.4.6",
- "http-serde",
- "query_map",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "backtrace"
 version = "0.3.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1623,12 +1491,6 @@ name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
-
-[[package]]
-name = "base64"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0ea22880d78093b0cbe17c89f64a7d457941e65759157ec6cb31a31d652b05e5"
 
 [[package]]
 name = "base64"
@@ -1778,9 +1640,6 @@ name = "bytes"
 version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8318a53db07bb3f8dca91a600466bdb3f2eaadeedfdbcf02e1accbad9271ba50"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "bytes-utils"
@@ -3136,16 +2995,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "http-serde"
-version = "1.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f560b665ad9f1572cfcaf034f7fb84338a7ce945216d64a90fd81f046a3caee"
-dependencies = [
- "http 0.2.12",
- "serde",
-]
-
-[[package]]
 name = "httparse"
 version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3510,335 +3359,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0de8b303297635ad57c9f5059fd9cee7a47f8e8daa09df0fcd07dd39fb22977f"
 dependencies = [
  "log",
-]
-
-[[package]]
-name = "lambda-block-indexer"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "async-trait",
- "dotenv",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "serde",
- "serde_json",
- "starknet 0.10.0",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-contract"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-contract-events"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-contract-tokens"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-contracts"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-events"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-owner-all"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-owner-contracts"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "serde",
- "serde_json",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-owner-events"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-owner-tokens"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-token"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-get-token-events"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-http-common"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "ark-sqlx",
- "lambda_http",
- "num-bigint",
- "num-traits",
- "serde",
- "serde_json",
- "serde_with 3.9.0",
- "thiserror",
- "tracing",
- "tracing-log 0.1.4",
-]
-
-[[package]]
-name = "lambda-playground"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "arkproject",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-post-batch-tokens"
-version = "0.1.0"
-dependencies = [
- "ark-dynamodb",
- "aws-sdk-dynamodb",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "serde",
- "serde_json",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda-post-refresh-token-metadata"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-dynamodb",
- "arkproject",
- "async-trait",
- "aws-config",
- "aws-sdk-dynamodb",
- "aws-sdk-s3",
- "lambda-http-common",
- "lambda_http",
- "lambda_runtime",
- "mockall 0.12.1",
- "sqlx",
- "starknet 0.10.0",
- "tokio 1.40.0",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "lambda_http"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2505c4a24f5a8d8ac66a87691215ec1f79736c5bc6e62bb921788dca9753f650"
-dependencies = [
- "aws_lambda_events",
- "base64 0.21.7",
- "bytes 1.7.1",
- "encoding_rs",
- "futures",
- "http 0.2.12",
- "http-body 0.4.6",
- "hyper 0.14.30",
- "lambda_runtime",
- "mime",
- "percent-encoding",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "tokio-stream",
- "url",
-]
-
-[[package]]
-name = "lambda_runtime"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deca8f65d7ce9a8bfddebb49d7d91b22e788a59ca0c5190f26794ab80ed7a702"
-dependencies = [
- "async-stream",
- "base64 0.20.0",
- "bytes 1.7.1",
- "futures",
- "http 0.2.12",
- "http-body 0.4.6",
- "http-serde",
- "hyper 0.14.30",
- "lambda_runtime_api_client",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "tokio 1.40.0",
- "tokio-stream",
- "tower",
- "tracing",
-]
-
-[[package]]
-name = "lambda_runtime_api_client"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "690c5ae01f3acac8c9c3348b556fc443054e9b7f1deaf53e9ebab716282bf0ed"
-dependencies = [
- "http 0.2.12",
- "hyper 0.14.30",
- "tokio 1.40.0",
- "tower-service",
 ]
 
 [[package]]
@@ -4784,17 +4304,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "query_map"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5eab6b8b1074ef3359a863758dae650c7c0c6027927a085b7af911c8e0bf3a15"
-dependencies = [
- "form_urlencoded",
- "serde",
- "serde_derive",
-]
-
-[[package]]
 name = "quinn"
 version = "0.11.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4914,21 +4423,6 @@ checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
 dependencies = [
  "crossbeam-deque",
  "crossbeam-utils",
-]
-
-[[package]]
-name = "redis"
-version = "0.24.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c580d9cbbe1d1b479e8d67cf9daf6a62c957e6846048408b80b43ac3f6af84cd"
-dependencies = [
- "combine",
- "itoa",
- "percent-encoding",
- "ryu",
- "sha1_smol",
- "socket2 0.4.10",
- "url",
 ]
 
 [[package]]
@@ -5566,16 +5060,6 @@ checksum = "62212da9872ca2a0cad0093191ee33753eddff9266cbbc1b4a602d13a3a768db"
 dependencies = [
  "itoa",
  "ryu",
- "serde",
-]
-
-[[package]]
-name = "serde_path_to_error"
-version = "0.1.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af99884400da37c88f5e9146b7f1fd0fbcae8f6eec4e9da38b67d05486f814a6"
-dependencies = [
- "itoa",
  "serde",
 ]
 
@@ -6960,7 +6444,6 @@ dependencies = [
  "tokio 1.40.0",
  "tower-layer",
  "tower-service",
- "tracing",
 ]
 
 [[package]]

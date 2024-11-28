@@ -8,10 +8,6 @@ on:
     paths:
       - ".github/workflows/nft-indexer-staging.yml"
       - "infrastructure/cdk-ark-indexers/**"
-      - "ark-indexer/**"
-      - "ark-lambdas/**"
-      - "ark-dynamodb/**"
-      - "ark-metadata-refresh/**"
 
 jobs:
   discord-notification:
