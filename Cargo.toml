@@ -10,25 +10,6 @@ edition = "2021"
 
 [workspace]
 members = [
-  "ark-indexer",
-  "ark-dynamodb",
-  "ark-lambdas/apigw/lambda-http-common",
-  "ark-lambdas/apigw/lambda-playground",
-  "ark-lambdas/apigw/lambda-get-contract",
-  "ark-lambdas/apigw/lambda-get-contracts",
-  "ark-lambdas/apigw/lambda-get-contract-tokens",
-  "ark-lambdas/apigw/lambda-get-contract-events",
-  "ark-lambdas/apigw/lambda-get-events",
-  "ark-lambdas/apigw/lambda-get-owner-tokens",
-  "ark-lambdas/apigw/lambda-get-owner-contracts",
-  "ark-lambdas/apigw/lambda-get-owner-all",
-  "ark-lambdas/apigw/lambda-get-token",
-  "ark-lambdas/apigw/lambda-get-token-events",
-  "ark-lambdas/apigw/lambda-post-refresh-token-metadata",
-  "ark-lambdas/apigw/lambda-post-batch-tokens",
-  "ark-lambdas/apigw/lambda-get-owner-events",
-  "ark-lambdas/lambda-block-indexer",
-  "ark-metadata-refresh",
   "ark-metadata-marketplace",
   "ark-sqlx",
   "arkchain-indexer",
@@ -45,7 +26,6 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0"
-ark-dynamodb = { path = "ark-dynamodb" }
 ark-sqlx = { path = "ark-sqlx" }
 arkproject = { git = "https://github.com/ArkProjectNFTs/ark-project", tag = "v0.57.15" }
 async-trait = "0.1.73"
