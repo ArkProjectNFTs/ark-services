@@ -1,7 +1,0 @@
-ALTER TABLE orderbook_token
-    ADD COLUMN status TEXT NOT NULL DEFAULT 'PLACED';
-
-ALTER TABLE orderbook_token_offers
-    ADD COLUMN status TEXT NOT NULL DEFAULT 'PLACED',
-    ADD COLUMN start_date BIGINT NOT NULL DEFAULT 0,
-    ADD COLUMN end_date BIGINT NOT NULL DEFAULT 0 ;
