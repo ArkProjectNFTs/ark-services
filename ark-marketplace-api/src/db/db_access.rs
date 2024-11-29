@@ -9,7 +9,7 @@ use crate::models::token::{
     TokenPortfolioData, TopOffer, TopOfferQueryResult,
 };
 use crate::utils::db_utils::event_type_list;
-use crate::utils::sql_utils::{generate_order_by_clause, generate_order_by_clause_collections};
+use crate::utils::sql_utils::generate_order_by_clause_collections;
 use async_trait::async_trait;
 use bigdecimal::BigDecimal;
 use serde_json::Value as JsonValue;
