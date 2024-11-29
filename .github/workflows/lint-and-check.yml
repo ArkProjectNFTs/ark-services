@@ -6,18 +6,12 @@ on:
       - main
       - staging
     paths:
-      - "ark-dynamodb/**"
       - "ark-indexer/**"
-      - "ark-lambdas/**"
-      - "ark-metadata-refresh/**"
       - "ark-sqlx/**"
       - "arkchain-indexer/**"
   pull_request:
     paths:
-      - "ark-dynamodb/**"
       - "ark-indexer/**"
-      - "ark-lambdas/**"
-      - "ark-metadata-refresh/**"
       - "ark-sqlx/**"
       - "arkchain-indexer/**"
 env:
