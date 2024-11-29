@@ -742,48 +742,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "arkchain-indexer"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-sqlx",
- "arkproject",
- "async-trait",
- "chrono",
- "dotenv",
- "sqlx",
- "starknet 0.8.0",
- "tokio 1.42.0",
- "tracing",
- "tracing-log 0.1.4",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "arkchain-indexer-marketplace"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ark-sqlx",
- "arkproject",
- "async-trait",
- "aws-config",
- "aws-sdk-secretsmanager",
- "chrono",
- "dotenv",
- "serde",
- "serde_json",
- "sqlx",
- "starknet 0.8.0",
- "tokio 1.42.0",
- "tracing",
- "tracing-log 0.1.4",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
 name = "arkproject"
 version = "0.1.0"
 source = "git+https://github.com/ArkProjectNFTs/ark-project?tag=v0.57.17#e134bb122c5ea0736cee33d5464225b3ec550845"
