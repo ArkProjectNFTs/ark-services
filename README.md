@@ -4,12 +4,8 @@
 
 The **ark-services** repository is organized into several sub-modules:
 
-### ark-indexer-marketplace
 
-- Description: Implementation of the traits of the Sana indexer. Provides specific configuration for indexing data from NFT APIs.
-- Utility: Indexes data retrieved from NFT APIs and organizes it for easy access and analysis.
-
-### ark-indexer-marketplace-admin
+### ark-indexer-admin
 
 Description: Front-end application for a dashboard of indexed blocks and monitoring indexing tasks.
 Utility: Allows users to view and monitor the indexing status in real-time.
@@ -18,3 +14,17 @@ Utility: Allows users to view and monitor the indexing status in real-time.
 
 - Description: Access to data and SQL queries.
 - Utility: Allows manipulation and querying of SQL databases for the project.
+
+### arkchain-indexer
+
+- Description: Indexer for the Arkchain orderbook.
+- Utility: Specific to indexing and analyzing data from the Arkchain orderbook.
+
+## Install
+
+To run the indexer locally, you need cargo-lambda. The pending blocks indexer will invoke the lambda-block-indexer lambda for each block.
+
+```
+brew tap cargo-lambda/cargo-lambda
+brew install cargo-lambda
+```
