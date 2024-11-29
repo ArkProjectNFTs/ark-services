@@ -199,14 +199,10 @@ pub async fn get_tokens_data<D: DatabaseAccess + Sync>(
     token_id: Option<String>,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
     // Generate a unique key for this query based on buy_now value
-    let cache_key = if buy_now {
-        if direction == "asc" {
-            format!("listed_tokens_asc_{}_page_{}", contract_address, page)
-        } else {
-            format!("listed_tokens_desc_{}_page_{}", contract_address, page)
-        }
-    } else {
-        format!("all_tokens_{}_page_{}", contract_address, page)
+    let cache_key = match (buy_now, direction) {
+        (true, "asc") => format!("listed_tokens_asc_{}_page_{}", contract_address, page),
+        (true, "desc") => format!("listed_tokens_desc_{}_page_{}", contract_address, page),
+        _ => format!("all_tokens_{}_page_{}", contract_address, page),
     };
     // Try to get the data from Redis
     let cached_data: Option<String> = redis_conn.get(&cache_key).await.unwrap_or(None);
@@ -275,7 +271,6 @@ pub async fn get_token_marketdata<D: DatabaseAccess + Sync>(
         .get_token_marketdata(contract_address, chain_id, token_id)
         .await
 }
-
 #[allow(clippy::too_many_arguments)]
 pub async fn get_tokens_data_by_id<D: DatabaseAccess + Sync>(
     db_access: &D,
@@ -289,22 +284,24 @@ pub async fn get_tokens_data_by_id<D: DatabaseAccess + Sync>(
     sort_value: Option<String>,
     token_ids: Option<Vec<String>>,
 ) -> Result<(Vec<TokenData>, bool, i64), sqlx::Error> {
-    let tokens_data = db_access
+    let sort = Some(sort.to_string());
+    let direction = Some(direction.to_string());
+    let token_id = None;
+
+    db_access
         .get_tokens_data(
             contract_address,
             chain_id,
             page,
             items_per_page,
             buy_now,
-            Some(sort.to_string()),
-            Some(direction.to_string()),
+            sort,
+            direction,
             sort_value,
             token_ids,
-            None,
+            token_id,
         )
-        .await?;
-
-    Ok(tokens_data)
+        .await
 }
 
 #[allow(clippy::too_many_arguments)]

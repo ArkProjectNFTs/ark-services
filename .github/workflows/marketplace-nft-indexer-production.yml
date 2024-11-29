@@ -7,7 +7,6 @@ on:
       - main
     paths:
       - ".github/workflows/marketplace-nft-indexer-production.yml"
-      - "infrastructure/cdk-starknet-indexer/**"
       - "ark-indexer-marketplace/**"
       - "ark-sqlx/providers/marketplace/**"
 
@@ -36,11 +35,6 @@ jobs:
 
       - name: Install pnpm
         run: npm install -g pnpm
-
-      - name: Install Dependencies
-        run: |
-          cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm install
 
       - name: Cache Cargo registry
         uses: actions/cache@v2
@@ -88,16 +82,6 @@ jobs:
 
       - name: Restart the service
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "sudo systemctl start marketplace-nft-indexer.service"
-
-      - name: Bootstrap Indexer Marketplace
-        run: |
-          cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm cdk bootstrap -c isProductionEnvironment=true
-
-      - name: Deploy Indexer Marketplace
-        run: |
-          cd infrastructure/cdk-ark-indexer-marketplace
-          pnpm cdk deploy --require-approval never -c isProductionEnvironment=true
 
       - name: Send success notification to dev-updates channel
         if: success()
