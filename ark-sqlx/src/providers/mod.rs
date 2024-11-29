@@ -1,5 +1,4 @@
 use crate::providers::marketplace::OrderProvider as MarketplaceOrderProvider;
-use crate::providers::orderbook::OrderProvider;
 use arkproject::diri::storage::types::{
     CancelledData, ExecutedData, FulfilledData, PlacedData, RollbackStatusData,
 };
@@ -23,8 +22,6 @@ use tokio::sync::Mutex;
 use tracing::error;
 
 pub mod marketplace;
-pub mod metrics;
-pub mod orderbook;
 
 async fn connect_redis() -> Result<Arc<Mutex<MultiplexedConnection>>, Box<dyn Error>> {
     let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL not set");
@@ -100,75 +97,6 @@ impl From<&str> for ProviderError {
 impl From<ProviderError> for StorageError {
     fn from(e: ProviderError) -> Self {
         StorageError::ProviderError(e.to_string())
-    }
-}
-
-pub struct SqlxArkchainProvider {
-    client: SqlxCtx,
-}
-
-impl SqlxArkchainProvider {
-    pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
-        let sqlx = SqlxCtx::new(sqlx_conn_str).await?;
-
-        Ok(Self { client: sqlx })
-    }
-}
-
-#[async_trait]
-impl Storage for SqlxArkchainProvider {
-    async fn register_placed(
-        &self,
-        block_id: u64,
-        block_timestamp: u64,
-        data: &PlacedData,
-    ) -> StorageResult<()> {
-        Ok(OrderProvider::register_placed(&self.client, block_id, block_timestamp, data).await?)
-    }
-
-    async fn register_cancelled(
-        &self,
-        block_id: u64,
-        block_timestamp: u64,
-        data: &CancelledData,
-    ) -> StorageResult<()> {
-        Ok(
-            OrderProvider::register_cancelled(&self.client, block_id, block_timestamp, data)
-                .await?,
-        )
-    }
-
-    async fn register_fulfilled(
-        &self,
-        block_id: u64,
-        block_timestamp: u64,
-        data: &FulfilledData,
-    ) -> StorageResult<()> {
-        Ok(
-            OrderProvider::register_fulfilled(&self.client, block_id, block_timestamp, data)
-                .await?,
-        )
-    }
-
-    async fn register_executed(
-        &self,
-        block_id: u64,
-        block_timestamp: u64,
-        data: &ExecutedData,
-    ) -> StorageResult<()> {
-        Ok(OrderProvider::register_executed(&self.client, block_id, block_timestamp, data).await?)
-    }
-
-    async fn status_back_to_open(
-        &self,
-        block_id: u64,
-        block_timestamp: u64,
-        data: &RollbackStatusData,
-    ) -> StorageResult<()> {
-        Ok(
-            OrderProvider::status_back_to_open(&self.client, block_id, block_timestamp, data)
-                .await?,
-        )
     }
 }
 

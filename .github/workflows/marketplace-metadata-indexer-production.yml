@@ -7,7 +7,6 @@ on:
       - main
     paths:
       - ".github/workflows/marketplace-metadata-indexer-production.yml"
-      - "infrastructure/cdk-ark-metadata-marketplace/**"
       - "ark-metadata-marketplace/**"
 
 jobs:
