@@ -109,8 +109,9 @@ impl sqlx::Type<Postgres> for OrderStatus {
 }
 
 impl Encode<'_, Postgres> for OrderStatus {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> sqlx::encode::IsNull {
-        <&str as Encode<Postgres>>::encode(self.as_ref(), buf)
+    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+        let str_val = self.as_ref();
+        <&str as Encode<Postgres>>::encode(str_val, buf)
     }
 }
 
