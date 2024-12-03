@@ -3,7 +3,7 @@ use arkproject::orderbook::{
     events::{common::u256_to_hex, OrderCancelled, OrderExecuted, OrderFulfilled, OrderPlaced},
     OrderType, RouteType,
 };
-use sqlx::{postgres::PgArgumentBuffer, Encode, encode::IsNull, Postgres};
+use sqlx::{encode::IsNull, postgres::PgArgumentBuffer, Encode, Postgres};
 use starknet_crypto::Felt;
 
 use crate::{
@@ -43,7 +43,10 @@ impl sqlx::Type<Postgres> for OrderEventType {
 }
 
 impl Encode<'_, Postgres> for OrderEventType {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
         <&str as Encode<Postgres>>::encode(str_val, buf)
     }
@@ -73,7 +76,10 @@ impl sqlx::Type<Postgres> for OrderStatus {
 }
 
 impl Encode<'_, Postgres> for OrderStatus {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
         <&str as Encode<Postgres>>::encode(str_val, buf)
     }
@@ -99,7 +105,10 @@ impl sqlx::Type<Postgres> for RouteTypeWrapper {
 }
 
 impl Encode<'_, Postgres> for RouteTypeWrapper {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
         <&str as Encode<Postgres>>::encode(str_val, buf)
     }
@@ -124,7 +133,10 @@ impl sqlx::Type<Postgres> for OrderTypeWrapper {
 }
 
 impl Encode<'_, Postgres> for OrderTypeWrapper {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
         <&str as Encode<Postgres>>::encode(str_val, buf)
     }
@@ -175,7 +187,10 @@ impl sqlx::Type<Postgres> for CancelledReason {
 }
 
 impl Encode<'_, Postgres> for CancelledReason {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
         let str_val = self.as_ref();
         <&str as Encode<Postgres>>::encode(str_val, buf)
     }
