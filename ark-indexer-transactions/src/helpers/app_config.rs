@@ -11,11 +11,13 @@ pub struct AppConfig {
     pub chain_id: String,
     pub start_from: u64,
     pub end_at: Option<u64>,
+    pub orderbooks: Vec<String>,
 }
 
 impl AppConfig {
     pub fn load_from_file(config_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
-        let builder = Config::builder();
+        let mut builder = Config::builder();
+        builder = builder.set_default("orderbooks", vec![""])?;
         let settings = builder
             .add_source(File::new(config_path, FileFormat::Yaml))
             .build()?;
