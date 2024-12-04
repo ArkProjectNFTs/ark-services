@@ -69,7 +69,7 @@ pub fn read_block_from_file(
     block_number: u64,
 ) -> Result<BlockWrapper, Box<dyn std::error::Error>> {
     let path = get_block_file_path(base_path, block_number);
-    println!("Block number: {:?} - path: {:?}", block_number, path);
+    println!("Block number: {:?}", block_number);
     let file = fs::File::open(path)?;
     let reader = BufReader::new(file);
     let value: Value = serde_json::from_reader(reader)?;
