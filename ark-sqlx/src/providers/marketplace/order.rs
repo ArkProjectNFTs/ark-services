@@ -1926,13 +1926,22 @@ impl OrderProvider {
         if let Some(token_data) =
             Self::get_token_data_by_order_hash(client, &data.order_hash).await?
         {
+            Self::update_token_status(
+                client,
+                &token_data.contract_address,
+                &token_data.token_id,
+                OrderStatus::Cancelled,
+            )
+            .await?;
+            Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
+
             Self::insert_event_history(
                 client,
                 &EventHistoryData {
                     order_hash: data.order_hash.clone(),
                     block_timestamp: block_timestamp as i64,
-                    token_id: token_data.token_id.clone(),
-                    token_id_hex: token_data.token_id_hex.clone(),
+                    token_id: token_data.token_id,
+                    token_id_hex: token_data.token_id_hex,
                     contract_address: token_data.contract_address,
                     chain_id: token_data.chain_id,
                     event_type: TokenEventType::Rollback,
@@ -1944,7 +1953,18 @@ impl OrderProvider {
                 },
             )
             .await?;
+        } else if let Some(offer_data) =
+            Self::get_offer_data_by_order_hash(client, &data.order_hash).await?
+        {
+            Self::update_token_status(
+                client,
+                &offer_data.contract_address,
+                &offer_data.token_id,
+                OrderStatus::Cancelled,
+            )
+            .await?;
         }
+
         Ok(())
     }
 
