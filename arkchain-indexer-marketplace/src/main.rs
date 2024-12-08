@@ -1,7 +1,3 @@
-//! How to use Diri library.
-//!
-//! Can be run with `cargo run --example diri`.
-//!
 use anyhow::Result;
 use ark_sqlx::providers::SqlxMarketplaceProvider;
 use arkproject::diri::{event_handler::EventHandler, Diri};
@@ -13,7 +9,7 @@ use starknet::{
     core::types::BlockId,
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, fs, path::Path};
 use tracing::{error, info, trace, warn};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
@@ -26,6 +22,40 @@ struct DatabaseCredentials {
     dbname: String,
     port: u16,
     host: String,
+}
+
+#[derive(Debug)]
+struct Checkpoint {
+    file_path: String,
+    current_block: u64,
+}
+
+impl Checkpoint {
+    async fn new(file_path: String) -> Result<Self> {
+        let current_block = if Path::new(&file_path).exists() {
+            let contents = fs::read_to_string(&file_path)?;
+            contents.trim().parse::<u64>()?
+        } else {
+            fs::write(&file_path, "0")?;
+            trace!("Created new checkpoint file at {}", file_path);
+            0
+        };
+
+        Ok(Checkpoint {
+            file_path,
+            current_block,
+        })
+    }
+
+    async fn save(&self, block_number: u64) -> Result<()> {
+        fs::write(&self.file_path, block_number.to_string())?;
+        trace!("Saved checkpoint: block {}", block_number);
+        Ok(())
+    }
+
+    fn get_block(&self) -> u64 {
+        self.current_block
+    }
 }
 
 async fn get_database_url() -> Result<String> {
@@ -69,10 +99,6 @@ async fn main() -> Result<()> {
         HttpTransport::new(rpc_url_converted.clone()),
     )));
 
-    // Quick launch locally:
-    // docker-compose up -d arkchain_postgres
-    // cd ark-sqlx
-    // sqlx database reset --database-url postgres://postgres:123@localhost:5432/arkchain-marketplace --source marketplace
     let storage = SqlxMarketplaceProvider::new(&database_uri).await?;
     let handler = DefaultEventHandler {};
 
@@ -83,7 +109,8 @@ async fn main() -> Result<()> {
     ));
 
     let sleep_secs = 1;
-    let mut from = 0;
+    let checkpoint = Checkpoint::new("checkpoint.txt".to_string()).await?;
+    let mut from = checkpoint.get_block();
     let range = 1;
 
     // Set to None to keep polling the head of chain.
@@ -130,9 +157,18 @@ async fn main() -> Result<()> {
 
                 if let Some(to) = to {
                     if end >= to {
+                        // Save final checkpoint before exiting
+                        if let Err(e) = checkpoint.save(end).await {
+                            warn!("Failed to save final checkpoint: {}", e);
+                        }
                         trace!("`to` block was reached, exit.");
                         return Ok(());
                     }
+                }
+
+                // Save the checkpoint after successful indexing
+                if let Err(e) = checkpoint.save(end).await {
+                    warn!("Failed to save checkpoint: {}", e);
                 }
 
                 // +1 to not re-index the end block.
@@ -141,8 +177,11 @@ async fn main() -> Result<()> {
             Err(e) => {
                 error!("Blocks indexing error: {}", e);
 
-                // TODO: for now, any failure on the block range, we skip it.
-                // Can be changed as needed.
+                // Save checkpoint even on error to track progress
+                if let Err(ce) = checkpoint.save(end).await {
+                    warn!("Failed to save checkpoint after error: {}", ce);
+                }
+
                 warn!("Skipping blocks range: {} - {}", start, end);
                 from = end + 1;
             }
@@ -152,8 +191,6 @@ async fn main() -> Result<()> {
     }
 }
 
-/// Initializes the logging, ensuring that the `RUST_LOG` environment
-/// variable is always considered first.
 fn init_logging() {
     const DEFAULT_LOG_FILTER: &str = "info,diri=trace,ark=trace";
 
@@ -169,7 +206,6 @@ fn init_logging() {
     .expect("Failed to set the global tracing subscriber");
 }
 
-// Default event hanlder.
 struct DefaultEventHandler;
 
 #[async_trait]
