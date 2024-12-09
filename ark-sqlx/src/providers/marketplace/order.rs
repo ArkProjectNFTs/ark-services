@@ -4,6 +4,7 @@ use crate::providers::marketplace::types::{
     LISTING_STR, MINT_STR, OFFER_CANCELLED_STR, OFFER_EXPIRED_STR, OFFER_STR, ROLLBACK_STR,
     SALE_STR, TRANSFER_STR,
 };
+use crate::providers::orderbook::order;
 use crate::providers::{ContractProvider, ProviderError, SqlxCtxPg};
 use anyhow::Result;
 use arkproject::diri::storage::types::{
@@ -1487,11 +1488,6 @@ impl OrderProvider {
         block_timestamp: u64,
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
-        trace!("Registering placed order {:?}", data);
-        let mut currency_chain_id = "".to_string();
-        let mut currency_address = "".to_string();
-
-        let mut to_address = None;
         let token_id = match data.token_id {
             Some(ref token_id_hex) => {
                 let cleaned_token_id = token_id_hex.trim_start_matches("0x");
@@ -1506,286 +1502,97 @@ impl OrderProvider {
             None => return Err(ProviderError::from("Missing token id")),
         };
 
-        let event_type = TokenEventType::from_str(&data.order_type).map_err(ProviderError::from)?;
-        let contract_address = Self::get_or_create_contract(
-            client,
-            &data.token_address,
-            &data.token_chain_id,
-            block_timestamp,
-        )
-        .await?;
+        if token_id == "4851" {
+            println!("-------------------------------------------------");
+            println!("Processing placement for token 4851");
+            println!("Incoming order type: '{}'", data.order_type);
 
-        match Self::clear_tokens_cache(redis_conn.clone(), &contract_address).await {
-            Ok(_) => {}
-            Err(e) => {
-                println!("Error when deleting cache : {}", e);
-            }
-        }
+            let event_type = TokenEventType::from_str(&data.order_type).map_err(|e| {
+                error!(
+                    "Failed to convert order type '{}' to TokenEventType",
+                    data.order_type
+                );
+                ProviderError::from("Invalid order type")
+            })?;
 
-        if event_type == TokenEventType::Offer || event_type == TokenEventType::CollectionOffer {
-            // create token without listing information
-            let upsert_query = "
-            INSERT INTO token (contract_address, token_id, token_id_hex, chain_id, updated_timestamp, 
-                              listing_orderhash, block_timestamp, status, 
-                              buy_in_progress, has_bid, is_burned)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 
-                    false, false, false)
-            ON CONFLICT (contract_address, token_id, chain_id)
-            DO NOTHING;
-        ";
+            // Use to_db_string() instead of to_string()
+            println!(
+                "Converted to DB event type: '{}'",
+                event_type.to_db_string()
+            );
 
-            sqlx::query(upsert_query)
-                .bind(contract_address.clone())
-                .bind(token_id.clone())
-                .bind(data.token_id.clone())
-                .bind(data.token_chain_id.clone())
-                .bind(block_timestamp as i64)
+            let contract_address = Self::get_or_create_contract(
+                client,
+                &data.token_address,
+                &data.token_chain_id,
+                block_timestamp,
+            )
+            .await?;
+
+            let upsert_token_query = r#"
+                INSERT INTO token (
+                    contract_address,
+                    token_id,
+                    token_id_hex,
+                    chain_id,
+                    updated_timestamp,
+                    block_timestamp,
+                    status,
+                    current_owner,
+                    buy_in_progress,
+                    has_bid,
+                    is_burned
+                )
+                VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8,
+                    false, false, false
+                )
+                ON CONFLICT (contract_address, token_id, chain_id)
+                DO UPDATE SET
+                    updated_timestamp = EXCLUDED.updated_timestamp,
+                    current_owner = COALESCE(token.current_owner, EXCLUDED.current_owner)
+                RETURNING token_id;
+            "#;
+
+            sqlx::query(upsert_token_query)
+                .bind(&contract_address)
+                .bind(&token_id)
+                .bind(data.token_id.as_ref().unwrap_or(&"".to_string()))
+                .bind(&data.token_chain_id)
                 .bind(block_timestamp as i64)
                 .bind(block_timestamp as i64)
                 .bind(OrderStatus::Placed.to_string())
+                .bind(&data.offerer)
                 .execute(&client.pool)
                 .await?;
 
-            to_address =
-                Self::get_current_owner(client, &contract_address, &token_id, &data.token_chain_id)
-                    .await?;
+            println!("Successfully upserted token record");
 
-            Self::insert_offers(
-                client,
-                &OfferData {
-                    token_id: token_id.clone(),
-                    contract_address: contract_address.clone(),
-                    broker_id: data.broker_id.clone(),
-                    chain_id: data.token_chain_id.clone(),
-                    timestamp: block_timestamp as i64,
-                    offer_maker: data.offerer.clone(),
-                    offer_amount: data.start_amount.clone(),
-                    quantity: data.quantity.clone(),
-                    order_hash: data.order_hash.clone(),
-                    currency_chain_id: data.currency_chain_id.clone(),
-                    currency_address: data.currency_address.clone(),
-                    status: OrderStatus::Placed.to_string(),
-                    start_date: data.start_date as i64,
-                    end_date: data.end_date as i64,
-                    to_address: to_address.clone().unwrap_or_default(),
-                },
-            )
-            .await?;
-        } else {
-            // create token with listing information
-            let upsert_query = "
-    INSERT INTO token (
-        contract_address,
-        token_id,
-        chain_id,
-        token_id_hex,
-        listing_timestamp,
-        updated_timestamp,
-        held_timestamp,
-        current_owner,
-        quantity,
-        listing_start_amount,
-        listing_end_amount,
-        listing_start_date,
-        listing_end_date,
-        listing_broker_id,
-        listing_orderhash,
-        listing_currency_address,
-        listing_currency_chain_id,
-        block_timestamp,
-        status,
-        listing_type,
-        buy_in_progress,
-        has_bid,
-        is_burned)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-            false, false, false)
-    ON CONFLICT (token_id, contract_address, chain_id) DO UPDATE SET
-        current_owner = EXCLUDED.current_owner,
-        token_id_hex = EXCLUDED.token_id_hex,
-        listing_timestamp = EXCLUDED.listing_timestamp,
-        listing_start_amount = EXCLUDED.listing_start_amount,
-        listing_end_amount = EXCLUDED.listing_end_amount,
-        listing_start_date = EXCLUDED.listing_start_date,
-        listing_end_date = EXCLUDED.listing_end_date,
-        listing_broker_id = EXCLUDED.listing_broker_id,
-        listing_orderhash = EXCLUDED.listing_orderhash,
-        status = EXCLUDED.status,
-        updated_timestamp = EXCLUDED.updated_timestamp,
-        listing_currency_address = EXCLUDED.listing_currency_address,
-        listing_currency_chain_id = EXCLUDED.listing_currency_chain_id,
-        listing_type = EXCLUDED.listing_type;
-";
-
-            let upsert_query_binded = sqlx::query(upsert_query)
-                .bind(contract_address.clone())
-                .bind(token_id.clone())
-                .bind(data.token_chain_id.clone())
-                .bind(data.token_id.clone())
-                .bind(block_timestamp as i64)
-                .bind(block_timestamp as i64)
-                .bind(block_timestamp as i64)
-                .bind(data.offerer.clone())
-                .bind(data.quantity.clone())
-                .bind(data.start_amount.clone())
-                .bind(data.end_amount.clone())
-                .bind(data.start_date as i64)
-                .bind(data.end_date as i64)
-                .bind(data.broker_id.clone())
-                .bind(data.order_hash.clone())
-                .bind(data.currency_address.clone())
-                .bind(data.currency_chain_id.clone())
-                .bind(block_timestamp as i64)
-                .bind(OrderStatus::Placed.to_string())
-                .bind(event_type.to_string());
-
-            currency_chain_id = data.currency_chain_id.clone();
-            currency_address = data.currency_address.clone();
-            let result = upsert_query_binded.execute(&client.pool).await;
-
-            // check if the broker is missing
-            let _ = match result {
-                Ok(_) => Ok(()),
-                Err(sqlx::Error::Database(ref e))
-                    if e.code() == Some(std::borrow::Cow::Borrowed("23503"))
-                        && e.message().contains("token_listing_broker_id_fkey") =>
-                {
-                    // Handle Foreign Key violation for broker_id
-                    Self::handle_broker_foreign_key_violation(
-                        client,
-                        &data.broker_id,
-                        &data.token_chain_id,
-                    )
-                    .await?;
-
-                    // Retry the upsert operation
-                    let _ = sqlx::query(upsert_query)
-                        .bind(contract_address.clone())
-                        .bind(token_id.clone())
-                        .bind(data.token_chain_id.clone())
-                        .bind(data.token_id.clone())
-                        .bind(block_timestamp as i64)
-                        .bind(block_timestamp as i64)
-                        .bind(block_timestamp as i64)
-                        .bind(data.offerer.clone())
-                        .bind(data.quantity.clone())
-                        .bind(data.start_amount.clone())
-                        .bind(data.end_amount.clone())
-                        .bind(data.start_date as i64)
-                        .bind(data.end_date as i64)
-                        .bind(data.broker_id.clone())
-                        .bind(data.order_hash.clone())
-                        .bind(data.currency_address.clone())
-                        .bind(data.currency_chain_id.clone())
-                        .bind(block_timestamp as i64)
-                        .bind(OrderStatus::Placed.to_string())
-                        .bind(event_type.to_string())
-                        .execute(&client.pool)
-                        .await;
-
-                    Ok(())
-                }
-                Err(e) => {
-                    error!("Error executing update query because of broker : {:?}", e);
-                    Err(ProviderError::from(e))
-                }
+            let event_data = EventHistoryData {
+                order_hash: data.order_hash.clone(),
+                token_id: token_id.clone(),
+                token_id_hex: data.token_id.clone().unwrap_or_default(),
+                contract_address: contract_address.clone(),
+                chain_id: data.token_chain_id.clone(),
+                event_type,
+                block_timestamp: block_timestamp as i64,
+                from_address: Some(data.offerer.clone()),
+                to_address: None,
+                amount: Some(data.start_amount.clone()),
+                canceled_reason: None,
+                currency_address: Some(data.currency_address.clone()),
             };
 
-            // update the floor :
-            let current_floor_query = "
-               SELECT floor_price
-               FROM contract
-               WHERE contract_address = $1 AND chain_id = $2;
-           ";
+            // Insert the event history
+            Self::insert_event_history(client, &event_data).await?;
 
-            let current_floor: Option<BigDecimal> = sqlx::query_scalar(current_floor_query)
-                .bind(&contract_address)
-                .bind(&data.token_chain_id)
-                .fetch_optional(&client.pool)
-                .await?
-                .unwrap_or_else(|| Some(BigDecimal::from(0)));
-
-            let default_floor = BigDecimal::from(0);
-            let current_floor_value = current_floor.unwrap_or(default_floor.clone());
-            let hex_str = &data.start_amount.trim_start_matches("0x"); // Remove the "0x" prefix
-            let bigint =
-                BigInt::parse_bytes(hex_str.as_bytes(), 16).unwrap_or_else(|| BigInt::from(0)); // Parse the hex string
-            let listing_amount = BigDecimal::new(bigint, 0); // Convert BigInt to BigDecimal
-
-            if listing_amount < current_floor_value || current_floor_value == default_floor {
-                let update_floor_query = "
-                   UPDATE contract
-                   SET floor_price = $3
-                   WHERE contract_address = $1 AND chain_id = $2;
-               ";
-
-                sqlx::query(update_floor_query)
-                    .bind(&contract_address)
-                    .bind(&data.token_chain_id)
-                    .bind(&listing_amount)
-                    .execute(&client.pool)
-                    .await?;
-            }
-        }
-
-        if let Some(token_id_hex) = data.token_id.clone() {
-            Self::insert_event_history(
-                client,
-                &EventHistoryData {
-                    order_hash: data.order_hash.clone(),
-                    token_id: token_id.clone(),
-                    token_id_hex,
-                    contract_address: contract_address.clone(),
-                    chain_id: data.token_chain_id.clone(),
-                    event_type,
-                    block_timestamp: block_timestamp as i64,
-                    from_address: Some(data.offerer.clone()),
-                    to_address: to_address.clone(),
-                    amount: Some(data.start_amount.clone()),
-                    canceled_reason: None,
-                    currency_address: Some(data.currency_address.clone()),
-                },
-            )
-            .await?;
-        }
-
-        // manage currency
-        if !currency_chain_id.is_empty() && !currency_address.is_empty() {
-            // Checking if currency mapping exists in the `currency_mapping` table
-            let currency_mapping_exists =
-                Self::check_currency_mapping_exists(client, &currency_chain_id, &currency_address)
-                    .await?;
-
-            if !currency_mapping_exists {
-                // Call method to interact with the contract address
-                let tst_token_address = Felt::from_str(&currency_address).map_err(|_| {
-                    ProviderError::ParsingError("Invalid currency address".to_string())
-                })?;
-                println!("tst_token_address: {:?}", tst_token_address);
-                let decimals_selector = selector!("decimals");
-                let decimals = provider
-                    .call_contract_method(tst_token_address, decimals_selector)
-                    .await?;
-
-                let decimals: i16 = decimals.parse::<i16>().map_err(|_| {
-                    ProviderError::ParsingError("Failed to parse decimals".to_string())
-                })?;
-
-                let symbol_selector = selector!("symbol");
-                let symbol = provider
-                    .call_contract_method(tst_token_address, symbol_selector)
-                    .await?;
-
-                sqlx::query(
-                    "INSERT INTO currency_mapping (currency_address, chain_id, symbol, decimals) VALUES ($1, $2, $3, $4)"
-                )
-                    .bind(&currency_address)
-                    .bind(&currency_chain_id)
-                    .bind(&symbol)
-                    .bind(decimals)
-                    .execute(&client.pool)
-                    .await?;
-            }
+            println!("-------------------------------------------------");
+            println!("Successfully inserted event for token 4851:");
+            println!("Contract: {}", contract_address);
+            println!("Event Type DB String: {}", event_type.to_db_string());
+            println!("Block Timestamp: {}", block_timestamp);
+            println!("Order Hash: {}", data.order_hash);
+            println!("-------------------------------------------------");
         }
 
         Ok(())
@@ -1798,60 +1605,68 @@ impl OrderProvider {
         block_timestamp: u64,
         data: &CancelledData,
     ) -> Result<(), ProviderError> {
-        trace!("Registering cancelled order {:?}", data);
-        let mut is_listing = true;
-        // if the order hash exists in token table, then it is a listing
-        if let Some(token_data) =
-            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
-        {
-            match Self::clear_tokens_cache(redis_conn.clone(), &token_data.contract_address).await {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Error when deleting cache : {}", e);
-                }
-            }
+        // Get the original order event to determine the type and token info
+        let select_query = "
+            SELECT token_id, token_id_hex, contract_address, chain_id, amount, currency_address, event_type
+            FROM token_event
+            WHERE order_hash = $1
+            AND event_type IN ('Listing', 'Offer', 'Auction')
+            ORDER BY block_timestamp DESC
+            LIMIT 1;
+        ";
 
-            Self::update_token_status(
-                client,
-                &token_data.contract_address,
-                &token_data.token_id,
-                OrderStatus::Cancelled,
-            )
-            .await?;
-
-            Self::clear_token_data_if_listing(
-                client,
-                &token_data.contract_address,
-                &token_data.token_id,
-            )
-            .await?;
-
-            Self::recalculate_floor_price(
-                client,
-                &token_data.contract_address,
-                &token_data.chain_id,
-            )
-            .await?;
-        }
-
-        // if the order hash exists in token_offer table, then it is an offer
-        if Self::get_offer_data_by_order_hash(client, &data.order_hash)
+        if let Some(order) = sqlx::query_as::<_, OrginalOrder>(select_query)
+            .bind(&data.order_hash)
+            .fetch_optional(&client.pool)
             .await?
-            .is_some()
         {
-            Self::update_offer_status(client, &data.order_hash, OrderStatus::Cancelled).await?;
-            is_listing = false;
-        }
-        // insert cancelled event
-        Self::insert_cancel_event(
-            client,
-            data.order_hash.clone(),
-            block_timestamp as i64,
-            data.reason.clone(),
-            is_listing,
-        )
-        .await?;
+            if order.token_id == "4851" {
+                println!("-------------------------------------------------");
+                println!("Processing cancellation for token 4851");
+                println!("Found original order:");
+                println!("Contract: {}", order.contract_address);
+                println!("Order Hash: {}", data.order_hash);
+                println!("Chain ID: {}", order.chain_id);
+                println!("Original Event Type: {}", order.event_type);
 
+                // Determine cancellation type based on original event
+                let cancel_event_type = match order.event_type {
+                    TokenEventType::Listing => TokenEventType::ListingCancelled,
+                    TokenEventType::Auction => TokenEventType::AuctionCancelled,
+                    TokenEventType::Offer => TokenEventType::OfferCancelled,
+                    _ => TokenEventType::Cancelled,
+                };
+
+                let event_data = EventHistoryData {
+                    order_hash: data.order_hash.clone(),
+                    token_id: order.token_id.clone(),
+                    token_id_hex: order.token_id_hex,
+                    contract_address: order.contract_address,
+                    chain_id: order.chain_id,
+                    event_type: cancel_event_type,
+                    block_timestamp: block_timestamp as i64,
+                    from_address: None,
+                    to_address: None,
+                    amount: if cancel_event_type == TokenEventType::ListingCancelled {
+                        None
+                    } else {
+                        order.amount
+                    },
+                    canceled_reason: Some(data.reason.clone()),
+                    currency_address: order.currency_address,
+                };
+
+                println!("Inserting cancellation event for token 4851:");
+                println!("Block Timestamp: {}", block_timestamp);
+                println!("Cancel Type: {}", cancel_event_type);
+                println!("Reason: {}", data.reason);
+
+                Self::insert_event_history(client, &event_data).await?;
+
+                println!("Successfully inserted cancellation event for token 4851");
+                println!("-------------------------------------------------");
+            }
+        }
         Ok(())
     }
 
@@ -1862,112 +1677,59 @@ impl OrderProvider {
         block_timestamp: u64,
         data: &FulfilledData,
     ) -> Result<(), ProviderError> {
-        // First check if an executed event exists with a later timestamp
-        let check_executed_query = "
-            SELECT block_timestamp 
-            FROM token_event 
-            WHERE order_hash = $1 
-            AND event_type = 'Executed'
-            AND block_timestamp > $2
+        // First get the original order details to get token information
+        let select_query = "
+            SELECT token_id, token_id_hex, contract_address, chain_id, currency_address
+            FROM token_event
+            WHERE order_hash = $1
+            AND event_type IN ('Listing', 'Offer', 'Auction')
+            ORDER BY block_timestamp DESC
             LIMIT 1;
         ";
 
-        let executed_exists = sqlx::query_scalar::<_, i64>(check_executed_query)
-            .bind(&data.order_hash)
-            .bind(block_timestamp as i64)
-            .fetch_optional(&client.pool)
-            .await?;
-
-        if let Some(token_data) =
-            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
+        if let Some((token_id, token_id_hex, contract_address, chain_id, currency_address)) =
+            sqlx::query_as::<_, (String, String, String, String, Option<String>)>(select_query)
+                .bind(&data.order_hash)
+                .fetch_optional(&client.pool)
+                .await?
         {
-            let token_id = match BigInt::from_str(&token_data.token_id) {
-                Ok(token_id) => token_id.to_string(),
-                Err(e) => {
-                    error!("Failed to parse token id: {}", e);
-                    return Err(ProviderError::from("Failed to parse token id"));
-                }
-            };
+            if token_id == "4851" {
+                println!("-------------------------------------------------");
+                println!("Processing fulfillment for token 4851");
+                println!("Found original order:");
+                println!("Contract: {}", contract_address);
+                println!("Order Hash: {}", data.order_hash);
+                println!("Chain ID: {}", chain_id);
 
-            match Self::clear_tokens_cache(redis_conn.clone(), &token_data.contract_address).await {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Error when deleting cache : {}", e);
-                }
-            }
-
-            // Always record the fulfill event
-            Self::insert_event_history(
-                client,
-                &EventHistoryData {
+                // Create and insert the fulfill event
+                let event_data = EventHistoryData {
                     order_hash: data.order_hash.clone(),
-                    token_id: token_id.clone(),
-                    token_id_hex: token_data.token_id_hex.clone(),
-                    contract_address: token_data.contract_address.clone(),
-                    chain_id: token_data.chain_id.clone(),
+                    token_id,
+                    token_id_hex,
+                    contract_address,
+                    chain_id,
                     event_type: TokenEventType::Fulfill,
                     block_timestamp: block_timestamp as i64,
-                    canceled_reason: None,
+                    from_address: Some(data.fulfiller.clone()),
                     to_address: None,
                     amount: None,
-                    from_address: Some(data.fulfiller.clone()),
-                    currency_address: token_data.currency_address,
-                },
-            )
-            .await?;
+                    canceled_reason: None,
+                    currency_address,
+                };
 
-            // Only update statuses if no later executed event exists
-            if executed_exists.is_none() {
-                info!("Updating token status to Fulfilled as no later Executed event exists");
-                Self::update_token_status(
-                    client,
-                    &token_data.contract_address,
-                    &token_data.token_id,
-                    OrderStatus::Fulfilled,
-                )
-                .await?;
+                println!("Inserting fulfill event for token 4851:");
+                println!("Block Timestamp: {}", block_timestamp);
+                println!("Fulfiller: {}", data.fulfiller);
+                println!("Event Type: {}", TokenEventType::Fulfill);
 
-                Self::update_offer_status(client, &data.order_hash, OrderStatus::Fulfilled).await?;
-            } else {
-                info!(
-                    "Skipping status update for order {} as it was already executed",
-                    data.order_hash
-                );
-            }
-        } else if let Some(offer_data) =
-            Self::get_offer_data_by_order_hash(client, &data.order_hash).await?
-        {
-            // Only update status if no later executed event exists
-            if executed_exists.is_none() {
-                Self::update_token_status(
-                    client,
-                    &offer_data.contract_address,
-                    &offer_data.token_id,
-                    OrderStatus::Fulfilled,
-                )
-                .await?;
+                Self::insert_event_history(client, &event_data).await?;
+
+                println!("Successfully inserted fulfill event for token 4851");
+                println!("-------------------------------------------------");
             }
         }
 
         Ok(())
-    }
-
-    /// This function checks if a currency mapping exists in the database
-    pub async fn check_currency_mapping_exists(
-        client: &SqlxCtxPg,
-        currency_chain_id: &str,
-        currency_address: &str,
-    ) -> Result<bool, ProviderError> {
-        let query = "
-            SELECT COUNT(*) FROM currency_mapping WHERE chain_id = $1 AND currency_address = $2
-        ";
-        let count: i64 = sqlx::query_scalar(query)
-            .bind(currency_chain_id)
-            .bind(currency_address)
-            .fetch_one(&client.pool)
-            .await?;
-
-        Ok(count > 0)
     }
 
     pub async fn register_executed(
@@ -1977,12 +1739,20 @@ impl OrderProvider {
         block_timestamp: u64,
         data: &ExecutedData,
     ) -> Result<(), ProviderError> {
-        println!("executed event {}", data.order_hash);
-        trace!("Registering executed order {:?}", data);
-
-        // 1. Get the original order event (Listing or Offer)
+        let order_hash = if !data.order_hash.starts_with("0x0") && data.order_hash.starts_with("0x")
+        {
+            format!("0x0{}", &data.order_hash[2..])
+        } else {
+            data.order_hash.clone()
+        };
+        if order_hash == "0x06fa2cd7c8dd367f6aee03afaecd95338d54d1218cdbdfcdda4514f997645158"
+            || order_hash == "0x6fa2cd7c8dd367f6aee03afaecd95338d54d1218cdbdfcdda4514f997645158"
+        {
+            print!("found order hash");
+        }
+        // Get the original order event (Listing or Offer)
         let select_query = "
-            SELECT token_id, contract_address, chain_id, token_id_hex, amount, currency_address, event_type
+            SELECT token_id, token_id_hex, contract_address, chain_id, amount, currency_address, event_type
             FROM token_event
             WHERE order_hash = $1
             AND event_type IN ('Listing', 'Offer', 'Auction')
@@ -1990,116 +1760,47 @@ impl OrderProvider {
             LIMIT 1;
         ";
 
-        let original_order: Option<OrginalOrder> = sqlx::query_as(select_query)
-            .bind(data.order_hash.clone())
+        if let Some(order) = sqlx::query_as::<_, OrginalOrder>(select_query)
+            .bind(&order_hash)
             .fetch_optional(&client.pool)
-            .await?;
+            .await?
+        {
+            if order.token_id == "4851" {
+                println!("-------------------------------------------------");
+                println!("Processing execution for token 4851");
+                println!("Found original order:");
+                println!("Contract: {}", order.contract_address);
+                println!("Order Hash: {}", data.order_hash);
+                println!("Chain ID: {}", order.chain_id);
+                println!("Original Event Type: {}", order.event_type);
 
-        // Always record the executed event, with or without original order data
-        if let Some(order) = original_order.as_ref() {
-            // Clear redis cache for this token
-            match Self::clear_tokens_cache(redis_conn.clone(), &order.contract_address).await {
-                Ok(_) => {}
-                Err(e) => {
-                    println!("Error when deleting cache : {}", e);
-                }
-            }
-
-            // Insert the execution event with full data
-            Self::insert_event_history(
-                client,
-                &EventHistoryData {
+                // Create and insert the executed event
+                let event_data = EventHistoryData {
                     order_hash: data.order_hash.clone(),
-                    block_timestamp: block_timestamp as i64,
                     token_id: order.token_id.clone(),
-                    token_id_hex: order.token_id_hex.clone(),
-                    contract_address: order.contract_address.clone(),
-                    chain_id: order.chain_id.clone(),
+                    token_id_hex: order.token_id_hex,
+                    contract_address: order.contract_address,
+                    chain_id: order.chain_id,
                     event_type: TokenEventType::Executed,
-                    canceled_reason: None,
-                    to_address: data.to.clone(),
-                    from_address: data.from.clone(),
-                    amount: Some(order.amount.clone().unwrap_or_default()),
-                    currency_address: Some(order.currency_address.clone().unwrap_or_default()),
-                },
-            )
-            .await?;
-
-            println!("register_executed: {:?}", data);
-
-            // Prepare common parameters for token update
-            let params = OrderExecutedInfo {
-                block_timestamp,
-                contract_address: order.contract_address.clone(),
-                token_id: order.token_id.clone(),
-                to_address: data.to.clone(),
-                price: order.amount.clone().unwrap_or_default(),
-                currency_chain_id: order.chain_id.clone(),
-                currency_address: order.currency_address.clone().unwrap_or_default(),
-            };
-
-            // Update token data based on event type
-            match order.event_type.to_db_string().as_str() {
-                "Listing" => {
-                    Self::update_token_data_on_listing_executed(client, &params).await?;
-                }
-                "Auction" => {
-                    // First delete all offers for this token
-                    let delete_offers_query = "
-                        DELETE FROM token_offer
-                        WHERE contract_address = $1 
-                        AND token_id = $2 
-                        AND chain_id = $3";
-
-                    sqlx::query(delete_offers_query)
-                        .bind(&order.contract_address)
-                        .bind(&order.token_id)
-                        .bind(&order.chain_id)
-                        .execute(&client.pool)
-                        .await?;
-
-                    // Then handle it like a listing
-                    Self::update_token_data_on_listing_executed(client, &params).await?;
-                }
-                "Offer" => {
-                    Self::update_token_data_on_offer_executed(client, &params).await?;
-                    Self::update_offer_status(client, &data.order_hash, OrderStatus::Executed)
-                        .await?;
-                }
-                _ => {
-                    error!("Unknown event type: {}", order.event_type);
-                }
-            }
-        } else {
-            error!(
-                "No original Listing or Offer found for order hash: {}",
-                data.order_hash
-            );
-
-            // Still record the executed event with available data
-            Self::insert_event_history(
-                client,
-                &EventHistoryData {
-                    order_hash: data.order_hash.clone(),
                     block_timestamp: block_timestamp as i64,
-                    token_id: "MISSING_DATA".to_string(),
-                    token_id_hex: "MISSING_DATA".to_string(),
-                    contract_address: "MISSING_DATA".to_string(),
-                    chain_id: "MISSING_DATA".to_string(),
-                    event_type: TokenEventType::Executed,
-                    canceled_reason: Some("No original order found".to_string()),
-                    to_address: data.to.clone(),
                     from_address: data.from.clone(),
-                    amount: None,
-                    currency_address: None,
-                },
-            )
-            .await?;
+                    to_address: data.to.clone(),
+                    amount: order.amount,
+                    canceled_reason: None,
+                    currency_address: order.currency_address,
+                };
 
-            error!(
-                "Recorded execution event with missing data for order hash: {:?}",
-                data
-            );
+                println!("Inserting executed event for token 4851:");
+                println!("Block Timestamp: {}", block_timestamp);
+                println!("From Address: {}", data.from.clone().unwrap_or_default());
+                println!("To Address: {}", data.to.clone().unwrap_or_default());
+                println!("Event Type: {}", TokenEventType::Executed);
+
+                Self::insert_event_history(client, &event_data).await?;
+
+                println!("Successfully inserted executed event for token 4851");
+                println!("-------------------------------------------------");
+            }
         }
 
         Ok(())
@@ -2111,36 +1812,36 @@ impl OrderProvider {
         block_timestamp: u64,
         data: &RollbackStatusData,
     ) -> Result<(), ProviderError> {
-        let mut string_reason = String::new();
-        if let Some(first_char) = data.reason.chars().next() {
-            let reason = first_char as u32;
-            if let Some(status) = RollbackStatus::from_code(reason) {
-                string_reason = status.to_string();
-            }
-        }
+        // let mut string_reason = String::new();
+        // if let Some(first_char) = data.reason.chars().next() {
+        //     let reason = first_char as u32;
+        //     if let Some(status) = RollbackStatus::from_code(reason) {
+        //         string_reason = status.to_string();
+        //     }
+        // }
 
-        if let Some(token_data) =
-            Self::get_token_data_by_order_hash(client, &data.order_hash).await?
-        {
-            Self::insert_event_history(
-                client,
-                &EventHistoryData {
-                    order_hash: data.order_hash.clone(),
-                    block_timestamp: block_timestamp as i64,
-                    token_id: token_data.token_id.clone(),
-                    token_id_hex: token_data.token_id_hex.clone(),
-                    contract_address: token_data.contract_address,
-                    chain_id: token_data.chain_id,
-                    event_type: TokenEventType::Rollback,
-                    canceled_reason: Some(string_reason),
-                    to_address: None,
-                    amount: None,
-                    from_address: None,
-                    currency_address: None,
-                },
-            )
-            .await?;
-        }
+        // if let Some(token_data) =
+        //     Self::get_token_data_by_order_hash(client, &data.order_hash).await?
+        // {
+        //     Self::insert_event_history(
+        //         client,
+        //         &EventHistoryData {
+        //             order_hash: data.order_hash.clone(),
+        //             block_timestamp: block_timestamp as i64,
+        //             token_id: token_data.token_id.clone(),
+        //             token_id_hex: token_data.token_id_hex.clone(),
+        //             contract_address: token_data.contract_address,
+        //             chain_id: token_data.chain_id,
+        //             event_type: TokenEventType::Rollback,
+        //             canceled_reason: Some(string_reason),
+        //             to_address: None,
+        //             amount: None,
+        //             from_address: None,
+        //             currency_address: None,
+        //         },
+        //     )
+        //     .await?;
+        // }
         Ok(())
     }
 
