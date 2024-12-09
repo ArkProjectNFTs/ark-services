@@ -1,8 +1,8 @@
 use super::default::Currency;
 use crate::models::token::Listing;
-use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use sqlx::types::BigDecimal;
 use sqlx::FromRow;
 use sqlx::Row;
 

@@ -1,6 +1,6 @@
-use bigdecimal::BigDecimal;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
+use sqlx::types::BigDecimal;
 use sqlx::FromRow;
 
 #[derive(Serialize, Deserialize, FromRow)]
