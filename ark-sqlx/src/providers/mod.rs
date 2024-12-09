@@ -179,19 +179,20 @@ pub struct SqlxMarketplaceProvider {
 }
 
 pub trait ContractProvider {
-    fn call_contract_method(
+    fn retrieve_decimals(
         &self,
         contract_address: Felt,
-        selector: Felt,
+    ) -> impl Future<Output = Result<String, ProviderError>> + Send;
+
+    fn retrieve_symbol(
+        &self,
+        contract_address: Felt,
     ) -> impl Future<Output = Result<String, ProviderError>> + Send;
 }
 
 impl ContractProvider for JsonRpcClient<HttpTransport> {
-    async fn call_contract_method(
-        &self,
-        contract_address: Felt,
-        selector: Felt,
-    ) -> Result<String, ProviderError> {
+    async fn retrieve_decimals(&self, contract_address: Felt) -> Result<String, ProviderError> {
+        let selector = selector!("decimals");
         let call_result = self
             .call(
                 FunctionCall {
@@ -203,37 +204,40 @@ impl ContractProvider for JsonRpcClient<HttpTransport> {
             )
             .await
             .map_err(|_| ProviderError::ParsingError("Failed to call contract".to_string()))?;
-
-        let mut property: String;
-        if let Some(result) = call_result.first() {
-            match parse_cairo_short_string(result) {
-                Ok(value) => {
-                    property = value;
-                }
-                Err(_) => {
-                    return Err(ProviderError::ParsingError(
-                        "Failed to parse short string".to_string(),
-                    ));
-                }
-            }
+        if call_result.len() == 1 {
+            Ok(call_result.first().unwrap().to_biguint().to_string())
         } else {
-            return Err(ProviderError::ParsingError(
-                "Failed call_result".to_string(),
-            ));
+            Err(ProviderError::ParsingError(
+                "Failed to parse decimals".to_string(),
+            ))
         }
+    }
 
-        if selector == selector!("decimals") {
-            property = (property
-                .chars()
-                .next()
-                .ok_or_else(|| ProviderError::ParsingError("Empty string".to_string()))?
-                as u32)
-                .to_string();
+    async fn retrieve_symbol(&self, contract_address: Felt) -> Result<String, ProviderError> {
+        let selector = selector!("symbol");
+        let call_result = self
+            .call(
+                FunctionCall {
+                    contract_address,
+                    entry_point_selector: selector,
+                    calldata: vec![],
+                },
+                BlockId::Tag(BlockTag::Latest),
+            )
+            .await
+            .map_err(|_| ProviderError::ParsingError("Failed to call contract".to_string()))?;
+        if call_result.len() == 1 {
+            parse_cairo_short_string(call_result.first().unwrap())
+                .map_err(|_| ProviderError::ParsingError("Failed to parse symbol".to_string()))
+        } else {
+            error!("ByteArray not supported yet");
+            Err(ProviderError::ParsingError(
+                "ByteArray not supported".to_string(),
+            ))
         }
-
-        Ok(property)
     }
 }
+
 impl SqlxMarketplaceProvider {
     pub async fn new(sqlx_conn_str: &str) -> Result<Self, ProviderError> {
         let redis_conn = match connect_redis().await {
@@ -246,10 +250,8 @@ impl SqlxMarketplaceProvider {
             }
         };
 
-        let rpc_url =
-            std::env::var("ARKCHAIN_RPC_PROVIDER").expect("ARKCHAIN_RPC_PROVIDER not set");
+        let rpc_url = std::env::var("STARKNET_RPC").expect("STARKNET_RPC not set");
         let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url).unwrap()));
-
         let sqlx = SqlxCtxPg::new(sqlx_conn_str).await?;
 
         Ok(Self {
