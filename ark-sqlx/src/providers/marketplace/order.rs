@@ -1969,7 +1969,26 @@ impl OrderProvider {
     ) -> Result<(), ProviderError> {
         println!("executed event {}", data.order_hash);
         trace!("Registering executed order {:?}", data);
+        let check_executed_query = "
+        SELECT EXISTS (
+            SELECT 1 
+            FROM token_event 
+            WHERE order_hash = $1 
+            AND event_type = 'Executed'
+            LIMIT 1
+        ) as exists;
+    ";
 
+        let already_executed: bool = sqlx::query_scalar(check_executed_query)
+            .bind(&data.order_hash)
+            .fetch_one(&client.pool)
+            .await?;
+
+        if already_executed {
+            trace!("Order {} was already executed, skipping", data.order_hash);
+            return Ok(());
+        }
+        
         // 1. Get the original order event (Listing or Offer)
         let select_query = "
             SELECT token_id, contract_address, chain_id, token_id_hex, amount, currency_address, event_type
