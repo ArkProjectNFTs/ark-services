@@ -1,4 +1,4 @@
-name: MKT Metadata Indexer (Staging) (Mainnet) (AWS)
+name: MKT Metadata Indexer (Staging) (Mainnet) (Scaleway)
 
 on:
   workflow_dispatch:
@@ -64,7 +64,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-artifact
-    
+
       - name: Extract variables from artifact
         id: deployment-extracted-vars
         run: |
@@ -122,4 +122,3 @@ jobs:
                   "content": "❌ Failed to deploy Marketplace metadata to Staging environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
-
