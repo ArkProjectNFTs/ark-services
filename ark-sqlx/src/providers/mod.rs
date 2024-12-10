@@ -250,7 +250,7 @@ impl SqlxMarketplaceProvider {
             }
         };
 
-        let rpc_url = std::env::var("STARKNET_RPC").expect("STARKNET_RPC not set");
+        let rpc_url = std::env::var("RPC_PROVIDER").expect("RPC_PROVIDER not set");
         let provider = JsonRpcClient::new(HttpTransport::new(Url::parse(&rpc_url).unwrap()));
         let sqlx = SqlxCtxPg::new(sqlx_conn_str).await?;
 
