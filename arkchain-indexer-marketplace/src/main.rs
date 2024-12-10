@@ -9,7 +9,7 @@ use starknet::{
     core::types::BlockId,
     providers::{jsonrpc::HttpTransport, AnyProvider, JsonRpcClient, Provider},
 };
-use std::{env, sync::Arc, fs, path::Path};
+use std::{env, fs, path::Path, sync::Arc};
 use tracing::{error, info, trace, warn};
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
