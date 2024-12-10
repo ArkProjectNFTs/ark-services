@@ -8,7 +8,7 @@ use sqlx::{
 };
 use starknet::core::types::Felt;
 // use starknet::core::types::String;
-use bigdecimal::BigDecimal;
+use sqlx::types::BigDecimal;
 use starknet::providers::ProviderError;
 
 use super::event::{ERCCompliance, ErcAction, EventType};
@@ -190,8 +190,12 @@ impl sqlx::Type<Postgres> for ContractType {
 }
 
 impl Encode<'_, Postgres> for ContractType {
-    fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> IsNull {
-        <&str as Encode<Postgres>>::encode(self.as_ref(), buf)
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, Box<dyn std::error::Error + Send + Sync>> {
+        let str_val = self.as_ref();
+        <&str as Encode<Postgres>>::encode(str_val, buf)
     }
 
     fn size_hint(&self) -> usize {
