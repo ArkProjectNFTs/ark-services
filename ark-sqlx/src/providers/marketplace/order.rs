@@ -219,8 +219,8 @@ pub struct TokenData {
     token_id_hex: String,
     contract_address: String,
     chain_id: String,
-    listing_start_amount: Option<String>,
-    currency_chain_id: Option<String>,
+    _listing_start_amount: Option<String>,
+    _currency_chain_id: Option<String>,
     currency_address: Option<String>,
 }
 
@@ -481,8 +481,8 @@ impl OrderProvider {
                 contract_address,
                 token_id_hex,
                 chain_id,
-                listing_start_amount,
-                currency_chain_id,
+                _listing_start_amount: listing_start_amount,
+                _currency_chain_id: currency_chain_id,
                 currency_address,
             }))
         } else {
@@ -586,8 +586,8 @@ impl OrderProvider {
                 contract_address,
                 token_id_hex,
                 chain_id,
-                listing_start_amount,
-                currency_chain_id,
+                _listing_start_amount: listing_start_amount,
+                _currency_chain_id: currency_chain_id,
                 currency_address,
             }))
         } else {
