@@ -24,7 +24,7 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install -y awscli jq
-        cargo install sqlx-cli --version 0.7.4 --no-default-features --features rustls,postgres
+        cargo install sqlx-cli --version 0.8.2 --no-default-features --features rustls,postgres
 
     - name: Check Migration Files
       shell: bash
