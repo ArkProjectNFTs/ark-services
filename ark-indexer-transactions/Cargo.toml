@@ -12,7 +12,7 @@ futures = "0.3"
 futures-util = "0.3.30"
 envy = "0.4.2"
 chrono = { version = "0.4.38", features = ["serde"]}
-sqlx = { version = "0.7.4", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono", "bigdecimal"] }
+sqlx = { version = "0.8.2", features = ["postgres", "runtime-tokio-native-tls", "macros", "chrono", "bigdecimal"] }
 anyhow = "1.0.89"
 starknet = "0.12.0"
 async-trait = "0.1.83"
@@ -22,7 +22,7 @@ thiserror = "1.0.64"
 num-bigint = "0.4.6"
 num-traits = "0.2.19"
 starknet-crypto = "0.7.2"
-bigdecimal = { version = "0.3", features = ["serde"] }
+bigdecimal = { version = "0.4.6", features = ["serde"] }
 config = "0.14.0"
 
 [package.metadata.deb]

@@ -25,7 +25,7 @@ url = "2.3.1"
 aws-sdk-secretsmanager = "1.30.0"
 
 [dev-dependencies]
-sqlx = { version = "0.7", features = [
+sqlx = { version = "0.8.2", features = [
     "postgres",
     "runtime-tokio-rustls",
     "tls-rustls",
