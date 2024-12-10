@@ -924,7 +924,7 @@ impl OrderProvider {
                 .await?;
 
         match best_offer {
-            Some((amount, curr_addr, curr_chain_id, start, end, order_hash)) => {
+            Some((amount, curr_addr, _curr_chain_id, start, end, order_hash)) => {
                 sqlx::query(
                     "
                 UPDATE token
