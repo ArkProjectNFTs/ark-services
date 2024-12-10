@@ -19,7 +19,6 @@ use serde::Deserialize;
 use sqlx::types::BigDecimal;
 use sqlx::Row;
 use starknet::core::types::Felt;
-use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use std::fmt;
