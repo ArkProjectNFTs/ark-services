@@ -1157,7 +1157,7 @@ impl DatabaseAccess for PgPool {
                     "SELECT COUNT(*) FROM token 
                     WHERE token.contract_address = $1 
                     AND token.chain_id = $2 
-                    AND ($3 = false OR token.listing_start_amount IS NOT NULL) 
+                    AND ($3 = false OR (token.listing_start_amount IS NOT NULL AND token.listing_type != 'Auction')) 
                     {}",
                     conditions.join(" ")
                 );
@@ -1231,7 +1231,7 @@ impl DatabaseAccess for PgPool {
             LEFT JOIN latest_transaction ON latest_transaction.contract_address = token.contract_address
             WHERE token.contract_address = $1
                 AND token.chain_id = $2
-                AND ($3 = false OR token.listing_start_amount IS NOT NULL)
+                AND ($3 = false OR (token.listing_start_amount IS NOT NULL AND token.listing_type != 'Auction'))
                 {}
             ORDER BY {}
             LIMIT $4 OFFSET $5",
