@@ -291,13 +291,14 @@ impl OrderProvider {
                 LIMIT 1
             );
         ";
-        let exists: i32 = sqlx::query_scalar(query)
+        let exists: bool = sqlx::query_scalar(query)
             .bind(contract_address)
             .bind(token_id)
             .bind(chain_id)
             .fetch_one(&client.pool)
             .await?;
-        Ok(exists != 0)
+
+        Ok(exists)
     }
 
     async fn order_hash_exists_in_token(
@@ -369,7 +370,7 @@ impl OrderProvider {
         order_hash: &str,
     ) -> Result<Option<OfferData>, sqlx::Error> {
         let query = "
-                SELECT  order_hash,
+                SELECT order_hash,
                         offer_timestamp,
                         offer_quantity,
                         status,
@@ -1761,6 +1762,9 @@ impl OrderProvider {
                 OrderStatus::Fulfilled,
             )
             .await?;
+
+            Self::update_offer_status(client, &offer_data.order_hash, OrderStatus::Fulfilled)
+                .await?;
         }
 
         Ok(())
