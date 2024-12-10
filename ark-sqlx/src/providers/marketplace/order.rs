@@ -19,7 +19,6 @@ use serde::Deserialize;
 use sqlx::types::BigDecimal;
 use sqlx::Row;
 use starknet::core::types::Felt;
-use starknet::macros::selector;
 use starknet::providers::jsonrpc::HttpTransport;
 use starknet::providers::JsonRpcClient;
 use std::fmt;
@@ -1761,21 +1760,12 @@ impl OrderProvider {
                 let tst_token_address = Felt::from_str(&currency_address).map_err(|_| {
                     ProviderError::ParsingError("Invalid currency address".to_string())
                 })?;
-                println!("tst_token_address: {:?}", tst_token_address);
-                let decimals_selector = selector!("decimals");
-                let decimals = provider
-                    .call_contract_method(tst_token_address, decimals_selector)
-                    .await?;
-
+                let decimals = provider.retrieve_decimals(tst_token_address).await?;
                 let decimals: i16 = decimals.parse::<i16>().map_err(|_| {
                     ProviderError::ParsingError("Failed to parse decimals".to_string())
                 })?;
 
-                let symbol_selector = selector!("symbol");
-                let symbol = provider
-                    .call_contract_method(tst_token_address, symbol_selector)
-                    .await?;
-
+                let symbol = provider.retrieve_symbol(tst_token_address).await?;
                 sqlx::query(
                     "INSERT INTO currency_mapping (currency_address, chain_id, symbol, decimals) VALUES ($1, $2, $3, $4)"
                 )
