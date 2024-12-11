@@ -59,6 +59,8 @@ pub struct CollectionData {
     pub description: Option<String>,
     pub twitter: Option<String>,
     pub discord: Option<String>,
+    #[schema(example = true, default = false)]
+    pub market_data_enabled: bool,
 }
 
 #[derive(Serialize, Deserialize, FromRow, utoipa::ToSchema)]
