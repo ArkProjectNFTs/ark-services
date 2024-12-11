@@ -93,7 +93,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         AND token_event.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type in ('Sale', 'Executed')
+                     AND token_event.event_type = 'Executed'
                      AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
                 ),
                 sales_7d = (
@@ -101,7 +101,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                      FROM token_event
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sale'
+                     AND token_event.event_type = 'Executed'
                      AND token_event.block_timestamp >= (EXTRACT(EPOCH FROM NOW() - INTERVAL '7 days')::BIGINT)
                 ),
                 owner_count = (
@@ -131,14 +131,14 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         AND token_event.chain_id = cm.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type in ('Sale', 'Executed')
+                     AND token_event.event_type = 'Executed'
                 ),
                 total_sales = (
                     SELECT COUNT(*)
                      FROM token_event
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
-                     AND token_event.event_type = 'Sale'
+                     AND token_event.event_type = 'Executed'
                 ),
                 marketcap = (
                     SELECT (MIN(hex_to_decimal(listing_start_amount)) * COUNT(*))
@@ -165,6 +165,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         0
                     )
                )
+        WHERE market_data_enabled = true
     "#;
 
     match sqlx::query(update_top_bid_query).execute(pool).await {
@@ -233,7 +234,7 @@ pub async fn update_contract_marketdata(pool: &PgPool) {
                         WHERE
                             token_event.contract_address = contract.contract_address
                             AND token_event.chain_id = contract.chain_id
-                            AND token_event.event_type = 'Sale'
+                            AND token_event.event_type = 'Executed'
                             AND to_timestamp(token_event.block_timestamp) >= (CURRENT_DATE - INTERVAL '{}')
                     ),
                     0
@@ -246,14 +247,13 @@ pub async fn update_contract_marketdata(pool: &PgPool) {
                     WHERE
                         token_event.contract_address = contract.contract_address
                         AND token_event.chain_id = contract.chain_id
-                        AND token_event.event_type = 'Sale'
+                        AND token_event.event_type = 'Executed'
                         AND to_timestamp(token_event.block_timestamp) >= (CURRENT_DATE - INTERVAL '{}')
                 ) AS number_of_sales,
                 '{}' AS timerange
             FROM
                 contract
-            WHERE
-                contract.is_verified = true
+            WHERE contract.is_verified = true AND contract.market_data_enabled = true
             OR contract.calculate_marketdata_timestamp is not null
             ON CONFLICT (contract_address, chain_id, timerange)
             DO UPDATE SET
