@@ -622,7 +622,8 @@ impl DatabaseAccess for PgPool {
                  website,
                  twitter,
                  discord,
-                 description
+                 description,
+                 market_data_enabled
              FROM contract
              WHERE contract.contract_address = $1
              AND contract.chain_id = $2
