@@ -1497,20 +1497,19 @@ impl OrderProvider {
                 LIMIT 1
             ) as exists;
         ";
-    
-        let event_type = TokenEventType::from_str(&data.order_type)
-            .map_err(ProviderError::from)?;
-    
+
+        let event_type = TokenEventType::from_str(&data.order_type).map_err(ProviderError::from)?;
+
         let already_exists: bool = sqlx::query_scalar(check_existing_query)
             .bind(&data.order_hash)
             .bind(event_type.to_string())
             .fetch_one(&client.pool)
             .await?;
-    
+
         if already_exists {
             trace!(
-                "Order {} of type {} was already registered, skipping", 
-                data.order_hash, 
+                "Order {} of type {} was already registered, skipping",
+                data.order_hash,
                 event_type.to_string()
             );
             return Ok(());
@@ -2017,7 +2016,7 @@ impl OrderProvider {
             trace!("Order {} was already executed, skipping", data.order_hash);
             return Ok(());
         }
-        
+
         // 1. Get the original order event (Listing or Offer)
         let select_query = "
             SELECT token_id, contract_address, chain_id, token_id_hex, amount, currency_address, event_type
