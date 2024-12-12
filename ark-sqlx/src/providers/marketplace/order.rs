@@ -241,7 +241,6 @@ struct TokenPrice {
 }
 
 fn eth_to_wei(price_in_eth: f64) -> u128 {
-    
     (price_in_eth * 1e18) as u128
 }
 
