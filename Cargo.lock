@@ -21,21 +21,6 @@ dependencies = [
 
 [[package]]
 name = "actix-cors"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0346d8c1f762b41b458ed3145eea914966bb9ad20b9be0d6d463b20d45586370"
-dependencies = [
- "actix-utils",
- "actix-web",
- "derive_more",
- "futures-util",
- "log",
- "once_cell",
- "smallvec",
-]
-
-[[package]]
-name = "actix-cors"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9e772b3bcafe335042b5db010ab7c09013dad6eac4915c91d8d50902769f331"
@@ -550,7 +535,7 @@ dependencies = [
 name = "ark-marketplace-api"
 version = "0.1.0"
 dependencies = [
- "actix-cors 0.7.0",
+ "actix-cors",
  "actix-rt",
  "actix-web",
  "actix-web-httpauth",
@@ -659,27 +644,6 @@ dependencies = [
  "tokio 1.40.0",
  "tracing",
  "tracing-log 0.2.0",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "ark-orderbook-api"
-version = "0.1.0"
-dependencies = [
- "actix-cors 0.6.5",
- "actix-rt",
- "actix-web",
- "actix-web-httpauth",
- "async-std",
- "async-trait",
- "dotenv",
- "env_logger 0.9.3",
- "num-bigint",
- "serde",
- "serde_json",
- "sqlx",
- "tokio 1.40.0",
- "tracing",
  "tracing-subscriber",
 ]
 
@@ -2341,19 +2305,6 @@ checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
 dependencies = [
  "log",
  "regex",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.9.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a12e6657c4c97ebab115a42dcee77225f7f482cdd841cf7088c657a42e9e00e7"
-dependencies = [
- "atty",
- "humantime",
- "log",
- "regex",
- "termcolor",
 ]
 
 [[package]]

@@ -260,10 +260,10 @@ impl OrderProvider {
     async fn clear_tokens_cache(
         redis_conn: Arc<Mutex<MultiplexedConnection>>,
         contract_address: &str,
-    ) -> redis::RedisResult<()> {
+    ) -> redis::RedisResult<Option<()>> {
         // Create a pattern for matching keys
         let pattern = format!("*{}_*", contract_address);
-
+    
         // Collect keys matching the pattern
         let mut cmd = redis::cmd("SCAN");
         cmd.cursor_arg(0);
@@ -276,13 +276,14 @@ impl OrderProvider {
                 keys.push(key);
             }
         }
-
+    
         // Delete keys and log the results
         if !keys.is_empty() {
-            conn.del(keys.clone()).await?;
+            // Explicitly specify the return type for del command
+            let _: () = conn.del(keys.clone()).await?;
         }
-
-        Ok(())
+    
+        Ok(None)
     }
 
     async fn token_exists(

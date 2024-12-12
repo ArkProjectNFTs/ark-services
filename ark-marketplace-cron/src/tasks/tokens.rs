@@ -61,7 +61,8 @@ async fn clear_collection_cache(
     }
 
     if !keys.is_empty() {
-        con.del(&keys).await?;
+        // Explicitly specify the return type for del command
+        let _: () = con.del(&keys).await?;
     }
 
     Ok(())
