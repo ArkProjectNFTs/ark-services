@@ -241,8 +241,8 @@ struct TokenPrice {
 }
 
 fn eth_to_wei(price_in_eth: f64) -> u128 {
-    let wei_value = (price_in_eth * 1e18) as u128;
-    wei_value
+    
+    (price_in_eth * 1e18) as u128
 }
 
 fn hex_to_wei(hex_str: Option<String>) -> Option<u128> {
