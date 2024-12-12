@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                SELECT\n                    top_bid_order_hash as order_hash,\n                    top_bid_amount as amount,\n                    top_bid_start_date as start_date,\n                    top_bid_end_date as end_date,\n                    top_bid_currency_address as currency_address\n                FROM token\n                WHERE token.token_id = $1\n                AND token.contract_address = $2\n            ",
+  "query": "\n            SELECT\n                top_bid_order_hash as order_hash,\n                top_bid_amount as amount,\n                top_bid_start_date as start_date,\n                top_bid_end_date as end_date,\n                top_bid_currency_address as currency_address\n            FROM token\n            WHERE token.token_id = $1\n            AND token.contract_address = $2\n            ",
   "describe": {
     "columns": [
       {
@@ -43,5 +43,5 @@
       true
     ]
   },
-  "hash": "0b933c355cf0fbada565e4303c655155305a92bd01d1278fbb10a5a7755a91aa"
+  "hash": "56d484a193ad2ac8d48da64ff77e2fd19729818298d5143be1a95bc06ff51116"
 }
