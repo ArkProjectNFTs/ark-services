@@ -263,7 +263,7 @@ impl OrderProvider {
     ) -> redis::RedisResult<Option<()>> {
         // Create a pattern for matching keys
         let pattern = format!("*{}_*", contract_address);
-    
+
         // Collect keys matching the pattern
         let mut cmd = redis::cmd("SCAN");
         cmd.cursor_arg(0);
@@ -276,13 +276,13 @@ impl OrderProvider {
                 keys.push(key);
             }
         }
-    
+
         // Delete keys and log the results
         if !keys.is_empty() {
             // Explicitly specify the return type for del command
             let _: () = conn.del(keys.clone()).await?;
         }
-    
+
         Ok(None)
     }
 
