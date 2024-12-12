@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
+use crate::models::serialize_option_bigdecimal;
+
 /// DEV-690: Expected format for Token Data
 /// {
 ///  "data": [
@@ -30,12 +32,14 @@ pub struct TokenData {
     pub collection_address: Option<String>,
     pub token_id: Option<String>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub last_price: Option<BigDecimal>,
     pub floor_difference: Option<i32>,
     pub listed_at: Option<i64>,
     pub is_listed: Option<bool>,
     pub listing: Option<TokenDataListing>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     #[schema(
         value_type = Object,
@@ -57,6 +61,7 @@ pub struct TokenData {
 pub struct TokenMarketData {
     pub owner: Option<String>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor: Option<BigDecimal>,
     pub created_timestamp: Option<i64>,
     pub updated_timestamp: Option<i64>,
@@ -66,6 +71,7 @@ pub struct TokenMarketData {
     pub top_offer: Option<TopOffer>,
     pub listing: Option<Listing>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub last_price: Option<BigDecimal>,
 }
 
@@ -74,10 +80,13 @@ pub struct TokenInformationData {
     pub token_id: String,
     pub collection_address: String,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub last_price: Option<BigDecimal>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub top_offer: Option<BigDecimal>,
     pub owner: Option<String>,
     pub collection_name: Option<String>,
@@ -102,6 +111,7 @@ pub struct TokenInformationData {
 pub struct TokenOneData {
     pub owner: Option<String>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor: Option<BigDecimal>,
     pub created_timestamp: Option<i64>,
     pub updated_timestamp: Option<i64>,
@@ -109,6 +119,7 @@ pub struct TokenOneData {
     pub has_offer: Option<bool>,
     pub buy_in_progress: Option<bool>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub last_price: Option<BigDecimal>,
     pub listing_currency_address: Option<String>,
     pub listing_currency_chain_id: Option<String>,
@@ -127,6 +138,7 @@ pub struct TopOfferQueryResult {
 pub struct TopOffer {
     pub order_hash: Option<String>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub amount: Option<BigDecimal>,
     pub start_date: Option<i64>,
     pub end_date: Option<i64>,
@@ -159,9 +171,12 @@ pub struct TokenPortfolioData {
     pub collection_address: Option<String>,
     pub token_id: Option<String>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub list_price: Option<BigDecimal>,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub best_offer: Option<BigDecimal>,
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor: Option<BigDecimal>,
     pub received_at: Option<i64>,
     #[schema(example = json!({
@@ -191,9 +206,11 @@ pub struct TokenOfferOneDataDB {
 pub struct TokenOfferOneData {
     pub offer_id: i32,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     pub currency: Currency,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor_difference: Option<BigDecimal>,
     pub source: Option<String>,
     pub expire_at: i64,
@@ -358,6 +375,7 @@ pub struct TokenActivityDataDB {
 pub struct TokenActivityData {
     pub activity_type: TokenEventType,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     pub from: Option<String>,
     pub to: Option<String>,
@@ -401,6 +419,7 @@ pub struct TokenPortfolioActivityDataDB {
 pub struct TokenPortfolioActivityData {
     pub activity_type: TokenEventType,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     pub from: Option<String>,
     pub to: Option<String>,

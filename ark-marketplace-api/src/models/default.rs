@@ -5,6 +5,8 @@ use sqlx::FromRow;
 use sqlx::Row;
 use utoipa::ToSchema;
 
+use crate::models::serialize_option_bigdecimal;
+
 const CURRENCY_ADDRESS_ETH: &str =
     "0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7";
 
@@ -72,6 +74,7 @@ pub struct LastSale {
     pub collection_name: String,
     pub collection_address: String,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     pub from: String,
     pub to: String,
@@ -123,6 +126,7 @@ pub struct CollectionInfo {
     pub collection_address: String,
     pub collection_image: String,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor_price: Option<BigDecimal>,
     pub floor_difference: Option<i64>,
 }
@@ -134,6 +138,7 @@ pub struct Trending {
     pub collection_address: String,
     pub collection_image: String,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor_price: Option<BigDecimal>,
     pub floor_difference: Option<i64>,
 }

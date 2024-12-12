@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use sqlx::FromRow;
 
+use crate::models::serialize_option_bigdecimal;
+
 #[derive(Serialize, Deserialize, FromRow, Clone, utoipa::ToSchema)]
 pub struct CollectionFullData {
     #[schema(value_type = String, example = "0x02acee8c430f62333cf0e0e7a94b2347b5513b4c25f699461dd8d7b23c072478")]
@@ -12,12 +14,15 @@ pub struct CollectionFullData {
     pub image: Option<String>,
     pub name: Option<String>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor: Option<BigDecimal>,
     pub volume: Option<i64>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub top_offer: Option<BigDecimal>,
     pub sales: Option<i64>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub marketcap: Option<BigDecimal>,
     pub listed_items: Option<i64>,
     pub listed_percentage: Option<i64>,
@@ -37,21 +42,27 @@ pub struct CollectionData {
     pub image: Option<String>,
     pub name: Option<String>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor: Option<BigDecimal>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub volume_7d_eth: Option<BigDecimal>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub top_offer: Option<BigDecimal>,
     pub sales_7d: Option<i64>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub marketcap: Option<BigDecimal>,
     pub listed_items: Option<i64>,
     pub listed_percentage: Option<i64>,
     pub token_count: Option<i64>,
     pub owner_count: Option<i64>,
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub total_volume: Option<BigDecimal>,
     pub total_sales: Option<i64>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor_7d_percentage: Option<BigDecimal>,
     pub is_verified: Option<bool>,
     pub deployed_timestamp: Option<i64>,
@@ -69,6 +80,7 @@ pub struct CollectionPortfolioData {
     pub image: Option<String>,
     pub name: Option<String>,
     #[schema(value_type = String, example = "1000000000000000")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub floor: Option<BigDecimal>,
     #[schema(value_type = String, example = "777")]
     pub token_count: Option<i64>,
@@ -112,6 +124,7 @@ pub struct CollectionActivityDataDB {
 pub struct CollectionActivityData {
     pub activity_type: TokenEventType,
     #[schema(value_type = String, example = "12345.6789")]
+    #[serde(serialize_with = "serialize_option_bigdecimal")]
     pub price: Option<BigDecimal>,
     pub from: Option<String>,
     pub to: Option<String>,
