@@ -8,11 +8,13 @@ on:
       - "ark-indexer/**"
       - "ark-sqlx/**"
       - "arkchain-indexer/**"
+      - "ark-marketplace-api"
   pull_request:
     paths:
       - "ark-indexer/**"
       - "ark-sqlx/**"
       - "arkchain-indexer/**"
+      - "ark-marketplace-api"
 env:
   CARGO_TERM_COLOR: always
   SQLX_OFFLINE: true 
