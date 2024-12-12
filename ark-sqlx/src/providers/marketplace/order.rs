@@ -1487,6 +1487,35 @@ impl OrderProvider {
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
+
+        let check_existing_query = "
+            SELECT EXISTS (
+                SELECT 1 
+                FROM token_event 
+                WHERE order_hash = $1 
+                AND event_type = $2
+                LIMIT 1
+            ) as exists;
+        ";
+    
+        let event_type = TokenEventType::from_str(&data.order_type)
+            .map_err(ProviderError::from)?;
+    
+        let already_exists: bool = sqlx::query_scalar(check_existing_query)
+            .bind(&data.order_hash)
+            .bind(event_type.to_string())
+            .fetch_one(&client.pool)
+            .await?;
+    
+        if already_exists {
+            trace!(
+                "Order {} of type {} was already registered, skipping", 
+                data.order_hash, 
+                event_type.to_string()
+            );
+            return Ok(());
+        }
+
         let mut currency_chain_id = "".to_string();
         let mut currency_address = "".to_string();
 
