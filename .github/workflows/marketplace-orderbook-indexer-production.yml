@@ -9,6 +9,7 @@ on:
       - ".github/workflows/marketplace-orderbook-indexer-production.yml"
       - "arkchain-indexer-marketplace/**"
       - "ark-sqlx/providers/marketplace/**"
+      - ".sqlx"
 
 jobs:
   deploy:

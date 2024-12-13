@@ -9,6 +9,7 @@ on:
       - ".github/workflows/marketplace-api-production.yml"
       - "ark-marketplace-api/**"
       - "ark-sqlx/providers/marketplace/**"
+      - ".sqlx"
 
 jobs:
   discord-notification:
