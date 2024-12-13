@@ -8,13 +8,16 @@ on:
       - "ark-indexer/**"
       - "ark-sqlx/**"
       - "arkchain-indexer/**"
+      - "ark-marketplace-api"
   pull_request:
     paths:
       - "ark-indexer/**"
       - "ark-sqlx/**"
       - "arkchain-indexer/**"
+      - "ark-marketplace-api"
 env:
   CARGO_TERM_COLOR: always
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
   check:
@@ -42,7 +45,7 @@ jobs:
     name: Run Lints
     runs-on: ubuntu-latest
     env:
-      SQLX_OFFLINE: true
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     if: github.event_name == 'pull_request' && github.event.action != 'closed'
     steps:
       - name: Checkout Code

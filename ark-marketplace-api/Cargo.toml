@@ -19,7 +19,7 @@ num-bigint = "0.4.4"
 sqlx = { version = "0.8.2", features = [
     "postgres",
     "runtime-async-std",
-    "bigdecimal",
+    "bigdecimal"
 ] }
 tokio = { version = "1", features = ["full"] }
 tokio-util = "0.6"

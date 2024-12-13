@@ -241,9 +241,7 @@ struct TokenPrice {
 }
 
 fn eth_to_wei(price_in_eth: f64) -> u128 {
-    let wei_value = (price_in_eth * 1e18) as u128;
-    format!("{:x}", wei_value);
-    wei_value
+    (price_in_eth * 1e18) as u128
 }
 
 fn hex_to_wei(hex_str: Option<String>) -> Option<u128> {
@@ -262,7 +260,7 @@ impl OrderProvider {
     async fn clear_tokens_cache(
         redis_conn: Arc<Mutex<MultiplexedConnection>>,
         contract_address: &str,
-    ) -> redis::RedisResult<()> {
+    ) -> redis::RedisResult<Option<()>> {
         // Create a pattern for matching keys
         let pattern = format!("*{}_*", contract_address);
 
@@ -281,10 +279,11 @@ impl OrderProvider {
 
         // Delete keys and log the results
         if !keys.is_empty() {
-            conn.del(keys.clone()).await?;
+            // Explicitly specify the return type for del command
+            let _: () = conn.del(keys.clone()).await?;
         }
 
-        Ok(())
+        Ok(None)
     }
 
     async fn token_exists(
@@ -1487,6 +1486,34 @@ impl OrderProvider {
         data: &PlacedData,
     ) -> Result<(), ProviderError> {
         trace!("Registering placed order {:?}", data);
+
+        let check_existing_query = "
+            SELECT EXISTS (
+                SELECT 1 
+                FROM token_event 
+                WHERE order_hash = $1 
+                AND event_type = $2
+                LIMIT 1
+            ) as exists;
+        ";
+
+        let event_type = TokenEventType::from_str(&data.order_type).map_err(ProviderError::from)?;
+
+        let already_exists: bool = sqlx::query_scalar(check_existing_query)
+            .bind(&data.order_hash)
+            .bind(event_type.to_string())
+            .fetch_one(&client.pool)
+            .await?;
+
+        if already_exists {
+            trace!(
+                "Order {} of type {} was already registered, skipping",
+                data.order_hash,
+                event_type.to_string()
+            );
+            return Ok(());
+        }
+
         let mut currency_chain_id = "".to_string();
         let mut currency_address = "".to_string();
 
@@ -1969,6 +1996,25 @@ impl OrderProvider {
     ) -> Result<(), ProviderError> {
         println!("executed event {}", data.order_hash);
         trace!("Registering executed order {:?}", data);
+        let check_executed_query = "
+        SELECT EXISTS (
+            SELECT 1 
+            FROM token_event 
+            WHERE order_hash = $1 
+            AND event_type = 'Executed'
+            LIMIT 1
+        ) as exists;
+    ";
+
+        let already_executed: bool = sqlx::query_scalar(check_executed_query)
+            .bind(&data.order_hash)
+            .fetch_one(&client.pool)
+            .await?;
+
+        if already_executed {
+            trace!("Order {} was already executed, skipping", data.order_hash);
+            return Ok(());
+        }
 
         // 1. Get the original order event (Listing or Offer)
         let select_query = "
