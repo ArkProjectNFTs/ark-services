@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
         Arc::new(handler),
     ));
 
-    let sleep_secs = 0;
+    let sleep_secs = 1;
     let checkpoint = Checkpoint::new("checkpoint.txt".to_string()).await?;
     let mut from = checkpoint.get_block();
     let range = 1;
