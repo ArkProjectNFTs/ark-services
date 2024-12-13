@@ -28,7 +28,8 @@ impl TokenEventType {
             Self::Sale => TokenEventTypeDB::Sale.to_string(),
             Self::Mint => TokenEventTypeDB::Mint.to_string(),
             Self::Burn => TokenEventTypeDB::Burn.to_string(),
-            Self::Transfer => TokenEventType::Transfer.to_string(),
+            Self::Transfer => TokenEventTypeDB::Transfer.to_string(),
+            Self::Rollback => TokenEventTypeDB::Rollback.to_string(),
             // Cancel event
             Self::ListingCancelled => TokenEventTypeDB::ListingCancelled.to_string(),
             Self::AuctionCancelled => TokenEventTypeDB::AuctionCancelled.to_string(),
@@ -70,12 +71,12 @@ where
                 TokenEventTypeDB::Mint => Ok(TokenEventType::Mint),
                 TokenEventTypeDB::Burn => Ok(TokenEventType::Burn),
                 TokenEventTypeDB::Transfer => Ok(TokenEventType::Transfer),
+                TokenEventTypeDB::Rollback => Ok(TokenEventType::Rollback),
                 TokenEventTypeDB::ListingCancelled => Ok(TokenEventType::ListingCancelled),
                 TokenEventTypeDB::AuctionCancelled => Ok(TokenEventType::AuctionCancelled),
                 TokenEventTypeDB::OfferCancelled => Ok(TokenEventType::OfferCancelled),
                 TokenEventTypeDB::ListingExpired => Ok(TokenEventType::ListingExpired),
                 TokenEventTypeDB::OfferExpired => Ok(TokenEventType::OfferExpired),
-                TokenEventTypeDB::Rollback => Err("Unsupported rollback event".into()), // _ => Ok(TokenEventType::Burn),
             }
         } else {
             Err("Invalid event type".into())
