@@ -29,6 +29,12 @@ async fn main() {
     println!("Starting the block ingestion process...");
     match envy::prefixed("SKSQADAPTER_").from_env::<Config>() {
         Ok(config) => {
+            println!("Using sequencer URL: {}", config.sequencer_url);
+            println!(
+                "Using state file path: {}/state/state.json",
+                config.storage_dir
+            );
+
             let client = Arc::new(Client::new());
             // let start_time = Instant::now();
             let latest_block_number = Arc::new(Mutex::new(0u64));
