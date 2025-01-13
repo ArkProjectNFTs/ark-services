@@ -22,7 +22,7 @@ jobs:
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           message: "🚢 Deploying Ark Indexer Transactions to BARE METAL STAGING environment..."
-  
+
   package-ark-indexer-transactions-service:
     runs-on: ubuntu-latest
     container: screenshotlabs/rust-ci-cd-toolchain:latest
@@ -60,7 +60,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: package-artifact
-    
+
       - name: Extract variables from artifact
         id: deployment-extracted-vars
         run: |
@@ -79,6 +79,7 @@ jobs:
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           database-url: ${{ secrets.DATABASE_URL_STAGING }}
+          database-name: staging
 
       - name: Copy debian package to scaleway
         run: |
@@ -92,7 +93,6 @@ jobs:
             sudo service ark-indexer-transactions-staging restart &&
             sleep 10
           "
-
 
       - name: Verify Deployment
         run: |
@@ -119,4 +119,3 @@ jobs:
                   "content": "❌ Failed to deploy Ark Indexer Transactions to Staging environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
-

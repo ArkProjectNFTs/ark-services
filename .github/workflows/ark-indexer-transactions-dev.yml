@@ -79,6 +79,7 @@ jobs:
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           database-url: ${{ secrets.DATABASE_URL_DEV }}
+          database-name: dev
 
       - name: Copy debian package to scaleway
         run: |
