@@ -6,12 +6,13 @@ use crate::{
             NFTInfo, StarknetClientError, TransactionInfo,
         },
         event::EventType,
+        orderbook::OrderbookTransactionInfo,
     },
     services::storage::Storage,
 };
 use bigdecimal::BigDecimal;
 use starknet::{
-    core::types::{BlockId::Hash, Felt},
+    core::types::{BlockId::Hash, EmittedEvent, Felt},
     providers::Provider,
 };
 use std::str::FromStr;
@@ -23,6 +24,8 @@ use super::{
     erc1155, erc1400, erc20, erc721,
     manager::ContractManager,
 };
+
+use arkproject::orderbook;
 
 impl<S, P> ContractManager<S, P>
 where
@@ -685,6 +688,41 @@ where
                 _ => return Ok(()),
             }
         }
+        Ok(())
+    }
+
+    pub async fn handle_orderbook_event(
+        &self,
+        event: Event,
+        event_id: u64,
+        chain_id: &str,
+        block_hash: Felt,
+        tx_hash: Felt,
+        block_timestamp: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let emitted_event = EmittedEvent {
+            from_address: event.from_address,
+            keys: event.keys,
+            data: event.data,
+            block_hash: Some(block_hash),
+            block_number: None,
+            transaction_hash: tx_hash,
+        };
+        let orderbook_event = orderbook::Event::from(emitted_event);
+        let orderbook_transaction_info = OrderbookTransactionInfo {
+            chain_id: chain_id.to_owned(),
+            tx_hash: felt_to_strk_string(tx_hash),
+            event_id,
+            block_hash: felt_to_strk_string(block_hash),
+            timestamp: block_timestamp,
+            from: felt_to_strk_string(event.from_address),
+            event: orderbook_event,
+        };
+        let storage = self.storage.lock().await;
+        storage
+            .store_orderbook_transaction_info(orderbook_transaction_info)
+            .await?;
+        drop(storage);
         Ok(())
     }
 
