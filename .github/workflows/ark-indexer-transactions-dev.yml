@@ -1,12 +1,12 @@
-name: Ark Indexer Transactions (Staging) (Mainnet) (Scaleway)
+name: Ark Indexer Transactions (Dev) (Testnet) (Scaleway)
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - staging
+      - dev
     paths:
-      - ".github/workflows/ark-indexer-transactions-staging.yml"
+      - ".github/workflows/ark-indexer-transactions-dev.yml"
       - "ark-indexer-transactions/**"
 
 jobs:
@@ -21,7 +21,7 @@ jobs:
         uses: ./.github/actions/discord-notification
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          message: "🚢 Deploying Ark Indexer Transactions to BARE METAL STAGING environment..."
+          message: "🚢 Deploying Ark Indexer Transactions to BARE METAL DEV environment..."
 
   package-ark-indexer-transactions-service:
     runs-on: ubuntu-latest
@@ -38,7 +38,7 @@ jobs:
 
       - name: Create debian service
         run: |
-          cargo deb -p ark-indexer-transactions --variant=staging
+          cargo deb -p ark-indexer-transactions --variant=dev
 
       - name: Upload package to artifact
         uses: actions/upload-artifact@v4
@@ -78,8 +78,8 @@ jobs:
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          database-url: ${{ secrets.DATABASE_URL_STAGING }}
-          database-name: staging
+          database-url: ${{ secrets.DATABASE_URL_DEV }}
+          database-name: dev
 
       - name: Copy debian package to scaleway
         run: |
@@ -90,14 +90,14 @@ jobs:
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_BARE_METAL_IP }} "
             sudo dpkg -i ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE_OUTPUT}} &&
             sudo chown -R github:github /etc/ark-project &&
-            sudo service ark-indexer-transactions-staging restart &&
+            sudo service ark-indexer-transactions-dev restart &&
             sleep 10
           "
 
       - name: Verify Deployment
         run: |
           ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_BARE_METAL_IP }} << EOF
-            sudo service ark-indexer-transactions-staging status
+            sudo service ark-indexer-transactions-dev status
           EOF
 
       - name: Send success notification to dev-updates channel
@@ -106,7 +106,7 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "✅ Successfully deployed Ark Indexer Transactions to Staging environment."
+                  "content": "✅ Successfully deployed Ark Indexer Transactions to Dev environment."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
 
@@ -116,6 +116,6 @@ jobs:
           curl -H "Content-Type: application/json" \
               -X POST \
               -d '{
-                  "content": "❌ Failed to deploy Ark Indexer Transactions to Staging environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+                  "content": "❌ Failed to deploy Ark Indexer Transactions to Dev environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
               }' \
               ${{ secrets.DISCORD_WEBHOOK_URL }}

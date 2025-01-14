@@ -17,9 +17,9 @@ set -e
 case "$1" in
     install|upgrade)
         mkdir -p /etc/ark-project
-        mkdir -p /opt/starknet-sequencer/mainnet/state
+        mkdir -p /opt/starknet-sequencer/sepolia/state
 
-        CONFIG_FILE="/etc/ark-project/transaction.config.staging.yml"
+        CONFIG_FILE="/etc/ark-project/transaction.config.dev.yml"
 
         if [ -f "$CONFIG_FILE" ]; then
             echo "Patching existing $CONFIG_FILE..."

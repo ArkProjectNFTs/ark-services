@@ -57,16 +57,19 @@ pub fn get_latest_block_in_folder(
     Ok(max_block_number)
 }
 
-pub fn get_block_file_path(block_number: u64) -> PathBuf {
+fn get_block_file_path(base_path: &str, block_number: u64) -> PathBuf {
     let folder_number = block_number / 100;
     let file_name = format!("block_{}.json", block_number);
-    let path = format!("/opt/fast-indexer/blocks/{}/{}", folder_number, file_name);
+    let path = format!("{}/{}/{}", base_path, folder_number, file_name);
     PathBuf::from(path)
 }
 
-pub fn read_block_from_file(block_number: u64) -> Result<BlockWrapper, Box<dyn std::error::Error>> {
-    let path = get_block_file_path(block_number);
-    println!("Block number: {:?}", block_number);
+pub fn read_block_from_file(
+    base_path: &str,
+    block_number: u64,
+) -> Result<BlockWrapper, Box<dyn std::error::Error>> {
+    let path = get_block_file_path(base_path, block_number);
+    println!("Block number: {:?} - path: {:?}", block_number, path);
     let file = fs::File::open(path)?;
     let reader = BufReader::new(file);
     let value: Value = serde_json::from_reader(reader)?;
