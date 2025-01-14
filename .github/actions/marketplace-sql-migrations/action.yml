@@ -7,6 +7,9 @@ inputs:
   database-url:
     description: "Database URL for running migrations"
     required: true
+  database-name:
+    description: "Database name for notifications"
+    required: true
 
 runs:
   using: "composite"
