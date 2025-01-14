@@ -30,7 +30,7 @@ case "$1" in
     remove|purge|disappear)
     if [ "$1" = "remove" ]; then
         if [ -x "/usr/bin/deb-systemd-helper" ]; then
-            deb-systemd-helper mask ark-indexer-transactions-staging.service >/dev/null
+            deb-systemd-helper mask ark-indexer-transactions-dev.service >/dev/null
             rm -Rf /opt/starknet-sequencer/sepolia/state
         fi
     fi
