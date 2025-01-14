@@ -31,7 +31,7 @@ case "$1" in
     if [ "$1" = "remove" ]; then
         if [ -x "/usr/bin/deb-systemd-helper" ]; then
             deb-systemd-helper mask ark-indexer-transactions-production.service >/dev/null
-            rm -Rf /opt/ark-indexer-transactions/state/production
+            rm -Rf /opt/starknet-sequencer/mainnet/state
         fi
     fi
     ;;

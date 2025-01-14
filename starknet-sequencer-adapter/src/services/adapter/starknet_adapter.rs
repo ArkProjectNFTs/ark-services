@@ -62,9 +62,9 @@ pub fn extract_events_from_block(_block: &Value) -> Vec<Value> {
     event_list
 }
 
-pub async fn verify_blocks_task(_state_path: Arc<PathBuf>) {
+pub async fn verify_blocks_task(storage_dir: &str, _state_path: Arc<PathBuf>) {
     // let mut state = HashMap::new();
-    let state_manager = StateManager::new("/opt/fast-indexer/state").unwrap();
+    let state_manager = StateManager::new(format!("{}/state", storage_dir)).unwrap();
 
     // Load state from file
     // if state_path.exists() {
@@ -75,7 +75,7 @@ pub async fn verify_blocks_task(_state_path: Arc<PathBuf>) {
     loop {
         // let mut verified_blocks = state.clone();
 
-        for entry in fs::read_dir("/opt/fast-indexer/blocks").unwrap() {
+        for entry in fs::read_dir(format!("{}/blocks", storage_dir)).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
             if path.is_dir() {
@@ -139,7 +139,11 @@ pub async fn verify_blocks_task(_state_path: Arc<PathBuf>) {
     }
 }
 
-pub async fn extract_events_task(blocks_per_file: u64, state_path: Arc<PathBuf>) {
+pub async fn extract_events_task(
+    storage_dir: &str,
+    blocks_per_file: u64,
+    state_path: Arc<PathBuf>,
+) {
     let mut state = HashMap::new();
 
     // Load state from file
@@ -151,7 +155,7 @@ pub async fn extract_events_task(blocks_per_file: u64, state_path: Arc<PathBuf>)
     loop {
         let mut extracted_blocks = state.clone();
 
-        for entry in fs::read_dir("/opt/fast-indexer/blocks").unwrap() {
+        for entry in fs::read_dir(format!("{}/blocks", storage_dir)).unwrap() {
             let entry = entry.unwrap();
             let path = entry.path();
             if path.is_dir() {
@@ -175,7 +179,8 @@ pub async fn extract_events_task(blocks_per_file: u64, state_path: Arc<PathBuf>)
                                             let events = extract_events_from_block(&block_content);
                                             for event in events {
                                                 let folder = format!(
-                                                    "/opt/fast-indexer/events/{}/",
+                                                    "{}/events/{}/",
+                                                    storage_dir,
                                                     block_number / blocks_per_file
                                                 );
                                                 fs::create_dir_all(&folder).unwrap();

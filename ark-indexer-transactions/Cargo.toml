@@ -4,6 +4,13 @@ version = "0.1.1"
 edition = "2021"
 
 [dependencies]
+sqlx = { version = "0.8.2", features = [
+  "postgres",
+  "runtime-tokio-native-tls",
+  "macros",
+  "chrono",
+  "bigdecimal",
+] }
 tikv-jemallocator = "0.6.0"
 tokio = { version = "1.40.0", features = ["full"] }
 serde = { version = "1.0.210", features = ["derive"] }
@@ -12,13 +19,6 @@ futures = "0.3"
 futures-util = "0.3.30"
 envy = "0.4.2"
 chrono = { version = "0.4.38", features = ["serde"] }
-sqlx = { version = "0.8.2", features = [
-    "postgres",
-    "runtime-tokio-native-tls",
-    "macros",
-    "chrono",
-    "bigdecimal",
-] }
 anyhow = "1.0.93"
 starknet = "0.12.0"
 async-trait = "0.1.83"
@@ -33,53 +33,70 @@ config = "0.14.0"
 clap = { version = "4.5.18", features = ["derive"] }
 hex = "0.4.3"
 
+arkproject.workspace = true
+
 [package.metadata.deb]
+assets = [
+  [
+    "target/release/ark-indexer-transactions",
+    "usr/bin/",
+    "755",
+  ],
+  [
+    "debian/ark-indexer-transactions@.service",
+    "/lib/systemd/system/ark-indexer-transactions@.service",
+    "644",
+  ],
+]
 maintainer = "Mehdi AISSANI <mehdi@screenshot.co>"
 copyright = "2024, Mehdi AISSANI <mehdi@screenshot.co>"
-extended-description = """ScreenshotLabs price engine API"""
+extended-description = """ScreenshotLabs Ark indexer transactions"""
 depends = "$auto, systemd"
 section = "admin"
 priority = "optional"
-assets = [
-    [
-        "target/release/ark-indexer-transactions",
-        "usr/bin/",
-        "755",
-    ],
-    [
-        "debian/ark-indexer-transactions@.service",
-        "/lib/systemd/system/ark-indexer-transactions@.service",
-        "644",
-    ],
-]
 maintainer-scripts = "debian/scripts"
 
 [package.metadata.deb.variants.production]
 assets = [
-    [
-        "target/release/ark-indexer-transactions",
-        "usr/bin/ark-indexer-transactions-production",
-        "755",
-    ],
-    [
-        "debian/ark-indexer-transactions-production.service",
-        "/lib/systemd/system/ark-indexer-transactions-production.service",
-        "644",
-    ],
+  [
+    "target/release/ark-indexer-transactions",
+    "usr/bin/ark-indexer-transactions-production",
+    "755",
+  ],
+  [
+    "debian/ark-indexer-transactions-production.service",
+    "/lib/systemd/system/ark-indexer-transactions-production.service",
+    "644",
+  ],
 ]
 maintainer-scripts = "debian/scripts/production"
 
 [package.metadata.deb.variants.staging]
 assets = [
-    [
-        "target/release/ark-indexer-transactions",
-        "usr/bin/ark-indexer-transactions-staging",
-        "755",
-    ],
-    [
-        "debian/ark-indexer-transactions-staging.service",
-        "/lib/systemd/system/ark-indexer-transactions-staging.service",
-        "644",
-    ],
+  [
+    "target/release/ark-indexer-transactions",
+    "usr/bin/ark-indexer-transactions-staging",
+    "755",
+  ],
+  [
+    "debian/ark-indexer-transactions-staging.service",
+    "/lib/systemd/system/ark-indexer-transactions-staging.service",
+    "644",
+  ],
 ]
 maintainer-scripts = "debian/scripts/staging"
+
+[package.metadata.deb.variants.dev]
+assets = [
+  [
+    "target/release/ark-indexer-transactions",
+    "usr/bin/ark-indexer-transactions-dev",
+    "755",
+  ],
+  [
+    "debian/ark-indexer-transactions-dev.service",
+    "/lib/systemd/system/ark-indexer-transactions-dev.service",
+    "644",
+  ],
+]
+maintainer-scripts = "debian/scripts/dev"

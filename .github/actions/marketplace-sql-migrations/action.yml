@@ -7,6 +7,9 @@ inputs:
   database-url:
     description: "Database URL for running migrations"
     required: true
+  database-name:
+    description: "Database name for notifications"
+    required: true
 
 runs:
   using: "composite"
@@ -16,7 +19,7 @@ runs:
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"🗃️ Running SQL migrations `/migrations/marketplace` on Mainnet database...\"}" \
+            -d "{\"content\": \"🗃️ Running SQL migrations `/migrations/marketplace` on ${{ inputs.database-name }} database...\"}" \
             ${{ inputs.discord-webhook-url }}
 
     - name: Install Dependencies
@@ -53,7 +56,7 @@ runs:
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"✅ SQL migrations `/migrations/marketplace` on Mainnet database were successful.\"}" \
+            -d "{\"content\": \"✅ SQL migrations `/migrations/marketplace` on ${{ inputs.database-name }} database were successful.\"}" \
             ${{ inputs.discord-webhook-url }}
 
     - name: Notify failure of migrations
@@ -62,5 +65,5 @@ runs:
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"❌ SQL migrations `/migrations/marketplace` on Mainnet database failed.\"}" \
+            -d "{\"content\": \"❌ SQL migrations `/migrations/marketplace` on ${{ inputs.database-name }} database failed.\"}" \
             ${{ inputs.discord-webhook-url }}

@@ -1,10 +1,10 @@
-name: MKT SQL Migrations (Scaleway)
+name: MKT SQL Migrations Dev (Scaleway)
 
 on:
   workflow_dispatch:
 
 jobs:
-  run-migrations:
+  run-migrations-staging:
     runs-on: ubuntu-latest
     name: Run SQL Migrations
     steps:
@@ -15,5 +15,5 @@ jobs:
         uses: ./.github/actions/marketplace-sql-migrations
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          database-url: ${{ secrets.DATABASE_URL }}
-          database-name: production
+          database-url: ${{ secrets.DATABASE_URL_DEV }}
+          database-name: dev
