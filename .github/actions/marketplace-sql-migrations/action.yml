@@ -27,11 +27,18 @@ runs:
       run: |
         sudo apt-get update
         sudo apt-get install -y jq unzip curl
-        # Install AWS CLI v2
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
-        rm awscliv2.zip
+        # Install/Update AWS CLI v2
+        if [ -d "/usr/local/aws-cli/v2/current" ]; then
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install --update
+          rm awscliv2.zip
+        else
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          rm awscliv2.zip
+        fi
         # Install sqlx-cli
         cargo install sqlx-cli --no-default-features --features rustls,postgres
 
