@@ -19,25 +19,31 @@ runs:
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"🗃️ Running SQL migrations `/migrations/marketplace` on ${{ inputs.database-name }} database...\"}" \
+            -d "{\"content\": \"🗃️ Running SQL migrations from './ark-sqlx/migrations/marketplace' on ${{ inputs.database-name }} database...\"}" \
             ${{ inputs.discord-webhook-url }}
 
-    - name: Install Dependencies
+- name: Install Dependencies
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y awscli jq
+        sudo apt-get install -y jq unzip curl
+        # Install AWS CLI v2
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        sudo ./aws/install
+        rm awscliv2.zip
+        # Install sqlx-cli
         cargo install sqlx-cli --no-default-features --features rustls,postgres
-
     - name: Check Migration Files
       shell: bash
       run: |
-        if [ ! -d "./ark-sqlx/migrations/marketplace" ]; then
-          echo "Migration directory does not exist"
+        MIGRATION_PATH="./ark-sqlx/migrations/marketplace"
+        if [ ! -d "$MIGRATION_PATH" ]; then
+          echo "Migration directory does not exist at $MIGRATION_PATH"
           exit 1
         fi
-        if [ -z "$(ls -A ./ark-sqlx/migrations/marketplace)" ]; then
-          echo "No migration files found"
+        if [ -z "$(ls -A $MIGRATION_PATH)" ]; then
+          echo "No migration files found in $MIGRATION_PATH"
           exit 1
         fi
 
@@ -56,7 +62,7 @@ runs:
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"✅ SQL migrations `/migrations/marketplace` on ${{ inputs.database-name }} database were successful.\"}" \
+            -d "{\"content\": \"✅ SQL migrations from './ark-sqlx/migrations/marketplace' on ${{ inputs.database-name }} database were successful.\"}" \
             ${{ inputs.discord-webhook-url }}
 
     - name: Notify failure of migrations
@@ -65,5 +71,5 @@ runs:
       run: |
         curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{\"content\": \"❌ SQL migrations `/migrations/marketplace` on ${{ inputs.database-name }} database failed.\"}" \
+            -d "{\"content\": \"❌ SQL migrations from './ark-sqlx/migrations/marketplace' on ${{ inputs.database-name }} database failed.\"}" \
             ${{ inputs.discord-webhook-url }}
