@@ -22,7 +22,7 @@ runs:
             -d "{\"content\": \"🗃️ Running SQL migrations from './ark-sqlx/migrations/marketplace' on ${{ inputs.database-name }} database...\"}" \
             ${{ inputs.discord-webhook-url }}
 
-- name: Install Dependencies
+    - name: Install Dependencies
       shell: bash
       run: |
         sudo apt-get update
@@ -34,6 +34,7 @@ runs:
         rm awscliv2.zip
         # Install sqlx-cli
         cargo install sqlx-cli --no-default-features --features rustls,postgres
+
     - name: Check Migration Files
       shell: bash
       run: |
