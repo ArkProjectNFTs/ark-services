@@ -1,0 +1,125 @@
+name: MKT Metadata Indexer (Dev) (Testnet) (Scaleway)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+    paths:
+      - ".github/workflows/marketplace-metadata-indexer-dev.yml"
+      - "infrastructure/cdk-ark-metadata-marketplace/**"
+      - "ark-metadata-marketplace/**"
+
+jobs:
+  discord-notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Send notification to dev-updates channel
+        uses: ./.github/actions/discord-notification
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          message: "🚀 Deploying Metadata Marketplace Indexer on Dev environment..."
+
+  package-marketplace-metadata:
+    runs-on: ubuntu-latest
+    container: screenshotlabs/rust-ci-cd-toolchain:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Store Package Vars
+        id: package-name
+        run: |
+          echo "PACKAGE_NAME=$(cargo get --entry ark-metadata-marketplace package.name)" >> package_name
+          echo "PACKAGE_VERSION=$(cargo get --entry ark-metadata-marketplace package.version)" >> package_version
+
+      - name: Create debian service
+        run: |
+          git config --global --add safe.directory /__w/ark-services/ark-services
+          echo "GIT_HASH=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          cargo deb -p ark-metadata-marketplace --variant=dev
+
+      - name: Upload package to artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-artifact
+          path: |
+            target/debian/*_amd64.deb
+            package_name
+            package_version
+
+  deploy-to-scaleway:
+    runs-on: ubuntu-latest
+    needs: [package-marketplace-metadata]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download package from artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: package-artifact
+
+      - name: Extract variables from artifact
+        id: deployment-extracted-vars
+        run: |
+          echo "PACKAGE_NAME=$(cat package_name)" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_VERSION=$(cat package_version)" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_DEBIAN_FILE=$(find . -regex ".*.deb")" >> "$GITHUB_OUTPUT"
+          echo "PACKAGE_DEBIAN_FILE_OUTPUT=$(find target/debian/ -type f -regex ".*.deb" -printf "%f")" >> "$GITHUB_OUTPUT"
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SCALEWAY_BARE_METAL_SECRET_KEY }}
+
+      - name: Apply Marketplace SQL Migrations
+        uses: ./.github/actions/marketplace-sql-migrations
+        with:
+          discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          database-url: ${{ secrets.DATABASE_URL_DEV }}
+          database-name: dev
+
+      - name: Copy debian package to scaleway
+        run: |
+          scp -o StrictHostKeyChecking=no ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE}} github@${{ secrets.SCALEWAY_BARE_METAL_IP }}:~/
+
+      - name: Deploy to Scaleway
+        run: |
+          ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_BARE_METAL_IP }} "
+            sudo dpkg -i ${{steps.deployment-extracted-vars.outputs.PACKAGE_DEBIAN_FILE_OUTPUT}} &&
+            sudo chown -R github:github /etc/ark-project &&
+            sudo service ark-metadata-marketplace-dev restart &&
+            sleep 10
+          "
+
+      - name: Verify Deployment
+        run: |
+          ssh -o StrictHostKeyChecking=no github@${{ secrets.SCALEWAY_BARE_METAL_IP }} << EOF
+            sudo service ark-metadata-marketplace-dev status
+          EOF
+
+      - name: Send success notification to dev-updates channel
+        if: success()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "✅ Successfully deployed Marketplace metadata to Dev environment."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+      - name: Send failure notification to dev-updates channel
+        if: failure()
+        run: |
+          curl -H "Content-Type: application/json" \
+              -X POST \
+              -d '{
+                  "content": "❌ Failed to deploy Marketplace metadata to Dev environment. Check the logs [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+              }' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
