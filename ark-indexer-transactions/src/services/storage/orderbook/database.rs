@@ -292,33 +292,35 @@ impl DatabaseStorage {
         order_placed: &OrderPlaced,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
-        INSERT INTO orders (
-            order_hash, created_at, route_type, order_type,
-            currency_address, currency_chain_id, offerer, 
-            token_chain_id, token_address, token_id, 
-            quantity, start_amount, end_amount,
-            start_date, end_date,
-            broker_id,
-            cancelled_order_hash,
-            updated_at,
-            status
-        ) VALUES (
-            $1, $2, $3, $4,
-            $5, $6, $7,
-            $8, $9, $10,
-            $11, $12, $13,
-            $14, $15,
-            $16,
-            $17,
-            $18, 
-            $19
-        )
+            INSERT INTO orders (
+                order_hash, created_at, route_type, order_type,
+                currency_address, currency_chain_id, offerer, 
+                token_chain_id, token_address, token_id, token_id_hex,
+                quantity, start_amount, end_amount,
+                start_date, end_date,
+                broker_id,
+                cancelled_order_hash,
+                updated_at,
+                status
+            ) VALUES (
+                $1, $2, $3, $4,
+                $5, $6, $7,
+                $8, $9, $10,
+                $11, $12, $13,
+                $14, $15,
+                $16,
+                $17,
+                $18, 
+                $19
+            )
         "#;
 
         let order_hash = match order_placed {
             OrderPlaced::V1(order_placed) => {
                 let order_hash = order_placed.order_hash.to_fixed_hex_string();
                 let order = &order_placed.order;
+
+                let token_id_hex = order.token_id.map(|value| u256_to_hex(&value));
 
                 let token_id = order
                     .token_id
@@ -341,6 +343,7 @@ impl DatabaseStorage {
                     .bind(order.token_chain_id.to_fixed_hex_string())
                     .bind(order.token_address.0.to_fixed_hex_string())
                     .bind(token_id)
+                    .bind(token_id_hex)
                     .bind(u256_to_hex(&order.quantity))
                     .bind(u256_to_hex(&order.start_amount))
                     .bind(u256_to_hex(&order.end_amount))
@@ -355,6 +358,7 @@ impl DatabaseStorage {
                 order_hash
             }
         };
+
         self.insert_orderbook_transaction_info(
             orderbook_transaction_info,
             order_hash,
@@ -366,6 +370,7 @@ impl DatabaseStorage {
             None,
         )
         .await?;
+
         Ok(())
     }
 
