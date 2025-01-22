@@ -1,4 +1,4 @@
-name: MKT NFT Indexer (Production) (Mainnet) (AWS)
+name: MKT NFT Indexer (Production) (Mainnet) (Scaleway)
 
 on:
   workflow_dispatch:

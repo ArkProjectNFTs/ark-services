@@ -1,4 +1,4 @@
-name: MKT Metadata Indexer (Production) (Mainnet) (AWS)
+name: MKT Metadata Indexer (Production) (Mainnet) (Scaleway)
 
 on:
   workflow_dispatch:
