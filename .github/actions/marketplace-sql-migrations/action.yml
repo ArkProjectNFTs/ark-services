@@ -20,16 +20,6 @@ runs:
           -X POST \
           -d "{\"content\": \"🗃️ Running SQL migrations from './ark-sqlx/migrations/marketplace' on ${{ inputs.database-name }} database...\"}" \
           ${{ inputs.discord-webhook-url }}
-    - name: Install Dependencies
-      shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq unzip curl
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
-        sudo ./aws/install
-        rm awscliv2.zip
-        cargo install sqlx-cli --no-default-features --features rustls,postgres
     - name: Check Migration Files
       shell: bash
       run: |
