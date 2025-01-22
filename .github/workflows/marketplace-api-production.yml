@@ -83,6 +83,7 @@ jobs:
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           database-url: ${{ secrets.DATABASE_URL }}
+          database-name: production
 
       - name: Deploy to Scaleway
         run: |

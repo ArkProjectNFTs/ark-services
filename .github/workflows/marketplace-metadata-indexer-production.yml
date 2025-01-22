@@ -74,6 +74,7 @@ jobs:
         with:
           discord-webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
           database-url: ${{ secrets.DATABASE_URL }}
+          database-name: production
 
       - name: Ensure deployment directory exists
         run: ssh -o StrictHostKeyChecking=no github@${{ vars.STARKNET_NODE_MAINNET_SERVER_IP }} "mkdir -p /opt/marketplace-metadata-indexer"
