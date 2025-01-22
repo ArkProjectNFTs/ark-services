@@ -13,7 +13,6 @@ members = [
   "ark-metadata-marketplace",
   "ark-sqlx",
   "ark-indexer-marketplace",
-  "ark-marketplace-api",
   "ark-marketplace-cron",
   "ark-price-engine",
   "starknet-sequencer-adapter",
