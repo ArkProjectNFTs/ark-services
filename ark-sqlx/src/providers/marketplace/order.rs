@@ -1776,12 +1776,10 @@ impl OrderProvider {
 
         // manage currency
         if !currency_chain_id.is_empty() && !currency_address.is_empty() {
-            // Checking if currency mapping exists in the `currency_mapping` table
-            let currency_mapping_exists =
-                Self::check_currency_mapping_exists(client, &currency_chain_id, &currency_address)
-                    .await?;
+            let is_currency_registered =
+                Self::currency_exists(client, &currency_chain_id, &currency_address).await?;
 
-            if !currency_mapping_exists {
+            if !is_currency_registered {
                 // Call method to interact with the contract address
                 let tst_token_address = Felt::from_str(&currency_address).map_err(|_| {
                     ProviderError::ParsingError("Invalid currency address".to_string())
@@ -1793,14 +1791,26 @@ impl OrderProvider {
 
                 let symbol = provider.retrieve_symbol(tst_token_address).await?;
                 sqlx::query(
-                    "INSERT INTO currency_mapping (currency_address, chain_id, symbol, decimals) VALUES ($1, $2, $3, $4)"
+                    r#"
+                        INSERT INTO currency (
+                            contract_address,
+                            chain_id,
+                            symbol,
+                            decimals,
+                            price_in_usd,
+                            price_in_eth
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                    "#,
                 )
-                    .bind(&currency_address)
-                    .bind(&currency_chain_id)
-                    .bind(&symbol)
-                    .bind(decimals)
-                    .execute(&client.pool)
-                    .await?;
+                .bind(&currency_address)
+                .bind(&currency_chain_id)
+                .bind(&symbol)
+                .bind(decimals)
+                .bind(0) // TODO: get price in usd and eth <!>
+                .bind(0) // TODO: get price in usd and eth <!>
+                .execute(&client.pool)
+                .await?;
             }
         }
 
@@ -1968,22 +1978,26 @@ impl OrderProvider {
         Ok(())
     }
 
-    /// This function checks if a currency mapping exists in the database
-    pub async fn check_currency_mapping_exists(
+    /// This function checks if a currency exists in the database
+    pub async fn currency_exists(
         client: &SqlxCtxPg,
         currency_chain_id: &str,
         currency_address: &str,
     ) -> Result<bool, ProviderError> {
         let query = "
-            SELECT COUNT(*) FROM currency_mapping WHERE chain_id = $1 AND currency_address = $2
+            SELECT EXISTS (
+                SELECT 1 
+                FROM currency 
+                WHERE chain_id = $1 
+                AND contract_address = $2
+            )
         ";
-        let count: i64 = sqlx::query_scalar(query)
+        Ok(sqlx::query_scalar(query)
             .bind(currency_chain_id)
             .bind(currency_address)
             .fetch_one(&client.pool)
-            .await?;
-
-        Ok(count > 0)
+            .await
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?)
     }
 
     pub async fn register_executed(
