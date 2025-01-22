@@ -81,16 +81,16 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         COALESCE(
                             ROUND(
                                 SUM(
-                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(c.decimals, 18)::NUMERIC)
                                 )::NUMERIC,
                                 2
                             ),
                             0
                         )
                      FROM token_event
-                     LEFT JOIN currency_mapping cm
-                        ON token_event.contract_address = cm.currency_address
-                        AND token_event.chain_id = cm.chain_id
+                     LEFT JOIN currency c
+                        ON token_event.contract_address = c.currency_address
+                        AND token_event.chain_id = c.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Executed'
@@ -119,16 +119,16 @@ pub async fn update_collections_market_data(pool: &PgPool) {
                         COALESCE(
                             ROUND(
                                 SUM(
-                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(cm.decimals, 18)::NUMERIC)
+                                    hex_to_decimal(amount) / POWER(10::NUMERIC, COALESCE(c.decimals, 18)::NUMERIC)
                                 )::NUMERIC,
                                 2
                             ),
                             0
                         )
                      FROM token_event
-                     LEFT JOIN currency_mapping cm
-                        ON token_event.contract_address = cm.currency_address
-                        AND token_event.chain_id = cm.chain_id
+                     LEFT JOIN currency c
+                        ON token_event.contract_address = c.currency_address
+                        AND token_event.chain_id = c.chain_id
                      WHERE token_event.contract_address = contract.contract_address
                      AND token_event.chain_id = contract.chain_id
                      AND token_event.event_type = 'Executed'
