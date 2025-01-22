@@ -6,7 +6,7 @@ use sqlx::types::BigDecimal;
 use sqlx::FromRow;
 use sqlx::Row;
 
-use crate::models::serialize_option_bigdecimal;
+use crate::models::{deserialize_option_bigdecimal, serialize_option_bigdecimal};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct OfferData {
@@ -65,7 +65,10 @@ impl<'r> FromRow<'r, sqlx::postgres::PgRow> for OfferData {
 pub struct OfferApiData {
     pub offer_id: i32,
     #[schema(value_type = String, example = "12345.6789")]
-    #[serde(serialize_with = "serialize_option_bigdecimal")]
+    #[serde(
+        serialize_with = "serialize_option_bigdecimal",
+        deserialize_with = "deserialize_option_bigdecimal"
+    )]
     pub price: Option<BigDecimal>,
     pub currency_address: String,
     pub expire_at: i64,
@@ -74,7 +77,10 @@ pub struct OfferApiData {
     pub to_address: Option<String>,
     pub from_address: Option<String>,
     #[schema(value_type = String, example = "12345.6789")]
-    #[serde(serialize_with = "serialize_option_bigdecimal")]
+    #[serde(
+        serialize_with = "serialize_option_bigdecimal",
+        deserialize_with = "deserialize_option_bigdecimal"
+    )]
     pub floor_difference: Option<BigDecimal>,
     pub collection_address: String,
     pub collection_name: Option<String>,
@@ -98,6 +104,9 @@ pub struct OfferApiData {
 #[derive(Serialize, Deserialize, Clone, FromRow, utoipa::ToSchema)]
 pub struct StatsData {
     #[schema(value_type = String, example = "12345.6789")]
-    #[serde(serialize_with = "serialize_option_bigdecimal")]
+    #[serde(
+        serialize_with = "serialize_option_bigdecimal",
+        deserialize_with = "deserialize_option_bigdecimal"
+    )]
     pub total_value: Option<BigDecimal>,
 }
