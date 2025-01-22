@@ -13,6 +13,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Install sqlx-cli
+      shell: bash
+      run: cargo install sqlx-cli --no-default-features --features native-tls,postgres
     - name: Notify start of migrations
       shell: bash
       run: |
