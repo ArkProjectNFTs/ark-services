@@ -1992,12 +1992,12 @@ impl OrderProvider {
                 AND contract_address = $2
             )
         ";
-        Ok(sqlx::query_scalar(query)
+        sqlx::query_scalar(query)
             .bind(currency_chain_id)
             .bind(currency_address)
             .fetch_one(&client.pool)
             .await
-            .map_err(|e| ProviderError::DatabaseError(e.to_string()))?)
+            .map_err(|e| ProviderError::DatabaseError(e.to_string()))
     }
 
     pub async fn register_executed(
