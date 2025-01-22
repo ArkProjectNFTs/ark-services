@@ -3,7 +3,7 @@
 # Dont start the script if DBS are not set 
 if [[ -n "${MARKETPLACE_DATABASE_URL}" ]]; then
   marketplace_db=$MARKETPLACE_DATABASE_URL
-  folders=("ark-marketplace-api" "ark-marketplace-cron" "ark-indexer-transactions")
+  folders=("ark-marketplace-cron" "ark-indexer-transactions")
   rm -rf .sqlx/*
   for folder in "${folders[@]}"
   do
