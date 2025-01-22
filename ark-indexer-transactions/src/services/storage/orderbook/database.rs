@@ -1,6 +1,9 @@
 use arkproject::orderbook::{
     self,
-    events::{common::u256_to_hex, OrderCancelled, OrderExecuted, OrderFulfilled, OrderPlaced},
+    events::{
+        common::{u256_to_biguint, u256_to_hex},
+        OrderCancelled, OrderExecuted, OrderFulfilled, OrderPlaced,
+    },
     OrderType, RouteType,
 };
 use sqlx::{encode::IsNull, postgres::PgArgumentBuffer, Encode, Postgres};
@@ -316,7 +319,11 @@ impl DatabaseStorage {
             OrderPlaced::V1(order_placed) => {
                 let order_hash = order_placed.order_hash.to_fixed_hex_string();
                 let order = &order_placed.order;
-                let token_id = order.token_id.map(|value| u256_to_hex(&value));
+
+                let token_id = order
+                    .token_id
+                    .map(|value| u256_to_biguint(&value).to_string());
+
                 let cancelled_order_hash = order_placed
                     .cancelled_order_hash
                     .map(|value| value.to_fixed_hex_string());
