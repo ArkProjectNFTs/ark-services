@@ -1,34 +1,34 @@
 import { Suspense } from "react";
-import type { NextPage } from "next";
 
-import BlocksOverview from "~/components/dashboard/BlockOverview";
-import BlocksOverviewSkeleton from "~/components/dashboard/BlockOverviewSkeleton";
-import CreateIndexerTaskForm from "~/components/dashboard/CreateIndexerTaskForm";
-import IndexerBlocksList from "~/components/dashboard/IndexerBlocksList";
-import IndexerTasksList from "~/components/dashboard/IndexerTasksList";
-import { TaskFormProvider } from "~/components/dashboard/TaskFormProvider";
+import CollectionSearch from "~/components/CollectionSearch";
+import ContractGridItem from "~/components/dashboard/ContractGridItem";
+import { api } from "~/trpc/server";
+import SearchContracts from "../../components/SearchContracts";
 
-const DashboardPage: NextPage = () => {
+export default async function DashboardPage({
+  params,
+}: {
+  params: { search: string };
+}) {
+  const contracts = await api.contract.getContracts.query();
+
   return (
-    <TaskFormProvider>
-      <div className="flex space-x-12">
-        <div className="flex-1 p-6">
-          <Suspense fallback={<BlocksOverviewSkeleton />}>
-            <BlocksOverview />
-          </Suspense>
-          <Suspense fallback={null}>
-            <IndexerTasksList />
-          </Suspense>
-          <Suspense fallback={null}>
-            <IndexerBlocksList />
-          </Suspense>
-        </div>
-        <div className="sticky top-0 h-screen border-l p-6">
-          <CreateIndexerTaskForm />
-        </div>
+    <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mb-8 flex flex-col gap-2">
+        <h1 className="text-3xl font-bold">Contracts</h1>
+        <p className="text-muted-foreground">
+          Explore the contracts that match your search query.
+        </p>
+        <CollectionSearch />
       </div>
-    </TaskFormProvider>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        {contracts.map((contract) => (
+          <ContractGridItem
+            key={contract.contract_address}
+            contract={contract}
+          />
+        ))}
+      </div>
+    </div>
   );
-};
-
-export default DashboardPage;
+}
