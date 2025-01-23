@@ -4,11 +4,8 @@ mod tasks;
 use anyhow::Result;
 use aws_config::BehaviorVersion;
 use clap::{App, Arg};
-use redis::aio::MultiplexedConnection;
-use redis::Client;
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
-use std::error::Error;
 use tasks::collections::{
     empty_floor_price, insert_floor_price, update_collections_market_data,
     update_top_bid_collections,
@@ -25,19 +22,6 @@ struct DatabaseCredentials {
     dbname: String,
     port: u16,
     host: String,
-}
-
-async fn connect_redis() -> Result<MultiplexedConnection, Box<dyn Error>> {
-    let redis_url = std::env::var("REDIS_URL").expect("REDIS_URL not set");
-    let redis_username = std::env::var("REDIS_USERNAME").expect("REDIS_USERNAME not set");
-    let redis_password = std::env::var("REDIS_PASSWORD").expect("REDIS_PASSWORD not set");
-
-    let client = Client::open(format!(
-        "redis://{}:{}@{}",
-        redis_username, redis_password, redis_url
-    ))?;
-    let connection = client.get_multiplexed_tokio_connection().await?;
-    Ok(connection)
 }
 
 #[tokio::main]
@@ -62,32 +46,14 @@ async fn main() -> std::io::Result<()> {
                 .default_value("task_set1")
                 .help("Sets the task set to run"),
         )
-        .arg(
-            Arg::with_name("disable-cache")
-                .short('d')
-                .long("disable-cache")
-                .default_value("false")
-                .takes_value(true)
-                .help("Disables the cache if set to true"),
-        )
         .get_matches();
 
     let task_set = matches.value_of("task").unwrap_or("");
-    // let should_cache_pages = !matches.is_present("disable-cache");
 
     match task_set {
-        "task_set1" => match connect_redis().await {
-            Ok(_) => {
-                update_currency_prices(&db_pool).await;
-                /* update_listed_tokens(&db_pool, &mut con).await;
-                update_top_bid_tokens(&db_pool, &mut con).await;
-                if should_cache_pages {
-                    let _ = cache_collection_pages(&db_pool, &mut con).await;
-                }
-                update_contract_marketdata(&db_pool).await; */
-            }
-            Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
-        },
+        "task_set1" => {
+            update_currency_prices(&db_pool).await;
+        }
         "task_set2" => {
             update_top_bid_collections(&db_pool).await;
             update_collections_market_data(&db_pool).await;
