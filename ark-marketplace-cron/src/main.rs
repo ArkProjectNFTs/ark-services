@@ -6,18 +6,17 @@ use aws_config::BehaviorVersion;
 use clap::{App, Arg};
 use redis::aio::MultiplexedConnection;
 use redis::Client;
-use tasks::collections::{
-    empty_floor_price, insert_floor_price, update_collections_market_data,
-    update_contract_marketdata, update_top_bid_collections,
-};
-use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
-use tracing::info;
-use tracing_subscriber::fmt;
-use tracing_subscriber::EnvFilter;
-
 use serde::Deserialize;
 use sqlx::postgres::PgPoolOptions;
 use std::error::Error;
+use tasks::collections::{
+    empty_floor_price, insert_floor_price, update_collections_market_data,
+    update_top_bid_collections,
+};
+use tasks::currency::update_currency_prices;
+use tracing::info;
+use tracing_subscriber::fmt;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Deserialize)]
 struct DatabaseCredentials {
@@ -74,17 +73,18 @@ async fn main() -> std::io::Result<()> {
         .get_matches();
 
     let task_set = matches.value_of("task").unwrap_or("");
-    let should_cache_pages = !matches.is_present("disable-cache");
+    // let should_cache_pages = !matches.is_present("disable-cache");
 
     match task_set {
         "task_set1" => match connect_redis().await {
-            Ok(mut con) => {
-                update_listed_tokens(&db_pool, &mut con).await;
+            Ok(_) => {
+                update_currency_prices(&db_pool).await;
+                /* update_listed_tokens(&db_pool, &mut con).await;
                 update_top_bid_tokens(&db_pool, &mut con).await;
                 if should_cache_pages {
                     let _ = cache_collection_pages(&db_pool, &mut con).await;
                 }
-                update_contract_marketdata(&db_pool).await;
+                update_contract_marketdata(&db_pool).await; */
             }
             Err(e) => tracing::error!("Failed to connect to Redis: {}", e),
         },
@@ -107,7 +107,7 @@ async fn main() -> std::io::Result<()> {
 }
 
 fn init_logging() {
-    const DEFAULT_LOG_FILTER: &str = "trace";
+    const DEFAULT_LOG_FILTER: &str = "info";
     tracing::subscriber::set_global_default(
         fmt::Subscriber::builder()
             .with_env_filter(
