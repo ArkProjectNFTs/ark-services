@@ -1,0 +1,2 @@
+ALTER TABLE currency
+ADD COLUMN price_updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();

@@ -37,7 +37,7 @@ async fn update_currency_price(pool: &PgPool, currency: &Currency) -> Result<()>
     );
 
     sqlx::query(
-        "UPDATE currency SET price_in_usd = $1, price_in_eth = $2 WHERE contract_address = $3",
+        "UPDATE currency SET price_in_usd = $1, price_in_eth = $2, price_updated_at = NOW() WHERE contract_address = $3",
     )
     .bind(price_info.price_in_usd)
     .bind(price_info.price_in_eth)
