@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
     paths:
       - ".github/workflows/marketplace-cron-staging.yml"
       - "ark-marketplace-cron/**"
