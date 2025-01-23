@@ -1,3 +1,14 @@
+use super::{
+    constants::{
+        sql_cancelled_reason_type, sql_order_event_type, sql_order_status, sql_order_type,
+        sql_route_type,
+    },
+    OrderbookStorage,
+};
+use crate::{
+    interfaces::orderbook::OrderbookTransactionInfo,
+    services::storage::{database::DatabaseStorage, models::Currency},
+};
 use arkproject::orderbook::{
     self,
     events::{
@@ -7,19 +18,8 @@ use arkproject::orderbook::{
     OrderType, RouteType,
 };
 use sqlx::{encode::IsNull, postgres::PgArgumentBuffer, Encode, Postgres};
+use starknet::core::types::U256;
 use starknet_crypto::Felt;
-
-use crate::{
-    interfaces::orderbook::OrderbookTransactionInfo, services::storage::database::DatabaseStorage,
-};
-
-use super::{
-    constants::{
-        sql_cancelled_reason_type, sql_order_event_type, sql_order_status, sql_order_type,
-        sql_route_type,
-    },
-    OrderbookStorage,
-};
 
 enum OrderEventType {
     Placed,
@@ -286,6 +286,32 @@ impl DatabaseStorage {
         Ok(())
     }
 
+    async fn get_currency_by_contract_address(
+        &self,
+        contract_address: &str,
+    ) -> Result<Option<Currency>, Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            SELECT 
+                contract_address,
+                chain_id,
+                name,
+                symbol,
+                decimals,
+                price_in_usd,
+                price_in_eth,
+                price_updated_at
+            FROM currency 
+            WHERE contract_address = $1
+        "#;
+
+        let currency = sqlx::query_as::<_, Currency>(query)
+            .bind(contract_address)
+            .fetch_optional(self.pool())
+            .await?;
+
+        Ok(currency)
+    }
+
     async fn handle_order_placed(
         &self,
         orderbook_transaction_info: &OrderbookTransactionInfo,
@@ -301,7 +327,8 @@ impl DatabaseStorage {
                 broker_id,
                 cancelled_order_hash,
                 updated_at,
-                status
+                status,
+                start_amount_eth
             ) VALUES (
                 $1, $2, $3, $4,
                 $5, $6, $7,
@@ -311,7 +338,8 @@ impl DatabaseStorage {
                 $16,
                 $17,
                 $18, 
-                $19
+                $19,
+                $20
             )
         "#;
 
@@ -332,12 +360,32 @@ impl DatabaseStorage {
                 let route_type = RouteTypeWrapper(RouteType::from(&order.route));
                 let order_type = OrderTypeWrapper(OrderType::from(&order_placed.order_type));
 
+                let currency_contract_address = &order.currency_address.0.to_fixed_hex_string();
+
+                let start_amount_eth = if let Ok(Some(currency)) = self
+                    .get_currency_by_contract_address(currency_contract_address)
+                    .await
+                {
+                    let currency_price_in_eth_wei_value: U256 =
+                        U256::from((currency.price_in_eth * 1_000_000_000_000_000_000_f64) as u128);
+
+                    let start_amount_u256 = starknet::core::types::U256::from_words(
+                        order.start_amount.low,
+                        order.start_amount.high,
+                    );
+
+                    let value = start_amount_u256 * currency_price_in_eth_wei_value;
+                    value
+                } else {
+                    U256::from_words(0, 0)
+                };
+
                 sqlx::query(query)
                     .bind(order_hash.clone())
                     .bind(orderbook_transaction_info.timestamp as i64)
                     .bind(route_type)
                     .bind(order_type)
-                    .bind(order.currency_address.0.to_fixed_hex_string())
+                    .bind(currency_contract_address)
                     .bind(order.currency_chain_id.to_fixed_hex_string())
                     .bind(order.offerer.0.to_fixed_hex_string())
                     .bind(order.token_chain_id.to_fixed_hex_string())
@@ -353,6 +401,7 @@ impl DatabaseStorage {
                     .bind(cancelled_order_hash)
                     .bind(orderbook_transaction_info.timestamp as i64) // updated_at
                     .bind(OrderStatus::Open)
+                    .bind(start_amount_eth.to_string())
                     .execute(self.pool())
                     .await?;
                 order_hash
