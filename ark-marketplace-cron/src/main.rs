@@ -11,10 +11,9 @@ use sqlx::postgres::PgPoolOptions;
 use std::error::Error;
 use tasks::collections::{
     empty_floor_price, insert_floor_price, update_collections_market_data,
-    update_contract_marketdata, update_top_bid_collections,
+    update_top_bid_collections,
 };
 use tasks::currency::update_currency_prices;
-use tasks::tokens::{cache_collection_pages, update_listed_tokens, update_top_bid_tokens};
 use tracing::info;
 use tracing_subscriber::fmt;
 use tracing_subscriber::EnvFilter;
