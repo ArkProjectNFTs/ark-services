@@ -31,6 +31,11 @@ async fn update_currency_price(pool: &PgPool, currency: &Currency) -> Result<()>
     let price_info =
         crate::tasks::token_price::fetch_token_price_from_avnu(&currency.contract_address).await?;
 
+    info!(
+        "Updating currency {} with price_in_usd={}, price_in_eth={}",
+        currency.contract_address, price_info.price_in_usd, price_info.price_in_eth
+    );
+
     sqlx::query(
         "UPDATE currency SET price_in_usd = $1, price_in_eth = $2 WHERE contract_address = $3",
     )

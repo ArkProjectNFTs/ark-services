@@ -1,13 +1,15 @@
 use reqwest::Client;
 use serde::Deserialize;
 use std::env;
+use tracing::info;
 
 const DEFAULT_PRICE: f64 = 0.0;
 
 #[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct AvnuTokenPriceResponse {
+    #[serde(rename = "priceInUSD")]
     pub price_in_usd: Option<f64>,
+    #[serde(rename = "priceInETH")]
     pub price_in_eth: Option<f64>,
 }
 
@@ -43,6 +45,8 @@ pub async fn fetch_token_price_from_avnu(
             .unwrap_or_else(|_| "https://starknet.impulse.avnu.fi".to_string()),
         token_address
     );
+
+    info!("Fetching token price from Avnu API: {}", avnu_api_url);
 
     let response = client
         .get(&avnu_api_url)
