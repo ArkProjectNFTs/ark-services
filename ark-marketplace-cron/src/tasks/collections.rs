@@ -177,6 +177,7 @@ pub async fn update_collections_market_data(pool: &PgPool) {
     }
 }
 
+/*
 pub async fn update_contract_marketdata(pool: &PgPool) {
     let update_old_timestamps_query = r#"
         UPDATE contract
@@ -276,7 +277,7 @@ pub async fn update_contract_marketdata(pool: &PgPool) {
             ),
         }
     }
-}
+} */
 
 pub async fn insert_floor_price(pool: &PgPool) {
     let now = chrono::Utc::now();
