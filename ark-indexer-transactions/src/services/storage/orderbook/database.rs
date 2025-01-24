@@ -17,8 +17,8 @@ use arkproject::orderbook::{
     },
     OrderType, RouteType,
 };
+use bigdecimal::BigDecimal;
 use sqlx::{encode::IsNull, postgres::PgArgumentBuffer, Encode, Postgres};
-use starknet::core::types::U256;
 use starknet_crypto::Felt;
 
 enum OrderEventType {
@@ -294,13 +294,12 @@ impl DatabaseStorage {
             SELECT 
                 contract_address,
                 chain_id,
-                name,
                 symbol,
                 decimals,
                 price_in_usd,
                 price_in_eth,
                 price_updated_at
-            FROM currency 
+            FROM currency
             WHERE contract_address = $1
         "#;
 
@@ -339,7 +338,8 @@ impl DatabaseStorage {
                 $17,
                 $18, 
                 $19,
-                $20
+                $20,
+                $21
             )
         "#;
 
@@ -366,18 +366,23 @@ impl DatabaseStorage {
                     .get_currency_by_contract_address(currency_contract_address)
                     .await
                 {
-                    let currency_price_in_eth_wei_value: U256 =
-                        U256::from((currency.price_in_eth * 1_000_000_000_000_000_000_f64) as u128);
-
                     let start_amount_u256 = starknet::core::types::U256::from_words(
                         order.start_amount.low,
                         order.start_amount.high,
                     );
 
-                    let value = start_amount_u256 * currency_price_in_eth_wei_value;
+                    let start_amount_decimal = start_amount_u256
+                        .to_string()
+                        .parse::<BigDecimal>()
+                        .unwrap_or_else(|_| BigDecimal::from(0));
+                    let value = start_amount_decimal * currency.price_in_eth;
+
                     value
+                        .to_string()
+                        .parse::<BigDecimal>()
+                        .unwrap_or_else(|_| BigDecimal::from(0))
                 } else {
-                    U256::from_words(0, 0)
+                    BigDecimal::from(0)
                 };
 
                 sqlx::query(query)
@@ -401,7 +406,7 @@ impl DatabaseStorage {
                     .bind(cancelled_order_hash)
                     .bind(orderbook_transaction_info.timestamp as i64) // updated_at
                     .bind(OrderStatus::Open)
-                    .bind(start_amount_eth.to_string())
+                    .bind(start_amount_eth)
                     .execute(self.pool())
                     .await?;
                 order_hash
