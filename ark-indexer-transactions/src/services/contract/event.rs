@@ -700,6 +700,15 @@ where
         tx_hash: Felt,
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+
+        println!(
+            "Processing orderbook event: chain_id={}, block_hash={:#064x}, tx_hash={:#064x}, from={:#064x}",
+            chain_id,
+            block_hash,
+            tx_hash, 
+            event.from_address
+        );
+
         let emitted_event = EmittedEvent {
             from_address: event.from_address,
             keys: event.keys,

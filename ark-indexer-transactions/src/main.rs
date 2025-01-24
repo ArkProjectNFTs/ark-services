@@ -44,6 +44,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .iter()
                 .filter_map(|e| Felt::from_hex(e).ok())
                 .collect();
+
+            println!("orderbooks: {:?}", orderbooks);
+
             let mut contract_manager = ContractManager::new(storage, provider, orderbooks);
             // let chain_id = Felt::from_hex(&config.chain_id).unwrap_or(Felt::ZERO); // starknet mainnet chain ID
             loop {

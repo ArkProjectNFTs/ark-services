@@ -94,6 +94,12 @@ where
         block: BlockWrapper,
         chain_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        println!(
+            "processing block ({:?}) with {:?} txs",
+            block.block.block_hash,
+            block.block.transaction_receipts.len()
+        );
+
         for tx in block.block.transaction_receipts {
             if let Err(e) = self
                 .process_transaction(
