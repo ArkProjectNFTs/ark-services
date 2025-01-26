@@ -34,9 +34,10 @@ async fn main() {
                 "Using state file path: {}/state/state.json",
                 config.storage_dir
             );
-
+            println!("Creating HTTP client...");
             let client = Arc::new(Client::new());
             // let start_time = Instant::now();
+            println!("Initializing shared state...");
             let latest_block_number = Arc::new(Mutex::new(0u64));
             let processed_blocks = Arc::new(Mutex::new(0usize));
             let notify = Arc::new(Notify::new());
@@ -49,10 +50,12 @@ async fn main() {
             let get_block_url =
                 Arc::new(format!("{}/get_block?blockNumber=", config.sequencer_url));
             // Ensure the state, events and blocks directories exist
+            println!("Creating required directories...");
             fs::create_dir_all(format!("{}/state", config.storage_dir)).unwrap();
             fs::create_dir_all(format!("{}/events", config.storage_dir)).unwrap();
             fs::create_dir_all(format!("{}/blocks", config.storage_dir)).unwrap();
 
+            println!("Counting existing processed blocks...");
             let initial_processed_blocks = {
                 let mut count = 0;
                 for entry in fs::read_dir(format!("{}/blocks", config.storage_dir)).unwrap() {
@@ -75,14 +78,20 @@ async fn main() {
                 count
             };
 
+            println!(
+                "Found {} previously processed blocks",
+                initial_processed_blocks
+            );
             *processed_blocks.lock().await = initial_processed_blocks;
 
+            println!("Setting up communication channels...");
             let (tx, rx) = tokio::sync::mpsc::channel(100);
             let rx = Arc::new(Mutex::new(rx));
 
             let storage_dir = Arc::new(config.storage_dir.clone());
             let storage_dir_verify = Arc::clone(&storage_dir);
 
+            println!("Spawning {} monitor threads...", config.monitor_threads);
             for i in 0..config.monitor_threads {
                 let storage_dir = Arc::clone(&storage_dir);
                 let client = Arc::clone(&client);
@@ -92,6 +101,7 @@ async fn main() {
                 let get_block_url = Arc::clone(&get_block_url);
 
                 tokio::spawn(async move {
+                    println!("Monitor thread {} started", i);
                     loop {
                         let latest_block_number_value =
                             match get_latest_block_number(&get_block_url, &client).await {
@@ -116,11 +126,18 @@ async fn main() {
                             * (latest_block_number_value / config.monitor_threads as u64)
                             + from)
                             .min(latest_block_number_value);
+
                         // drop(latest_block_number);
-                        // println!("check with range {} to {}", range_start, range_end);
+                        println!(
+                            "Thread {} checking range {} to {}",
+                            i, range_start, range_end
+                        );
                         for block_number in range_start..=range_end {
                             if !is_block_saved(&storage_dir, config.blocks_per_file, block_number) {
-                                println!("send to save {}", block_number);
+                                println!(
+                                    "Thread {} sending block {} to save queue",
+                                    i, block_number
+                                );
                                 tx.send(block_number).await.unwrap();
                             }
                         }
@@ -132,6 +149,7 @@ async fn main() {
             }
 
             // Worker thread
+            println!("Starting worker thread...");
             {
                 let client = Arc::clone(&client);
                 let processed_blocks = Arc::clone(&processed_blocks);
@@ -141,6 +159,7 @@ async fn main() {
                 let get_block_url = Arc::clone(&get_block_url);
 
                 tokio::spawn(async move {
+                    println!("Worker thread started");
                     let mut last_update = Instant::now();
                     // let mut blocks_last_minute = 0;
                     let mut interval = interval(call_interval);
@@ -152,6 +171,7 @@ async fn main() {
                             rx.recv().await.unwrap()
                         };
 
+                        println!("Worker processing block {}", block_number);
                         match fetch_block(&get_block_url, &client, block_number).await {
                             Ok(block) => {
                                 if let Err(e) = save_block(
@@ -162,10 +182,11 @@ async fn main() {
                                 ) {
                                     eprintln!("Failed to save block {}: {}", block_number, e);
                                 } else {
-                                    println!("block: {} saved", block_number);
+                                    println!("Successfully saved block {}", block_number);
                                     // let latest_block_number = *latest_block_number.lock().await;
                                     let mut processed_blocks = processed_blocks.lock().await;
                                     *processed_blocks += 1;
+                                    println!("Total processed blocks: {}", *processed_blocks);
                                     // blocks_last_minute += 1;
                                     if last_update.elapsed().as_secs() >= 1 {
                                         last_update = Instant::now();
@@ -175,6 +196,7 @@ async fn main() {
                             }
                             Err(e) => {
                                 eprintln!("Failed to fetch block {}: {}", block_number, e);
+                                println!("Requeueing block {} for retry", block_number);
                                 tx.send(block_number).await.unwrap();
                                 notify.notify_one(); // Retry the block
                             }
@@ -184,9 +206,11 @@ async fn main() {
             }
 
             // Task to verify block format
+            println!("Starting block verification task...");
             {
                 let state_path = Arc::clone(&state_path);
                 tokio::spawn(async move {
+                    println!("Block verification thread started");
                     verify_blocks_task(&storage_dir_verify, state_path).await;
                 });
             }
@@ -199,6 +223,7 @@ async fn main() {
             //     });
             // }
 
+            println!("All tasks started, entering main loop");
             loop {
                 sleep(Duration::from_secs(2)).await;
             }
