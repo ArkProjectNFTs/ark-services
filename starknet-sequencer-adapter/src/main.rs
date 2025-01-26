@@ -113,14 +113,16 @@ async fn main() {
                                 }
                             };
 
-                        // println!("Latest block number: {}", latest_block_number_value);
                         *latest_block_number.lock().await = latest_block_number_value;
+                        println!("Latest block number: {}", latest_block_number_value);
+
                         let from = config.from_block;
                         let range = if from >= latest_block_number_value {
                             0
                         } else {
                             latest_block_number_value - from
                         };
+
                         let range_start = i as u64 * (range / config.monitor_threads as u64) + from;
                         let range_end = ((i + 1) as u64
                             * (latest_block_number_value / config.monitor_threads as u64)
