@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     interfaces::orderbook::OrderbookTransactionInfo,
-    services::storage::{database::DatabaseStorage, models::Currency},
+    services::storage::{database::DatabaseStorage, models::currency::Currency},
 };
 use arkproject::orderbook::{
     self,

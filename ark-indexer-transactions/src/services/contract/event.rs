@@ -1,3 +1,19 @@
+use arkproject::orderbook;
+use bigdecimal::BigDecimal;
+use starknet::{
+    core::types::{BlockId::Hash, EmittedEvent, Felt},
+    providers::{
+        Provider,
+        sequencer::models::Event,
+    },
+};
+use std::str::FromStr;
+
+use super::{
+    common::{detect_erc_action, utils::parse_u256},
+    erc1155, erc1400, erc20, erc721,
+    manager::ContractManager,
+};
 use crate::{
     helpers::common::felt_to_strk_string,
     interfaces::{
@@ -8,24 +24,8 @@ use crate::{
         event::EventType,
         orderbook::OrderbookTransactionInfo,
     },
-    services::storage::Storage,
+    services::storage::{models::token_event::TokenEvent, Storage},
 };
-use bigdecimal::BigDecimal;
-use starknet::{
-    core::types::{BlockId::Hash, EmittedEvent, Felt},
-    providers::Provider,
-};
-use std::str::FromStr;
-
-use starknet::providers::sequencer::models::Event;
-
-use super::{
-    common::{detect_erc_action, utils::parse_u256},
-    erc1155, erc1400, erc20, erc721,
-    manager::ContractManager,
-};
-
-use arkproject::orderbook;
 
 impl<S, P> ContractManager<S, P>
 where
@@ -301,7 +301,7 @@ where
                         to: felt_to_strk_string(to),
                         value: None,
                         timestamp: block_timestamp,
-                        token_id: Some(token_id),
+                        token_id: Some(token_id.clone()),
                         contract_address: felt_to_strk_string(contract_origin),
                         contract_type: ContractType::ERC721,
                         block_hash: felt_to_strk_string(block_hash),
@@ -313,7 +313,9 @@ where
                     let storage = self.storage.lock().await;
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
-                    storage.store_token_event(tx_info.clone()).await?;
+                    if let Ok(token_event) = TokenEvent::try_from(tx_info.clone()) {
+                        storage.store_token_event(token_event).await?;
+                    }
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -543,7 +545,9 @@ where
                     let storage = self.storage.lock().await;
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
-                    storage.store_token_event(tx_info.clone()).await?;
+                    if let Ok(token_event) = TokenEvent::try_from(tx_info.clone()) {
+                        storage.store_token_event(token_event).await?;
+                    }
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -664,7 +668,8 @@ where
                         .map(|tx_info| storage.store_transaction_info(tx_info));
                     let store_te_futures = tx_infos
                         .into_iter()
-                        .map(|tx_info| storage.store_token_event(tx_info));
+                        .filter_map(|tx_info| TokenEvent::try_from(tx_info).ok())
+                        .map(|token_event| storage.store_token_event(token_event));
                     // Exécution parallèle des futures
                     let (token_results, nft_results, te_results, tx_results) = tokio::join!(
                         futures::future::join_all(store_token_futures),
@@ -731,6 +736,10 @@ where
         storage
             .store_orderbook_transaction_info(orderbook_transaction_info)
             .await?;
+
+        // TODO: insert missing token_event
+        // storage.store_token_event(token_event).await?;
+
         drop(storage);
         Ok(())
     }
