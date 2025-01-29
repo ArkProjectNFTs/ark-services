@@ -1,3 +1,4 @@
+use super::models::token_event::TokenEvent;
 use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage};
 use crate::interfaces::contract::ContractType;
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
