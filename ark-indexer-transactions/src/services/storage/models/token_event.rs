@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use crate::interfaces::contract::TransactionInfo;
 
@@ -21,7 +22,7 @@ pub struct TokenEvent {
     pub token_sub_event_id: String,
 }
 
-#[derive(Debug, sqlx::Type, Deserialize, Serialize)]
+#[derive(Debug, sqlx::Type, Deserialize, Serialize, Clone, Copy, PartialEq, Eq)]
 #[sqlx(type_name = "TEXT", rename_all = "lowercase")]
 pub enum TokenEventType {
     Listing,
@@ -41,11 +42,17 @@ pub enum TokenEventType {
     OfferExpired,
 }
 
+#[derive(Debug, Error)]
+pub enum TokenEventError {
+    #[error("Token ID must be defined")]
+    MissingTokenId,
+}
+
 impl TryFrom<TransactionInfo> for TokenEvent {
-    type Error = &'static str;
+    type Error = TokenEventError;
 
     fn try_from(tx: TransactionInfo) -> Result<Self, Self::Error> {
-        let token_id = tx.token_id.ok_or("Token ID must be defined")?;
+        let token_id = tx.token_id.ok_or(TokenEventError::MissingTokenId)?;
 
         Ok(Self {
             token_event_id: format!("{}_{}", tx.tx_hash, tx.event_id),
