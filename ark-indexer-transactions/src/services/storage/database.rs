@@ -173,8 +173,8 @@ impl TransactionInfoStorage for DatabaseStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             INSERT INTO token_event (
-                token_event_id, contract_address, chain_id, token_id, event_type, block_timestamp, transaction_hash, to_address, from_address, amount, token_sub_event_id, indexed_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                token_event_id, contract_address, chain_id, token_id, event_type, block_timestamp, transaction_hash, to_address, from_address, amount, token_sub_event_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (token_event_id, token_sub_event_id) DO UPDATE
             SET chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, transaction_hash = EXCLUDED.transaction_hash
         "#;
@@ -191,7 +191,6 @@ impl TransactionInfoStorage for DatabaseStorage {
             .bind(&token_event.from_address)
             .bind(&token_event.amount)
             .bind(&token_event.token_sub_event_id)
-            .bind(Utc::now())
             .execute(&self.pool)
             .await?;
 
