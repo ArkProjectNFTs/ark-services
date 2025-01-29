@@ -706,7 +706,7 @@ where
             "Processing orderbook event: chain_id={}, block_hash={:#064x}, tx_hash={:#064x}, from={:#064x}",
             chain_id,
             block_hash,
-            tx_hash, 
+            tx_hash,
             event.from_address
         );
 
