@@ -2,10 +2,7 @@ use arkproject::orderbook;
 use bigdecimal::BigDecimal;
 use starknet::{
     core::types::{BlockId::Hash, EmittedEvent, Felt},
-    providers::{
-        Provider,
-        sequencer::models::Event,
-    },
+    providers::{sequencer::models::Event, Provider},
 };
 use std::str::FromStr;
 
@@ -705,7 +702,6 @@ where
         tx_hash: Felt,
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-
         println!(
             "Processing orderbook event: chain_id={}, block_hash={:#064x}, tx_hash={:#064x}, from={:#064x}",
             chain_id,
