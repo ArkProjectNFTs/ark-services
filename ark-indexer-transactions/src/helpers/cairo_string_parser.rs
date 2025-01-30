@@ -1,7 +1,7 @@
+use super::byte_array::ByteArray;
 use starknet::core::{types::Felt, utils::parse_cairo_short_string};
 use std::ops::Add;
-
-use super::byte_array::ByteArray;
+use tracing::info;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -80,6 +80,7 @@ mod tests {
 
     use super::parse_cairo_string;
     use starknet::core::types::Felt;
+    use tracing::info;
 
     #[test]
     fn should_handle_single_field_element() {
@@ -119,7 +120,7 @@ mod tests {
         assert!(result.is_ok());
 
         let value = result.unwrap();
-        println!("Value: {}", value);
+        info!("Value: {}", value);
         assert!(value == "https://api.briq.construction/v1/uri/set/starknet-mainnet/.json");
     }
 

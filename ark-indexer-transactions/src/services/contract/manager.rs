@@ -1,9 +1,7 @@
-use std::sync::Arc;
-
 use crate::helpers::cairo_string_parser::parse_cairo_string;
-
 use crate::interfaces::contract::{ContractType, StarknetClientError};
 use crate::services::state::manager::StateManager;
+use std::sync::Arc;
 // use crate::services::state::parsing::{load_parsing_state, save_parsing_state, ParsingState};
 use crate::services::storage::block::read_block_from_file;
 use crate::services::storage::block::BlockWrapper;
@@ -18,7 +16,7 @@ use starknet::providers::sequencer::models::Event;
 use starknet::providers::{Provider, ProviderError};
 use std::collections::HashMap;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::{error, info};
 // use super::event::*;
 // use super::receipt::*;
 
@@ -94,7 +92,7 @@ where
         block: BlockWrapper,
         chain_id: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        println!(
+        info!(
             "processing block ({:?}) with {:?} txs",
             block.block.block_hash,
             block.block.transaction_receipts.len()
@@ -110,7 +108,7 @@ where
                 )
                 .await
             {
-                eprintln!("Error processing transaction: {:?}", e);
+                error!("Error processing transaction: {:?}", e);
             }
         }
         // for tx in block.block.transaction_receipts {
@@ -623,10 +621,7 @@ where
                     let _ = state_manager.set_block_state(block_number.try_into().unwrap(), true);
                 }
                 Err(e) => {
-                    eprintln!(
-                        "Erreur lors de la lecture du bloc {}: {:?}",
-                        block_number, e
-                    );
+                    error!("Error reading block {}: {:?}", block_number, e);
                 }
             }
         }

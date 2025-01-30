@@ -7,6 +7,7 @@ use chrono::Utc;
 use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
+use tracing::info;
 
 const MINT_EVENT: &str = "Mint";
 const BURN_EVENT: &str = "Burn";
@@ -274,7 +275,7 @@ impl NFTInfoStorage for DatabaseStorage {
         if let Some(token_id) = nft_info.token_id.clone() {
             token_id_hex = Some(token_id.to_hex_string())
         } else {
-            println!("Invalid Token with info: {:?}", nft_info);
+            info!("Invalid Token with info: {:?}", nft_info);
         }
 
         sqlx::query(query)

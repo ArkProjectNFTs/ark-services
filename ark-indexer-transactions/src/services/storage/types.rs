@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+use tracing::error;
 
 #[derive(Debug, Clone)]
 pub enum StorageError {
@@ -354,14 +355,14 @@ mod tests {
 
         let serialized_value: Result<Value, _> = serde_json::from_str(&serialized);
         if serialized_value.is_err() {
-            println!("`serialized` is not a valid json");
+            error!("`serialized` is not a valid json");
             return;
         }
         let serialized_value = serialized_value.unwrap();
 
         let expected_value: Result<Value, _> = serde_json::from_str(&expected);
         if expected_value.is_err() {
-            println!("`expected` is not a valid json");
+            error!("`expected` is not a valid json");
             return;
         }
         let expected_value = expected_value.unwrap();
