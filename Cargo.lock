@@ -221,6 +221,7 @@ dependencies = [
  "tikv-jemallocator",
  "tokio 1.43.0",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

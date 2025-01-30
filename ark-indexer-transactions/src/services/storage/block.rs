@@ -4,6 +4,7 @@ use starknet::providers::sequencer::models::Block;
 use std::fs;
 use std::io::BufReader;
 use std::path::PathBuf;
+use tracing::{error, info};
 
 #[derive(Deserialize)]
 pub struct BlockWrapper {
@@ -69,13 +70,13 @@ pub fn read_block_from_file(
     block_number: u64,
 ) -> Result<BlockWrapper, Box<dyn std::error::Error>> {
     let path = get_block_file_path(base_path, block_number);
-    println!("Block number: {:?}", block_number);
+    info!("Reading block number: {:?}", block_number);
     let file = fs::File::open(path)?;
     let reader = BufReader::new(file);
     let value: Value = serde_json::from_reader(reader)?;
     let block: Block = serde_json::from_value(value.clone()).map_err(|e| {
         // Log the error and return it
-        println!("Error deserializing block: {:?}, JSON: {}", e, value);
+        error!("Error deserializing block: {:?}, JSON: {}", e, value);
         e
     })?;
 
