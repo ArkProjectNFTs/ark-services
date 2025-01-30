@@ -319,6 +319,7 @@ impl DatabaseStorage {
         orderbook_transaction_info: &OrderbookTransactionInfo,
         order_placed: &OrderPlaced,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        println!("Handling order placed event");
         let query = r#"
             INSERT INTO orders (
                 order_hash, created_at, route_type, order_type,
@@ -348,27 +349,35 @@ impl DatabaseStorage {
 
         let order_hash = match order_placed {
             OrderPlaced::V1(order_placed) => {
+                println!("Processing OrderPlaced::V1");
                 let order_hash = order_placed.order_hash.to_fixed_hex_string();
                 let order = &order_placed.order;
 
                 let token_id_hex = order.token_id.map(|value| u256_to_hex(&value));
+                println!("Token ID hex: {:?}", token_id_hex);
 
                 let token_id = order
                     .token_id
                     .map(|value| u256_to_biguint(&value).to_string());
+                println!("Token ID: {:?}", token_id);
 
                 let cancelled_order_hash = order_placed
                     .cancelled_order_hash
                     .map(|value| value.to_fixed_hex_string());
+                println!("Cancelled order hash: {:?}", cancelled_order_hash);
+
                 let route_type = RouteTypeWrapper(RouteType::from(&order.route));
                 let order_type = OrderTypeWrapper(OrderType::from(&order_placed.order_type));
+                println!("Route type: {:?}, Order type: {:?}", route_type, order_type);
 
                 let currency_contract_address = &order.currency_address.0.to_fixed_hex_string();
+                println!("Currency contract address: {}", currency_contract_address);
 
                 let start_amount_eth = if let Ok(Some(currency)) = self
                     .get_currency_by_contract_address(currency_contract_address)
                     .await
                 {
+                    println!("Found currency info for contract address");
                     let start_amount_u256 = starknet::core::types::U256::from_words(
                         order.start_amount.low,
                         order.start_amount.high,
@@ -379,15 +388,18 @@ impl DatabaseStorage {
                         .parse::<BigDecimal>()
                         .unwrap_or_else(|_| BigDecimal::from(0));
                     let value = start_amount_decimal * currency.price_in_eth;
+                    println!("Calculated start amount in ETH: {}", value);
 
                     value
                         .to_string()
                         .parse::<BigDecimal>()
                         .unwrap_or_else(|_| BigDecimal::from(0))
                 } else {
+                    println!("No currency info found, using 0 as ETH amount");
                     BigDecimal::from(0)
                 };
 
+                println!("Inserting order into database");
                 sqlx::query(query)
                     .bind(order_hash.clone())
                     .bind(orderbook_transaction_info.timestamp as i64)
@@ -413,6 +425,7 @@ impl DatabaseStorage {
                     .execute(self.pool())
                     .await?;
 
+                println!("Inserting token event into database");
                 let query = r#"
                     INSERT INTO token_event (
                         token_event_id, contract_address, chain_id, broker_id, order_hash, 
@@ -447,10 +460,12 @@ impl DatabaseStorage {
                     .bind(&start_amount_eth)
                     .execute(self.pool())
                     .await?;
+                println!("Successfully inserted token event");
                 order_hash
             }
         };
 
+        println!("Inserting orderbook transaction info");
         self.insert_orderbook_transaction_info(
             orderbook_transaction_info,
             order_hash,
@@ -462,6 +477,7 @@ impl DatabaseStorage {
             None,
         )
         .await?;
+        println!("Successfully handled order placed event");
 
         Ok(())
     }
