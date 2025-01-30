@@ -19,7 +19,7 @@ use crate::{
             NFTInfo, StarknetClientError, TransactionInfo,
         },
         event::EventType,
-        orderbook::OrderbookTransactionInfo,
+        orderbook::OrderTransactionInfo,
     },
     services::storage::Storage,
 };
@@ -707,7 +707,7 @@ where
             transaction_hash: tx_hash,
         };
         let orderbook_event = orderbook::Event::from(emitted_event);
-        let orderbook_transaction_info = OrderbookTransactionInfo {
+        let orderbook_transaction_info = OrderTransactionInfo {
             chain_id: chain_id.to_owned(),
             tx_hash: felt_to_strk_string(tx_hash),
             event_id,

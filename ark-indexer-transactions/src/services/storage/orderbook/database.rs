@@ -6,7 +6,7 @@ use super::{
     OrderbookStorage,
 };
 use crate::{
-    interfaces::orderbook::OrderbookTransactionInfo,
+    interfaces::orderbook::OrderTransactionInfo,
     services::storage::{
         database::DatabaseStorage,
         models::{currency::Currency, ExistingOrder, ExistingOrderType},
@@ -23,7 +23,7 @@ use arkproject::orderbook::{
 use bigdecimal::BigDecimal;
 use sqlx::{encode::IsNull, postgres::PgArgumentBuffer, Encode, Postgres};
 use starknet_crypto::Felt;
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 enum OrderEventType {
     Placed,
@@ -246,7 +246,7 @@ impl DatabaseStorage {
     #[allow(clippy::too_many_arguments)]
     async fn insert_orderbook_transaction_info(
         &self,
-        transaction_info: &OrderbookTransactionInfo,
+        transaction_info: &OrderTransactionInfo,
         order_hash: String,
         order_event_type: OrderEventType,
         cancelled_reason: Option<CancelledReason>,
@@ -317,9 +317,11 @@ impl DatabaseStorage {
 
     async fn handle_order_placed(
         &self,
-        orderbook_transaction_info: &OrderbookTransactionInfo,
+        orderbook_transaction_info: &OrderTransactionInfo,
         order_placed: &OrderPlaced,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!("Handling order placed event");
+
         let query = r#"
             INSERT INTO orders (
                 order_hash, created_at, route_type, order_type,
@@ -349,6 +351,8 @@ impl DatabaseStorage {
 
         let order_hash = match order_placed {
             OrderPlaced::V1(order_placed) => {
+                info!("Processing V1 order placed");
+
                 let order_hash = order_placed.order_hash.to_fixed_hex_string();
                 let order = &order_placed.order;
 
@@ -386,6 +390,7 @@ impl DatabaseStorage {
                         .parse::<BigDecimal>()
                         .unwrap_or_else(|_| BigDecimal::from(0))
                 } else {
+                    info!("No currency info found, using 0 as ETH amount");
                     BigDecimal::from(0)
                 };
 
@@ -414,7 +419,8 @@ impl DatabaseStorage {
                     .execute(self.pool())
                     .await?;
 
-                let query = r#"
+                if let Some(token_id) = token_id {
+                    let query = r#"
                     INSERT INTO token_event (
                         token_event_id, contract_address, chain_id, broker_id, order_hash, 
                         token_id, event_type, block_timestamp, transaction_hash, 
@@ -428,26 +434,40 @@ impl DatabaseStorage {
                     )
                 "#;
 
-                sqlx::query(query)
-                    .bind(format!(
+                    let token_event_id = format!(
                         "{}_{}",
                         orderbook_transaction_info.tx_hash, orderbook_transaction_info.event_id
-                    ))
-                    .bind(order.token_address.0.to_fixed_hex_string())
-                    .bind(order.token_chain_id.to_fixed_hex_string())
-                    .bind(order.broker_id.0.to_fixed_hex_string())
-                    .bind(order_hash.clone())
-                    .bind(token_id.clone())
-                    .bind(&order_type)
-                    .bind(orderbook_transaction_info.timestamp as i64)
-                    .bind(orderbook_transaction_info.tx_hash.clone())
-                    .bind(order.offerer.0.to_fixed_hex_string())
-                    .bind(u256_to_hex(&order.start_amount))
-                    .bind(orderbook_transaction_info.sub_event_id.clone())
-                    .bind(currency_contract_address.clone())
-                    .bind(&start_amount_eth)
-                    .execute(self.pool())
-                    .await?;
+                    );
+
+                    info!(
+                        "Inserting token event for order {} (token_event_id: {}, contract: {}, chain: {}, token: {}, broker_id: {})",
+                        order_hash,
+                        token_event_id,
+                        order.token_address.0.to_fixed_hex_string(),
+                        order.token_chain_id.to_hex_string(),
+                        token_id.to_string(),
+                        order.broker_id.0.to_fixed_hex_string()
+                    );
+
+                    sqlx::query(query)
+                        .bind(token_event_id)
+                        .bind(order.token_address.0.to_fixed_hex_string())
+                        .bind(order.token_chain_id.to_hex_string())
+                        .bind(order.broker_id.0.to_fixed_hex_string())
+                        .bind(order_hash.clone())
+                        .bind(token_id.clone())
+                        .bind(&order_type)
+                        .bind(orderbook_transaction_info.timestamp as i64)
+                        .bind(orderbook_transaction_info.tx_hash.clone())
+                        .bind(order.offerer.0.to_fixed_hex_string())
+                        .bind(u256_to_hex(&order.start_amount))
+                        .bind(orderbook_transaction_info.sub_event_id.clone())
+                        .bind(currency_contract_address.clone())
+                        .bind(&start_amount_eth)
+                        .execute(self.pool())
+                        .await?;
+                }
+
                 order_hash
             }
         };
@@ -469,7 +489,7 @@ impl DatabaseStorage {
 
     async fn handle_order_cancelled(
         &self,
-        transaction_info: &OrderbookTransactionInfo,
+        transaction_info: &OrderTransactionInfo,
         order_cancelled: &OrderCancelled,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let (order_hash, cancelled_reason) = match order_cancelled {
@@ -498,10 +518,10 @@ impl DatabaseStorage {
 
             let query = r#"
                 INSERT INTO token_event (
-                    token_event_id, contract_address, chain_id, order_hash, event_type,
+                    token_event_id, contract_address, token_id, chain_id, order_hash, event_type,
                     block_timestamp, transaction_hash, token_sub_event_id, canceled_reason
                 ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
                 )
             "#;
 
@@ -515,6 +535,7 @@ impl DatabaseStorage {
             sqlx::query(query)
                 .bind(token_event_id)
                 .bind(existing_order.token_address)
+                .bind(existing_order.token_id)
                 .bind(&transaction_info.chain_id)
                 .bind(order_hash.clone())
                 .bind(event_type)
@@ -550,7 +571,7 @@ impl DatabaseStorage {
 
     async fn handle_order_fulfilled(
         &self,
-        transaction_info: &OrderbookTransactionInfo,
+        transaction_info: &OrderTransactionInfo,
         order_fulfilled: &OrderFulfilled,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let (order_hash, fulfiller, related_order_hash) = match order_fulfilled {
@@ -582,7 +603,7 @@ impl DatabaseStorage {
 
     async fn handle_order_executed(
         &self,
-        transaction_info: &OrderbookTransactionInfo,
+        transaction_info: &OrderTransactionInfo,
         order_executed: &OrderExecuted,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let (order_hash, from, to) = match order_executed {
@@ -677,7 +698,7 @@ impl DatabaseStorage {
 impl OrderbookStorage for DatabaseStorage {
     async fn store_orderbook_transaction_info(
         &self,
-        transaction_info: OrderbookTransactionInfo,
+        transaction_info: OrderTransactionInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         match transaction_info.event {
             orderbook::Event::OrderPlaced(ref order_placed) => {

@@ -160,7 +160,7 @@ impl TransactionInfoStorage for DatabaseStorage {
             tx_info.timestamp as i64,
             tx_info.token_id,
             &tx_info.contract_address,
-            tx_info.contract_type as ContractType,  // Ensure the contract type is passed as a string
+            tx_info.contract_type.clone() as ContractType,  // Ensure the contract type is passed as a string
             &tx_info.block_hash,
             tx_info.event_type.clone() as EventType,  // Ensure event type is passed as a string
             tx_info.compliance as ERCCompliance,  // Ensure compliance is passed as a string
@@ -173,24 +173,32 @@ impl TransactionInfoStorage for DatabaseStorage {
 
         tracing::trace!("Inserted/updated transaction info record");
 
-        if matches!(
-            &tx_info.event_type,
+        let is_nft_contract = matches!(
+            tx_info.contract_type,
+            ContractType::ERC721 | ContractType::ERC1155
+        );
+
+        let is_transfer_event = matches!(
+            tx_info.event_type,
             EventType::Transfer
                 | EventType::TransferSingle
                 | EventType::TransferBatch
                 | EventType::TransferByPartition
-        ) {
-            tracing::info!(
+        );
+
+        if is_nft_contract && is_transfer_event {
+            if let Some(token_id) = tx_info.token_id {
+                tracing::info!(
                 "Storing token transfer event for contract: {}, token_id: {:?}, from: {}, to: {}, chain_id: {}, event_id: {}",
                 tx_info.contract_address,
-                tx_info.token_id,
+                token_id.to_string(),
                 tx_info.from,
                 tx_info.to,
                 tx_info.chain_id,
                 event_id
             );
 
-            let query = r#"
+                let query = r#"
                 INSERT INTO token_event (
                     token_event_id,
                     contract_address,
@@ -212,32 +220,33 @@ impl TransactionInfoStorage for DatabaseStorage {
                     transaction_hash = EXCLUDED.transaction_hash
             "#;
 
-            let event_type = if tx_info.from == "0x0" {
-                tracing::debug!("Detected mint event");
-                MINT_EVENT
-            } else if tx_info.to == "0x0" {
-                tracing::debug!("Detected burn event");
-                BURN_EVENT
-            } else {
-                tracing::debug!("Detected transfer event");
-                TRANSFER_EVENT
-            };
+                let event_type = if tx_info.from == "0x0" {
+                    tracing::debug!("Detected mint event");
+                    MINT_EVENT
+                } else if tx_info.to == "0x0" {
+                    tracing::debug!("Detected burn event");
+                    BURN_EVENT
+                } else {
+                    tracing::debug!("Detected transfer event");
+                    TRANSFER_EVENT
+                };
 
-            sqlx::query(query)
-                .bind(&event_id)
-                .bind(&tx_info.contract_address)
-                .bind(&tx_info.chain_id)
-                .bind(&tx_info.token_id)
-                .bind(event_type)
-                .bind(tx_info.timestamp as i64)
-                .bind(&tx_info.tx_hash)
-                .bind(&tx_info.to)
-                .bind(&tx_info.from)
-                .bind(&tx_info.sub_event_id)
-                .execute(&self.pool)
-                .await?;
+                sqlx::query(query)
+                    .bind(&event_id)
+                    .bind(&tx_info.contract_address)
+                    .bind(&tx_info.chain_id)
+                    .bind(&token_id)
+                    .bind(event_type)
+                    .bind(tx_info.timestamp as i64)
+                    .bind(&tx_info.tx_hash)
+                    .bind(&tx_info.to)
+                    .bind(&tx_info.from)
+                    .bind(&tx_info.sub_event_id)
+                    .execute(&self.pool)
+                    .await?;
 
-            tracing::trace!("Inserted/updated token event record");
+                tracing::trace!("Inserted/updated token event record");
+            }
         }
 
         tracing::debug!(
