@@ -31,10 +31,6 @@ pub trait TransactionInfoStorage {
         &self,
         tx_info: TransactionInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn store_token_event(
-        &self,
-        tx_info: TransactionInfo,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
 #[async_trait]

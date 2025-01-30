@@ -1,15 +1,23 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc};
 
+pub mod currency;
 pub mod transaction_info;
 
-#[derive(sqlx::FromRow, Debug)]
-pub struct Currency {
-    pub contract_address: String,
-    pub chain_id: String,
-    pub symbol: String,
-    pub decimals: i16,
-    pub price_in_usd: BigDecimal,
-    pub price_in_eth: BigDecimal,
-    pub price_updated_at: DateTime<Utc>,
+#[derive(sqlx::FromRow)]
+pub struct ExistingOrder {
+    pub token_address: String,
+    pub token_id: Option<String>,
+    pub broker_id: String,
+    pub start_amount: String,
+    pub start_amount_eth: Option<BigDecimal>,
+    pub order_type: ExistingOrderType,
+}
+
+#[derive(sqlx::Type)]
+#[sqlx(type_name = "order_type")]
+pub enum ExistingOrderType {
+    Listing,
+    Auction,
+    Offer,
+    CollectionOffer,
 }

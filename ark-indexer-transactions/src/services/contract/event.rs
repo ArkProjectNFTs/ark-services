@@ -1,3 +1,16 @@
+use arkproject::orderbook;
+use bigdecimal::BigDecimal;
+use starknet::{
+    core::types::{BlockId::Hash, EmittedEvent, Felt},
+    providers::{sequencer::models::Event, Provider},
+};
+use std::str::FromStr;
+
+use super::{
+    common::{detect_erc_action, utils::parse_u256},
+    erc1155, erc1400, erc20, erc721,
+    manager::ContractManager,
+};
 use crate::{
     helpers::common::felt_to_strk_string,
     interfaces::{
@@ -10,22 +23,6 @@ use crate::{
     },
     services::storage::Storage,
 };
-use bigdecimal::BigDecimal;
-use starknet::{
-    core::types::{BlockId::Hash, EmittedEvent, Felt},
-    providers::Provider,
-};
-use std::str::FromStr;
-
-use starknet::providers::sequencer::models::Event;
-
-use super::{
-    common::{detect_erc_action, utils::parse_u256},
-    erc1155, erc1400, erc20, erc721,
-    manager::ContractManager,
-};
-
-use arkproject::orderbook;
 
 impl<S, P> ContractManager<S, P>
 where
@@ -313,7 +310,6 @@ where
                     let storage = self.storage.lock().await;
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
-                    storage.store_token_event(tx_info.clone()).await?;
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -543,7 +539,6 @@ where
                     let storage = self.storage.lock().await;
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
-                    storage.store_token_event(tx_info.clone()).await?;
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -662,14 +657,10 @@ where
                         .clone()
                         .into_iter()
                         .map(|tx_info| storage.store_transaction_info(tx_info));
-                    let store_te_futures = tx_infos
-                        .into_iter()
-                        .map(|tx_info| storage.store_token_event(tx_info));
                     // Exécution parallèle des futures
-                    let (token_results, nft_results, te_results, tx_results) = tokio::join!(
+                    let (token_results, nft_results, tx_results) = tokio::join!(
                         futures::future::join_all(store_token_futures),
                         futures::future::join_all(store_nft_futures),
-                        futures::future::join_all(store_te_futures),
                         futures::future::join_all(store_tx_futures)
                     );
 
@@ -677,7 +668,6 @@ where
                     for result in nft_results
                         .into_iter()
                         .chain(tx_results)
-                        .chain(te_results)
                         .chain(token_results)
                     {
                         result?;
@@ -700,12 +690,11 @@ where
         tx_hash: Felt,
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-
         println!(
             "Processing orderbook event: chain_id={}, block_hash={:#064x}, tx_hash={:#064x}, from={:#064x}",
             chain_id,
             block_hash,
-            tx_hash, 
+            tx_hash,
             event.from_address
         );
 
@@ -726,11 +715,13 @@ where
             timestamp: block_timestamp,
             from: felt_to_strk_string(event.from_address),
             event: orderbook_event,
+            sub_event_id: format!("{}_O", event_id),
         };
         let storage = self.storage.lock().await;
         storage
             .store_orderbook_transaction_info(orderbook_transaction_info)
             .await?;
+
         drop(storage);
         Ok(())
     }

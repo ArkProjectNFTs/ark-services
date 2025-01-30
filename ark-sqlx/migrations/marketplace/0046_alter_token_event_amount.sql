@@ -1,0 +1,2 @@
+ALTER TABLE token_event
+ALTER COLUMN amount_eth TYPE NUMERIC;

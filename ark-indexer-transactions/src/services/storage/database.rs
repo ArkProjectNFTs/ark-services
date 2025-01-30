@@ -1,14 +1,16 @@
-use chrono::Utc;
-
+use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage};
 use crate::interfaces::contract::ContractType;
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
 use crate::interfaces::event::{ERCCompliance, ErcAction, EventType};
 use bigdecimal::BigDecimal;
+use chrono::Utc;
 use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
 
-use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage};
+const MINT_EVENT: &str = "Mint";
+const BURN_EVENT: &str = "Burn";
+const TRANSFER_EVENT: &str = "Transfer";
 
 trait BigDecimalHex {
     fn to_hex_string(&self) -> String;
@@ -128,85 +130,100 @@ impl TransactionInfoStorage for DatabaseStorage {
         tx_info: TransactionInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
-        // println!("tx_info: {:?}", tx_info);
+
+        let mut transaction = self.pool.begin().await?;
+
         sqlx::query_as!(
-                TransactionInfoModel,
-                r#"
-                INSERT INTO transaction_info (
-                    tx_hash, event_id, from_address, to_address, value, timestamp, token_id, contract_address, contract_type, block_hash, event_type, erc_compliance, erc_action, indexed_at, sub_event_id
-                ) VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-                )
-                ON CONFLICT (tx_hash, event_id, sub_event_id) DO UPDATE
-                SET from_address = EXCLUDED.from_address, 
-                    to_address = EXCLUDED.to_address, 
-                    value = EXCLUDED.value,
-                    timestamp = EXCLUDED.timestamp, 
-                    token_id = EXCLUDED.token_id, 
-                    contract_address = EXCLUDED.contract_address,
-                    contract_type = EXCLUDED.contract_type, 
-                    block_hash = EXCLUDED.block_hash, 
-                    indexed_at = EXCLUDED.indexed_at
-                "#,
-                &tx_info.tx_hash,
-                &event_id,
-                &tx_info.from,
-                &tx_info.to,
-                tx_info.value,
-                tx_info.timestamp as i64,
-                tx_info.token_id,
-                &tx_info.contract_address,
-                tx_info.contract_type as ContractType,  // Ensure the contract type is passed as a string
-                &tx_info.block_hash,
-                tx_info.event_type as EventType,  // Ensure event type is passed as a string
-                tx_info.compliance as ERCCompliance,  // Ensure compliance is passed as a string
-                tx_info.action as ErcAction,  // Ensure action is passed as a string
-                Utc::now(),
-                tx_info.sub_event_id,
+            TransactionInfoModel,
+            r#"
+            INSERT INTO transaction_info (
+                tx_hash, event_id, from_address, to_address, value, timestamp, token_id, contract_address, contract_type, block_hash, event_type, erc_compliance, erc_action, indexed_at, sub_event_id
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
             )
-            .execute(&self.pool)
+            ON CONFLICT (tx_hash, event_id, sub_event_id) DO UPDATE
+            SET from_address = EXCLUDED.from_address, 
+                to_address = EXCLUDED.to_address, 
+                value = EXCLUDED.value,
+                timestamp = EXCLUDED.timestamp, 
+                token_id = EXCLUDED.token_id, 
+                contract_address = EXCLUDED.contract_address,
+                contract_type = EXCLUDED.contract_type, 
+                block_hash = EXCLUDED.block_hash, 
+                indexed_at = EXCLUDED.indexed_at
+            "#,
+            &tx_info.tx_hash,
+            &event_id,
+            &tx_info.from,
+            &tx_info.to,
+            tx_info.value,
+            tx_info.timestamp as i64,
+            tx_info.token_id,
+            &tx_info.contract_address,
+            tx_info.contract_type as ContractType,  // Ensure the contract type is passed as a string
+            &tx_info.block_hash,
+            tx_info.event_type.clone() as EventType,  // Ensure event type is passed as a string
+            tx_info.compliance as ERCCompliance,  // Ensure compliance is passed as a string
+            tx_info.action as ErcAction,  // Ensure action is passed as a string
+            Utc::now(),
+            tx_info.sub_event_id,
+        )
+            .execute(&mut *transaction)
             .await?;
 
-        Ok(())
-    }
+        if !matches!(
+            &tx_info.event_type,
+            EventType::Transfer
+                | EventType::TransferSingle
+                | EventType::TransferBatch
+                | EventType::TransferByPartition
+        ) {
+            let query = r#"
+                INSERT INTO token_event (
+                    token_event_id,
+                    contract_address,
+                    chain_id,
+                    token_id,
+                    event_type,
+                    block_timestamp,
+                    transaction_hash,
+                    to_address,
+                    from_address,
+                    token_sub_event_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+                )
+                ON CONFLICT (token_event_id, token_sub_event_id) DO UPDATE
+                SET
+                    chain_id = EXCLUDED.chain_id,
+                    block_timestamp = EXCLUDED.block_timestamp,
+                    transaction_hash = EXCLUDED.transaction_hash
+            "#;
 
-    async fn store_token_event(
-        &self,
-        tx_info: TransactionInfo,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let query = r#"
-            INSERT INTO token_event (
-                token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp, transaction_hash, to_address, from_address, amount, token_sub_event_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-            ON CONFLICT (token_event_id, token_sub_event_id) DO UPDATE
-            SET chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, transaction_hash = EXCLUDED.transaction_hash
-        "#;
+            let event_type = if tx_info.from == "0x0" {
+                MINT_EVENT
+            } else if tx_info.to == "0x0" {
+                BURN_EVENT
+            } else {
+                TRANSFER_EVENT
+            };
 
-        let mut token_id_hex: Option<String> = None;
-        if let Some(token_id) = tx_info.token_id.clone() {
-            token_id_hex = Some(token_id.to_hex_string())
-        } else {
-            println!("Invalid Token with info: {:?}", tx_info);
+            sqlx::query(query)
+                .bind(event_id)
+                .bind(&tx_info.contract_address)
+                .bind(&tx_info.chain_id)
+                .bind(&tx_info.token_id)
+                .bind(event_type)
+                .bind(tx_info.timestamp as i64)
+                .bind(&tx_info.tx_hash)
+                .bind(&tx_info.to)
+                .bind(&tx_info.from)
+                .bind(&tx_info.sub_event_id)
+                .execute(&mut *transaction)
+                .await?;
         }
-        let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
 
-        sqlx::query(query)
-            .bind(event_id)
-            .bind(&tx_info.contract_address)
-            .bind(&tx_info.chain_id)
-            .bind(tx_info.token_id)
-            .bind(token_id_hex)
-            .bind(&tx_info.event_type)
-            .bind(tx_info.timestamp as i64)
-            .bind(&tx_info.tx_hash)
-            .bind(&tx_info.to)
-            .bind(&tx_info.from)
-            .bind(&tx_info.value)
-            .bind(&tx_info.sub_event_id)
-            .bind(Utc::now())
-            .execute(&self.pool)
-            .await?;
-
+        transaction.commit().await?;
         Ok(())
     }
 }
