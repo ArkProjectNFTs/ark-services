@@ -298,7 +298,7 @@ where
                         to: felt_to_strk_string(to),
                         value: None,
                         timestamp: block_timestamp,
-                        token_id: Some(token_id.clone()),
+                        token_id: Some(token_id),
                         contract_address: felt_to_strk_string(contract_origin),
                         contract_type: ContractType::ERC721,
                         block_hash: felt_to_strk_string(block_hash),
