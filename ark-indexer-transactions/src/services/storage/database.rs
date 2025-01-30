@@ -131,8 +131,7 @@ impl TransactionInfoStorage for DatabaseStorage {
         tx_info: TransactionInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let event_id = format!("{}_{}", tx_info.tx_hash, tx_info.event_id);
-
-        let mut transaction = self.pool.begin().await?;
+        tracing::debug!("Storing transaction info for event_id: {}", event_id);
 
         sqlx::query_as!(
             TransactionInfoModel,
@@ -169,16 +168,28 @@ impl TransactionInfoStorage for DatabaseStorage {
             Utc::now(),
             tx_info.sub_event_id,
         )
-            .execute(&mut *transaction)
+            .execute(&self.pool)
             .await?;
 
-        if !matches!(
+        tracing::trace!("Inserted/updated transaction info record");
+
+        if matches!(
             &tx_info.event_type,
             EventType::Transfer
                 | EventType::TransferSingle
                 | EventType::TransferBatch
                 | EventType::TransferByPartition
         ) {
+            tracing::info!(
+                "Storing token transfer event for contract: {}, token_id: {:?}, from: {}, to: {}, chain_id: {}, event_id: {}",
+                tx_info.contract_address,
+                tx_info.token_id,
+                tx_info.from,
+                tx_info.to,
+                tx_info.chain_id,
+                event_id
+            );
+
             let query = r#"
                 INSERT INTO token_event (
                     token_event_id,
@@ -202,15 +213,18 @@ impl TransactionInfoStorage for DatabaseStorage {
             "#;
 
             let event_type = if tx_info.from == "0x0" {
+                tracing::debug!("Detected mint event");
                 MINT_EVENT
             } else if tx_info.to == "0x0" {
+                tracing::debug!("Detected burn event");
                 BURN_EVENT
             } else {
+                tracing::debug!("Detected transfer event");
                 TRANSFER_EVENT
             };
 
             sqlx::query(query)
-                .bind(event_id)
+                .bind(&event_id)
                 .bind(&tx_info.contract_address)
                 .bind(&tx_info.chain_id)
                 .bind(&tx_info.token_id)
@@ -220,11 +234,16 @@ impl TransactionInfoStorage for DatabaseStorage {
                 .bind(&tx_info.to)
                 .bind(&tx_info.from)
                 .bind(&tx_info.sub_event_id)
-                .execute(&mut *transaction)
+                .execute(&self.pool)
                 .await?;
+
+            tracing::trace!("Inserted/updated token event record");
         }
 
-        transaction.commit().await?;
+        tracing::debug!(
+            "Successfully stored transaction info for event_id: {}",
+            event_id
+        );
         Ok(())
     }
 }
