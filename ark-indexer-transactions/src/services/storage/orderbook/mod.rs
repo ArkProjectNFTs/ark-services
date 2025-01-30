@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use crate::interfaces::orderbook::OrderbookTransactionInfo;
+use crate::interfaces::orderbook::OrderTransactionInfo;
 
 pub(crate) mod constants;
 
@@ -10,6 +10,6 @@ pub mod database;
 pub trait OrderbookStorage {
     async fn store_orderbook_transaction_info(
         &self,
-        orderbook_transaction_info: OrderbookTransactionInfo,
+        orderbook_transaction_info: OrderTransactionInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }

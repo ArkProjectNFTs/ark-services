@@ -1,7 +1,7 @@
 use arkproject::orderbook;
 
 #[derive(Debug)]
-pub struct OrderbookTransactionInfo {
+pub struct OrderTransactionInfo {
     pub chain_id: String,
     pub tx_hash: String,
     pub event_id: u64,
