@@ -7,7 +7,10 @@ use super::{
 };
 use crate::{
     interfaces::orderbook::OrderbookTransactionInfo,
-    services::storage::{database::DatabaseStorage, models::currency::Currency},
+    services::storage::{
+        database::DatabaseStorage,
+        models::{currency::Currency, ExistingOrder, ExistingOrderType},
+    },
 };
 use arkproject::orderbook::{
     self,
@@ -389,13 +392,13 @@ impl DatabaseStorage {
                     .bind(order_hash.clone())
                     .bind(orderbook_transaction_info.timestamp as i64)
                     .bind(route_type)
-                    .bind(order_type)
+                    .bind(&order_type)
                     .bind(currency_contract_address)
                     .bind(order.currency_chain_id.to_fixed_hex_string())
                     .bind(order.offerer.0.to_fixed_hex_string())
                     .bind(order.token_chain_id.to_fixed_hex_string())
                     .bind(order.token_address.0.to_fixed_hex_string())
-                    .bind(token_id)
+                    .bind(token_id.clone())
                     .bind(token_id_hex)
                     .bind(u256_to_hex(&order.quantity))
                     .bind(u256_to_hex(&order.start_amount))
@@ -406,7 +409,42 @@ impl DatabaseStorage {
                     .bind(cancelled_order_hash)
                     .bind(orderbook_transaction_info.timestamp as i64) // updated_at
                     .bind(OrderStatus::Open)
-                    .bind(start_amount_eth)
+                    .bind(&start_amount_eth)
+                    .execute(self.pool())
+                    .await?;
+
+                let query = r#"
+                    INSERT INTO token_event (
+                        token_event_id, contract_address, chain_id, broker_id, order_hash, 
+                        token_id, event_type, block_timestamp, transaction_hash, 
+                        from_address, amount,
+                        token_sub_event_id, currency_address, eth_amount
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, 
+                        $6, $7, $8, $9, 
+                        $10, $11,
+                        $12, $13, $14
+                    )
+                "#;
+
+                sqlx::query(query)
+                    .bind(format!(
+                        "{}_{}",
+                        orderbook_transaction_info.tx_hash, orderbook_transaction_info.event_id
+                    ))
+                    .bind(order.token_address.0.to_fixed_hex_string())
+                    .bind(order.token_chain_id.to_fixed_hex_string())
+                    .bind(order.broker_id.0.to_fixed_hex_string())
+                    .bind(order_hash.clone())
+                    .bind(token_id.clone())
+                    .bind(&order_type)
+                    .bind(orderbook_transaction_info.timestamp as i64)
+                    .bind(orderbook_transaction_info.tx_hash.clone())
+                    .bind(order.offerer.0.to_fixed_hex_string())
+                    .bind(u256_to_hex(&order.start_amount))
+                    .bind(orderbook_transaction_info.sub_event_id.clone())
+                    .bind(currency_contract_address.clone())
+                    .bind(&start_amount_eth)
                     .execute(self.pool())
                     .await?;
                 order_hash
@@ -427,7 +465,6 @@ impl DatabaseStorage {
 
         Ok(())
     }
-
     async fn handle_order_cancelled(
         &self,
         transaction_info: &OrderbookTransactionInfo,
@@ -440,12 +477,60 @@ impl DatabaseStorage {
                 (order_hash, cancelled_reason)
             }
         };
+
+        let query = r#"
+            SELECT token_address, token_id, broker_id, start_amount_eth, start_amount, order_type
+            FROM public.orders
+            WHERE order_hash = $1
+            LIMIT 1
+        "#;
+
+        let existing_order = sqlx::query_as::<_, ExistingOrder>(query)
+            .bind(&order_hash)
+            .fetch_optional(self.pool())
+            .await?;
+
+        if let Some(existing_order) = existing_order {
+            let token_event_id =
+                format!("{}_{}", transaction_info.tx_hash, transaction_info.event_id);
+
+            let query = r#"
+                INSERT INTO token_event (
+                    token_event_id, contract_address, chain_id, order_hash, event_type,
+                    block_timestamp, transaction_hash, token_sub_event_id, canceled_reason
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9
+                )
+            "#;
+
+            let event_type = match existing_order.order_type {
+                ExistingOrderType::Listing => "ListingCancelled",
+                ExistingOrderType::Auction => "AuctionCancelled",
+                ExistingOrderType::Offer => "OfferCancelled",
+                ExistingOrderType::CollectionOffer => "OfferCancelled",
+            };
+
+            sqlx::query(query)
+                .bind(token_event_id)
+                .bind(existing_order.token_address)
+                .bind(&transaction_info.chain_id)
+                .bind(order_hash.clone())
+                .bind(event_type)
+                .bind(transaction_info.timestamp as i64)
+                .bind(transaction_info.tx_hash.clone())
+                .bind(transaction_info.sub_event_id.clone())
+                .bind(&cancelled_reason)
+                .execute(self.pool())
+                .await?;
+        }
+
         self.update_order_status(
             order_hash.clone(),
             OrderStatus::Cancelled,
             transaction_info.timestamp,
         )
         .await?;
+
         self.insert_orderbook_transaction_info(
             transaction_info,
             order_hash,
@@ -457,6 +542,7 @@ impl DatabaseStorage {
             None,
         )
         .await?;
+
         Ok(())
     }
 
@@ -472,9 +558,11 @@ impl DatabaseStorage {
                 let related_order_hash = order_fulfilled
                     .related_order_hash
                     .map(|value| value.to_fixed_hex_string());
+
                 (order_hash, fulfiller, related_order_hash)
             }
         };
+
         self.insert_orderbook_transaction_info(
             transaction_info,
             order_hash,
@@ -486,6 +574,7 @@ impl DatabaseStorage {
             None,
         )
         .await?;
+
         Ok(())
     }
 
@@ -528,6 +617,56 @@ impl DatabaseStorage {
             to,
         )
         .await?;
+
+        /*
+         let query = r#"
+            SELECT token_address, token_id, broker_id, start_amount_eth, start_amount, order_type
+            FROM public.orders
+            WHERE order_hash = $1
+            LIMIT 1
+        "#;
+
+             let existing_order = sqlx::query_as::<_, ExistingOrder>(query)
+                .bind(&order_hash)
+                .fetch_optional(self.pool())
+                .await?;
+
+            if let Some(existing_order) = existing_order {
+                let query = r#"
+                    INSERT INTO token_event (
+                        token_event_id, contract_address, chain_id, order_hash,
+                        token_id, event_type, block_timestamp, transaction_hash,
+                        from_address, amount,
+                        token_sub_event_id, currency_address, eth_amount
+                    ) VALUES (
+                        $1, $2, $3, $4, $5,
+                        $6, $7, $8, $9,
+                        $10, $11,
+                        $12, $13, $14
+                    )
+                "#;
+
+                sqlx::query(query)
+                    .bind(format!(
+                        "{}_{}",
+                        transaction_info.tx_hash, transaction_info.event_id
+                    ))
+                    .bind(existing_order.token_address)
+                    .bind(transaction_info.chain_id)
+                    .bind(order_hash.clone())
+                    .bind(existing_order.token_id)
+                    .bind(existing_order.order_type)
+                    .bind(transaction_info.timestamp as i64)
+                    .bind(transaction_info.tx_hash.clone())
+                    .bind(from.unwrap_or_default())
+                    .bind()
+                    .bind(transaction_info.sub_event_id.clone())
+                    .bind(order.currency_address.0.to_fixed_hex_string())
+                    .bind(BigDecimal::from(0))
+                    .execute(self.pool())
+                    .await?;
+            } */
+
         Ok(())
     }
 }

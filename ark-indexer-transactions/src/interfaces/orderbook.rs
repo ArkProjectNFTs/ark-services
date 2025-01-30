@@ -9,4 +9,5 @@ pub struct OrderbookTransactionInfo {
     pub timestamp: u64,
     pub from: String,
     pub event: orderbook::Event,
+    pub sub_event_id: String,
 }

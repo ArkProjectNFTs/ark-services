@@ -21,7 +21,7 @@ use crate::{
         event::EventType,
         orderbook::OrderbookTransactionInfo,
     },
-    services::storage::{models::token_event::TokenEvent, Storage},
+    services::storage::Storage,
 };
 
 impl<S, P> ContractManager<S, P>
@@ -310,9 +310,6 @@ where
                     let storage = self.storage.lock().await;
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
-                    if let Ok(token_event) = TokenEvent::try_from(tx_info.clone()) {
-                        storage.store_token_event(token_event).await?;
-                    }
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -542,9 +539,6 @@ where
                     let storage = self.storage.lock().await;
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
-                    if let Ok(token_event) = TokenEvent::try_from(tx_info.clone()) {
-                        storage.store_token_event(token_event).await?;
-                    }
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
                     drop(storage);
@@ -663,15 +657,10 @@ where
                         .clone()
                         .into_iter()
                         .map(|tx_info| storage.store_transaction_info(tx_info));
-                    let store_te_futures = tx_infos
-                        .into_iter()
-                        .filter_map(|tx_info| TokenEvent::try_from(tx_info).ok())
-                        .map(|token_event| storage.store_token_event(token_event));
                     // Exécution parallèle des futures
-                    let (token_results, nft_results, te_results, tx_results) = tokio::join!(
+                    let (token_results, nft_results, tx_results) = tokio::join!(
                         futures::future::join_all(store_token_futures),
                         futures::future::join_all(store_nft_futures),
-                        futures::future::join_all(store_te_futures),
                         futures::future::join_all(store_tx_futures)
                     );
 
@@ -679,7 +668,6 @@ where
                     for result in nft_results
                         .into_iter()
                         .chain(tx_results)
-                        .chain(te_results)
                         .chain(token_results)
                     {
                         result?;
@@ -727,14 +715,12 @@ where
             timestamp: block_timestamp,
             from: felt_to_strk_string(event.from_address),
             event: orderbook_event,
+            sub_event_id: format!("{}_O", event_id),
         };
         let storage = self.storage.lock().await;
         storage
             .store_orderbook_transaction_info(orderbook_transaction_info)
             .await?;
-
-        // TODO: insert missing token_event
-        // storage.store_token_event(token_event).await?;
 
         drop(storage);
         Ok(())

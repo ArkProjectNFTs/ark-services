@@ -9,7 +9,6 @@ use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use models::token_event::TokenEvent;
 use orderbook::OrderbookStorage;
 
 #[async_trait]
@@ -31,10 +30,6 @@ pub trait TransactionInfoStorage {
     async fn store_transaction_info(
         &self,
         tx_info: TransactionInfo,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    async fn store_token_event(
-        &self,
-        token_event: TokenEvent,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
