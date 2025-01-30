@@ -109,8 +109,8 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
         let token_event_id = format!("0x{:x}", result);
 
         let insert_expired_listing_event_query = r#"
-        INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, token_id_hex, event_type, block_timestamp)
-        VALUES ($1, $2, $3, $4, $5, $6, $7);
+        INSERT INTO token_event (token_event_id, contract_address, chain_id, token_id, event_type, block_timestamp)
+        VALUES ($1, $2, $3, $4, $5, $6);
     "#;
 
         match sqlx::query(insert_expired_listing_event_query)
@@ -118,7 +118,6 @@ pub async fn update_listed_tokens(pool: &PgPool, con: &mut MultiplexedConnection
             .bind(expired_listing.contract_address.clone())
             .bind(expired_listing.chain_id.clone())
             .bind(expired_listing.token_id.clone())
-            .bind(expired_listing.token_id_hex.clone())
             .bind(EXPIRED_LISTING_EVENT_TYPE)
             .bind(now)
             .execute(pool)
@@ -393,7 +392,6 @@ async fn clear_token_bid(pool: &PgPool, offer: &ExpiredOffer) -> Result<(), sqlx
 
     Ok(())
 }
-
 async fn insert_expired_event(
     pool: &PgPool,
     offer: &ExpiredOffer,
@@ -403,16 +401,15 @@ async fn insert_expired_event(
         r#"
         INSERT INTO token_event (
             token_event_id, contract_address, chain_id, token_id, 
-            token_id_hex, event_type, block_timestamp
+            event_type, block_timestamp
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6)
         "#,
     )
     .bind(&event.token_event_id)
     .bind(&offer.contract_address)
     .bind(&offer.chain_id)
     .bind(&offer.token_id)
-    .bind(&event.token_id_hex)
     .bind(EXPIRED_OFFER_EVENT_TYPE)
     .bind(event.timestamp)
     .execute(pool)
