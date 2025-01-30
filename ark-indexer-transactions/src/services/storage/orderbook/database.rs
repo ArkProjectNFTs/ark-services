@@ -418,7 +418,7 @@ impl DatabaseStorage {
                         token_event_id, contract_address, chain_id, broker_id, order_hash, 
                         token_id, event_type, block_timestamp, transaction_hash, 
                         from_address, amount,
-                        token_sub_event_id, currency_address, eth_amount
+                        token_sub_event_id, currency_address, amount_eth
                     ) VALUES (
                         $1, $2, $3, $4, $5, 
                         $6, $7, $8, $9, 
@@ -637,7 +637,7 @@ impl DatabaseStorage {
                         token_event_id, contract_address, chain_id, order_hash,
                         token_id, event_type, block_timestamp, transaction_hash,
                         from_address, amount,
-                        token_sub_event_id, currency_address, eth_amount
+                        token_sub_event_id, currency_address, amount_eth
                     ) VALUES (
                         $1, $2, $3, $4, $5,
                         $6, $7, $8, $9,
