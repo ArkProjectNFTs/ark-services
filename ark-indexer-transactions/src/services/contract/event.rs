@@ -5,6 +5,7 @@ use starknet::{
     providers::{sequencer::models::Event, Provider},
 };
 use std::str::FromStr;
+use tracing::info;
 
 use super::{
     common::{detect_erc_action, utils::parse_u256},
@@ -690,7 +691,7 @@ where
         tx_hash: Felt,
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        println!(
+        info!(
             "Processing orderbook event: chain_id={}, block_hash={:#064x}, tx_hash={:#064x}, from={:#064x}",
             chain_id,
             block_hash,

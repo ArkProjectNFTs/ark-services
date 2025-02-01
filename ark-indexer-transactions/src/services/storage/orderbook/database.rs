@@ -622,6 +622,8 @@ impl DatabaseStorage {
             ),
         };
 
+        debug!(order_hash = %order_hash, from = ?from, to = ?to, "Handling order executed");
+
         self.update_order_status(
             order_hash.clone(),
             OrderStatus::Executed,
@@ -629,37 +631,46 @@ impl DatabaseStorage {
         )
         .await?;
 
+        debug!("Updated order status to Executed");
+
         self.insert_orderbook_transaction_info(
             transaction_info,
-            order_hash,
+            order_hash.clone(),
             OrderEventType::Executed,
             None,
             None,
             None,
-            from,
-            to,
+            from.clone(),
+            to.clone(),
         )
         .await?;
 
-        /*
-         let query = r#"
-            SELECT token_address, token_id, broker_id, start_amount_eth, start_amount, order_type
-            FROM public.orders
+        debug!("Inserted orderbook transaction info");
+
+        let query = r#"
+            SELECT token_address, token_id, broker_id, start_amount_eth, start_amount, order_type, currency_address, currency_chain_id
+            FROM orders
             WHERE order_hash = $1
             LIMIT 1
         "#;
 
-             let existing_order = sqlx::query_as::<_, ExistingOrder>(query)
-                .bind(&order_hash)
-                .fetch_optional(self.pool())
-                .await?;
+        let existing_order = sqlx::query_as::<_, ExistingOrder>(query)
+            .bind(&order_hash)
+            .fetch_optional(self.pool())
+            .await?;
 
-            if let Some(existing_order) = existing_order {
-                let query = r#"
+        if let Some(existing_order) = existing_order {
+            debug!(
+                token_address = %existing_order.token_address,
+                token_id = ?existing_order.token_id,
+                "Found existing order"
+            );
+
+            let query = r#"
                     INSERT INTO token_event (
                         token_event_id, contract_address, chain_id, order_hash,
                         token_id, event_type, block_timestamp, transaction_hash,
-                        from_address, amount,
+                        from_address, to_address, amount,
                         token_sub_event_id, currency_address, amount_eth
                     ) VALUES (
                         $1, $2, $3, $4, $5,
@@ -669,26 +680,42 @@ impl DatabaseStorage {
                     )
                 "#;
 
-                sqlx::query(query)
-                    .bind(format!(
-                        "{}_{}",
-                        transaction_info.tx_hash, transaction_info.event_id
-                    ))
-                    .bind(existing_order.token_address)
-                    .bind(transaction_info.chain_id)
-                    .bind(order_hash.clone())
-                    .bind(existing_order.token_id)
-                    .bind(existing_order.order_type)
-                    .bind(transaction_info.timestamp as i64)
-                    .bind(transaction_info.tx_hash.clone())
-                    .bind(from.unwrap_or_default())
-                    .bind()
-                    .bind(transaction_info.sub_event_id.clone())
-                    .bind(order.currency_address.0.to_fixed_hex_string())
-                    .bind(BigDecimal::from(0))
-                    .execute(self.pool())
-                    .await?;
-            } */
+            let token_event_id =
+                format!("{}_{}", transaction_info.tx_hash, transaction_info.event_id);
+
+            let amount = existing_order
+                .start_amount
+                .parse::<BigDecimal>()
+                .unwrap_or_else(|_| BigDecimal::from(0));
+
+            debug!(
+                token_event_id = %token_event_id,
+                amount = %amount,
+                "Inserting token event"
+            );
+
+            sqlx::query(query)
+                .bind(token_event_id)
+                .bind(existing_order.token_address)
+                .bind(transaction_info.chain_id.to_string())
+                .bind(order_hash.clone())
+                .bind(existing_order.token_id)
+                .bind("Sale")
+                .bind(transaction_info.timestamp as i64)
+                .bind(transaction_info.tx_hash.clone())
+                .bind(from)
+                .bind(to)
+                .bind(amount.to_string())
+                .bind(transaction_info.sub_event_id.clone())
+                .bind(existing_order.currency_address)
+                .bind(existing_order.start_amount_eth)
+                .execute(self.pool())
+                .await?;
+
+            debug!("Successfully inserted token event");
+        } else {
+            debug!(order_hash = %order_hash, "No existing order found");
+        }
 
         Ok(())
     }
