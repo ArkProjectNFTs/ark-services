@@ -749,7 +749,7 @@ impl OrderbookStorage for DatabaseStorage {
                     .await?
             }
             _ => {
-                warn!(event = ?transaction_info.event, "Unsupported event");
+                warn!(event = ?transaction_info.event, tx_hash = %transaction_info.tx_hash, "Unsupported event");
             }
         };
         Ok(())

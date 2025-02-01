@@ -707,6 +707,11 @@ where
             block_number: None,
             transaction_hash: tx_hash,
         };
+
+        info!(
+            "Processing orderbook event with key: {:#064x}",
+            emitted_event.keys[0]
+        );
         let orderbook_event = orderbook::Event::from(emitted_event);
         let orderbook_transaction_info = OrderTransactionInfo {
             chain_id: chain_id.to_owned(),
