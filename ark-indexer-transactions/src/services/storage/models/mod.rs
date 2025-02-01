@@ -11,6 +11,8 @@ pub struct ExistingOrder {
     pub start_amount: String,
     pub start_amount_eth: Option<BigDecimal>,
     pub order_type: ExistingOrderType,
+    pub currency_address: String,
+    pub currency_chain_id: String,
 }
 
 #[derive(sqlx::Type)]
