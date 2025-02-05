@@ -448,8 +448,8 @@ where
                     value,
                 } => {
                     let value = value.clone();
-                    let value_for_tx = value.clone();  // For NFTInfo and TransactionInfo
-                    let value_for_balance = value.clone();  // For token balance updates
+                    let value_for_tx = value.clone(); // For NFTInfo and TransactionInfo
+                    let value_for_balance = value.clone(); // For token balance updates
 
                     let call_data = vec![id_low, id_high];
                     // if let Some(token_id) = transfer_info.clone().token_id {
@@ -556,40 +556,48 @@ where
                     let zero_address = Felt::ZERO;
                     if from == zero_address {
                         // Mint case
-                        storage.update_token_balance(
-                            &felt_to_strk_string(contract_origin),
-                            &token_id_for_balance,
-                            &felt_to_strk_string(to),
-                            chain_id,
-                            &value_for_balance
-                        ).await?;
+                        storage
+                            .update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(to),
+                                chain_id,
+                                &value_for_balance,
+                            )
+                            .await?;
                     } else if to == zero_address {
                         // Burn case
                         let negative_value = -value_for_balance.clone();
-                        storage.update_token_balance(
-                            &felt_to_strk_string(contract_origin),
-                            &token_id_for_balance,
-                            &felt_to_strk_string(from),
-                            chain_id,
-                            &negative_value
-                        ).await?;
+                        storage
+                            .update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(from),
+                                chain_id,
+                                &negative_value,
+                            )
+                            .await?;
                     } else {
                         // Transfer case
                         let negative_value = -value_for_balance.clone();
-                        storage.update_token_balance(
-                            &felt_to_strk_string(contract_origin),
-                            &token_id_for_balance,
-                            &felt_to_strk_string(from),
-                            chain_id,
-                            &negative_value
-                        ).await?;
-                        storage.update_token_balance(
-                            &felt_to_strk_string(contract_origin),
-                            &token_id_for_balance,
-                            &felt_to_strk_string(to),
-                            chain_id,
-                            &value_for_balance
-                        ).await?;
+                        storage
+                            .update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(from),
+                                chain_id,
+                                &negative_value,
+                            )
+                            .await?;
+                        storage
+                            .update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(to),
+                                chain_id,
+                                &value_for_balance,
+                            )
+                            .await?;
                     }
 
                     drop(storage);
@@ -644,10 +652,12 @@ where
                     let storage = self.storage.lock().await;
                     let zero_address = Felt::ZERO;
 
-                    for (index, ((id_low, id_high), value)) in ids.into_iter().zip(values.iter()).enumerate() {
+                    for (index, ((id_low, id_high), value)) in
+                        ids.into_iter().zip(values.iter()).enumerate()
+                    {
                         let value = value.clone();
-                        let value_for_tx = value.clone();  // For NFTInfo and TransactionInfo
-                        let value_for_balance = value.clone();  // For token balance updates
+                        let value_for_tx = value.clone(); // For NFTInfo and TransactionInfo
+                        let value_for_balance = value.clone(); // For token balance updates
                         let call_data = vec![id_low, id_high];
                         let uri = match self
                             .get_contract_property_string(
@@ -701,38 +711,46 @@ where
 
                         // Now storage is in scope for token balance updates
                         if from == zero_address {
-                            storage.update_token_balance(
-                                &felt_to_strk_string(contract_origin),
-                                &token_id_for_balance,
-                                &felt_to_strk_string(to),
-                                chain_id,
-                                &value_for_balance
-                            ).await?;
+                            storage
+                                .update_token_balance(
+                                    &felt_to_strk_string(contract_origin),
+                                    &token_id_for_balance,
+                                    &felt_to_strk_string(to),
+                                    chain_id,
+                                    &value_for_balance,
+                                )
+                                .await?;
                         } else if to == zero_address {
                             let negative_value = -value_for_balance.clone();
-                            storage.update_token_balance(
-                                &felt_to_strk_string(contract_origin),
-                                &token_id_for_balance,
-                                &felt_to_strk_string(from),
-                                chain_id,
-                                &negative_value
-                            ).await?;
+                            storage
+                                .update_token_balance(
+                                    &felt_to_strk_string(contract_origin),
+                                    &token_id_for_balance,
+                                    &felt_to_strk_string(from),
+                                    chain_id,
+                                    &negative_value,
+                                )
+                                .await?;
                         } else {
                             let negative_value = -value_for_balance.clone();
-                            storage.update_token_balance(
-                                &felt_to_strk_string(contract_origin),
-                                &token_id_for_balance,
-                                &felt_to_strk_string(from),
-                                chain_id,
-                                &negative_value
-                            ).await?;
-                            storage.update_token_balance(
-                                &felt_to_strk_string(contract_origin),
-                                &token_id_for_balance,
-                                &felt_to_strk_string(to),
-                                chain_id,
-                                &value_for_balance
-                            ).await?;
+                            storage
+                                .update_token_balance(
+                                    &felt_to_strk_string(contract_origin),
+                                    &token_id_for_balance,
+                                    &felt_to_strk_string(from),
+                                    chain_id,
+                                    &negative_value,
+                                )
+                                .await?;
+                            storage
+                                .update_token_balance(
+                                    &felt_to_strk_string(contract_origin),
+                                    &token_id_for_balance,
+                                    &felt_to_strk_string(to),
+                                    chain_id,
+                                    &value_for_balance,
+                                )
+                                .await?;
                         }
                     }
 

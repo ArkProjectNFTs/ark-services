@@ -1,3 +1,4 @@
+use super::TokenBalanceStorage;
 use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage};
 use crate::interfaces::contract::ContractType;
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
@@ -8,7 +9,6 @@ use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
 use tracing::info;
-use super::TokenBalanceStorage;
 
 const MINT_EVENT: &str = "Mint";
 const BURN_EVENT: &str = "Burn";

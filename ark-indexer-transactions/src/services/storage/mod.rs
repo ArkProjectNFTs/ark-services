@@ -5,8 +5,8 @@ pub mod orderbook;
 pub mod types;
 
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
-use sqlx::types::BigDecimal;
 use orderbook::OrderbookStorage;
+use sqlx::types::BigDecimal;
 
 use async_trait::async_trait;
 #[cfg(test)]
@@ -56,4 +56,11 @@ pub trait TokenBalanceStorage {
 }
 
 #[async_trait::async_trait]
-pub trait Storage: NFTInfoStorage + ContractInfoStorage + TokenBalanceStorage + TransactionInfoStorage + OrderbookStorage {}
+pub trait Storage:
+    NFTInfoStorage
+    + ContractInfoStorage
+    + TokenBalanceStorage
+    + TransactionInfoStorage
+    + OrderbookStorage
+{
+}
