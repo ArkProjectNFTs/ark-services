@@ -8,6 +8,7 @@ use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
 use tracing::info;
+use super::TokenBalanceStorage;
 
 const MINT_EVENT: &str = "Mint";
 const BURN_EVENT: &str = "Burn";
@@ -268,8 +269,13 @@ impl NFTInfoStorage for DatabaseStorage {
                 contract_address, token_id, name, symbol, metadata_uri, owner, chain_id, block_hash, indexed_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (contract_address, token_id) DO UPDATE
-            SET name = EXCLUDED.name, symbol = EXCLUDED.symbol, metadata_uri = EXCLUDED.metadata_uri,
-                owner = EXCLUDED.owner, chain_id = EXCLUDED.chain_id, block_hash = EXCLUDED.block_hash, indexed_at = EXCLUDED.indexed_at
+            SET name = EXCLUDED.name, 
+                symbol = EXCLUDED.symbol, 
+                metadata_uri = EXCLUDED.metadata_uri,
+                owner = EXCLUDED.owner, 
+                chain_id = EXCLUDED.chain_id, 
+                block_hash = EXCLUDED.block_hash, 
+                indexed_at = EXCLUDED.indexed_at
         "#;
 
         sqlx::query(query)
@@ -294,10 +300,16 @@ impl NFTInfoStorage for DatabaseStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let query = r#"
             INSERT INTO token (
-                contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp, quantity
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (contract_address, chain_id, token_id) DO UPDATE
-            SET current_owner = EXCLUDED.current_owner, chain_id = EXCLUDED.chain_id, block_timestamp = EXCLUDED.block_timestamp, updated_timestamp = EXCLUDED.updated_timestamp
+            SET metadata_status = EXCLUDED.metadata_status,
+                block_timestamp = EXCLUDED.block_timestamp,
+                updated_timestamp = EXCLUDED.updated_timestamp,
+                quantity = CASE 
+                    WHEN token.quantity IS NULL THEN EXCLUDED.quantity
+                    ELSE token.quantity + EXCLUDED.quantity
+                END
         "#;
         let mut token_id_hex: Option<String> = None;
         if let Some(token_id) = nft_info.token_id.clone() {
@@ -312,9 +324,10 @@ impl NFTInfoStorage for DatabaseStorage {
             .bind(nft_info.token_id)
             .bind(token_id_hex)
             .bind("TO_REFRESH")
-            .bind(&nft_info.owner)
+            .bind(Option::<String>::None) // current_owner is null for ERC1155
             .bind(nft_info.block_timestamp as i64)
             .bind(Utc::now().timestamp())
+            .bind(nft_info.value)
             .execute(&self.pool)
             .await?;
 
@@ -343,6 +356,42 @@ impl ContractInfoStorage for DatabaseStorage {
             .bind(&contract_info.name)
             .bind(&contract_info.symbol)
             .bind(Utc::now().timestamp())
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl TokenBalanceStorage for DatabaseStorage {
+    async fn update_token_balance(
+        &self,
+        contract_address: &str,
+        token_id: &BigDecimal,
+        owner_address: &str,
+        chain_id: &str,
+        amount: &BigDecimal,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let query = r#"
+            INSERT INTO token_balance (
+                contract_address, token_id, owner_address, balance, chain_id, last_updated_at
+            ) VALUES ($1, $2, $3, $4, $5, NOW())
+            ON CONFLICT (contract_address, token_id, owner_address, chain_id) DO UPDATE
+            SET balance = token_balance.balance + EXCLUDED.balance,
+                last_updated_at = NOW()
+            WHERE token_balance.contract_address = EXCLUDED.contract_address
+            AND token_balance.token_id = EXCLUDED.token_id
+            AND token_balance.owner_address = EXCLUDED.owner_address
+            AND token_balance.chain_id = EXCLUDED.chain_id
+        "#;
+
+        sqlx::query(query)
+            .bind(contract_address)
+            .bind(token_id)
+            .bind(owner_address)
+            .bind(amount)
+            .bind(chain_id)
             .execute(&self.pool)
             .await?;
 

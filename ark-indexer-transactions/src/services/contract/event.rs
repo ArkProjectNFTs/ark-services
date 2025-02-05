@@ -9,7 +9,7 @@ use tracing::info;
 
 use super::{
     common::{detect_erc_action, utils::parse_u256},
-    erc1155, erc1400, erc20, erc721,
+    erc1155, erc721,
     manager::ContractManager,
 };
 use crate::{
@@ -30,121 +30,121 @@ where
     S: Storage + Send + Sync + 'static,
     P: Provider + Send + Sync + 'static,
 {
-    pub async fn handle_erc20_event(
-        &self,
-        event: Event,
-        event_id: u64,
-        chain_id: &str,
-        block_hash: Felt,
-        tx_hash: Felt,
-        block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = erc20::decode(&event)? {
-            match erc_event {
-                ERC20Event::Transfer { from, to, value } => {
-                    let call_data = vec![];
+    // pub async fn handle_erc20_event(
+    //     &self,
+    //     event: Event,
+    //     event_id: u64,
+    //     chain_id: &str,
+    //     block_hash: Felt,
+    //     tx_hash: Felt,
+    //     block_timestamp: u64,
+    // ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    //     let contract_origin = event.from_address;
+    //     if let Some((erc_event, erc_compliance)) = erc20::decode(&event)? {
+    //         match erc_event {
+    //             ERC20Event::Transfer { from, to, value } => {
+    //                 let call_data = vec![];
 
-                    let name = match self
-                        .get_contract_property_string(
-                            contract_origin,
-                            "name",
-                            call_data.clone(),
-                            Hash(block_hash),
-                        )
-                        .await
-                    {
-                        Ok(name) => name,
-                        Err(_) => "".to_owned(),
-                    };
+    //                 let name = match self
+    //                     .get_contract_property_string(
+    //                         contract_origin,
+    //                         "name",
+    //                         call_data.clone(),
+    //                         Hash(block_hash),
+    //                     )
+    //                     .await
+    //                 {
+    //                     Ok(name) => name,
+    //                     Err(_) => "".to_owned(),
+    //                 };
 
-                    // println!("Name: {:?}", name);
+    //                 // println!("Name: {:?}", name);
 
-                    let symbol = match self
-                        .get_contract_property_string(
-                            contract_origin,
-                            "symbol",
-                            call_data.clone(),
-                            Hash(block_hash),
-                        )
-                        .await
-                    {
-                        Ok(symbol) => symbol,
-                        Err(_) => "".to_owned(),
-                    };
+    //                 let symbol = match self
+    //                     .get_contract_property_string(
+    //                         contract_origin,
+    //                         "symbol",
+    //                         call_data.clone(),
+    //                         Hash(block_hash),
+    //                     )
+    //                     .await
+    //                 {
+    //                     Ok(symbol) => symbol,
+    //                     Err(_) => "".to_owned(),
+    //                 };
 
-                    // println!("Symbol: {:?}", symbol);
+    //                 // println!("Symbol: {:?}", symbol);
 
-                    let _decimals = match self
-                        .get_contract_property_string(
-                            contract_origin,
-                            "decimals",
-                            call_data.clone(),
-                            Hash(block_hash),
-                        )
-                        .await
-                    {
-                        Ok(decimals) => decimals,
-                        Err(_) => "".to_owned(),
-                    };
+    //                 let _decimals = match self
+    //                     .get_contract_property_string(
+    //                         contract_origin,
+    //                         "decimals",
+    //                         call_data.clone(),
+    //                         Hash(block_hash),
+    //                     )
+    //                     .await
+    //                 {
+    //                     Ok(decimals) => decimals,
+    //                     Err(_) => "".to_owned(),
+    //                 };
 
-                    // println!("Decimals: {:?}", decimals);
+    //                 // println!("Decimals: {:?}", decimals);
 
-                    // let value = match value {
-                    //     Some(value) => value.to_bigint().to_string(),
-                    //     None => "0".to_owned(),
-                    // };
-                    let action = detect_erc_action(from, to);
-                    let tx_info = TransactionInfo {
-                        tx_hash: felt_to_strk_string(tx_hash),
-                        event_id,
-                        chain_id: chain_id.to_owned(),
-                        from: felt_to_strk_string(from),
-                        to: felt_to_strk_string(to),
-                        event_type: EventType::Transfer,
-                        compliance: erc_compliance,
-                        value: Some(value),
-                        timestamp: block_timestamp,
-                        token_id: Some(BigDecimal::from_str("0")?),
-                        contract_address: felt_to_strk_string(contract_origin),
-                        contract_type: ContractType::ERC20,
-                        block_hash: felt_to_strk_string(block_hash),
-                        action,
-                        sub_event_id: format!("{}_O", event_id),
-                    };
-                    let _nft_info = NFTInfo {
-                        tx_hash: felt_to_strk_string(tx_hash),
-                        contract_address: felt_to_strk_string(contract_origin),
-                        token_id: None,
-                        name: Some(name.clone()),
-                        symbol: Some(symbol.clone()),
-                        metadata_uri: None,
-                        owner: felt_to_strk_string(to),
-                        chain_id: chain_id.to_owned(),
-                        block_hash: felt_to_strk_string(block_hash),
-                        block_timestamp,
-                    };
-                    let contract_info = ContractInfo {
-                        chain_id: chain_id.to_owned(),
-                        contract_type: ContractType::ERC20,
-                        contract_address: felt_to_strk_string(contract_origin),
-                        name: Some(name.clone()),
-                        symbol: Some(symbol.clone()),
-                        image: None,
-                    };
-                    // println!("TX INFO : {:?}", tx_info);
-                    let storage = self.storage.lock().await;
-                    storage.store_contract(contract_info).await?;
-                    // storage.store_token(nft_info.clone()).await?;
-                    // storage.store_token_event(tx_info.clone()).await?;
-                    storage.store_transaction_info(tx_info).await?;
-                    drop(storage);
-                }
-                _ => return Ok(()),
-            }
-        }
-        Ok(())
-    }
+    //                 // let value = match value {
+    //                 //     Some(value) => value.to_bigint().to_string(),
+    //                 //     None => "0".to_owned(),
+    //                 // };
+    //                 let action = detect_erc_action(from, to);
+    //                 let tx_info = TransactionInfo {
+    //                     tx_hash: felt_to_strk_string(tx_hash),
+    //                     event_id,
+    //                     chain_id: chain_id.to_owned(),
+    //                     from: felt_to_strk_string(from),
+    //                     to: felt_to_strk_string(to),
+    //                     event_type: EventType::Transfer,
+    //                     compliance: erc_compliance,
+    //                     value: Some(value),
+    //                     timestamp: block_timestamp,
+    //                     token_id: Some(BigDecimal::from_str("0")?),
+    //                     contract_address: felt_to_strk_string(contract_origin),
+    //                     contract_type: ContractType::ERC20,
+    //                     block_hash: felt_to_strk_string(block_hash),
+    //                     action,
+    //                     sub_event_id: format!("{}_O", event_id),
+    //                 };
+    //                 let _nft_info = NFTInfo {
+    //                     tx_hash: felt_to_strk_string(tx_hash),
+    //                     contract_address: felt_to_strk_string(contract_origin),
+    //                     token_id: None,
+    //                     name: Some(name.clone()),
+    //                     symbol: Some(symbol.clone()),
+    //                     metadata_uri: None,
+    //                     owner: felt_to_strk_string(to),
+    //                     chain_id: chain_id.to_owned(),
+    //                     block_hash: felt_to_strk_string(block_hash),
+    //                     block_timestamp,
+    //                 };
+    //                 let contract_info = ContractInfo {
+    //                     chain_id: chain_id.to_owned(),
+    //                     contract_type: ContractType::ERC20,
+    //                     contract_address: felt_to_strk_string(contract_origin),
+    //                     name: Some(name.clone()),
+    //                     symbol: Some(symbol.clone()),
+    //                     image: None,
+    //                 };
+    //                 // println!("TX INFO : {:?}", tx_info);
+    //                 let storage = self.storage.lock().await;
+    //                 storage.store_contract(contract_info).await?;
+    //                 // storage.store_token(nft_info.clone()).await?;
+    //                 // storage.store_token_event(tx_info.clone()).await?;
+    //                 storage.store_transaction_info(tx_info).await?;
+    //                 drop(storage);
+    //             }
+    //             _ => return Ok(()),
+    //         }
+    //     }
+    //     Ok(())
+    // }
 
     pub async fn handle_erc721_event(
         &self,
@@ -277,6 +277,7 @@ where
                     };
                     // println!("Meta data URI: {:?}", metadata_uri);
                     let token_id: BigDecimal = parse_u256(&token_id_low, &token_id_high);
+                    let token_id_for_balance = token_id.clone();
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
@@ -288,6 +289,7 @@ where
                         chain_id: chain_id.to_owned(),
                         block_hash: felt_to_strk_string(block_hash),
                         block_timestamp,
+                        value: None,
                     };
                     // println!("Found NFT: {:?}", nft_info);
                     let action = detect_erc_action(from, to);
@@ -321,109 +323,109 @@ where
         Ok(())
     }
 
-    pub async fn handle_erc1400_event(
-        &self,
-        event: Event,
-        event_id: u64,
-        chain_id: &str,
-        block_hash: Felt,
-        tx_hash: Felt,
-        block_timestamp: u64,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        let contract_origin = event.from_address;
-        if let Some((erc_event, erc_compliance)) = erc1400::decode(&event)? {
-            match erc_event {
-                ERC1400Event::Transfer { from, to, value } => {
-                    let call_data = vec![];
-                    // if let Some(token_id) = transfer_info.clone().token_id {
-                    //     call_data.push(Felt::from_hex(&token_id.clone())?);
-                    //     println!("Token ID: {:?}", token_id);
-                    // }
+    // pub async fn handle_erc1400_event(
+    //     &self,
+    //     event: Event,
+    //     event_id: u64,
+    //     chain_id: &str,
+    //     block_hash: Felt,
+    //     tx_hash: Felt,
+    //     block_timestamp: u64,
+    // ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    //     let contract_origin = event.from_address;
+    //     if let Some((erc_event, erc_compliance)) = erc1400::decode(&event)? {
+    //         match erc_event {
+    //             ERC1400Event::Transfer { from, to, value } => {
+    //                 let call_data = vec![];
+    //                 // if let Some(token_id) = transfer_info.clone().token_id {
+    //                 //     call_data.push(Felt::from_hex(&token_id.clone())?);
+    //                 //     println!("Token ID: {:?}", token_id);
+    //                 // }
 
-                    let name = match self
-                        .get_contract_property_string(
-                            contract_origin,
-                            "name",
-                            call_data.clone(),
-                            Hash(block_hash),
-                        )
-                        .await
-                    {
-                        Ok(name) => name,
-                        Err(_) => "".to_owned(),
-                    };
+    //                 let name = match self
+    //                     .get_contract_property_string(
+    //                         contract_origin,
+    //                         "name",
+    //                         call_data.clone(),
+    //                         Hash(block_hash),
+    //                     )
+    //                     .await
+    //                 {
+    //                     Ok(name) => name,
+    //                     Err(_) => "".to_owned(),
+    //                 };
 
-                    // println!("Name: {:?}", name);
+    //                 // println!("Name: {:?}", name);
 
-                    let symbol = match self
-                        .get_contract_property_string(
-                            contract_origin,
-                            "symbol",
-                            call_data.clone(),
-                            Hash(block_hash),
-                        )
-                        .await
-                    {
-                        Ok(symbol) => symbol,
-                        Err(_) => "".to_owned(),
-                    };
+    //                 let symbol = match self
+    //                     .get_contract_property_string(
+    //                         contract_origin,
+    //                         "symbol",
+    //                         call_data.clone(),
+    //                         Hash(block_hash),
+    //                     )
+    //                     .await
+    //                 {
+    //                     Ok(symbol) => symbol,
+    //                     Err(_) => "".to_owned(),
+    //                 };
 
-                    // println!("Symbol: {:?}", symbol);
+    //                 // println!("Symbol: {:?}", symbol);
 
-                    // let value = match transfer_info.amount {
-                    //     Some(value) => value.to_bigint().to_string(),
-                    //     None => "0".to_owned(),
-                    // };
+    //                 // let value = match transfer_info.amount {
+    //                 //     Some(value) => value.to_bigint().to_string(),
+    //                 //     None => "0".to_owned(),
+    //                 // };
 
-                    let action = detect_erc_action(from, to);
-                    let tx_info = TransactionInfo {
-                        tx_hash: felt_to_strk_string(tx_hash),
-                        event_id,
-                        chain_id: chain_id.to_owned(),
-                        from: felt_to_strk_string(from),
-                        to: felt_to_strk_string(to),
-                        value: Some(value),
-                        timestamp: block_timestamp,
-                        token_id: Some(BigDecimal::from_str("0")?),
-                        contract_address: felt_to_strk_string(contract_origin),
-                        contract_type: ContractType::ERC1400,
-                        block_hash: felt_to_strk_string(block_hash),
-                        event_type: EventType::Transfer,
-                        compliance: erc_compliance,
-                        action,
-                        sub_event_id: format!("{}_O", event_id),
-                    };
-                    let _nft_info = NFTInfo {
-                        tx_hash: felt_to_strk_string(tx_hash),
-                        contract_address: felt_to_strk_string(contract_origin),
-                        token_id: None,
-                        name: Some(name.clone()),
-                        symbol: Some(symbol.clone()),
-                        metadata_uri: None,
-                        owner: felt_to_strk_string(to),
-                        chain_id: chain_id.to_owned(),
-                        block_hash: felt_to_strk_string(block_hash),
-                        block_timestamp,
-                    };
-                    let contract_info = ContractInfo {
-                        chain_id: chain_id.to_owned(),
-                        contract_type: ContractType::ERC1400,
-                        contract_address: felt_to_strk_string(contract_origin),
-                        name: Some(name.clone()),
-                        symbol: Some(symbol.clone()),
-                        image: None,
-                    };
-                    let storage = self.storage.lock().await;
-                    storage.store_contract(contract_info).await?;
-                    // storage.store_token(nft_info.clone()).await?;
-                    // storage.store_token_event(tx_info.clone()).await?;
-                    storage.store_transaction_info(tx_info).await?;
-                    drop(storage);
-                }
-            }
-        }
-        Ok(())
-    }
+    //                 let action = detect_erc_action(from, to);
+    //                 let tx_info = TransactionInfo {
+    //                     tx_hash: felt_to_strk_string(tx_hash),
+    //                     event_id,
+    //                     chain_id: chain_id.to_owned(),
+    //                     from: felt_to_strk_string(from),
+    //                     to: felt_to_strk_string(to),
+    //                     value: Some(value),
+    //                     timestamp: block_timestamp,
+    //                     token_id: Some(BigDecimal::from_str("0")?),
+    //                     contract_address: felt_to_strk_string(contract_origin),
+    //                     contract_type: ContractType::ERC1400,
+    //                     block_hash: felt_to_strk_string(block_hash),
+    //                     event_type: EventType::Transfer,
+    //                     compliance: erc_compliance,
+    //                     action,
+    //                     sub_event_id: format!("{}_O", event_id),
+    //                 };
+    //                 let _nft_info = NFTInfo {
+    //                     tx_hash: felt_to_strk_string(tx_hash),
+    //                     contract_address: felt_to_strk_string(contract_origin),
+    //                     token_id: None,
+    //                     name: Some(name.clone()),
+    //                     symbol: Some(symbol.clone()),
+    //                     metadata_uri: None,
+    //                     owner: felt_to_strk_string(to),
+    //                     chain_id: chain_id.to_owned(),
+    //                     block_hash: felt_to_strk_string(block_hash),
+    //                     block_timestamp,
+    //                 };
+    //                 let contract_info = ContractInfo {
+    //                     chain_id: chain_id.to_owned(),
+    //                     contract_type: ContractType::ERC1400,
+    //                     contract_address: felt_to_strk_string(contract_origin),
+    //                     name: Some(name.clone()),
+    //                     symbol: Some(symbol.clone()),
+    //                     image: None,
+    //                 };
+    //                 let storage = self.storage.lock().await;
+    //                 storage.store_contract(contract_info).await?;
+    //                 // storage.store_token(nft_info.clone()).await?;
+    //                 // storage.store_token_event(tx_info.clone()).await?;
+    //                 storage.store_transaction_info(tx_info).await?;
+    //                 drop(storage);
+    //             }
+    //         }
+    //     }
+    //     Ok(())
+    // }
 
     pub async fn handle_erc1155_event(
         &self,
@@ -445,6 +447,10 @@ where
                     id_high,
                     value,
                 } => {
+                    let value = value.clone();
+                    let value_for_tx = value.clone();  // For NFTInfo and TransactionInfo
+                    let value_for_balance = value.clone();  // For token balance updates
+
                     let call_data = vec![id_low, id_high];
                     // if let Some(token_id) = transfer_info.clone().token_id {
                     //     call_data.push(Felt::from_hex(&id)?);
@@ -494,6 +500,7 @@ where
 
                     // println!("URI: {:?}", uri);
                     let token_id = parse_u256(&id_low, &id_high);
+                    let token_id_for_balance = token_id.clone();
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
@@ -505,6 +512,7 @@ where
                         chain_id: chain_id.to_owned(),
                         block_hash: felt_to_strk_string(block_hash),
                         block_timestamp,
+                        value: Some(value_for_tx.clone()),
                     };
                     // let value = match transfer_info.amount {
                     //     Some(value) => value.to_bigint().to_string(),
@@ -526,7 +534,7 @@ where
                         chain_id: chain_id.to_owned(),
                         from: felt_to_strk_string(from),
                         to: felt_to_strk_string(to),
-                        value: Some(value),
+                        value: Some(value_for_tx),
                         timestamp: block_timestamp,
                         token_id: Some(token_id),
                         contract_address: felt_to_strk_string(contract_origin),
@@ -538,10 +546,52 @@ where
                         sub_event_id: format!("{}_O", event_id),
                     };
                     let storage = self.storage.lock().await;
+
                     storage.store_contract(contract_info).await?;
                     storage.store_token(nft_info.clone()).await?;
                     storage.store_nft_info(nft_info).await?;
                     storage.store_transaction_info(tx_info).await?;
+
+                    // Handle token balances
+                    let zero_address = Felt::ZERO;
+                    if from == zero_address {
+                        // Mint case
+                        storage.update_token_balance(
+                            &felt_to_strk_string(contract_origin),
+                            &token_id_for_balance,
+                            &felt_to_strk_string(to),
+                            chain_id,
+                            &value_for_balance
+                        ).await?;
+                    } else if to == zero_address {
+                        // Burn case
+                        let negative_value = -value_for_balance.clone();
+                        storage.update_token_balance(
+                            &felt_to_strk_string(contract_origin),
+                            &token_id_for_balance,
+                            &felt_to_strk_string(from),
+                            chain_id,
+                            &negative_value
+                        ).await?;
+                    } else {
+                        // Transfer case
+                        let negative_value = -value_for_balance.clone();
+                        storage.update_token_balance(
+                            &felt_to_strk_string(contract_origin),
+                            &token_id_for_balance,
+                            &felt_to_strk_string(from),
+                            chain_id,
+                            &negative_value
+                        ).await?;
+                        storage.update_token_balance(
+                            &felt_to_strk_string(contract_origin),
+                            &token_id_for_balance,
+                            &felt_to_strk_string(to),
+                            chain_id,
+                            &value_for_balance
+                        ).await?;
+                    }
+
                     drop(storage);
                 }
                 ERC1155Event::TransferBatch {
@@ -591,9 +641,13 @@ where
                         symbol: Some(symbol.clone()),
                         image: None,
                     };
-                    for (index, ((id_low, id_high), value)) in
-                        ids.into_iter().zip(values.iter()).enumerate()
-                    {
+                    let storage = self.storage.lock().await;
+                    let zero_address = Felt::ZERO;
+
+                    for (index, ((id_low, id_high), value)) in ids.into_iter().zip(values.iter()).enumerate() {
+                        let value = value.clone();
+                        let value_for_tx = value.clone();  // For NFTInfo and TransactionInfo
+                        let value_for_balance = value.clone();  // For token balance updates
                         let call_data = vec![id_low, id_high];
                         let uri = match self
                             .get_contract_property_string(
@@ -607,7 +661,8 @@ where
                             Ok(uri) => uri,
                             Err(_) => "".to_owned(),
                         };
-                        let token_id: BigDecimal = parse_u256(&id_low, &id_high);
+                        let token_id = parse_u256(&id_low, &id_high);
+                        let token_id_for_balance = token_id.clone();
                         let nft_info = NFTInfo {
                             tx_hash: felt_to_strk_string(tx_hash),
                             contract_address: felt_to_strk_string(contract_origin),
@@ -619,6 +674,7 @@ where
                             chain_id: chain_id.to_owned(),
                             block_hash: felt_to_strk_string(block_hash),
                             block_timestamp,
+                            value: Some(value_for_tx.clone()),
                         };
 
                         let action = detect_erc_action(from, to);
@@ -628,7 +684,7 @@ where
                             chain_id: chain_id.to_owned(),
                             from: felt_to_strk_string(from),
                             to: felt_to_strk_string(to),
-                            value: Some(value.clone()),
+                            value: Some(value_for_tx),
                             timestamp: block_timestamp,
                             token_id: Some(token_id),
                             contract_address: felt_to_strk_string(contract_origin),
@@ -642,11 +698,44 @@ where
 
                         nft_infos.push(nft_info);
                         tx_infos.push(tx_info);
+
+                        // Now storage is in scope for token balance updates
+                        if from == zero_address {
+                            storage.update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(to),
+                                chain_id,
+                                &value_for_balance
+                            ).await?;
+                        } else if to == zero_address {
+                            let negative_value = -value_for_balance.clone();
+                            storage.update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(from),
+                                chain_id,
+                                &negative_value
+                            ).await?;
+                        } else {
+                            let negative_value = -value_for_balance.clone();
+                            storage.update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(from),
+                                chain_id,
+                                &negative_value
+                            ).await?;
+                            storage.update_token_balance(
+                                &felt_to_strk_string(contract_origin),
+                                &token_id_for_balance,
+                                &felt_to_strk_string(to),
+                                chain_id,
+                                &value_for_balance
+                            ).await?;
+                        }
                     }
 
-                    let storage = self.storage.lock().await;
-                    storage.store_contract(contract_info).await?;
-                    // Utilisation de futures pour paralléliser les opérations d'enregistrement
                     let store_nft_futures = nft_infos
                         .clone()
                         .into_iter()

@@ -466,25 +466,11 @@ where
         // println!("contract_type {}", contract_type);
         match contract_type {
             ContractType::ERC20 => {
-                // println!(
-                //     "contract-Type: {:?} for {:?}",
-                //     contract_type, contract_address
-                // );
-                self.handle_erc20_event(
-                    event,
-                    event_id,
-                    chain_id,
-                    block_hash,
-                    tx_hash,
-                    block_timestamp,
-                )
-                .await?
+                // ERC20 handling is currently disabled
+                let result: Result<(), Box<dyn std::error::Error + Send + Sync>> = Ok(());
+                result?
             }
             ContractType::ERC721 => {
-                // println!(
-                //     "contract-Type: {:?} for {:?}",
-                //     contract_type, contract_address
-                // );
                 self.handle_erc721_event(
                     event,
                     event_id,
@@ -496,10 +482,6 @@ where
                 .await?
             }
             ContractType::ERC1155 => {
-                // println!(
-                //     "contract-Type: {:?} for {:?}",
-                //     contract_type, contract_address
-                // );
                 self.handle_erc1155_event(
                     event,
                     event_id,
@@ -511,19 +493,9 @@ where
                 .await?
             }
             ContractType::ERC1400 => {
-                // println!(
-                //     "contract-Type: {:?} for {:?}",
-                //     contract_type, contract_address
-                // );
-                self.handle_erc1400_event(
-                    event,
-                    event_id,
-                    chain_id,
-                    block_hash,
-                    tx_hash,
-                    block_timestamp,
-                )
-                .await?
+                // ERC1400 handling is currently disabled
+                let result: Result<(), Box<dyn std::error::Error + Send + Sync>> = Ok(());
+                result?
             }
             ContractType::Orderbook => {
                 self.handle_orderbook_event(
