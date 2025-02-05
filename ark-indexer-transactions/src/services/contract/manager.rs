@@ -1,11 +1,10 @@
 use crate::helpers::cairo_string_parser::parse_cairo_string;
-use crate::interfaces::contract::{ContractType, StarknetClientError};
+use crate::interfaces::contract::{ContractType, StarknetClientError, ContractInfo};
 use crate::services::state::manager::StateManager;
 use std::sync::Arc;
 // use crate::services::state::parsing::{load_parsing_state, save_parsing_state, ParsingState};
 use crate::services::storage::block::read_block_from_file;
 use crate::services::storage::block::BlockWrapper;
-use crate::services::storage::types::ContractInfo;
 use crate::services::storage::Storage;
 use num_traits::ToPrimitive;
 use starknet::core::types::{BlockId, BlockTag};
@@ -242,7 +241,7 @@ where
                     let _info = ContractInfo {
                         chain_id: chain_id.to_string(),
                         contract_address: address.to_hex_string(),
-                        contract_type: contract_type.to_string(),
+                        contract_type: contract_type.clone(),
                         name,
                         symbol,
                         image: None,

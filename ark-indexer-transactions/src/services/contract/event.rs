@@ -4,7 +4,6 @@ use starknet::{
     core::types::{BlockId::Hash, EmittedEvent, Felt},
     providers::{sequencer::models::Event, Provider},
 };
-use std::str::FromStr;
 use tracing::info;
 
 use super::{
@@ -16,8 +15,8 @@ use crate::{
     helpers::common::felt_to_strk_string,
     interfaces::{
         contract::{
-            ContractInfo, ContractType, ERC1155Event, ERC1400Event, ERC20Event, ERC721Event,
-            NFTInfo, StarknetClientError, TransactionInfo,
+            ContractInfo, ContractType, ERC1155Event, ERC721Event, NFTInfo, StarknetClientError,
+            TransactionInfo,
         },
         event::EventType,
         orderbook::OrderTransactionInfo,
@@ -277,7 +276,6 @@ where
                     };
                     // println!("Meta data URI: {:?}", metadata_uri);
                     let token_id: BigDecimal = parse_u256(&token_id_low, &token_id_high);
-                    let token_id_for_balance = token_id.clone();
                     let nft_info = NFTInfo {
                         tx_hash: felt_to_strk_string(tx_hash),
                         contract_address: felt_to_strk_string(contract_origin),
@@ -651,6 +649,9 @@ where
                     };
                     let storage = self.storage.lock().await;
                     let zero_address = Felt::ZERO;
+
+                    // Store contract info first
+                    storage.store_contract(contract_info).await?;
 
                     for (index, ((id_low, id_high), value)) in
                         ids.into_iter().zip(values.iter()).enumerate()
