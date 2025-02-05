@@ -1,5 +1,5 @@
 use crate::helpers::cairo_string_parser::parse_cairo_string;
-use crate::interfaces::contract::{ContractType, StarknetClientError, ContractInfo};
+use crate::interfaces::contract::{ContractInfo, ContractType, StarknetClientError};
 use crate::services::state::manager::StateManager;
 use std::sync::Arc;
 // use crate::services::state::parsing::{load_parsing_state, save_parsing_state, ParsingState};
