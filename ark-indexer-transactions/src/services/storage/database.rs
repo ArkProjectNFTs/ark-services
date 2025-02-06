@@ -9,7 +9,7 @@ use chrono::Utc;
 use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{info, debug};
 
 const MINT_EVENT: &str = "Mint";
 const BURN_EVENT: &str = "Burn";
@@ -299,6 +299,11 @@ impl NFTInfoStorage for DatabaseStorage {
         &self,
         nft_info: NFTInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        debug!(
+            "store_token - Raw value before processing: {:?}",
+            nft_info.value
+        );
+
         let query = r#"
             INSERT INTO token (
                 contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp, quantity
@@ -319,15 +324,17 @@ impl NFTInfoStorage for DatabaseStorage {
             info!("Invalid Token with info: {:?}", nft_info);
         }
 
-        tracing::debug!(
-            "Storing token with contract: {}, token_id: {:?}, quantity type: {:?}, quantity value: {:?}",
-            nft_info.contract_address,
+        debug!(
+            "store_token - Before database operation:\n\
+             token_id: {:?}\n\
+             quantity: {:?}\n\
+             quantity type: {}",
             nft_info.token_id,
-            nft_info.value.as_ref().map(|v| v.to_string()),
-            nft_info.value
+            nft_info.value,
+            nft_info.value.as_ref().map_or("None", |_| std::any::type_name::<BigDecimal>())
         );
 
-        sqlx::query(query)
+        let result = sqlx::query(query)
             .bind(&nft_info.contract_address)
             .bind(&nft_info.chain_id)
             .bind(nft_info.token_id)
@@ -336,10 +343,16 @@ impl NFTInfoStorage for DatabaseStorage {
             .bind(Option::<String>::None) // current_owner is null for ERC1155
             .bind(nft_info.block_timestamp as i64)
             .bind(Utc::now().timestamp())
-            .bind(nft_info.value.as_ref())  // Use as_ref() to pass the reference of BigDecimal
+            .bind(nft_info.value.as_ref())
             .execute(&self.pool)
-            .await?;
+            .await;
 
+        match &result {
+            Ok(_) => debug!("store_token - Database operation successful"),
+            Err(e) => debug!("store_token - Database operation failed: {:?}", e),
+        }
+
+        result?;
         Ok(())
     }
 }
@@ -382,7 +395,17 @@ impl TokenBalanceStorage for DatabaseStorage {
         chain_id: &str,
         amount: &BigDecimal,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        tracing::info!(
+        debug!(
+            "update_token_balance - Input values:\n\
+             amount (raw): {:?}\n\
+             amount (display): {}\n\
+             amount (debug): {:#?}",
+            amount,
+            amount.to_string(),
+            amount
+        );
+
+        info!(
             "Updating token balance: contract={}, token_id={}, owner={}, chain_id={}, amount={}",
             contract_address,
             token_id,

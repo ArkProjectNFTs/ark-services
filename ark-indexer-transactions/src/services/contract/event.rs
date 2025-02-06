@@ -448,21 +448,22 @@ where
                     value,
                 } => {
                     info!(
-                        "ERC1155 TransferSingle details:\n\
+                        "Processing ERC1155 TransferSingle:\n\
                          Contract: {}\n\
                          From: {}\n\
                          To: {}\n\
-                         ID: ({:?}, {:?})\n\
-                         Value (type): {}\n\
+                         ID Low: {:?}\n\
+                         ID High: {:?}\n\
                          Value (raw): {:?}\n\
+                         Value (display): {}\n\
                          Value (debug): {:#?}",
                         felt_to_strk_string(contract_origin),
                         felt_to_strk_string(from),
                         felt_to_strk_string(to),
                         id_low,
                         id_high,
-                        std::any::type_name::<BigDecimal>(),
                         value,
+                        value.to_string(),
                         value
                     );
                     
@@ -575,6 +576,19 @@ where
                     let zero_address = Felt::ZERO;
                     if from == zero_address {
                         // Mint case
+                        info!(
+                            "Handling mint case:\n\
+                             Contract: {}\n\
+                             Token ID: {}\n\
+                             To: {}\n\
+                             Chain ID: {}\n\
+                             Value: {}",
+                            felt_to_strk_string(contract_origin),
+                            token_id_for_balance,
+                            felt_to_strk_string(to),
+                            chain_id,
+                            value_for_balance
+                        );
                         storage
                             .update_token_balance(
                                 &felt_to_strk_string(contract_origin),
@@ -587,6 +601,19 @@ where
                     } else if to == zero_address {
                         // Burn case
                         let negative_value = -value_for_balance.clone();
+                        info!(
+                            "Handling burn case:\n\
+                             Contract: {}\n\
+                             Token ID: {}\n\
+                             From: {}\n\
+                             Chain ID: {}\n\
+                             Value: {}",
+                            felt_to_strk_string(contract_origin),
+                            token_id_for_balance,
+                            felt_to_strk_string(from),
+                            chain_id,
+                            negative_value
+                        );
                         storage
                             .update_token_balance(
                                 &felt_to_strk_string(contract_origin),
@@ -599,6 +626,21 @@ where
                     } else {
                         // Transfer case
                         let negative_value = -value_for_balance.clone();
+                        info!(
+                            "Handling transfer case:\n\
+                             Contract: {}\n\
+                             Token ID: {}\n\
+                             From: {} (value: {})\n\
+                             To: {} (value: {})\n\
+                             Chain ID: {}",
+                            felt_to_strk_string(contract_origin),
+                            token_id_for_balance,
+                            felt_to_strk_string(from),
+                            negative_value,
+                            felt_to_strk_string(to),
+                            value_for_balance,
+                            chain_id
+                        );
                         storage
                             .update_token_balance(
                                 &felt_to_strk_string(contract_origin),
