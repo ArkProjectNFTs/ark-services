@@ -378,8 +378,7 @@ impl TokenBalanceStorage for DatabaseStorage {
                 contract_address, token_id, owner_address, balance, chain_id, last_updated_at
             ) VALUES ($1, $2, $3, $4, $5, NOW())
             ON CONFLICT (contract_address, token_id, owner_address, chain_id) DO UPDATE
-            SET balance = token_balance.balance + EXCLUDED.balance,
-                last_updated_at = NOW()
+            SET balance = COALESCE(token_balance.balance, 0) + EXCLUDED.balance::numeric,
             WHERE token_balance.contract_address = EXCLUDED.contract_address
             AND token_balance.token_id = EXCLUDED.token_id
             AND token_balance.owner_address = EXCLUDED.owner_address
