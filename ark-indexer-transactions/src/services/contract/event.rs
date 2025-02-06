@@ -4,7 +4,7 @@ use starknet::{
     core::types::{BlockId::Hash, EmittedEvent, Felt},
     providers::{sequencer::models::Event, Provider},
 };
-use tracing::info;
+use tracing::{info, error};
 
 use super::{
     common::{detect_erc_action, utils::parse_u256},
@@ -435,6 +435,8 @@ where
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
+        info!("Starting ERC1155 event handling for contract: {}, event_id: {}", felt_to_strk_string(contract_origin), event_id);
+        
         if let Some((erc_event, erc_compliance)) = erc1155::decode(&event)? {
             match erc_event {
                 ERC1155Event::TransferSingle {
@@ -445,9 +447,28 @@ where
                     id_high,
                     value,
                 } => {
+                    info!(
+                        "ERC1155 TransferSingle details:\n\
+                         Contract: {}\n\
+                         From: {}\n\
+                         To: {}\n\
+                         ID: ({:?}, {:?})\n\
+                         Value (type): {}\n\
+                         Value (raw): {:?}\n\
+                         Value (debug): {:#?}",
+                        felt_to_strk_string(contract_origin),
+                        felt_to_strk_string(from),
+                        felt_to_strk_string(to),
+                        id_low,
+                        id_high,
+                        std::any::type_name::<BigDecimal>(),
+                        value,
+                        value
+                    );
+                    
                     let value = value.clone();
-                    let value_for_tx = value.clone(); // For NFTInfo and TransactionInfo
-                    let value_for_balance = value.clone(); // For token balance updates
+                    let value_for_tx = value.clone();
+                    let value_for_balance = value.clone();
 
                     let call_data = vec![id_low, id_high];
                     // if let Some(token_id) = transfer_info.clone().token_id {
