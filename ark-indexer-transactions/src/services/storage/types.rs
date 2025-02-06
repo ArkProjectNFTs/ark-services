@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
+#[cfg(test)]
 use tracing::error;
 
 #[derive(Debug, Clone)]
@@ -294,22 +295,11 @@ pub struct BlockIndexing {
     pub indexer_version: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
 pub struct BlockInfo {
     pub indexer_version: String,
     pub indexer_identifier: String,
     pub block_status: BlockIndexingStatus,
     pub block_number: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-pub struct ContractInfo {
-    pub chain_id: String,
-    pub contract_address: String,
-    pub contract_type: String,
-    pub name: Option<String>,
-    pub symbol: Option<String>,
-    pub image: Option<String>,
 }
 
 #[cfg(test)]

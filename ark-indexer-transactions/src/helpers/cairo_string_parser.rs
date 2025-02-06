@@ -1,7 +1,6 @@
 use super::byte_array::ByteArray;
 use starknet::core::{types::Felt, utils::parse_cairo_short_string};
 use std::ops::Add;
-use tracing::info;
 
 #[derive(Debug)]
 pub enum ParseError {
