@@ -3,6 +3,7 @@ use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage
 use crate::interfaces::contract::ContractType;
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
 use crate::interfaces::event::{ERCCompliance, ErcAction, EventType};
+use crate::helpers::common::sanitize_string;
 use bigdecimal::BigDecimal;
 use chrono::Utc;
 use num_bigint::BigUint;
@@ -381,6 +382,20 @@ impl TokenBalanceStorage for DatabaseStorage {
         chain_id: &str,
         amount: &BigDecimal,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        tracing::info!(
+            "Updating token balance: contract={}, token_id={}, owner={}, chain_id={}, amount={}",
+            contract_address,
+            token_id,
+            owner_address,
+            chain_id,
+            amount
+        );
+
+        // Sanitize inputs before database operation
+        let sanitized_contract = sanitize_string(contract_address);
+        let sanitized_owner = sanitize_string(owner_address);
+        let sanitized_chain = sanitize_string(chain_id);
+
         let query = r#"
             INSERT INTO token_balance (
                 contract_address, token_id, owner_address, balance, chain_id, last_updated_at
@@ -394,24 +409,25 @@ impl TokenBalanceStorage for DatabaseStorage {
             AND token_balance.chain_id = EXCLUDED.chain_id
         "#;
 
-        tracing::debug!(
-            "Updating token balance: contract={}, token_id={}, owner={}, amount={}",
-            contract_address,
-            token_id,
-            owner_address,
-            amount
-        );
-
-        sqlx::query(query)
-            .bind(contract_address)
+        let result = sqlx::query(query)
+            .bind(&sanitized_contract)
             .bind(token_id)
-            .bind(owner_address)
+            .bind(&sanitized_owner)
             .bind(amount)
-            .bind(chain_id)
+            .bind(&sanitized_chain)
             .execute(&self.pool)
-            .await?;
+            .await;
 
-        Ok(())
+        match result {
+            Ok(_) => {
+                tracing::info!("Successfully updated token balance");
+                Ok(())
+            }
+            Err(e) => {
+                tracing::error!("Failed to update token balance: {}", e);
+                Err(Box::new(e))
+            }
+        }
     }
 }
 
