@@ -301,14 +301,14 @@ impl NFTInfoStorage for DatabaseStorage {
         let query = r#"
             INSERT INTO token (
                 contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp, quantity
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::numeric)
+            ) VALUES ($1, $2, $3::numeric, $4, $5, $6, $7, $8, COALESCE($9::numeric, 0::numeric))
             ON CONFLICT (contract_address, chain_id, token_id) DO UPDATE
             SET metadata_status = EXCLUDED.metadata_status,
                 block_timestamp = EXCLUDED.block_timestamp,
                 updated_timestamp = EXCLUDED.updated_timestamp,
                 quantity = CASE 
-                    WHEN token.quantity IS NULL THEN EXCLUDED.quantity
-                    ELSE COALESCE(token.quantity, 0::numeric) + EXCLUDED.quantity::numeric
+                    WHEN token.quantity IS NULL THEN COALESCE(EXCLUDED.quantity::numeric, 0::numeric)
+                    ELSE (COALESCE(token.quantity::numeric, 0::numeric) + COALESCE(EXCLUDED.quantity::numeric, 0::numeric))
                 END
         "#;
         let mut token_id_hex: Option<String> = None;
@@ -319,9 +319,10 @@ impl NFTInfoStorage for DatabaseStorage {
         }
 
         tracing::debug!(
-            "Storing token with contract: {}, token_id: {:?}, quantity: {:?}",
+            "Storing token with contract: {}, token_id: {:?}, quantity type: {:?}, quantity value: {:?}",
             nft_info.contract_address,
             nft_info.token_id,
+            nft_info.value.as_ref().map(|v| v.to_string()),
             nft_info.value
         );
 
@@ -334,7 +335,7 @@ impl NFTInfoStorage for DatabaseStorage {
             .bind(Option::<String>::None) // current_owner is null for ERC1155
             .bind(nft_info.block_timestamp as i64)
             .bind(Utc::now().timestamp())
-            .bind(nft_info.value)
+            .bind(nft_info.value.as_ref())  // Use as_ref() to pass the reference of BigDecimal
             .execute(&self.pool)
             .await?;
 
@@ -385,13 +386,21 @@ impl TokenBalanceStorage for DatabaseStorage {
                 contract_address, token_id, owner_address, balance, chain_id, last_updated_at
             ) VALUES ($1, $2::numeric, $3, $4::numeric, $5, NOW())
             ON CONFLICT (contract_address, token_id, owner_address, chain_id) DO UPDATE
-            SET balance = (COALESCE(token_balance.balance, 0::numeric) + EXCLUDED.balance),
+            SET balance = (COALESCE(token_balance.balance::numeric, 0::numeric) + EXCLUDED.balance::numeric),
                 last_updated_at = NOW()
             WHERE token_balance.contract_address = EXCLUDED.contract_address
             AND token_balance.token_id = EXCLUDED.token_id
             AND token_balance.owner_address = EXCLUDED.owner_address
             AND token_balance.chain_id = EXCLUDED.chain_id
         "#;
+
+        tracing::debug!(
+            "Updating token balance: contract={}, token_id={}, owner={}, amount={}",
+            contract_address,
+            token_id,
+            owner_address,
+            amount
+        );
 
         sqlx::query(query)
             .bind(contract_address)
