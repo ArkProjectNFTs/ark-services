@@ -395,10 +395,28 @@ impl TokenBalanceStorage for DatabaseStorage {
         chain_id: &str,
         amount: &BigDecimal,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        info!(
+            "update_token_balance - Raw inputs:\n\
+             contract_address: {}\n\
+             token_id: {}\n\
+             owner_address: {}\n\
+             chain_id: {}\n\
+             amount: {}",
+            contract_address, token_id, owner_address, chain_id, amount
+        );
+
         // Sanitize inputs before database operation
         let sanitized_contract = sanitize_string(contract_address);
         let sanitized_owner = sanitize_string(owner_address);
         let sanitized_chain = sanitize_string(chain_id);
+
+        info!(
+            "update_token_balance - After sanitization:\n\
+             sanitized_contract: {}\n\
+             sanitized_owner: {}\n\
+             sanitized_chain: {}",
+            sanitized_contract, sanitized_owner, sanitized_chain
+        );
 
         let query = r#"
             INSERT INTO token_balance (
@@ -413,6 +431,8 @@ impl TokenBalanceStorage for DatabaseStorage {
             AND token_balance.chain_id = EXCLUDED.chain_id
         "#;
 
+        info!("update_token_balance - Executing query with sanitized values");
+        
         let result = sqlx::query(query)
             .bind(&sanitized_contract)
             .bind(token_id)
