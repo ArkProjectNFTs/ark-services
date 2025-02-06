@@ -5,11 +5,12 @@ pub mod orderbook;
 pub mod types;
 
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
+use orderbook::OrderbookStorage;
+use sqlx::types::BigDecimal;
 
 use async_trait::async_trait;
 #[cfg(test)]
 use mockall::automock;
-use orderbook::OrderbookStorage;
 
 #[async_trait]
 #[cfg_attr(test, automock)]
@@ -42,7 +43,24 @@ pub trait ContractInfoStorage {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
+#[async_trait]
+pub trait TokenBalanceStorage {
+    async fn update_token_balance(
+        &self,
+        contract_address: &str,
+        token_id: &BigDecimal,
+        owner_address: &str,
+        chain_id: &str,
+        amount: &BigDecimal,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+}
+
+#[async_trait::async_trait]
 pub trait Storage:
-    NFTInfoStorage + TransactionInfoStorage + ContractInfoStorage + OrderbookStorage
+    NFTInfoStorage
+    + ContractInfoStorage
+    + TokenBalanceStorage
+    + TransactionInfoStorage
+    + OrderbookStorage
 {
 }

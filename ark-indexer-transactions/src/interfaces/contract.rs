@@ -36,6 +36,7 @@ pub struct NFTInfo {
     pub tx_hash: String,
     pub block_hash: String,
     pub block_timestamp: u64,
+    pub value: Option<BigDecimal>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
