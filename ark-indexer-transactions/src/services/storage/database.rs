@@ -279,12 +279,15 @@ impl NFTInfoStorage for DatabaseStorage {
                 indexed_at = EXCLUDED.indexed_at
         "#;
 
+        // Sanitize the metadata_uri if it exists
+        let sanitized_metadata_uri = nft_info.metadata_uri.as_ref().map(|uri| sanitize_string(uri));
+
         sqlx::query(query)
             .bind(&nft_info.contract_address)
             .bind(nft_info.token_id)
             .bind(&nft_info.name)
             .bind(&nft_info.symbol)
-            .bind(&nft_info.metadata_uri)
+            .bind(&sanitized_metadata_uri)
             .bind(&nft_info.owner)
             .bind(&nft_info.chain_id)
             .bind(&nft_info.block_hash)
