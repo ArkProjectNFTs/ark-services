@@ -302,11 +302,6 @@ impl NFTInfoStorage for DatabaseStorage {
         &self,
         nft_info: NFTInfo,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        debug!(
-            "store_token - Raw value before processing: {:?}",
-            nft_info.value
-        );
-
         let query = r#"
             INSERT INTO token (
                 contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp, quantity
@@ -327,16 +322,6 @@ impl NFTInfoStorage for DatabaseStorage {
             info!("Invalid Token with info: {:?}", nft_info);
         }
 
-        debug!(
-            "store_token - Before database operation:\n\
-             token_id: {:?}\n\
-             quantity: {:?}\n\
-             quantity type: {}",
-            nft_info.token_id,
-            nft_info.value,
-            nft_info.value.as_ref().map_or("None", |_| std::any::type_name::<BigDecimal>())
-        );
-
         let result = sqlx::query(query)
             .bind(&nft_info.contract_address)
             .bind(&nft_info.chain_id)
@@ -349,11 +334,6 @@ impl NFTInfoStorage for DatabaseStorage {
             .bind(nft_info.value.as_ref())
             .execute(&self.pool)
             .await;
-
-        match &result {
-            Ok(_) => debug!("store_token - Database operation successful"),
-            Err(e) => debug!("store_token - Database operation failed: {:?}", e),
-        }
 
         result?;
         Ok(())
@@ -398,28 +378,10 @@ impl TokenBalanceStorage for DatabaseStorage {
         chain_id: &str,
         amount: &BigDecimal,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        info!(
-            "update_token_balance - Raw inputs:\n\
-             contract_address: {}\n\
-             token_id: {}\n\
-             owner_address: {}\n\
-             chain_id: {}\n\
-             amount: {}",
-            contract_address, token_id, owner_address, chain_id, amount
-        );
-
         // Sanitize inputs before database operation
         let sanitized_contract = sanitize_string(contract_address);
         let sanitized_owner = sanitize_string(owner_address);
         let sanitized_chain = sanitize_string(chain_id);
-
-        info!(
-            "update_token_balance - After sanitization:\n\
-             sanitized_contract: {}\n\
-             sanitized_owner: {}\n\
-             sanitized_chain: {}",
-            sanitized_contract, sanitized_owner, sanitized_chain
-        );
 
         let query = r#"
             INSERT INTO token_balance (
@@ -433,8 +395,6 @@ impl TokenBalanceStorage for DatabaseStorage {
             AND token_balance.owner_address = EXCLUDED.owner_address
             AND token_balance.chain_id = EXCLUDED.chain_id
         "#;
-
-        info!("update_token_balance - Executing query with sanitized values");
         
         let result = sqlx::query(query)
             .bind(&sanitized_contract)
