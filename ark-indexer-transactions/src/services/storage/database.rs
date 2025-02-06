@@ -9,7 +9,7 @@ use chrono::Utc;
 use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
-use tracing::{info, debug};
+use tracing::{info, debug, error};
 
 const MINT_EVENT: &str = "Mint";
 const BURN_EVENT: &str = "Burn";
@@ -395,25 +395,6 @@ impl TokenBalanceStorage for DatabaseStorage {
         chain_id: &str,
         amount: &BigDecimal,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        debug!(
-            "update_token_balance - Input values:\n\
-             amount (raw): {:?}\n\
-             amount (display): {}\n\
-             amount (debug): {:#?}",
-            amount,
-            amount.to_string(),
-            amount
-        );
-
-        info!(
-            "Updating token balance: contract={}, token_id={}, owner={}, chain_id={}, amount={}",
-            contract_address,
-            token_id,
-            owner_address,
-            chain_id,
-            amount
-        );
-
         // Sanitize inputs before database operation
         let sanitized_contract = sanitize_string(contract_address);
         let sanitized_owner = sanitize_string(owner_address);
@@ -442,12 +423,9 @@ impl TokenBalanceStorage for DatabaseStorage {
             .await;
 
         match result {
-            Ok(_) => {
-                tracing::info!("Successfully updated token balance");
-                Ok(())
-            }
+            Ok(_) => Ok(()),
             Err(e) => {
-                tracing::error!("Failed to update token balance: {}", e);
+                error!("Failed to update token balance: {}", e);
                 Err(Box::new(e))
             }
         }
