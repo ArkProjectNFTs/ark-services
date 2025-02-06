@@ -567,15 +567,35 @@ where
                     };
                     let storage = self.storage.lock().await;
 
+                    info!("Step 1: About to store contract info: {:?}", contract_info);
                     storage.store_contract(contract_info).await?;
+                    
+                    info!("Step 2: About to store token with NFT info: {:?}", nft_info);
                     storage.store_token(nft_info.clone()).await?;
+                    
+                    info!("Step 3: About to store NFT info");
                     storage.store_nft_info(nft_info).await?;
+                    
+                    info!("Step 4: About to store transaction info: {:?}", tx_info);
                     storage.store_transaction_info(tx_info).await?;
 
                     // Handle token balances
                     let zero_address = Felt::ZERO;
                     if from == zero_address {
                         // Mint case
+                        info!(
+                            "Step 5: About to update token balance for mint:\n\
+                             contract: {}\n\
+                             token_id: {:?}\n\
+                             owner: {}\n\
+                             chain_id: {}\n\
+                             value: {:?}",
+                            felt_to_strk_string(contract_origin),
+                            token_id_for_balance,
+                            felt_to_strk_string(to),
+                            chain_id,
+                            value_for_balance
+                        );
                         storage
                             .update_token_balance(
                                 &felt_to_strk_string(contract_origin),
