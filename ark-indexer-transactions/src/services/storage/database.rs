@@ -301,14 +301,14 @@ impl NFTInfoStorage for DatabaseStorage {
         let query = r#"
             INSERT INTO token (
                 contract_address, chain_id, token_id, token_id_hex, metadata_status, current_owner, block_timestamp, updated_timestamp, quantity
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::numeric)
             ON CONFLICT (contract_address, chain_id, token_id) DO UPDATE
             SET metadata_status = EXCLUDED.metadata_status,
                 block_timestamp = EXCLUDED.block_timestamp,
                 updated_timestamp = EXCLUDED.updated_timestamp,
                 quantity = CASE 
                     WHEN token.quantity IS NULL THEN EXCLUDED.quantity
-                    ELSE token.quantity + EXCLUDED.quantity
+                    ELSE COALESCE(token.quantity, 0::numeric) + EXCLUDED.quantity::numeric
                 END
         "#;
         let mut token_id_hex: Option<String> = None;
@@ -317,6 +317,13 @@ impl NFTInfoStorage for DatabaseStorage {
         } else {
             info!("Invalid Token with info: {:?}", nft_info);
         }
+
+        tracing::debug!(
+            "Storing token with contract: {}, token_id: {:?}, quantity: {:?}",
+            nft_info.contract_address,
+            nft_info.token_id,
+            nft_info.value
+        );
 
         sqlx::query(query)
             .bind(&nft_info.contract_address)
@@ -376,9 +383,10 @@ impl TokenBalanceStorage for DatabaseStorage {
         let query = r#"
             INSERT INTO token_balance (
                 contract_address, token_id, owner_address, balance, chain_id, last_updated_at
-            ) VALUES ($1, $2, $3, $4, $5, NOW())
+            ) VALUES ($1, $2::numeric, $3, $4::numeric, $5, NOW())
             ON CONFLICT (contract_address, token_id, owner_address, chain_id) DO UPDATE
-            SET balance = COALESCE(token_balance.balance, 0) + EXCLUDED.balance::numeric,
+            SET balance = (COALESCE(token_balance.balance, 0::numeric) + EXCLUDED.balance),
+                last_updated_at = NOW()
             WHERE token_balance.contract_address = EXCLUDED.contract_address
             AND token_balance.token_id = EXCLUDED.token_id
             AND token_balance.owner_address = EXCLUDED.owner_address
