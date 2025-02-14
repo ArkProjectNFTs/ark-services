@@ -1,15 +1,15 @@
 use super::TokenBalanceStorage;
 use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage};
+use crate::helpers::common::sanitize_string;
 use crate::interfaces::contract::ContractType;
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
-use crate::interfaces::event::{ERCCompliance, ErcAction, EventType};
-use crate::helpers::common::sanitize_string;
+use crate::interfaces::event::EventType;
 use bigdecimal::BigDecimal;
 use chrono::Utc;
 use num_bigint::BigUint;
 use sqlx::PgPool;
 use std::str::FromStr;
-use tracing::{info, debug, error};
+use tracing::{error, info};
 
 const MINT_EVENT: &str = "Mint";
 const BURN_EVENT: &str = "Burn";
@@ -280,7 +280,10 @@ impl NFTInfoStorage for DatabaseStorage {
         "#;
 
         // Sanitize the metadata_uri if it exists
-        let sanitized_metadata_uri = nft_info.metadata_uri.as_ref().map(|uri| sanitize_string(uri));
+        let sanitized_metadata_uri = nft_info
+            .metadata_uri
+            .as_ref()
+            .map(|uri| sanitize_string(uri));
 
         sqlx::query(query)
             .bind(&nft_info.contract_address)
@@ -395,7 +398,7 @@ impl TokenBalanceStorage for DatabaseStorage {
             AND token_balance.owner_address = EXCLUDED.owner_address
             AND token_balance.chain_id = EXCLUDED.chain_id
         "#;
-        
+
         let result = sqlx::query(query)
             .bind(&sanitized_contract)
             .bind(token_id)

@@ -4,7 +4,7 @@ use starknet::{
     core::types::{BlockId::Hash, EmittedEvent, Felt},
     providers::{sequencer::models::Event, Provider},
 };
-use tracing::{info, error};
+use tracing::{error, info};
 
 use super::{
     common::{detect_erc_action, utils::parse_u256},
@@ -435,8 +435,12 @@ where
         block_timestamp: u64,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let contract_origin = event.from_address;
-        info!("Starting ERC1155 event handling for contract: {}, event_id: {}", felt_to_strk_string(contract_origin), event_id);
-        
+        info!(
+            "Starting ERC1155 event handling for contract: {}, event_id: {}",
+            felt_to_strk_string(contract_origin),
+            event_id
+        );
+
         if let Some((erc_event, erc_compliance)) = erc1155::decode(&event)? {
             match erc_event {
                 ERC1155Event::TransferSingle {
@@ -466,7 +470,7 @@ where
                         value.to_string(),
                         value
                     );
-                    
+
                     let value = value.clone();
                     let value_for_tx = value.clone();
                     let value_for_balance = value.clone();
@@ -569,13 +573,13 @@ where
 
                     info!("Step 1: About to store contract info: {:?}", contract_info);
                     storage.store_contract(contract_info).await?;
-                    
+
                     info!("Step 2: About to store token with NFT info: {:?}", nft_info);
                     storage.store_token(nft_info.clone()).await?;
-                    
+
                     info!("Step 3: About to store NFT info");
                     storage.store_nft_info(nft_info).await?;
-                    
+
                     info!("Step 4: About to store transaction info: {:?}", tx_info);
                     storage.store_transaction_info(tx_info).await?;
 
