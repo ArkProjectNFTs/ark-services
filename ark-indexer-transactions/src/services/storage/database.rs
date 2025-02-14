@@ -3,7 +3,7 @@ use super::{ContractInfoStorage, NFTInfoStorage, Storage, TransactionInfoStorage
 use crate::helpers::common::sanitize_string;
 use crate::interfaces::contract::ContractType;
 use crate::interfaces::contract::{ContractInfo, NFTInfo, TransactionInfo};
-use crate::interfaces::event::EventType;
+use crate::interfaces::event::{ERCCompliance, ErcAction, EventType};
 use bigdecimal::BigDecimal;
 use chrono::Utc;
 use num_bigint::BigUint;
