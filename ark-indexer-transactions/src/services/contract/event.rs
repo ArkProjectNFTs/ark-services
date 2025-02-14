@@ -1,11 +1,3 @@
-use arkproject::orderbook;
-use bigdecimal::BigDecimal;
-use starknet::{
-    core::types::{BlockId::Hash, EmittedEvent, Felt},
-    providers::{sequencer::models::Event, Provider},
-};
-use tracing::{error, info};
-
 use super::{
     common::{detect_erc_action, utils::parse_u256},
     erc1155, erc721,
@@ -23,6 +15,13 @@ use crate::{
     },
     services::storage::Storage,
 };
+use arkproject::orderbook;
+use bigdecimal::BigDecimal;
+use starknet::{
+    core::types::{BlockId::Hash, EmittedEvent, Felt},
+    providers::{sequencer::models::Event, Provider},
+};
+use tracing::info;
 
 impl<S, P> ContractManager<S, P>
 where
